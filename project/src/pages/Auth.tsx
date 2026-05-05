@@ -56,7 +56,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   // Ref para evitar múltiplas execuções
   const referralCodeProcessedRef = useRef(false);
 
-  
+
   const { login, register } = useAuth();
   const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
   const { captureLead, markAsConverted } = useLeadCapture();
@@ -91,39 +91,39 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
 
     setReferralCodeLoading(true);
-    
+
     // Detectar tipo automaticamente
     // SUAIDEN e BRANT são códigos especiais de seller (Direct Sales) que aplicam Package 3 automaticamente
-     const directSalesCodes = ['SUAIDEN', 'BRANT'];
-     const codeUpper = code.toUpperCase();
-     const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-     
-     // ✅ NOVO: Verificar primeiro se o código existe na tabela sellers (para Direct Sales como TFOE)
-     // Isso permite detectar códigos de Direct Sales que não estão na lista hardcoded
-     let isSellerCode = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-     
-     // Se não for claramente um seller, verificar na tabela sellers antes de classificar como rewards
-     if (!isSellerCode && !code.startsWith('MATR')) {
-       try {
-         const { data: sellerCheck } = await supabase
-           .from('sellers')
-           .select('id')
-           .eq('referral_code', codeUpper)
-           .eq('is_active', true)
-           .maybeSingle();
-         
-         if (sellerCheck) {
-           isSellerCode = true;
-           console.log('[AUTH] Código encontrado na tabela sellers, tratando como seller:', code);
-         }
-       } catch (err) {
-         console.error('[AUTH] Erro ao verificar código na tabela sellers:', err);
-       }
-     }
-     
-     const isSeller = isSellerCode;
-     const isRewards = !isDirectSalesCode && !isSellerCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
-    
+    const directSalesCodes = ['SUAIDEN', 'BRANT'];
+    const codeUpper = code.toUpperCase();
+    const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+
+    // ✅ NOVO: Verificar primeiro se o código existe na tabela sellers (para Direct Sales como TFOE)
+    // Isso permite detectar códigos de Direct Sales que não estão na lista hardcoded
+    let isSellerCode = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+
+    // Se não for claramente um seller, verificar na tabela sellers antes de classificar como rewards
+    if (!isSellerCode && !code.startsWith('MATR')) {
+      try {
+        const { data: sellerCheck } = await supabase
+          .from('sellers')
+          .select('id')
+          .eq('referral_code', codeUpper)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (sellerCheck) {
+          isSellerCode = true;
+          console.log('[AUTH] Código encontrado na tabela sellers, tratando como seller:', code);
+        }
+      } catch (err) {
+        console.error('[AUTH] Erro ao verificar código na tabela sellers:', err);
+      }
+    }
+
+    const isSeller = isSellerCode;
+    const isRewards = !isDirectSalesCode && !isSellerCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+
     try {
       if (isSeller) {
         setReferralCodeType('seller');
@@ -134,20 +134,20 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           .eq('referral_code', codeUpper)
           .eq('is_active', true)
           .single();
-        
+
         setReferralCodeValid(!error && !!data);
         console.log('[AUTH] Resultado validação seller:', { data, error, valid: !error && !!data });
-        
+
         // ✅ NOVO: Verificar se o seller é do sistema simplificado
         if (!error && data) {
           try {
             const { data: systemTypeData, error: systemTypeError } = await supabase
               .rpc('get_seller_admin_system_type_by_code', { seller_code: codeUpper });
-            
-             if (!systemTypeError && systemTypeData) {
-               const isSimplified = systemTypeData === 'simplified';
-               console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
-             }
+
+            if (!systemTypeError && systemTypeData) {
+              const isSimplified = systemTypeData === 'simplified';
+              console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
+            }
           } catch (err) {
             console.error('[AUTH] Erro ao verificar system_type do seller:', err);
           }
@@ -161,7 +161,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           .eq('code', code.toUpperCase())
           .eq('is_active', true)
           .single();
-        
+
         setReferralCodeValid(!error && !!data);
         console.log('[AUTH] Resultado validação rewards:', { data, error, valid: !error && !!data });
       } else {
@@ -184,7 +184,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
 
     console.log('[AUTH] Processando código de referência:', code, 'Tipo:', type);
-    
+
     // Detectar tipo se não fornecido
     let detectedType = type;
     if (!detectedType) {
@@ -198,10 +198,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const directSalesCodes = ['SUAIDEN', 'BRANT'];
         const codeUpper = code.toUpperCase();
         const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-        
+
         // Verificar se é seller (incluindo Direct Sales)
         let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-        
+
         // Se não for claramente um seller, verificar na tabela sellers
         if (!isSeller && !code.startsWith('MATR')) {
           try {
@@ -211,7 +211,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               .eq('referral_code', codeUpper)
               .eq('is_active', true)
               .maybeSingle();
-            
+
             if (sellerCheck) {
               isSeller = true;
             }
@@ -219,9 +219,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             // Ignorar erro, continuar com detecção padrão
           }
         }
-        
+
         const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
-        
+
         detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
       }
     }
@@ -230,7 +230,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setReferralCodeType(detectedType);
     setIsReferralCodeLocked(true);
     referralCodeProcessedRef.current = true;
-    
+
     // Validar código de forma assíncrona
     setTimeout(() => {
       validateReferralCode(code);
@@ -242,10 +242,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     const loadReferralCodes = async () => {
       if (mode === 'register' && activeTab === 'student') {
         console.log('[AUTH] Carregando códigos de referência...');
-        
+
         // ✅ PRIORIDADE 1: Verificar URL diretamente (para evitar race condition)
         const urlParams = new URLSearchParams(location.search);
-        
+
         // Tratar mensagem de email já confirmado (não é erro, é informação)
         const emailInfo = urlParams.get('info');
         const infoMessage = urlParams.get('message');
@@ -254,18 +254,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }
         // Capturar tanto ?ref= (com desconto) quanto ?sref= (sem desconto)
         const refCodeFromUrl = urlParams.get('ref') || urlParams.get('sref');
-        
+
         if (refCodeFromUrl && !referralCodeProcessedRef.current) {
           console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
-          
+
           // Detectar tipo do código
           const directSalesCodes = ['SUAIDEN', 'BRANT'];
           const codeUpper = refCodeFromUrl.toUpperCase();
           const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-          
+
           // Verificar se é seller (incluindo Direct Sales)
           let isSeller = isDirectSalesCode || refCodeFromUrl.startsWith('SELLER_') || refCodeFromUrl.length > 8;
-          
+
           // Se não for claramente um seller, verificar na tabela sellers
           if (!isSeller && !refCodeFromUrl.startsWith('MATR')) {
             try {
@@ -275,7 +275,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 .eq('referral_code', codeUpper)
                 .eq('is_active', true)
                 .maybeSingle();
-              
+
               if (sellerCheck) {
                 isSeller = true;
               }
@@ -283,27 +283,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               // Ignorar erro, continuar com detecção padrão
             }
           }
-          
+
           const isRewards = !isDirectSalesCode && !isSeller && (refCodeFromUrl.startsWith('MATR') || (refCodeFromUrl.length <= 8 && /^[A-Z0-9]+$/.test(refCodeFromUrl)));
           const detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
-          
+
           // Salvar no localStorage para consistência
           localStorage.setItem('pending_referral_code', refCodeFromUrl);
           localStorage.setItem('pending_referral_code_type', detectedType || 'rewards');
-          
+
           await processReferralCode(refCodeFromUrl, detectedType);
           return;
         }
-        
+
         // ✅ PRIORIDADE 2: Carregar do localStorage
         const pendingCode = localStorage.getItem('pending_referral_code');
         const pendingType = localStorage.getItem('pending_referral_code_type');
-        
+
         if (pendingCode && !referralCodeProcessedRef.current) {
           console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
           await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
         }
-        
+
         console.log('[AUTH] Estado final do campo unificado:', {
           referralCode: pendingCode || refCodeFromUrl,
           type: pendingType
@@ -326,7 +326,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       };
 
       window.addEventListener('storage', handleStorageChange);
-      
+
       // Também verificar periodicamente (fallback para mesmo-origin)
       const intervalId = setInterval(async () => {
         if (!referralCodeProcessedRef.current) {
@@ -350,7 +350,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const handleReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
-    
+
     if (code.length >= 4) {
       validateReferralCode(code);
     } else {
@@ -377,7 +377,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('🔍 [AUTH] Dados do formulário:', formData);
         console.log('🔍 [AUTH] Tab ativa:', activeTab);
         console.log('🔍 [AUTH] Telefone no formData:', formData.phone);
-        
+
         // Checagem prévia: email já cadastrado (RPC + fallback em user_profiles)
         const normalizedEmail = (formData.email || '').trim().toLowerCase();
         try {
@@ -402,7 +402,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         } catch (checkErr) {
           // Se a checagem falhar por permissão ou outro motivo, seguimos, pois o backend ainda validará
         }
-        
+
         if (formData.password !== formData.confirmPassword) {
           setError(t('authPage.messages.passwordsNotMatch'));
           setLoading(false);
@@ -416,7 +416,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setLoading(false);
           return;
         }
-        
+
         // Validar telefone obrigatório e formato internacional
         if (!formData.phone || formData.phone.length < 8) {
           console.log('❌ [AUTH] Validação de telefone falhou:', {
@@ -427,55 +427,55 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setLoading(false);
           return;
         }
-        
 
-        
-         
-         // Validar aceite dos termos
-         if (!termsAccepted) {
-           setError(t('authPage.messages.mustAcceptTerms'));
-           setLoading(false);
-           return;
-         }
-         
-         // ✅ NOVA VALIDAÇÃO: Verificar se código de referência é válido (se fornecido)
-         if (formData.referralCode && formData.referralCode.trim()) {
-           // Se está carregando a validação, aguardar
-           if (referralCodeLoading) {
-             setError(t('authPage.register.referralCode.waitingValidation'));
-             setLoading(false);
-             return;
-           }
-           // Se a validação falhou, bloquear submissão
-           if (referralCodeValid === false) {
-             setError(t('authPage.register.referralCode.validationError'));
-             setLoading(false);
-             return;
-           }
-           // Se ainda não foi validado (null), aguardar validação
-           if (referralCodeValid === null) {
-             setError(t('authPage.register.referralCode.waitingValidation'));
-             setLoading(false);
-             return;
-           }
-         }
-        
-        console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
-        
-         // Detectar se é código Direct Sales (SUAIDEN ou BRANT) para aplicar Package 3 automaticamente
-         const directSalesCodes = ['SUAIDEN', 'BRANT'];
-         const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
-         
-          // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
-          if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
-            setError(t('authPage.messages.invalidDependents'));
+
+
+
+        // Validar aceite dos termos
+        if (!termsAccepted) {
+          setError(t('authPage.messages.mustAcceptTerms'));
+          setLoading(false);
+          return;
+        }
+
+        // ✅ NOVA VALIDAÇÃO: Verificar se código de referência é válido (se fornecido)
+        if (formData.referralCode && formData.referralCode.trim()) {
+          // Se está carregando a validação, aguardar
+          if (referralCodeLoading) {
+            setError(t('authPage.register.referralCode.waitingValidation'));
             setLoading(false);
             return;
           }
-          
-          // Como a validação acima garante que não é null, usamos o valor diretamente
-          const finalDependents = formData.dependents;
-        
+          // Se a validação falhou, bloquear submissão
+          if (referralCodeValid === false) {
+            setError(t('authPage.register.referralCode.validationError'));
+            setLoading(false);
+            return;
+          }
+          // Se ainda não foi validado (null), aguardar validação
+          if (referralCodeValid === null) {
+            setError(t('authPage.register.referralCode.waitingValidation'));
+            setLoading(false);
+            return;
+          }
+        }
+
+        console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
+
+        // Detectar se é código Direct Sales (SUAIDEN ou BRANT) para aplicar Package 3 automaticamente
+        const directSalesCodes = ['SUAIDEN', 'BRANT'];
+        const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
+
+        // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
+        if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
+          setError(t('authPage.messages.invalidDependents'));
+          setLoading(false);
+          return;
+        }
+
+        // Como a validação acima garante que não é null, usamos o valor diretamente
+        const finalDependents = formData.dependents;
+
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
@@ -489,39 +489,39 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             location: formData.location || '',
             phone: formData.phone || ''
           }),
-           // Add phone for student
-           ...(activeTab === 'student' && {
-             phone: formData.phone || '',
-             // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
-             ...(referralCodeType === 'seller' && formData.referralCode && {
-               seller_referral_code: formData.referralCode
-             }),
-             ...(referralCodeType === 'rewards' && formData.referralCode && {
-               affiliate_code: formData.referralCode
-             }),
-             // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente
-             ...(isDirectSalesCode && {
-               scholarship_package_number: 3,
-               desired_scholarship_range: 4500
-             }),
-              // ✅ Dependents: Sempre salvar para todos os estudantes
-              dependents: finalDependents
-           })
+          // Add phone for student
+          ...(activeTab === 'student' && {
+            phone: formData.phone || '',
+            // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
+            ...(referralCodeType === 'seller' && formData.referralCode && {
+              seller_referral_code: formData.referralCode
+            }),
+            ...(referralCodeType === 'rewards' && formData.referralCode && {
+              affiliate_code: formData.referralCode
+            }),
+            // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente
+            ...(isDirectSalesCode && {
+              scholarship_package_number: 3,
+              desired_scholarship_range: 4500
+            }),
+            // ✅ Dependents: Sempre salvar para todos os estudantes
+            dependents: finalDependents
+          })
         };
 
         console.log('🔍 [AUTH] userData criado:', userData);
         console.log('🔍 [AUTH] Telefone no userData:', userData.phone);
-        
+
         // Salvar no localStorage antes de chamar register
         console.log('💾 [AUTH] Salvando telefone no localStorage:', formData.phone);
         localStorage.setItem('pending_phone', formData.phone || '');
-        
+
         // 📊 Ler parâmetros UTM do localStorage (se existirem)
         const utmParams = getStoredUtmParams();
         if (utmParams) {
           console.log('📊 [AUTH] UTM parameters detectados:', utmParams);
         }
-        
+
         await register(normalizedEmail, formData.password, userData, {
           utm: utmParams
         });
@@ -530,7 +530,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
         localStorage.removeItem('pending_seller_referral_code_nodiscount');
-        
+
         // 📊 Limpar parâmetros UTM do localStorage após registro bem-sucedido
         if (utmParams) {
           clearUtmParams();
@@ -551,10 +551,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     } catch (err: any) {
       // Enhanced error handling with specific messages
       let errorMessage = t('authPage.messages.authenticationFailed');
-      
+
       if (err.message) {
         const message = err.message.toLowerCase();
-        
+
         if (message.includes('invalid_credentials') || message.includes('invalid login credentials')) {
           errorMessage = t('authPage.messages.invalidCredentials');
         } else if (
@@ -580,7 +580,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           errorMessage = err.message;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -607,9 +607,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           {/* Header */}
           <div className="text-center">
             <div className="flex justify-center mb-6 sm:mb-8">
-              <img 
-                src="/favicon-branco.png" 
-                alt="Matrícula USA" 
+              <img
+                src="/favicon-branco.png"
+                alt="Matrícula USA"
                 className="h-12 sm:h-16 w-auto"
               />
             </div>
@@ -632,8 +632,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             {error && (
               <div className={`${error.includes('já foi confirmado') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'} px-4 py-3 rounded-2xl text-sm`}>
                 <div className={`font-medium ${error.includes('já foi confirmado') ? 'text-green-800' : 'text-red-800'} mb-1`}>
-                  {error.includes('já foi confirmado') 
-                    ? t('authPage.login.emailConfirmed') 
+                  {error.includes('já foi confirmado')
+                    ? t('authPage.login.emailConfirmed')
                     : t('authPage.login.loginFailed')}
                 </div>
                 <div>{error}</div>
@@ -715,9 +715,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex justify-center mb-6 sm:mb-8">
-            <img 
-              src="/favicon-branco.png" 
-              alt="Matrícula USA" 
+            <img
+              src="/favicon-branco.png"
+              alt="Matrícula USA"
               className="h-12 sm:h-16 w-auto"
             />
           </div>
@@ -732,7 +732,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <Link to={`/login${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
               {t('authPage.register.signInHere')}
             </Link>
-            </p>
+          </p>
         </div>
 
         {/* Tab Navigation */}
@@ -740,22 +740,20 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <div className="bg-slate-100 p-1 sm:p-2 rounded-2xl flex space-x-1 sm:space-x-2 w-full max-w-md">
             <button
               onClick={() => handleTabChange('student')}
-              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
-                activeTab === 'student'
+              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${activeTab === 'student'
                   ? 'bg-white text-[#05294E] shadow-lg'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
               <span className="truncate">{t('authPage.register.tabStudent')}</span>
             </button>
             <button
               onClick={() => handleTabChange('university')}
-              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
-                activeTab === 'university'
+              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${activeTab === 'university'
                   ? 'bg-white text-[#05294E] shadow-lg'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <Building className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
               <span className="truncate">{t('authPage.register.tabUniversity')}</span>
@@ -765,17 +763,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         {/* Form Container */}
         <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-slate-200 mx-4 sm:mx-0">
-          {error && 
-            error !== t('authPage.messages.invalidDependents') && 
-            error !== t('authPage.messages.passwordsNotMatch') && 
-            error !== t('authPage.messages.invalidPasswordChars') && 
-            error !== t('authPage.messages.weakPassword') && 
+          {error &&
+            error !== t('authPage.messages.invalidDependents') &&
+            error !== t('authPage.messages.passwordsNotMatch') &&
+            error !== t('authPage.messages.invalidPasswordChars') &&
+            error !== t('authPage.messages.weakPassword') &&
             error !== t('authPage.messages.invalidPhone') && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
-              <div className="font-medium text-red-800 mb-1">{t('authPage.messages.registrationFailed')}</div>
-              {error}
-            </div>
-          )}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
+                <div className="font-medium text-red-800 mb-1">{t('authPage.messages.registrationFailed')}</div>
+                {error}
+              </div>
+            )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Student Form */}
@@ -854,11 +852,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#05294E'
                         }}
                         maxLength={20}
-                        className={`phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
-                          error === t('authPage.messages.invalidPhone') 
-                            ? 'border-red-500 ring-2 ring-red-500/10' 
+                        className={`phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${error === t('authPage.messages.invalidPhone')
+                            ? 'border-red-500 ring-2 ring-red-500/10'
                             : 'border-slate-300'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.enterPhone')}
                       />
                       {error === t('authPage.messages.invalidPhone') && (
@@ -884,11 +881,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
-                          error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -922,11 +918,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
-                          error === t('authPage.messages.passwordsNotMatch')
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
@@ -963,17 +958,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.referralCode || ''}
                         onChange={handleReferralCodeChange}
                         readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
-                          isReferralCodeLocked 
-                            ? 'bg-gray-50 cursor-not-allowed border-slate-300' 
+                        className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${isReferralCodeLocked
+                            ? 'bg-gray-50 cursor-not-allowed border-slate-300'
                             : ''
-                        } ${
-                          referralCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
-                            : referralCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
+                          } ${referralCodeValid === true
+                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
+                            : referralCodeValid === false
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                              : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                          }`}
                         placeholder={isReferralCodeLocked ? t('authPage.register.referralCodeAutoApplied') : t('authPage.register.referralCodePlaceholderSellerMatr')}
                         onBlur={() => trackFieldFilled('referral_code')}
                         maxLength={20}
@@ -994,7 +987,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Feedback de tipo detectado */}
                     {formData.referralCode && (
                       <div className="mt-1 text-xs">
@@ -1031,11 +1024,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             const val = e.target.value === '' ? null : parseInt(e.target.value);
                             setFormData(prev => ({ ...prev, dependents: val }));
                           }}
-                          className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${
-                            error === t('authPage.messages.invalidDependents')
+                          className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${error === t('authPage.messages.invalidDependents')
                               ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                               : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                          }`}
+                            }`}
                           onBlur={() => trackFieldFilled('dependents')}
                         >
                           <option value="" disabled>{t('authPage.register.selectDependents')}</option>
@@ -1053,8 +1045,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           </div>
                         )}
                       </div>
-              </div>
-            )}
+                    </div>
+                  )}
 
                 </div>
               </>
@@ -1131,7 +1123,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       />
                     </div>
                   </div>
-                  
+
 
                   <div className="lg:col-span-1">
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
@@ -1158,11 +1150,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         }}
                         maxLength={20}
                         onBlur={() => handleFieldBlur('phone')}
-                        className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
-                          error === t('authPage.messages.invalidPhone') 
-                            ? 'border-red-500 ring-2 ring-red-500/10' 
+                        className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${error === t('authPage.messages.invalidPhone')
+                            ? 'border-red-500 ring-2 ring-red-500/10'
                             : 'border-slate-300'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
                       {error === t('authPage.messages.invalidPhone') && (
@@ -1188,11 +1179,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
-                          error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -1226,11 +1216,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
-                          error === t('authPage.messages.passwordsNotMatch')
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
-                        }`}
+                          }`}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
@@ -1264,18 +1253,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               />
               <label htmlFor="terms-acceptance" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
                 {t('authPage.register.termsNotice')}
-                <a 
-                  href="/terms-of-service" 
-                  target="_blank" 
+                <a
+                  href="/terms-of-service"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
                 >
                   {t('authPage.register.terms')}
                 </a>
                 {t('authPage.register.and')}
-                <a 
-                  href="/privacy-policy" 
-                  target="_blank" 
+                <a
+                  href="/privacy-policy"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
                 >
@@ -1303,11 +1292,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <button
               type="submit"
               disabled={loading || !termsAccepted}
-              className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                activeTab === 'student' 
-                  ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 
+              className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'student'
+                  ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]'
                   : 'bg-[#D0151C] hover:bg-[#B01218] focus:ring-[#D0151C]'
-              }`}
+                }`}
             >
               {loading ? (
                 <div className="flex items-center">

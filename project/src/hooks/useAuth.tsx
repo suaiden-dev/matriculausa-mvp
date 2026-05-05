@@ -12,6 +12,8 @@ interface User {
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
+  onboarding_completed?: boolean;
+  is_active?: boolean;
 }
 
 // Definição completa do tipo para o perfil do usuário (incluindo todas as colunas do seu schema)
@@ -78,6 +80,7 @@ export interface UserProfile {
 
   // New field for admin restrictions
   is_restricted_admin?: boolean;
+  is_active?: boolean;
 
   // ... outras colunas se existirem
 }
@@ -203,6 +206,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         university_id: currentProfile?.university_id ?? undefined,
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
         university_image: (sessionUser as any).university_image || null,
+        onboarding_completed: currentProfile?.onboarding_completed,
+        is_active: currentProfile?.is_active,
       };
       // Usuario construído com sucesso
       return builtUser;
@@ -336,9 +341,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } catch (error) {
                   console.log('❌ [USEAUTH] Erro geral ao atualizar perfil existente:', error);
                 }
-              } else {
-                console.log('ℹ️ [USEAUTH] Perfil existente já está correto, não precisa de atualização.');
               }
+            }
+          }
+
+          // ✅ NOVO: Se o role for affiliate_admin, buscar dados adicionais da tabela affiliate_admins
+          if (profile && profile.role === 'affiliate_admin') {
+            try {
+              const { data: affiliateData, error: affiliateError } = await supabase
+                .from('affiliate_admins')
+                .select('is_active, onboarding_completed')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+
+              if (!affiliateError && affiliateData) {
+                profile = {
+                  ...profile,
+                  is_active: affiliateData.is_active,
+                  onboarding_completed: affiliateData.onboarding_completed
+                };
+                console.log('✅ [USEAUTH] Status de affiliate_admin recuperado:', affiliateData);
+              }
+            } catch (err) {
+              console.error('❌ [USEAUTH] Erro ao buscar status de affiliate_admin:', err);
             }
           }
         } catch (error) {
@@ -1177,7 +1202,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] data.user:', data?.user);
 
     // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
-    if (data?.user && userData.role === 'student') {
+    if (data?.user && (userData.role === 'student' || userData.role === 'affiliate_admin')) {
       try {
         // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
         let isSellerRegistration = false;

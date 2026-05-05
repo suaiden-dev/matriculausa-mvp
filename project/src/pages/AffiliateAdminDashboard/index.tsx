@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
@@ -56,6 +56,7 @@ const AffiliateAdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Memorizar user.id e user.role para evitar re-renders desnecessários
   const userId = useMemo(() => user?.id, [user?.id]);
@@ -202,7 +203,19 @@ const AffiliateAdminDashboard: React.FC = () => {
 
   useEffect(() => {
     if (userId && userRole === 'affiliate_admin') {
-      loadAffiliateAdminData();
+      // Check onboarding completion before loading dashboard
+      supabase
+        .from('affiliate_admins')
+        .select('onboarding_completed')
+        .eq('user_id', userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data && !data.onboarding_completed) {
+            navigate('/affiliate-admin/onboarding');
+          } else {
+            loadAffiliateAdminData();
+          }
+        });
     }
   }, [userId, userRole, loadAffiliateAdminData]);
 

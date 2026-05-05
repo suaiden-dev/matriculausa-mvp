@@ -51,7 +51,7 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
                 }`}></div>
                 <span className="text-sm font-medium text-slate-700">
                   {referralInfo.type === 'seller' ? 'Seller' :
-                   referralInfo.type === 'affiliate' ? 'Affiliate' :
+                   referralInfo.type === 'affiliate' ? 'Agency' :
                    (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
                 </span>
               </div>
@@ -60,7 +60,7 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
                 <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
                 {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
                   <div className="mt-2 pl-3 border-l-2 border-blue-200">
-                    <div className="text-xs text-slate-500 mb-1">Affiliate</div>
+                    <div className="text-xs text-slate-500 mb-1">Agency</div>
                     <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
                     <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
                   </div>

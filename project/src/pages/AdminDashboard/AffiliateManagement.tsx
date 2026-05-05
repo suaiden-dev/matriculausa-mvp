@@ -17,7 +17,12 @@ import {
   GraduationCap,
   Eye,
   Building,
-  CreditCard
+  CreditCard,
+  Pencil,
+  Save,
+  X,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
@@ -122,6 +127,188 @@ const AffiliateManagement: React.FC = () => {
   const [affiliateManualPayments, setAffiliateManualPayments] = useState<Record<string, number>>({});
   const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
   const [loadingManualPayments, setLoadingManualPayments] = useState(false);
+
+  // ===== Comissão por agência =====
+  const [editingCommission, setEditingCommission] = useState<Record<string, string>>({});
+  const [savingCommission, setSavingCommission] = useState<Record<string, boolean>>({});
+
+  interface CommissionBalance {
+    vendas_comissionadas: number;
+    total_acumulado: number;
+    total_pago: number;
+    saldo: number;
+  }
+  const [commissionBalances, setCommissionBalances] = useState<Record<string, CommissionBalance>>({});
+  const [loadingCommissionBalances, setLoadingCommissionBalances] = useState(false);
+
+  interface CommissionHistoryRow {
+    completed_at: string;
+    aluno_name: string;
+    aluno_email: string;
+    seller_name: string;
+    seller_referral_code: string;
+    payment_amount: number;
+    commission_amount: number;
+  }
+  const [commissionHistories, setCommissionHistories] = useState<Record<string, CommissionHistoryRow[]>>({});
+  const [loadingCommissionHistories, setLoadingCommissionHistories] = useState<Record<string, boolean>>({});
+
+  // ===== Agency requests =====
+  interface AgencyRequest {
+    id: string;
+    full_name: string;
+    company_name: string;
+    email: string;
+    phone: string | null;
+    country: string | null;
+    message: string | null;
+    status: 'pending' | 'approved' | 'rejected';
+    created_at: string;
+  }
+  const [agencyRequests, setAgencyRequests] = useState<AgencyRequest[]>([]);
+  const [loadingAgencyRequests, setLoadingAgencyRequests] = useState(false);
+  const [agencyRequestsError, setAgencyRequestsError] = useState<string | null>(null);
+  const [processingAgencyRequest, setProcessingAgencyRequest] = useState<string | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+
+  const handleToggleAffiliateStatus = async (affiliateId: string, userId: string, currentStatus: boolean) => {
+    try {
+      setTogglingStatus(affiliateId);
+      const { error } = await supabase
+        .from('affiliate_admins')
+        .update({ is_active: !currentStatus })
+        .eq('id', affiliateId);
+
+      if (error) throw error;
+      
+      // Criar notificação para o admin
+      await supabase.from('admin_notifications').insert({
+        title: `Conta de Agência ${!currentStatus ? 'Ativada' : 'Desativada'}`,
+        message: `A conta do parceiro foi ${!currentStatus ? 'ativada' : 'desativada'} manualmente pelo administrador.`,
+        type: 'info',
+        is_read: false,
+      });
+
+      await refetch();
+    } catch (err: any) {
+      console.error('Error toggling affiliate status:', err);
+      alert('Erro ao alterar status da conta: ' + err.message);
+    } finally {
+      setTogglingStatus(null);
+    }
+  };
+
+  const loadCommissionHistoryForAffiliate = async (affiliateId: string, sellers: any[]) => {
+    const sellerCodes = sellers.map((s: any) => s.referral_code).filter(Boolean);
+    if (!sellerCodes.length) {
+      setCommissionHistories(prev => ({ ...prev, [affiliateId]: [] }));
+      return;
+    }
+    setLoadingCommissionHistories(prev => ({ ...prev, [affiliateId]: true }));
+    try {
+      const { data: referrals } = await supabase
+        .from('affiliate_referrals')
+        .select('affiliate_code, referred_id, payment_amount, commission_amount, completed_at')
+        .in('affiliate_code', sellerCodes)
+        .not('commission_amount', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(100);
+
+      const referredIds = [...new Set((referrals || []).map((r: any) => r.referred_id).filter(Boolean))];
+      let profilesByUserId: Record<string, any> = {};
+      if (referredIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', referredIds);
+        profilesByUserId = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]));
+      }
+      const sellersByCode: Record<string, any> = Object.fromEntries(sellers.map((s: any) => [s.referral_code, s]));
+
+      const history: CommissionHistoryRow[] = (referrals || []).map((r: any) => ({
+        completed_at: r.completed_at,
+        aluno_name: profilesByUserId[r.referred_id]?.full_name || 'Unknown',
+        aluno_email: profilesByUserId[r.referred_id]?.email || '',
+        seller_name: sellersByCode[r.affiliate_code]?.name || r.affiliate_code,
+        seller_referral_code: r.affiliate_code,
+        payment_amount: Number(r.payment_amount) || 0,
+        commission_amount: Number(r.commission_amount) || 0,
+      }));
+      setCommissionHistories(prev => ({ ...prev, [affiliateId]: history }));
+    } catch (e) {
+      console.error('[AffiliateManagement] Erro histórico comissão:', e);
+      setCommissionHistories(prev => ({ ...prev, [affiliateId]: [] }));
+    } finally {
+      setLoadingCommissionHistories(prev => ({ ...prev, [affiliateId]: false }));
+    }
+  };
+
+  const handleSaveCommission = async (affiliateId: string, value: string) => {
+    const parsed = parseFloat(value);
+    if (isNaN(parsed) || parsed < 0) return;
+    setSavingCommission(prev => ({ ...prev, [affiliateId]: true }));
+    try {
+      await supabase
+        .from('affiliate_admins')
+        .update({ commission_per_sale: parsed })
+        .eq('id', affiliateId);
+      setEditingCommission(prev => { const n = { ...prev }; delete n[affiliateId]; return n; });
+      refetch();
+    } finally {
+      setSavingCommission(prev => { const n = { ...prev }; delete n[affiliateId]; return n; });
+    }
+  };
+
+  // Carregar saldo de comissão por agência
+  const loadCommissionBalances = async () => {
+    if (affiliates.length === 0) return;
+    setLoadingCommissionBalances(true);
+    try {
+      const allCodes = affiliates.flatMap(a => a.sellers.map((s: any) => s.referral_code)).filter(Boolean);
+      const userIds = affiliates.map(a => a.user_id).filter(Boolean);
+
+      const [referralsResult, paidResult] = await Promise.all([
+        allCodes.length > 0
+          ? supabase
+              .from('affiliate_referrals')
+              .select('affiliate_code, commission_amount')
+              .in('affiliate_code', allCodes)
+              .not('commission_amount', 'is', null)
+          : Promise.resolve({ data: [] as any[], error: null }),
+        userIds.length > 0
+          ? supabase
+              .from('affiliate_payment_requests')
+              .select('referrer_user_id, amount_usd')
+              .in('referrer_user_id', userIds)
+              .eq('status', 'paid')
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+
+      const referrals = referralsResult.data || [];
+      const paidRequests = paidResult.data || [];
+
+      const balances: Record<string, CommissionBalance> = {};
+      for (const affiliate of affiliates) {
+        const affiliateCodes = new Set(affiliate.sellers.map((s: any) => s.referral_code));
+        const affiliateReferrals = referrals.filter((r: any) => affiliateCodes.has(r.affiliate_code));
+        const total_acumulado = affiliateReferrals.reduce((sum: number, r: any) => sum + (Number(r.commission_amount) || 0), 0);
+        const total_pago = paidRequests
+          .filter((p: any) => p.referrer_user_id === affiliate.user_id)
+          .reduce((sum: number, p: any) => sum + (Number(p.amount_usd) || 0), 0);
+        balances[affiliate.id] = {
+          vendas_comissionadas: affiliateReferrals.length,
+          total_acumulado,
+          total_pago,
+          saldo: total_acumulado - total_pago,
+        };
+      }
+      setCommissionBalances(balances);
+    } catch (e) {
+      console.error('[AffiliateManagement] Erro ao carregar saldo de comissão:', e);
+    } finally {
+      setLoadingCommissionBalances(false);
+    }
+  };
 
   // Função para carregar informações de pagamento dos affiliate admins
   const loadAffiliatePaymentRequests = async () => {
@@ -359,6 +546,24 @@ const AffiliateManagement: React.FC = () => {
     }
   }, [affiliates]);
 
+  // Carregar saldo de comissão quando affiliates mudarem
+  useEffect(() => {
+    if (affiliates.length > 0) {
+      loadCommissionBalances();
+    }
+  }, [affiliates]);
+
+  // Carregar histórico de comissão quando affiliate for expandido (lazy)
+  useEffect(() => {
+    for (const affiliateId of expandedAffiliates) {
+      if (commissionHistories[affiliateId] !== undefined) continue;
+      if (loadingCommissionHistories[affiliateId]) continue;
+      const affiliate = affiliates.find(a => a.id === affiliateId);
+      if (!affiliate) continue;
+      loadCommissionHistoryForAffiliate(affiliateId, affiliate.sellers);
+    }
+  }, [expandedAffiliates, affiliates]);
+
   useEffect(() => {
     const loadDependents = async () => {
       try {
@@ -518,6 +723,70 @@ const AffiliateManagement: React.FC = () => {
 
     loadPaymentDates();
   }, [filteredStudents, filters.dateFrom, filters.dateTo]);
+
+  // ===== Agency requests loader =====
+  const loadAgencyRequests = async () => {
+    setLoadingAgencyRequests(true);
+    setAgencyRequestsError(null);
+    try {
+      const { data, error: err } = await supabase
+        .from('agency_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err) throw err;
+      setAgencyRequests((data as AgencyRequest[]) || []);
+    } catch (e: any) {
+      setAgencyRequestsError(e.message || 'Failed to load agency requests');
+    } finally {
+      setLoadingAgencyRequests(false);
+    }
+  };
+
+  const handleApproveAgencyRequest = async (req: AgencyRequest) => {
+    if (!window.confirm(`Aprovar solicitação de ${req.company_name} (${req.email})?`)) return;
+    setProcessingAgencyRequest(req.id);
+    try {
+      // Create user account and mark request approved via edge function
+      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-agency-user', {
+        body: {
+          email: req.email,
+          full_name: req.full_name,
+          company_name: req.company_name,
+          agency_request_id: req.id,
+        },
+      });
+      if (inviteError) throw inviteError;
+      if (inviteData?.error) throw new Error(inviteData.error);
+
+      await loadAgencyRequests();
+    } catch (e: any) {
+      alert('Erro ao aprovar: ' + (e.message || 'Tente novamente'));
+    } finally {
+      setProcessingAgencyRequest(null);
+    }
+  };
+
+  const handleRejectAgencyRequest = async (req: AgencyRequest) => {
+    const reason = window.prompt('Motivo da rejeição (opcional):') ?? null;
+    if (reason === null) return; // user cancelled
+    setProcessingAgencyRequest(req.id);
+    try {
+      const { error: updateError } = await supabase
+        .from('agency_requests')
+        .update({ status: 'rejected', rejection_reason: reason || null, reviewed_at: new Date().toISOString() })
+        .eq('id', req.id);
+      if (updateError) throw updateError;
+      await loadAgencyRequests();
+    } catch (e: any) {
+      alert('Erro ao rejeitar: ' + (e.message || 'Tente novamente'));
+    } finally {
+      setProcessingAgencyRequest(null);
+    }
+  };
+
+  useEffect(() => {
+    loadAgencyRequests();
+  }, []);
 
   // ✅ CORREÇÃO: Não filtrar estudantes, mas sim filtrar quais taxas foram pagas no período
   // Todos os estudantes serão incluídos, mas apenas as taxas pagas no período serão contabilizadas
@@ -1101,6 +1370,109 @@ const AffiliateManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Agency Partnership Requests */}
+      {(loadingAgencyRequests || agencyRequests.length > 0) && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#05294E]" />
+              <h2 className="text-lg font-semibold text-slate-900">Solicitações de Parceria</h2>
+              {agencyRequests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  {agencyRequests.filter(r => r.status === 'pending').length} pendente{agencyRequests.filter(r => r.status === 'pending').length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={loadAgencyRequests}
+              className="px-3 py-1.5 text-sm rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              Atualizar
+            </button>
+          </div>
+
+          {agencyRequestsError && (
+            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-sm text-red-700">{agencyRequestsError}</p>
+            </div>
+          )}
+
+          {loadingAgencyRequests ? (
+            <div className="flex items-center justify-center h-24">
+              <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Agência</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Responsável</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contato</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Data</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {agencyRequests.map(req => (
+                    <tr key={req.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-slate-900">{req.company_name}</div>
+                        {req.country && <div className="text-xs text-slate-500">{req.country}</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-slate-900">{req.full_name}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-slate-900">{req.email}</div>
+                        {req.phone && <div className="text-xs text-slate-500">{req.phone}</div>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-xs text-slate-500">
+                          {new Date(req.created_at).toLocaleDateString('pt-BR')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {req.status === 'pending' ? 'Pendente' : req.status === 'approved' ? 'Aprovada' : 'Rejeitada'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {req.status === 'pending' && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleApproveAgencyRequest(req)}
+                              disabled={processingAgencyRequest === req.id}
+                              className="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {processingAgencyRequest === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                              Aprovar
+                            </button>
+                            <button
+                              onClick={() => handleRejectAgencyRequest(req)}
+                              disabled={processingAgencyRequest === req.id}
+                              className="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                              Rejeitar
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -1280,7 +1652,7 @@ const AffiliateManagement: React.FC = () => {
 
                     <div className="flex items-center space-x-4">
                       {/* Quick Stats */}
-                      <div className="grid grid-cols-6 gap-4 text-center">
+                      <div className="grid grid-cols-7 gap-4 text-center">
                         <div>
                           <p className="text-lg font-bold text-slate-900">{affiliate.total_sellers}</p>
                           <p className="text-xs text-slate-600">Sellers</p>
@@ -1333,6 +1705,54 @@ const AffiliateManagement: React.FC = () => {
                             );
                           })()}
                         </div>
+
+                        {/* Comissão por venda */}
+                        <div className="text-center">
+                          {editingCommission[affiliate.id] !== undefined ? (
+                            <div className="flex items-center gap-1 justify-center">
+                              <span className="text-sm text-slate-500">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editingCommission[affiliate.id]}
+                                onChange={e => setEditingCommission(prev => ({ ...prev, [affiliate.id]: e.target.value }))}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleSaveCommission(affiliate.id, editingCommission[affiliate.id]);
+                                  if (e.key === 'Escape') setEditingCommission(prev => { const n = { ...prev }; delete n[affiliate.id]; return n; });
+                                }}
+                                className="w-16 text-center text-sm border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveCommission(affiliate.id, editingCommission[affiliate.id])}
+                                disabled={savingCommission[affiliate.id]}
+                                className="text-green-600 hover:text-green-700 disabled:opacity-50"
+                              >
+                                {savingCommission[affiliate.id] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => setEditingCommission(prev => { const n = { ...prev }; delete n[affiliate.id]; return n; })}
+                                className="text-slate-400 hover:text-slate-600"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              className="flex items-center justify-center gap-1 cursor-pointer group"
+                              onClick={() => setEditingCommission(prev => ({ ...prev, [affiliate.id]: String(affiliate.commission_per_sale ?? '') }))}
+                              title="Clique para editar comissão por venda"
+                            >
+                              <p className="text-lg font-bold text-blue-600">
+                                {affiliate.commission_per_sale != null ? `$${affiliate.commission_per_sale}` : '—'}
+                              </p>
+                              <Pencil className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                          <p className="text-xs text-slate-600">Comissão/Venda</p>
+                        </div>
+
                       </div>
 
                       {/* Expand Button */}
@@ -1354,6 +1774,55 @@ const AffiliateManagement: React.FC = () => {
                   }`}>
                   <div className="border-t border-slate-200 bg-slate-50">
                     <div className="p-6">
+                      {/* Account Management Actions */}
+                      <div className="mb-8 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                              affiliate.is_active ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                            }`}>
+                              {affiliate.is_active ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-slate-900">Gestão de Conta</h4>
+                              <p className="text-sm text-slate-500">
+                                Status atual: <span className={`font-medium ${affiliate.is_active ? 'text-green-600' : 'text-amber-600'}`}>
+                                  {affiliate.is_active ? 'Ativa' : 'Aguardando Aprovação / Inativa'}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {!affiliate.is_active ? (
+                              <button
+                                onClick={() => handleToggleAffiliateStatus(affiliate.id, affiliate.user_id, affiliate.is_active)}
+                                disabled={togglingStatus === affiliate.id}
+                                className="px-6 py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition-all shadow-md shadow-green-100 flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {togglingStatus === affiliate.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Aprovar Parceria Agora
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleToggleAffiliateStatus(affiliate.id, affiliate.user_id, affiliate.is_active)}
+                                disabled={togglingStatus === affiliate.id}
+                                className="px-6 py-2.5 rounded-xl bg-white border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {togglingStatus === affiliate.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                                Desativar Conta
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {!affiliate.is_active && (
+                          <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p className="text-xs text-blue-700 flex items-center gap-2">
+                              <AlertCircle className="w-3 h-3" />
+                              Esta agência acaba de se registrar e está aguardando a ativação para acessar o painel completo.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                       {/* Payment Information */}
                       <div className="mb-8">
                         <h4 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
@@ -1369,13 +1838,13 @@ const AffiliateManagement: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                                    <p className="text-2xl font-bold text-green-600">
+                                    <div className="text-2xl font-bold text-green-600">
                                       {isLoadingRealPaidAmounts ? (
                                         <div className="animate-pulse bg-slate-200 h-8 w-32 rounded"></div>
                                       ) : (
                                         `$${affiliate.total_revenue.toLocaleString()}`
                                       )}
-                                    </p>
+                                    </div>
                                   </div>
                                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                                     <DollarSign className="h-6 w-6 text-green-600" />
@@ -1448,6 +1917,139 @@ const AffiliateManagement: React.FC = () => {
                         })()}
                       </div>
 
+                      {/* Commission Balance */}
+                      {(affiliate.commission_per_sale != null || (commissionBalances[affiliate.id]?.total_acumulado ?? 0) > 0) && (
+                        <div className="mb-8">
+                          <h4 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
+                            <DollarSign className="h-6 w-6 mr-3 text-blue-600" />
+                            Saldo de Comissão
+                          </h4>
+                          {(() => {
+                            const cb = commissionBalances[affiliate.id];
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div className="bg-white rounded-lg border border-blue-200 p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-600">Comissão por Venda</p>
+                                      <p className="text-2xl font-bold text-blue-600">
+                                        {affiliate.commission_per_sale != null ? `$${affiliate.commission_per_sale}` : '—'}
+                                      </p>
+                                    </div>
+                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                      <DollarSign className="h-6 w-6 text-blue-600" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-600">Vendas Comissionadas</p>
+                                      {loadingCommissionBalances ? (
+                                        <div className="animate-pulse bg-slate-200 h-8 w-16 rounded mt-1"></div>
+                                      ) : (
+                                        <p className="text-2xl font-bold text-slate-900">{cb?.vendas_comissionadas ?? 0}</p>
+                                      )}
+                                    </div>
+                                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                                      <Users className="h-6 w-6 text-slate-600" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-600">Total Acumulado</p>
+                                      {loadingCommissionBalances ? (
+                                        <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mt-1"></div>
+                                      ) : (
+                                        <p className="text-2xl font-bold text-green-600">${(cb?.total_acumulado ?? 0).toLocaleString()}</p>
+                                      )}
+                                    </div>
+                                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                      <DollarSign className="h-6 w-6 text-green-600" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded-lg border border-orange-200 p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-600">Saldo a Receber</p>
+                                      {loadingCommissionBalances ? (
+                                        <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mt-1"></div>
+                                      ) : (
+                                        <p className="text-2xl font-bold text-orange-600">${(cb?.saldo ?? 0).toLocaleString()}</p>
+                                      )}
+                                      {!loadingCommissionBalances && (
+                                        <p className="text-xs text-slate-500 mt-1">Já pago: ${(cb?.total_pago ?? 0).toLocaleString()}</p>
+                                      )}
+                                    </div>
+                                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                      <DollarSign className="h-6 w-6 text-orange-600" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Commission History */}
+                      {(affiliate.commission_per_sale != null || (commissionBalances[affiliate.id]?.total_acumulado ?? 0) > 0) && (
+                        <div className="mb-8">
+                          <h4 className="text-xl font-semibold text-slate-900 mb-4 flex items-center">
+                            <DollarSign className="h-6 w-6 mr-3 text-blue-600" />
+                            Histórico de Comissões
+                          </h4>
+                          {loadingCommissionHistories[affiliate.id] ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                            </div>
+                          ) : !commissionHistories[affiliate.id] || commissionHistories[affiliate.id].length === 0 ? (
+                            <div className="text-center py-8 text-slate-400 bg-white rounded-lg border border-slate-200">
+                              <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">Nenhuma comissão registrada ainda.</p>
+                            </div>
+                          ) : (
+                            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200">
+                                  <thead className="bg-slate-50">
+                                    <tr>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Data</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Aluno</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Seller</th>
+                                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Valor Pago</th>
+                                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Comissão</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {commissionHistories[affiliate.id].map((row, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">
+                                          {row.completed_at ? new Date(row.completed_at).toLocaleDateString('en-US') : '—'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <div className="text-sm font-medium text-slate-900">{row.aluno_name}</div>
+                                          <div className="text-xs text-slate-500">{row.aluno_email}</div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <div className="text-sm text-slate-700">{row.seller_name}</div>
+                                          <div className="text-xs text-slate-400 font-mono">{row.seller_referral_code}</div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right text-slate-700">${row.payment_amount.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm font-semibold text-right text-blue-600">${row.commission_amount.toLocaleString()}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Sellers - Full Width */}
                       <div>
                         <h4 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
@@ -1501,13 +2103,13 @@ const AffiliateManagement: React.FC = () => {
                                               <p className="text-sm font-medium text-slate-900 mt-1">
                                                 {seller.students_count} students
                                               </p>
-                                              <p className="text-sm text-green-600 font-medium">
+                                              <div className="text-sm text-green-600 font-medium">
                                                 {isLoadingRealPaidAmounts ? (
                                                   <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                 ) : (
                                                   formatCurrency(seller.total_revenue)
                                                 )}
-                                              </p>
+                                              </div>
                                             </div>
 
                                             {sellerStudents.length > 0 && (
@@ -1694,13 +2296,13 @@ const AffiliateManagement: React.FC = () => {
                                                           {student.status || 'Unknown'}
                                                         </span>
                                                       </div>
-                                                      <p className="text-sm font-medium text-green-600 mt-1">
+                                                      <div className="text-sm font-medium text-green-600 mt-1">
                                                         {isLoadingRealPaidAmounts ? (
                                                           <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                         ) : (
                                                           formatCurrency(student.total_paid_adjusted)
                                                         )}
-                                                      </p>
+                                                      </div>
                                                       <p className="text-xs text-slate-500">
                                                         {formatDate(student.created_at)}
                                                       </p>
@@ -1742,14 +2344,14 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${selectionFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                            <div className={`text-sm font-semibold ${selectionFee > 0 ? 'text-green-600' : 'text-slate-400'
                                                               }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
                                                                 selectionFee > 0 ? formatCurrency(selectionFee) : 'N/A'
                                                               )}
-                                                            </p>
+                                                            </div>
                                                             {hasDateFilter && selectionDate && (() => {
                                                               const paymentDateObj = new Date(selectionDate);
                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
@@ -1773,14 +2375,14 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${scholarshipFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                            <div className={`text-sm font-semibold ${scholarshipFee > 0 ? 'text-green-600' : 'text-slate-400'
                                                               }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
                                                                 scholarshipFee > 0 ? formatCurrency(scholarshipFee) : 'N/A'
                                                               )}
-                                                            </p>
+                                                            </div>
                                                             {hasDateFilter && scholarshipDate && (() => {
                                                               const paymentDateObj = new Date(scholarshipDate);
                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
@@ -1804,14 +2406,14 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${applicationFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                            <div className={`text-sm font-semibold ${applicationFee > 0 ? 'text-green-600' : 'text-slate-400'
                                                               }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
                                                                 applicationFee > 0 ? formatCurrency(applicationFee) : 'N/A'
                                                               )}
-                                                            </p>
+                                                            </div>
                                                             {hasDateFilter && applicationDate && (() => {
                                                               const paymentDateObj = new Date(applicationDate);
                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
@@ -1835,14 +2437,14 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${i20Fee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                            <div className={`text-sm font-semibold ${i20Fee > 0 ? 'text-green-600' : 'text-slate-400'
                                                               }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
                                                                 i20Fee > 0 ? formatCurrency(i20Fee) : 'N/A'
                                                               )}
-                                                            </p>
+                                                            </div>
                                                             {hasDateFilter && i20Date && (() => {
                                                               const paymentDateObj = new Date(i20Date);
                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
@@ -1857,13 +2459,13 @@ const AffiliateManagement: React.FC = () => {
                                                       {/* Total */}
                                                       <div className="flex items-center justify-between p-2 bg-slate-100 rounded border border-slate-300 mt-2">
                                                         <p className="text-xs font-semibold text-slate-900">Total (Period)</p>
-                                                        <p className="text-sm font-bold text-green-700">
+                                                        <div className="text-sm font-bold text-green-700">
                                                           {isLoadingRealPaidAmounts ? (
                                                             <div className="animate-pulse bg-slate-200 h-4 w-20 rounded"></div>
                                                           ) : (
                                                             formatCurrency(selectionFee + scholarshipFee + i20Fee)
                                                           )}
-                                                        </p>
+                                                        </div>
                                                       </div>
                                                     </div>
                                                   </div>

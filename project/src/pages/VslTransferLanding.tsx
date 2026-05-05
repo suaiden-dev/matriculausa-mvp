@@ -395,7 +395,7 @@ const VslTransferLanding: React.FC = () => {
     if (!isRegistered) {
       if (!formData.password) errors.password = 'Senha é obrigatória';
       else if (formData.password.length < 6) errors.password = 'Mínimo 6 caracteres';
-      
+
       if (formData.password !== formData.confirm_password) {
         errors.confirm_password = 'Senhas não coincidem';
       }
@@ -424,7 +424,7 @@ const VslTransferLanding: React.FC = () => {
       }
       const result = await register(formData.email, formData.password, userData);
       if (result?.user?.id && activeTerm) await recordTermAcceptance(activeTerm.id, 'checkout_terms', result.user.id);
-      
+
       setIsRegistered(true); sessionStorage.setItem('vsl_transfer_registered', 'true');
       markAsConverted(formData.email);
       setLoadingProgress(30);
@@ -527,19 +527,19 @@ const VslTransferLanding: React.FC = () => {
           <AnimatePresence mode="wait">
             {showZelleCheckout ? (
               <motion.div key="zelle" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto">
-                 <button onClick={() => setShowZelleCheckout(false)} className="flex items-center gap-2 text-slate-400 font-bold hover:text-white transition-all mb-8 group">
+                <button onClick={() => setShowZelleCheckout(false)} className="flex items-center gap-2 text-slate-400 font-bold hover:text-white transition-all mb-8 group">
                   <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" /> Voltar
                 </button>
                 <div className="bg-slate-900/50 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/10 p-8">
-                  <ZelleCheckout amount={currentFee} feeType="selection_process" onSuccess={() => navigate('/student/onboarding?step=selection_fee&payment=success')} onProcessingChange={() => {}} />
+                  <ZelleCheckout amount={currentFee} feeType="selection_process" onSuccess={() => navigate('/student/onboarding?step=selection_fee&payment=success')} onProcessingChange={() => { }} />
                 </div>
               </motion.div>
             ) : (
               <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
                 <div className="lg:col-span-2 space-y-8">
-                   {(codeApplied || promotionalCouponValidation?.isValid) && <UrgencyBanner timeLeft={timeLeft} />}
-                   
-                   <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
+                  {(codeApplied || promotionalCouponValidation?.isValid) && <UrgencyBanner timeLeft={timeLeft} />}
+
+                  <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
                     {/* Step 1: Info */}
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
@@ -547,7 +547,7 @@ const VslTransferLanding: React.FC = () => {
                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">1</div>
                         Dados do seu Perfil
                       </h3>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Name */}
                         <div className="space-y-2">
@@ -573,7 +573,7 @@ const VslTransferLanding: React.FC = () => {
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
                           <div className="h-[14px] mb-1"></div> {/* Espaçador técnico para alinhamento */}
-                          <PhoneInput international defaultCountry="US" value={formData.phone} onChange={v => setFormData(p => ({...p, phone: v || ''}))} className="vsl-phone-input w-full px-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus-within:ring-2 focus-within:ring-blue-500/50 transition-all text-white" />
+                          <PhoneInput international defaultCountry="US" value={formData.phone} onChange={v => setFormData(p => ({ ...p, phone: v || '' }))} className="vsl-phone-input w-full px-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus-within:ring-2 focus-within:ring-blue-500/50 transition-all text-white" />
                           {fieldErrors.phone && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.phone}</p>}
                         </div>
 
@@ -582,11 +582,11 @@ const VslTransferLanding: React.FC = () => {
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Número de Dependentes</label>
                           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-1 -mt-1 mb-1">Membros da família (cônjuge e/ou filhos)</p>
                           <div className="relative">
-                             <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 z-10" />
-                             <select name="dependents" value={formData.dependents} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-10 py-4 bg-slate-950/50 border border-white/10 rounded-2xl appearance-none focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white cursor-pointer relative z-0">
-                                {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n} dependente{n === 1 ? '' : 's'}</option>)}
-                             </select>
-                             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
+                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 z-10" />
+                            <select name="dependents" value={formData.dependents} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-10 py-4 bg-slate-950/50 border border-white/10 rounded-2xl appearance-none focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white cursor-pointer relative z-0">
+                              {[0, 1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} dependente{n === 1 ? '' : 's'}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
                           </div>
                           {fieldErrors.dependents && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.dependents}</p>}
                         </div>
@@ -599,7 +599,7 @@ const VslTransferLanding: React.FC = () => {
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                 <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Digite sua senha" />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5" /></button>
                               </div>
                               {fieldErrors.password && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.password}</p>}
                             </div>
@@ -608,7 +608,7 @@ const VslTransferLanding: React.FC = () => {
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                                 <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Confirme sua senha" />
-                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
+                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5" /></button>
                               </div>
                               {fieldErrors.confirm_password && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.confirm_password}</p>}
                             </div>
@@ -619,8 +619,8 @@ const VslTransferLanding: React.FC = () => {
                       {/* Coupon Trigger & Area */}
                       {!isNoDiscountLink && (
                         <div className="mt-8">
-                          <div 
-                            className="flex items-center gap-4 cursor-pointer group" 
+                          <div
+                            className="flex items-center gap-4 cursor-pointer group"
                             onClick={() => {
                               const nextState = !hasReferralCode;
                               setHasReferralCode(nextState);
@@ -640,12 +640,12 @@ const VslTransferLanding: React.FC = () => {
 
                           <AnimatePresence>
                             {hasReferralCode && (
-                              <motion.div 
+                              <motion.div
                                 id="coupon-area"
-                                initial={{ height: 0, opacity: 0 }} 
-                                animate={{ height: 'auto', opacity: 1 }} 
-                                exit={{ height: 0, opacity: 0 }} 
-                                transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }} 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
                                 className="overflow-hidden origin-top"
                               >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 pb-2">
@@ -661,7 +661,7 @@ const VslTransferLanding: React.FC = () => {
                                       </div>
                                       {!codeApplied && (
                                         <button type="button" onClick={() => validateDiscountCode()} disabled={isValidating || !couponCode.trim()} className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black uppercase tracking-widest text-xs border border-white/10 transition-all disabled:opacity-50">
-                                          {isValidating ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Validar'}
+                                          {isValidating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Validar'}
                                         </button>
                                       )}
                                     </div>
@@ -676,13 +676,13 @@ const VslTransferLanding: React.FC = () => {
                                     {promotionalCouponValidation?.isValid ? (
                                       <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                                         <span className="font-black text-white text-[10px] tracking-widest">{promotionalCoupon}</span>
-                                        <button type="button" onClick={removePromotionalCoupon} className="text-slate-400 hover:text-white transition-colors"><X className="w-3 h-3"/></button>
+                                        <button type="button" onClick={removePromotionalCoupon} className="text-slate-400 hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                                       </div>
                                     ) : (
                                       <div className="flex gap-2">
                                         <input type="text" value={promotionalCoupon} onChange={e => setPromotionalCoupon(e.target.value.toUpperCase())} placeholder="CUPOM" className="flex-1 px-4 py-3 bg-slate-950/30 border border-white/10 rounded-xl text-center font-black text-white text-base tracking-[0.2em] focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-700" />
                                         <button type="button" onClick={validatePromotionalCoupon} disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()} className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all disabled:opacity-50">
-                                          {isValidatingPromotionalCoupon ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Validar'}
+                                          {isValidatingPromotionalCoupon ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Validar'}
                                         </button>
                                       </div>
                                     )}
@@ -697,13 +697,13 @@ const VslTransferLanding: React.FC = () => {
 
                       {/* Terms */}
                       <div className="mt-8">
-                        <div className="flex items-center gap-4 cursor-pointer group" onClick={() => !isRegistered && setFormData(p => ({...p, termsAccepted: !p.termsAccepted}))}>
-                           <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${formData.termsAccepted ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
-                              {formData.termsAccepted && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
-                           </div>
-                           <label htmlFor="terms" className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors cursor-pointer select-none">
-                              Eu aceito e concordo com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-blue-400 hover:text-blue-300 underline font-black uppercase tracking-widest transition-colors">Termos e Condições</button> do contrato de prestação de serviços.
-                           </label>
+                        <div className="flex items-center gap-4 cursor-pointer group" onClick={() => !isRegistered && setFormData(p => ({ ...p, termsAccepted: !p.termsAccepted }))}>
+                          <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${formData.termsAccepted ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
+                            {formData.termsAccepted && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
+                          </div>
+                          <label htmlFor="terms" className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors cursor-pointer select-none">
+                            Eu aceito e concordo com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-blue-400 hover:text-blue-300 underline font-black uppercase tracking-widest transition-colors">Termos e Condições</button> do contrato de prestação de serviços.
+                          </label>
                         </div>
                         {fieldErrors.termsAccepted && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-2">{fieldErrors.termsAccepted}</p>}
                       </div>
@@ -717,42 +717,42 @@ const VslTransferLanding: React.FC = () => {
                           Forma de Pagamento
                         </h3>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                          { id: 'stripe', name: 'Cartão de Crédito', icon: StripeIcon, price: `$${cardAmountWithFees.toFixed(2)}` },
-                          { id: 'pix', name: 'PIX (Brasil)', icon: PixIcon, price: `R$ ${pixAmountWithFees.toFixed(2)}` },
-                          { id: 'zelle', name: 'Zelle (EUA)', icon: ZelleIcon, price: `$${currentFee.toFixed(2)}` },
-                          { id: 'parcelow', name: 'Boleto/PIX Parcelado', icon: ParcelowIcon, price: `$${currentFee.toFixed(2)}` }
-                        ].map((m) => (
-                          <button key={m.id} type="button" onClick={() => setSelectedMethod(m.id as any)} className={`p-6 rounded-2xl border-2 transition-all flex flex-col gap-4 text-left group ${selectedMethod === m.id ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'border-white/5 bg-slate-950/30 hover:bg-slate-950/50'}`}>
-                            <div className="flex items-center justify-between">
-                              <m.icon className="w-12 h-12" />
-                              <span className="text-lg font-black text-white leading-none tracking-tight">{m.price}</span>
-                            </div>
-                            <span className="font-bold text-slate-100 uppercase tracking-widest text-xs">{m.name}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {selectedMethod === 'parcelow' && (
-                        <div className="mt-6 p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
-                          <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block">Seu CPF (Para Parcelamento)</label>
-                          <input type="text" value={formData.cpf} onChange={e => setFormData(p => ({...p, cpf: formatCPF(e.target.value)}))} placeholder="000.000.000-00" className="w-full p-4 bg-slate-950 border border-white/10 rounded-xl text-white font-black tracking-widest text-center" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {[
+                            { id: 'stripe', name: 'Cartão de Crédito', icon: StripeIcon, price: `$${cardAmountWithFees.toFixed(2)}` },
+                            { id: 'pix', name: 'PIX (Brasil)', icon: PixIcon, price: `R$ ${pixAmountWithFees.toFixed(2)}` },
+                            { id: 'zelle', name: 'Zelle (EUA)', icon: ZelleIcon, price: `$${currentFee.toFixed(2)}` },
+                            { id: 'parcelow', name: 'Boleto/PIX Parcelado', icon: ParcelowIcon, price: `$${currentFee.toFixed(2)}` }
+                          ].map((m) => (
+                            <button key={m.id} type="button" onClick={() => setSelectedMethod(m.id as any)} className={`p-6 rounded-2xl border-2 transition-all flex flex-col gap-4 text-left group ${selectedMethod === m.id ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'border-white/5 bg-slate-950/30 hover:bg-slate-950/50'}`}>
+                              <div className="flex items-center justify-between">
+                                <m.icon className="w-12 h-12" />
+                                <span className="text-lg font-black text-white leading-none tracking-tight">{m.price}</span>
+                              </div>
+                              <span className="font-bold text-slate-100 uppercase tracking-widest text-xs">{m.name}</span>
+                            </button>
+                          ))}
                         </div>
-                      )}
+
+                        {selectedMethod === 'parcelow' && (
+                          <div className="mt-6 p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
+                            <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block">Seu CPF (Para Parcelamento)</label>
+                            <input type="text" value={formData.cpf} onChange={e => setFormData(p => ({ ...p, cpf: formatCPF(e.target.value) }))} placeholder="000.000.000-00" className="w-full p-4 bg-slate-950 border border-white/10 rounded-xl text-white font-black tracking-widest text-center" />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </form>
-              </div>
+                  </form>
+                </div>
 
                 {/* Sidebar Summary */}
                 <div className="lg:col-span-1">
                   <div className="sticky top-24 space-y-6">
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-                      
+
                       <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Resumo do Pagamento</h3>
-                      
+
                       <div className="space-y-6 mb-8 relative z-10">
                         <div className="flex flex-col">
                           <span className="text-xl font-black text-white leading-none mb-6">
@@ -769,7 +769,7 @@ const VslTransferLanding: React.FC = () => {
                               <span className="text-4xl font-black text-white tracking-tighter">
                                 {formattedAmount}
                               </span>
-                              
+
                               {codeApplied && (
                                 <div className="flex items-center justify-end mt-2">
                                   <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/20 flex items-center">
@@ -821,17 +821,17 @@ const VslTransferLanding: React.FC = () => {
             <div className="flex min-h-full items-center justify-center p-4">
               <Transition.Child as={React.Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
                 <Dialog.Panel className="w-full max-w-4xl bg-slate-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                   <div className="px-8 py-6 border-b border-white/10 flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                         <Shield className="w-5 h-5 text-white" />
-                         <Dialog.Title className="text-xl font-black text-white uppercase">Termos e Condições</Dialog.Title>
-                      </div>
-                      <button onClick={() => setShowTermsModal(false)} className="text-white hover:text-white/80 transition-colors"><X className="w-6 h-6"/></button>
-                   </div>
-                   <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
-                      {loadingTerms ? <Loader2 className="w-12 h-12 text-white animate-spin mx-auto py-20"/> : <div className="prose prose-invert max-w-none text-white leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }} />}
+                  <div className="px-8 py-6 border-b border-white/10 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-white" />
+                      <Dialog.Title className="text-xl font-black text-white uppercase">Termos e Condições</Dialog.Title>
                     </div>
-                   <div className="p-6 border-t border-white/10 flex justify-center"><button onClick={() => setShowTermsModal(false)} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold uppercase tracking-widest text-xs transition-all">Fechar</button></div>
+                    <button onClick={() => setShowTermsModal(false)} className="text-white hover:text-white/80 transition-colors"><X className="w-6 h-6" /></button>
+                  </div>
+                  <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+                    {loadingTerms ? <Loader2 className="w-12 h-12 text-white animate-spin mx-auto py-20" /> : <div className="prose prose-invert max-w-none text-white leading-relaxed text-base" dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }} />}
+                  </div>
+                  <div className="p-6 border-t border-white/10 flex justify-center"><button onClick={() => setShowTermsModal(false)} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold uppercase tracking-widest text-xs transition-all">Fechar</button></div>
                 </Dialog.Panel>
               </Transition.Child>
             </div>
@@ -840,7 +840,7 @@ const VslTransferLanding: React.FC = () => {
       </Transition>
 
       <PaymentLoadingOverlay show={loading && !showZelleCheckout} step={loadingStep} progress={loadingProgress} />
-      
+
       <style>{`
         .vsl-phone-input input { background: transparent !important; border: none !important; color: white !important; font-weight: bold !important; width: 100% !important; padding: 0 !important; }
         .vsl-phone-input .PhoneInputCountry { margin-right: 12px; }

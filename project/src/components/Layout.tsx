@@ -23,7 +23,8 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/webnar' ||
                      location.pathname === '/vsl-transfer' ||
                      location.pathname === '/vsl-cos' ||
-                     location.pathname === '/selection-process';
+                     location.pathname === '/selection-process' ||
+                     location.pathname === '/affiliate-admin/onboarding';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');

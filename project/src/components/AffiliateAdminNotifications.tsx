@@ -24,7 +24,7 @@ const AffiliateAdminNotifications: React.FC<AffiliateAdminNotificationsProps> = 
   } = useAffiliateAdminNotifications({
     affiliateAdminId,
     onNotificationReceived: (notification) => {
-      console.log('🔔 Nova notificação recebida para affiliate admin:', notification);
+      console.log('🔔 Nova notificação recebida para agência:', notification);
     }
   });
 

@@ -145,7 +145,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       const isWhitelistedInternalRegister = currentPath === '/student/register';
 
       // REDIRECIONAMENTO APÓS LOGIN
-      if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
+      if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register' || currentPath === '/agencias') {
         const searchParams = new URLSearchParams(location.search);
         const redirectParam = searchParams.get('redirect');
 
@@ -160,7 +160,18 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
 
         if (user.role === 'admin') { navigate('/admin/dashboard', { replace: true }); return; }
-        if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate_admin') {
+          if (!user.onboarding_completed) {
+            navigate('/affiliate-admin/onboarding', { replace: true });
+            return;
+          }
+          if (!user.is_active) {
+            navigate('/affiliate-admin/pending-approval', { replace: true });
+            return;
+          }
+          navigate('/affiliate-admin/dashboard', { replace: true });
+          return;
+        }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
 
         if (user.role === 'student') {
@@ -201,8 +212,30 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/admin/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'affiliate_admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
-        navigate('/affiliate-admin/dashboard', { replace: true }); return;
+      if (user.role === 'affiliate_admin') {
+        const tryingToAccessOtherDashboard = (currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || 
+                                             currentPath.startsWith('/school/') || 
+                                             currentPath.startsWith('/admin/') || 
+                                             currentPath.startsWith('/seller/');
+                                             
+        const isProtectedAffiliatePath = currentPath.startsWith('/affiliate-admin/dashboard') || 
+                                         currentPath.startsWith('/affiliate-admin/onboarding') || 
+                                         currentPath.startsWith('/affiliate-admin/pending-approval');
+
+        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath) {
+          if (!user.onboarding_completed && currentPath !== '/affiliate-admin/onboarding') {
+            navigate('/affiliate-admin/onboarding', { replace: true });
+            return;
+          }
+          if (user.onboarding_completed && !user.is_active && currentPath !== '/affiliate-admin/pending-approval') {
+            navigate('/affiliate-admin/pending-approval', { replace: true });
+            return;
+          }
+          if (user.onboarding_completed && user.is_active && (tryingToAccessOtherDashboard || currentPath === '/affiliate-admin/onboarding' || currentPath === '/affiliate-admin/pending-approval')) {
+            navigate('/affiliate-admin/dashboard', { replace: true });
+            return;
+          }
+        }
       }
 
       if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {

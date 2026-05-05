@@ -71,7 +71,7 @@ const AffiliatePaymentRequests: React.FC = () => {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-slate-900">Affiliate Payment Requests</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Agency Payment Requests</h2>
           <button
             onClick={loadRequests}
             className="px-3 py-1.5 text-sm rounded-lg bg-slate-100 hover:bg-slate-200"
@@ -89,15 +89,15 @@ const AffiliatePaymentRequests: React.FC = () => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CreditCard className="h-8 w-8 text-gray-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No affiliate payment requests</h3>
-            <p className="text-gray-500">Requests submitted by affiliates will appear here</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No agency payment requests</h3>
+            <p className="text-gray-500">Requests submitted by agencies will appear here</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Affiliate</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agency</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>

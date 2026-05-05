@@ -44,7 +44,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   // Função helper para obter o nome de exibição (prioriza company_name)
   const getDisplayName = () => {
     const companyName = (userProfile as any)?.company_name;
-    return companyName && companyName.trim() ? companyName : (user?.name || 'Admin de Afiliados');
+    return companyName && companyName.trim() ? companyName : (user?.name || 'Agência');
   };
 
   // Monitorar deadlines do I-20
@@ -136,8 +136,8 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 truncate">Affiliate Admin Panel</h3>
-                <p className="text-sm text-slate-500 truncate">Affiliate Administrator</p>
+                <h3 className="font-semibold text-slate-900 truncate">Agency Panel</h3>
+                <p className="text-sm text-slate-500 truncate">Agency</p>
               </div>
             </div>
             
@@ -253,7 +253,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{getDisplayName()}</p>
-                    <p className="text-xs text-slate-500">Affiliate Administrator</p>
+                    <p className="text-xs text-slate-500">Agency</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>

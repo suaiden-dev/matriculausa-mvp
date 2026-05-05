@@ -24,7 +24,7 @@ const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-history'>('financial-overview');
+  const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-balance'>('financial-overview');
 
   // Payment request modal state
   const [showPaymentRequestModal, setShowPaymentRequestModal] = useState(false);
@@ -48,6 +48,27 @@ const PaymentManagement: React.FC = () => {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
+
+  // Commission balance state
+  interface CommissionSummary {
+    commission_per_sale: number | null;
+    vendas: number;
+    total_acumulado: number;
+    total_pago: number;
+    saldo: number;
+  }
+  interface CommissionHistoryRow {
+    completed_at: string;
+    aluno_name: string;
+    aluno_email: string;
+    seller_name: string;
+    seller_referral_code: string;
+    payment_amount: number;
+    commission_amount: number;
+  }
+  const [commissionSummary, setCommissionSummary] = useState<CommissionSummary | null>(null);
+  const [commissionHistory, setCommissionHistory] = useState<CommissionHistoryRow[]>([]);
+  const [loadingCommission, setLoadingCommission] = useState(false);
 
   // Flags para evitar requisições redundantes/concorrentes
   const hasLoadedBalanceForUser = useRef<string | null>(null);
@@ -460,6 +481,92 @@ const PaymentManagement: React.FC = () => {
     }
   }, [user?.id]);
 
+  // Carregar dados de comissão por agência
+  const loadCommissionData = useCallback(async () => {
+    const uid = user?.id;
+    if (!uid) return;
+    setLoadingCommission(true);
+    try {
+      const { data: aaList } = await supabase
+        .from('affiliate_admins')
+        .select('id, commission_per_sale')
+        .eq('user_id', uid)
+        .limit(1);
+      if (!aaList || aaList.length === 0) {
+        setCommissionSummary({ commission_per_sale: null, vendas: 0, total_acumulado: 0, total_pago: 0, saldo: 0 });
+        setCommissionHistory([]);
+        return;
+      }
+      const { id: affiliateAdminId, commission_per_sale } = aaList[0];
+
+      const { data: sellers } = await supabase
+        .from('sellers')
+        .select('id, name, referral_code')
+        .eq('affiliate_admin_id', affiliateAdminId);
+
+      if (!sellers || sellers.length === 0) {
+        setCommissionSummary({ commission_per_sale, vendas: 0, total_acumulado: 0, total_pago: 0, saldo: 0 });
+        setCommissionHistory([]);
+        return;
+      }
+      const sellerCodes = sellers.map((s: any) => s.referral_code);
+      const sellersByCode: Record<string, any> = Object.fromEntries(sellers.map((s: any) => [s.referral_code, s]));
+
+      const [referralsResult, paidResult] = await Promise.all([
+        supabase
+          .from('affiliate_referrals')
+          .select('affiliate_code, referred_id, payment_amount, commission_amount, completed_at')
+          .in('affiliate_code', sellerCodes)
+          .not('commission_amount', 'is', null)
+          .order('completed_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('affiliate_payment_requests')
+          .select('amount_usd')
+          .eq('referrer_user_id', uid)
+          .eq('status', 'paid'),
+      ]);
+
+      const referrals = referralsResult.data || [];
+      const paidRequests = paidResult.data || [];
+
+      const referredIds = [...new Set(referrals.map((r: any) => r.referred_id).filter(Boolean))];
+      let profilesByUserId: Record<string, any> = {};
+      if (referredIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', referredIds);
+        profilesByUserId = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]));
+      }
+
+      const total_acumulado = referrals.reduce((sum: number, r: any) => sum + (Number(r.commission_amount) || 0), 0);
+      const total_pago = paidRequests.reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+
+      setCommissionSummary({
+        commission_per_sale,
+        vendas: referrals.length,
+        total_acumulado,
+        total_pago,
+        saldo: total_acumulado - total_pago,
+      });
+
+      setCommissionHistory(referrals.map((r: any) => ({
+        completed_at: r.completed_at,
+        aluno_name: profilesByUserId[r.referred_id]?.full_name || 'Unknown',
+        aluno_email: profilesByUserId[r.referred_id]?.email || '',
+        seller_name: sellersByCode[r.affiliate_code]?.name || r.affiliate_code,
+        seller_referral_code: r.affiliate_code,
+        payment_amount: Number(r.payment_amount) || 0,
+        commission_amount: Number(r.commission_amount) || 0,
+      })));
+    } catch (e) {
+      console.error('[PaymentManagement] Erro ao carregar comissão:', e);
+    } finally {
+      setLoadingCommission(false);
+    }
+  }, [user?.id]);
+
   // Load affiliate payment requests (memoizado)
   const loadAffiliatePaymentRequests = useCallback(async () => {
     const uid = user?.id;
@@ -612,6 +719,14 @@ const PaymentManagement: React.FC = () => {
     });
   };
 
+  // Carregar dados de comissão ao montar ou trocar para a aba
+  useEffect(() => {
+    if (!user?.id) return;
+    if (activeTab === 'commission-balance') {
+      loadCommissionData();
+    }
+  }, [user?.id, activeTab, loadCommissionData]);
+
   // Load inicial e polling controlado pela aba ativa
   useEffect(() => {
     if (!user?.id) return;
@@ -723,6 +838,20 @@ const PaymentManagement: React.FC = () => {
                       }`} />
                     Payment Requests
                   </button>
+                  <button
+                    onClick={() => setActiveTab('commission-balance')}
+                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${activeTab === 'commission-balance'
+                        ? 'border-[#05294E] text-[#05294E]'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                    type="button"
+                    aria-selected={activeTab === 'commission-balance'}
+                    role="tab"
+                  >
+                    <DollarSign className={`w-5 h-5 mr-2 transition-colors ${activeTab === 'commission-balance' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                    Commission Balance
+                  </button>
                 </nav>
               </div>
             </div>
@@ -734,8 +863,8 @@ const PaymentManagement: React.FC = () => {
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-slate-900">
                       {activeTab === 'financial-overview' ? 'Financial Overview' :
-                        activeTab === 'payment-requests' ? 'Affiliate Payment Requests' :
-                          'Commission Transaction History'}
+                        activeTab === 'payment-requests' ? 'Payment Requests' :
+                          'Commission Balance'}
                     </h2>
                     <p className="text-sm text-slate-600 mt-1">
                       {activeTab === 'financial-overview'
@@ -980,6 +1109,145 @@ const PaymentManagement: React.FC = () => {
                             )}
                           </div>
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Commission Balance Tab */}
+      {activeTab === 'commission-balance' && (
+        <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Comissão por Venda</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {loadingCommission ? (
+                      <span className="animate-pulse bg-slate-200 h-8 w-16 rounded inline-block"></span>
+                    ) : commissionSummary?.commission_per_sale != null ? (
+                      `$${commissionSummary.commission_per_sale}`
+                    ) : (
+                      <span className="text-slate-400 text-lg">Não configurado</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-slate-100 rounded-xl">
+                  <TrendingUp className="w-6 h-6 text-slate-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Vendas Comissionadas</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {loadingCommission ? (
+                      <span className="animate-pulse bg-slate-200 h-8 w-12 rounded inline-block"></span>
+                    ) : (
+                      commissionSummary?.vendas ?? 0
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Total Acumulado</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {loadingCommission ? (
+                      <span className="animate-pulse bg-slate-200 h-8 w-20 rounded inline-block"></span>
+                    ) : (
+                      formatCurrency(commissionSummary?.total_acumulado ?? 0)
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">Já pago: {formatCurrency(commissionSummary?.total_pago ?? 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-orange-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-orange-100 rounded-xl">
+                  <Award className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Saldo a Receber</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {loadingCommission ? (
+                      <span className="animate-pulse bg-slate-200 h-8 w-20 rounded inline-block"></span>
+                    ) : (
+                      formatCurrency(commissionSummary?.saldo ?? 0)
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">Disponível para saque</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Commission History Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-medium text-slate-900">Histórico de Comissões</h3>
+              <p className="text-sm text-slate-500 mt-1">Todas as comissões geradas nas vendas de Selection Process</p>
+            </div>
+
+            {loadingCommission ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+              </div>
+            ) : commissionHistory.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <DollarSign className="h-8 w-8 text-blue-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma comissão ainda</h3>
+                <p className="text-gray-500">Comissões aparecerão aqui após vendas de Selection Process</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Pago</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Comissão</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {commissionHistory.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {row.completed_at ? new Date(row.completed_at).toLocaleDateString('en-US') : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">{row.aluno_name}</div>
+                          <div className="text-xs text-gray-500">{row.aluno_email}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">{row.seller_name}</div>
+                          <div className="text-xs text-gray-400 font-mono">{row.seller_referral_code}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">{formatCurrency(row.payment_amount)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right text-blue-600">{formatCurrency(row.commission_amount)}</td>
                       </tr>
                     ))}
                   </tbody>

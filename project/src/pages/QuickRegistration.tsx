@@ -184,7 +184,7 @@ const QuickRegistration: React.FC = () => {
       const urlName = searchParams.get('name');
       const urlEmail = searchParams.get('email');
       const urlPhone = searchParams.get('phone');
-      
+
       const saved = sessionStorage.getItem('matricula_quick_form');
       const parsed = saved ? JSON.parse(saved) : null;
 
@@ -928,11 +928,11 @@ const QuickRegistration: React.FC = () => {
         clearInterval(fetchInterval);
         setLoadingProgress(100);
         setLoadingStep("Redirecionando para o pagamento...");
-        
+
         // Limpar persistência antes de redirecionar para fora
         sessionStorage.removeItem('matricula_quick_selected_method');
         sessionStorage.removeItem('matricula_quick_show_zelle');
-        
+
         // Pequeno delay para o usuário ver o 100%
         await new Promise(resolve => setTimeout(resolve, 800));
         window.location.href = paymentUrl;
@@ -1861,10 +1861,10 @@ const QuickRegistration: React.FC = () => {
         </Dialog>
       </Transition>
 
-      <PaymentLoadingOverlay 
-        show={loading && !showZelleCheckout} 
-        step={loadingStep} 
-        progress={loadingProgress} 
+      <PaymentLoadingOverlay
+        show={loading && !showZelleCheckout}
+        step={loadingStep}
+        progress={loadingProgress}
       />
     </div>
   );

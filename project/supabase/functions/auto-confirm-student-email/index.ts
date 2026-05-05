@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é aluno
-    if (role !== 'student') {
-      console.log(`[auto-confirm-student-email] Role is not 'student', skipping auto-confirmation:`, role);
+    // Verificar se é aluno ou affiliate_admin
+    if (role !== 'student' && role !== 'affiliate_admin') {
+      console.log(`[auto-confirm-student-email] Role is not 'student' or 'affiliate_admin', skipping auto-confirmation:`, role);
       return new Response(
-        JSON.stringify({ error: 'Auto-confirmation only for students', skipped: true }),
+        JSON.stringify({ error: 'Auto-confirmation only for students and affiliate_admins', skipped: true }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log(`[auto-confirm-student-email] Confirming email for student:`, userId);
+    console.log(`[auto-confirm-student-email] Confirming email for user (${role}):`, userId);
 
     // Confirmar email do usuário usando Admin API
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -58,14 +58,18 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      console.error('[auto-confirm-student-email] Error confirming email:', error);
+      console.error('[auto-confirm-student-email] Error confirming email in updateUserById:', {
+        message: error.message,
+        status: error.status,
+        details: error
+      });
       return new Response(
         JSON.stringify({ error: error.message, details: error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[auto-confirm-student-email] Email confirmed successfully for student:', userId);
+    console.log('[auto-confirm-student-email] Email confirmed successfully for:', userId);
 
     return new Response(
       JSON.stringify({ success: true, user: data.user }),

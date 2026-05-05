@@ -67,6 +67,9 @@ const NotFound = React.lazy(() => import('./pages/NotFound'));
 const WebinárioRegistrationLanding = React.lazy(() => import('./pages/WebinarioRegistrationLanding'));
 const VslTransferLanding = React.lazy(() => import('./pages/VslTransferLanding'));
 const VslCosLanding = React.lazy(() => import('./pages/VslCosLanding'));
+const AgencyLogin = React.lazy(() => import('./pages/AgencyLogin'));
+const AffiliateAdminOnboarding = React.lazy(() => import('./pages/AffiliateAdminOnboarding'));
+const AffiliateAdminPendingApproval = React.lazy(() => import('./pages/AffiliateAdminPendingApproval'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -155,6 +158,11 @@ const AppContent = () => {
           <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
           {/* Admin Dashboard Direct Route */}
           <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
+          {/* Agency Login */}
+          <Route path="/agencias" element={<AgencyLogin />} />
+          {/* Agency Onboarding */}
+          <Route path="/affiliate-admin/onboarding" element={<AffiliateAdminOnboarding />} />
+          <Route path="/affiliate-admin/pending-approval" element={<AffiliateAdminPendingApproval />} />
           {/* Affiliate Admin Dashboard */}
           <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
           {/* Seller Dashboard */}

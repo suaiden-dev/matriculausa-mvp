@@ -133,10 +133,9 @@ const SellerManagement: React.FC = () => {
           nome_seller: userProfile.full_name || userName,
           email_affiliate_admin: affiliateAdmin?.email || "",
           nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
-          o_que_enviar: `O affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"} promoveu ${userProfile.full_name || userName} a seller. Código de referência: ${sellerData?.referral_code || "N/A"}`,
+          o_que_enviar: `A agência ${affiliateAdmin?.full_name || "Agência"} promoveu ${userProfile.full_name || userName} a seller. Código de referência: ${sellerData?.referral_code || "N/A"}`,
           seller_id: userId,
           referral_code: sellerData?.referral_code || "",
-          commission_rate: sellerData?.commission_rate || 0.1,
           created_by: "affiliate_admin"
         };
 
@@ -168,10 +167,9 @@ const SellerManagement: React.FC = () => {
           phone_seller: userProfile.phone || "",
           email_affiliate_admin: affiliateAdmin?.email || "",
           nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
-          o_que_enviar: `Parabéns! Você foi promovido a seller pelo affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,
+          o_que_enviar: `Parabéns! Você foi promovido a seller pela agência ${affiliateAdmin?.full_name || "Agência"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos!`,
           seller_id: userId,
           referral_code: sellerData?.referral_code || "",
-          commission_rate: sellerData?.commission_rate || 0.1,
           dashboard_link: "/seller/dashboard"
         };
 

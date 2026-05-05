@@ -36,6 +36,7 @@ export interface Affiliate {
   total_students: number;
   total_revenue: number;
   is_active: boolean;
+  commission_per_sale: number | null;
   sellers: Seller[];
   students: Student[];
 }
@@ -87,7 +88,7 @@ export const useAffiliateData = () => {
       // 1. Buscar todos os affiliate admins
       const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
         .from('affiliate_admins')
-        .select('id, user_id, is_active, created_at')
+        .select('id, user_id, is_active, created_at, commission_per_sale')
         .order('created_at', { ascending: false });
 
       if (affiliateAdminsError) throw affiliateAdminsError;
@@ -200,6 +201,7 @@ export const useAffiliateData = () => {
             total_students: studentsData.length,
             total_revenue: totalRevenue,
             is_active: !!affiliateAdmin.is_active,
+            commission_per_sale: affiliateAdmin.commission_per_sale ?? null,
             sellers: sellers.map(s => ({
               ...s,
               students_count: studentsData.filter(std => std.seller_referral_code === s.referral_code).length,
