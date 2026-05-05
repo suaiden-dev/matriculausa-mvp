@@ -82,7 +82,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const baseClasses = "relative inline-block text-left";
   
   const buttonClasses = {
-    header: "inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors",
+    header: "inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-transparent hover:bg-slate-100/50 focus:outline-none focus:ring-2 focus:ring-[#05294E] transition-colors",
     footer: "inline-flex items-center px-3 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors",
     compact: "inline-flex items-center px-2 py-1 text-base font-bold text-gray-700 hover:text-gray-900 transition-colors",
     dashboard: "inline-flex items-center px-2 py-1 lg:px-3 lg:py-2 text-sm font-medium rounded-xl text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors border border-gray-100 hover:border-gray-200 h-[38px] lg:h-[42px] shadow-sm"

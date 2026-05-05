@@ -328,16 +328,17 @@ const Overview: React.FC = () => {
 
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
 
-      {/* Welcome Message / Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 pb-8 sm:pb-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
+      {/* Welcome Message */}
+      <div className="mb-6">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+          {t('studentDashboard.welcome')}, {userProfile?.full_name || user?.email || t('studentDashboard.title').replace(' Dashboard', '')}!
+        </h2>
+      </div>
+
+      {/* Onboarding Banner / Hero */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 pb-8 sm:pb-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl mb-8">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
-          <div className="mb-3 sm:mb-4">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">
-              {t('studentDashboard.welcome')}, {userProfile?.full_name || user?.email || t('studentDashboard.title').replace(' Dashboard', '')}!
-            </h2>
-          </div>
-
           {/* Indicador de passo atual do onboarding - Seamless Style Vertical */}
           {!userProfile?.onboarding_completed && (
             <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">

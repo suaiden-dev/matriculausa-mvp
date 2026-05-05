@@ -169,7 +169,7 @@ const Header: React.FC = () => {
               <div className="relative flex items-center gap-2">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="flex items-center space-x-3 p-2 rounded-xl bg-transparent hover:bg-slate-100/50 transition-colors"
                 >
                   {
                     user?.avatar_url && user.role === 'student' ? (

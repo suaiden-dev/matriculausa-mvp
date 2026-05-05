@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe, ChevronLeft, ChevronRight, ArrowDown } from 'lucide-react';
+import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, AlertTriangle, Monitor, MapPin, Briefcase, Globe, ChevronLeft, ChevronRight, ArrowDown, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -495,7 +495,7 @@ const Scholarships: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+      <section className="relative pt-32 pb-32 lg:pt-44 lg:pb-40 overflow-hidden bg-[#05294E] min-h-[600px] lg:min-h-[650px] flex items-center">
         {/* Background Image Layer */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 lg:right-0 lg:left-auto lg:w-[65%]">
@@ -554,9 +554,9 @@ const Scholarships: React.FC = () => {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
         {/* Modern Filter Bar */}
-        <div id="scholarships-filters" className="bg-white shadow-lg rounded-2xl border border-slate-200 p-6 mb-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+        <div id="scholarships-filters" className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
           {/* Search Input */}
           <div className="flex items-center flex-1 min-w-[220px] max-w-sm bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 focus-within:ring-2 focus-within:ring-[#05294E]">
             <Search className="h-5 w-5 text-slate-400 mr-2" aria-hidden="true" />
@@ -890,50 +890,47 @@ const Scholarships: React.FC = () => {
                         </div>
                       </div>
 
-                    {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
+                    {/* Action Buttons - Agora na mesma linha (75% / 25%) */}
                     <div className="px-6 pb-6 mt-auto">
-                      <div className="flex flex-col gap-3">
-                        {/* View Details Button */}
-                        <button
-                          onClick={() => openScholarshipModal(scholarship)}
-                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                          aria-label={`View details for ${scholarship.title} scholarship`}
-                        >
-                          <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
-                        </button>
-                        
-                        {/* Apply Now Button - Maior */}
+                      <div className="flex flex-row gap-3">
+                        {/* Apply Now Button - 75% */}
                         {isBlocked ? (
                           <button
                             disabled
-                            className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                            className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                           >
-                            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
+                            <span className="relative z-10 truncate">{t('scholarshipDeadline.3800Expired')}</span>
                           </button>
                         ) : (!isAuthenticated) ? (
                           <button
-                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={() => navigate(`/login${location.search}`)}
                             aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                            <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                           </button>
                         ) : (
                           <button
-                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={() => navigate('/student/onboarding')}
                             aria-label={`Apply for ${scholarship.title} scholarship`}
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                            <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                           </button>
                         )}
+                        
+                        {/* View Details Button - 25% (Ícone de Olhinho) */}
+                        <button
+                          onClick={() => openScholarshipModal(scholarship)}
+                          className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
+                          aria-label={`View details for ${scholarship.title} scholarship`}
+                          title={t('scholarshipsPage.scholarshipCard.details')}
+                        >
+                          <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -1231,69 +1228,65 @@ const Scholarships: React.FC = () => {
 
                       </div>
 
-                     {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
+                     {/* Action Buttons - Agora na mesma linha (75% / 25%) */}
                      <div className="px-6 pb-6 mt-auto">
-                       <div className="flex flex-col gap-3">
-                         {/* View Details Button */}
-                         <button
-                           onClick={() => openScholarshipModal(scholarship)}
-                           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                           aria-label={`View details for ${scholarship.title} scholarship`}
-                         >
-                           <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
-                         </button>
-                         
-                         {/* Badge de bolsa inativa/expirada */}
-                         {!scholarship.is_active && (
-                           <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
-                             <AlertTriangle className="h-3 w-3" />
-                             Expirada
-                           </div>
-                         )}
+                       {/* Badge de bolsa inativa/expirada movido para fora do flow principal de botões */}
+                       {!scholarship.is_active && (
+                         <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
+                           <AlertTriangle className="h-3 w-3" />
+                           Expirada
+                         </div>
+                       )}
 
-                         {/* Apply Now Button - Maior */}
+                       <div className="flex flex-row gap-3">
+                         {/* Apply Now Button - 75% */}
                          {!scholarship.is_active || isBlocked ? (
                            <button
                              disabled
-                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                            >
-                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                             <span className="relative z-10">
+                             <span className="relative z-10 truncate">
                                {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
                              </span>
                            </button>
                          ) : (!isAuthenticated) ? (
                            <button
-                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={() => navigate(`/login${location.search}`)}
                              aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                             <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                            </button>
                          ) : isBlocked ? (
                            <button
                              disabled
-                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                            >
-                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
+                             <span className="relative z-10 truncate">{t('scholarshipDeadline.3800Expired')}</span>
                            </button>
                          ) : (
                            <button
-                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={() => navigate('/student/onboarding')}
                              aria-label={`Apply for ${scholarship.title} scholarship`}
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                             <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                            </button>
                          )}
+
+                         {/* View Details Button - 25% (Ícone de Olhinho) */}
+                         <button
+                           onClick={() => openScholarshipModal(scholarship)}
+                           className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
+                           aria-label={`View details for ${scholarship.title} scholarship`}
+                           title={t('scholarshipsPage.scholarshipCard.details')}
+                         >
+                           <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
+                         </button>
                        </div>
                      </div>
                      

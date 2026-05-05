@@ -8,7 +8,6 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
-import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { useAuth } from '../hooks/useAuth';
 
 const PAGE_SIZE = 21;
@@ -141,10 +140,9 @@ const Universities: React.FC = () => {
     );
   }
   
-  // Check if user needs to pay selection process fee (only for authenticated students)
-  if (isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee) {
-    return <PaymentRequiredBlocker pageType="universities" />;
-  }
+  // Check if user needs to pay selection process fee
+  const needsToPaySelectionFee = isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee;
+  const isLocked = !isAuthenticated || needsToPaySelectionFee;
 
   // Get unique states for filter a partir de allUniversities
   const states = Array.from(new Set(allUniversities.map(school => {
@@ -182,7 +180,7 @@ const Universities: React.FC = () => {
       <Header />
       <div className="bg-white min-h-screen">
         {/* Hero Section */}
-        <section className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+        <section className="relative pt-32 pb-32 lg:pt-44 lg:pb-40 overflow-hidden bg-[#05294E] min-h-[600px] lg:min-h-[650px] flex items-center">
           {/* Background Image Layer */}
           <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 lg:left-0 lg:w-[65%]">
@@ -241,9 +239,9 @@ const Universities: React.FC = () => {
           </div>
         </section>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
           {/* Search and Filters */}
-          <div id="university-search" className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
+          <div id="university-search" className="mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Search */}
             <div className="relative">
@@ -300,25 +298,44 @@ const Universities: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
               {filteredFeaturedUniversities.map((school) => (
                 <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
-                  {/* Overlay de blur quando não autenticado */}
-                  {!isAuthenticated && (
+                  {/* Overlay de blur quando não autenticado ou pendente pagamento */}
+                  {isLocked && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                       <div className="text-center p-6">
                         <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                           <Lock className="h-8 w-8 text-[#05294E]" />
                         </div>
-                        <h4 className="text-lg font-bold text-slate-900 mb-2">
-                          {t('home.featuredUniversities.lockedTitle')}
-                        </h4>
-                        <p className="text-sm text-slate-600 mb-4">
-                          {t('home.featuredUniversities.lockedDescription')}
-                        </p>
-                        <button
-                          onClick={() => navigate(`/login${location.search}`)}
-                          className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
-                        >
-                          {t('home.featuredUniversities.loginToView')}
-                        </button>
+                        {needsToPaySelectionFee ? (
+                          <>
+                            <h4 className="text-lg font-bold text-slate-900 mb-2">
+                              Desbloqueie o Acesso
+                            </h4>
+                            <p className="text-sm text-slate-600 mb-4">
+                              Inicie o Processo Seletivo para ver todos os detalhes das universidades.
+                            </p>
+                            <button
+                              onClick={() => navigate(`/student/onboarding`)}
+                              className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
+                            >
+                              Iniciar Processo Seletivo
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <h4 className="text-lg font-bold text-slate-900 mb-2">
+                              {t('home.featuredUniversities.lockedTitle')}
+                            </h4>
+                            <p className="text-sm text-slate-600 mb-4">
+                              {t('home.featuredUniversities.lockedDescription')}
+                            </p>
+                            <button
+                              onClick={() => navigate(`/login${location.search}`)}
+                              className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                            >
+                              {t('home.featuredUniversities.loginToView')}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -337,7 +354,7 @@ const Universities: React.FC = () => {
                         src={school.image_url || school.logo_url}
                         alt={`${school.name} campus`}
                         className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${
-                          !isAuthenticated ? 'blur-lg' : ''
+                          isLocked ? 'blur-lg' : ''
                         }`}
                         onError={(e) => {
                           // Fallback para div com ícone se a imagem falhar
@@ -372,14 +389,14 @@ const Universities: React.FC = () => {
                   {/* University Info */}
                   <div className="flex flex-col flex-1 p-6">
                     <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
-                      !isAuthenticated ? 'blur-sm' : ''
+                      isLocked ? 'blur-sm' : ''
                     }`}>
                       {school.name}
                     </h3>
                     
                     {/* Location */}
                     <div className={`flex items-center text-slate-600 mb-4 h-6 ${
-                      !isAuthenticated ? 'blur-sm' : ''
+                      isLocked ? 'blur-sm' : ''
                     }`}>
                       <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
                       <span className="text-sm truncate">{school.location}</span>
@@ -388,7 +405,7 @@ const Universities: React.FC = () => {
                     {/* Programs Preview */}
                     <div className="mb-6 h-[52px] overflow-hidden">
                       <div className={`flex flex-wrap gap-2 ${
-                        !isAuthenticated ? 'blur-sm' : ''
+                        isLocked ? 'blur-sm' : ''
                       }`}>
                         {school.programs?.slice(0, 3).map((program: string, index: number) => (
                           <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
@@ -428,25 +445,44 @@ const Universities: React.FC = () => {
             ))
           ) : filteredSchools.map((school) => (
             <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
-              {/* Overlay de blur quando não autenticado */}
-              {!isAuthenticated && (
+              {/* Overlay de blur quando não autenticado ou pendente pagamento */}
+              {isLocked && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                   <div className="text-center p-6">
                     <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Lock className="h-8 w-8 text-[#05294E]" />
                     </div>
-                    <h4 className="text-lg font-bold text-slate-900 mb-2">
-                      {t('home.featuredUniversities.lockedTitle')}
-                    </h4>
-                    <p className="text-sm text-slate-600 mb-4">
-                      {t('home.featuredUniversities.lockedDescription')}
-                    </p>
-                    <button
-                      onClick={() => navigate(`/login${location.search}`)}
-                      className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
-                    >
-                      {t('home.featuredUniversities.loginToView')}
-                    </button>
+                    {needsToPaySelectionFee ? (
+                      <>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">
+                          Desbloqueie o Acesso
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4">
+                          Inicie o Processo Seletivo para ver todos os detalhes das universidades.
+                        </p>
+                        <button
+                          onClick={() => navigate(`/student/onboarding`)}
+                          className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          Iniciar Processo Seletivo
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">
+                          {t('home.featuredUniversities.lockedTitle')}
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4">
+                          {t('home.featuredUniversities.lockedDescription')}
+                        </p>
+                        <button
+                          onClick={() => navigate(`/login${location.search}`)}
+                          className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                        >
+                          {t('home.featuredUniversities.loginToView')}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -457,7 +493,7 @@ const Universities: React.FC = () => {
                     src={school.image_url || school.logo_url}
                     alt={`${school.name} campus`}
                     className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
-                      !isAuthenticated ? 'blur-lg' : ''
+                      isLocked ? 'blur-lg' : ''
                     }`}
                     onError={(e) => {
                       // Fallback para div com ícone se a imagem falhar
@@ -490,14 +526,14 @@ const Universities: React.FC = () => {
               {/* University Info */}
               <div className="flex flex-col flex-1 p-6">
                 <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
-                  !isAuthenticated ? 'blur-sm' : ''
+                  isLocked ? 'blur-sm' : ''
                 }`}>
                   {school.name}
                 </h3>
                 
                 {/* Location */}
                 <div className={`flex items-center text-slate-600 mb-4 h-6 ${
-                  !isAuthenticated ? 'blur-sm' : ''
+                  isLocked ? 'blur-sm' : ''
                 }`}>
                   <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
                   <span className="text-sm truncate">{school.location}</span>
@@ -506,7 +542,7 @@ const Universities: React.FC = () => {
                 {/* Programs Preview */}
                 <div className="mb-6 h-[52px] overflow-hidden">
                   <div className={`flex flex-wrap gap-2 ${
-                    !isAuthenticated ? 'blur-sm' : ''
+                    isLocked ? 'blur-sm' : ''
                   }`}>
                     {school.programs?.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">

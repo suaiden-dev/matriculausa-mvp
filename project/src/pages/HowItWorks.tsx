@@ -106,7 +106,7 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+    <section ref={ref} className="relative pt-32 pb-32 lg:pt-44 lg:pb-40 overflow-hidden bg-[#05294E] min-h-[600px] lg:min-h-[650px] flex items-center">
       {/* Background Image Layer with Responsive Design */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 lg:right-auto lg:left-0 lg:w-[65%]">
