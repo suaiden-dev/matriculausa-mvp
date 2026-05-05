@@ -8,6 +8,7 @@ import {
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
 import { StudentRecord } from './StudentApplicationsView';
+import { UserX } from 'lucide-react';
 
 interface InternalAdmin {
   id: string;
@@ -35,9 +36,17 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return getUnreadCount(studentId) + getGlobalUnreadCount(studentId);
   };
 
-  // Filtramos apenas os que pagaram a selection fee ou estão inscritos
+  // Separar dropped dos demais
+  const droppedStudents = useMemo(() => {
+    return students.filter(s => s.is_dropped);
+  }, [students]);
+
+  // Filtramos apenas os que pagaram a selection fee ou estão inscritos, excluindo dropped
   const displayStudents = useMemo(() => {
-    return students.filter(s => s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma');
+    return students.filter(s =>
+      !s.is_dropped &&
+      (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')
+    );
   }, [students]);
 
   // Filter out stages that should be hidden
@@ -108,11 +117,28 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
   return (
     <div className="h-full flex flex-col">
-      {/* Summary Stats - Simplified */}
-      <div className="px-1 pb-2">
+      {/* Summary Stats + Color Legend */}
+      <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
           {displayStudents.length} students in pipeline
+          {droppedStudents.length > 0 && (
+            <span className="ml-2 text-red-400">· {droppedStudents.length} dropped</span>
+          )}
         </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Process type:</span>
+          {[
+            { label: 'Initial',   color: 'bg-sky-400' },
+            { label: 'COS',       color: 'bg-violet-400' },
+            { label: 'Transfer',  color: 'bg-amber-400' },
+            { label: 'Resident',  color: 'bg-teal-400' },
+          ].map(({ label, color }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-sm ${color} flex-shrink-0`} />
+              <span className="text-xs text-gray-500">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Kanban Board - Horizontal Scrollable */}
@@ -137,6 +163,24 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
               </div>
             );
           })}
+
+          {/* Coluna especial: Dropped */}
+          <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
+            <KanbanColumn
+              stage={{
+                key: 'dropped' as ApplicationFlowStageKey,
+                label: 'Dropped',
+                shortLabel: 'Dropped',
+                icon: UserX,
+                description: 'Students who dropped out of the process',
+              }}
+              students={droppedStudents}
+              onStudentClick={handleStudentClick}
+              getUnreadCount={getStudentTotalUnread}
+              internalAdmins={internalAdmins}
+              isDropped
+            />
+          </div>
         </div>
       </div>
 

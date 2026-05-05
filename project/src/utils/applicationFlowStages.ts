@@ -21,7 +21,8 @@ export type ApplicationFlowStageKey =
   | 'i539_cos_package'
   | 'acceptance_letter'
   | 'transfer_form'
-  | 'enrollment';
+  | 'enrollment'
+  | 'dropped';
 
 export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'skipped';
 
@@ -105,6 +106,21 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     description: 'Student has paid the I-20 Control Fee'
   },
   {
+    key: 'acceptance_letter',
+    label: 'Acceptance Letter',
+    shortLabel: 'Acceptance',
+    icon: BookOpen,
+    description: 'Acceptance letter has been sent or approved'
+  },
+  {
+    key: 'transfer_form',
+    label: 'Transfer Form',
+    shortLabel: 'Transfer Form',
+    icon: FileText,
+    description: 'Transfer form has been submitted and approved (transfer students only)',
+    requiresTransfer: true
+  },
+  {
     key: 'ds160_package',
     label: 'DS-160 Package',
     shortLabel: 'DS-160',
@@ -119,21 +135,6 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     icon: FileText,
     description: 'Student pays the I-539 COS Package fee (change of status students)',
     requiresProcessType: 'change_of_status'
-  },
-  {
-    key: 'acceptance_letter',
-    label: 'Acceptance Letter',
-    shortLabel: 'Acceptance',
-    icon: BookOpen,
-    description: 'Acceptance letter has been sent or approved'
-  },
-  {
-    key: 'transfer_form',
-    label: 'Transfer Form',
-    shortLabel: 'Transfer Form',
-    icon: FileText,
-    description: 'Transfer form has been submitted and approved (transfer students only)',
-    requiresTransfer: true
   },
   {
     key: 'enrollment',

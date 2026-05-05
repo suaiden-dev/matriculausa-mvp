@@ -69,6 +69,7 @@ export interface StudentRecord {
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
   is_archived: boolean;
+  is_dropped: boolean;
   assigned_to_admin_id: string | null;
   assigned_to_admin_name: string | null;
   placement_fee_pending_balance: number;
@@ -174,6 +175,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [assignedAdminFilter, setAssignedAdminFilter] = useState('all');
+  const [processTypeFilter, setProcessTypeFilter] = useState('all');
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
@@ -202,6 +204,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       onlyBlackCouponUsers,
       showCurrentStudents,
       assignedAdminFilter,
+      processTypeFilter,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -226,6 +229,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
         setAssignedAdminFilter(filters.assignedAdminFilter || 'all');
+        setProcessTypeFilter(filters.processTypeFilter || 'all');
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -250,6 +254,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     setOnlyBlackCouponUsers(false);
     setShowCurrentStudents(false);
     setAssignedAdminFilter('all');
+    setProcessTypeFilter('all');
     setCurrentPage(1);
   };
 
@@ -645,7 +650,10 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         ? !student.assigned_to_admin_id
         : student.assigned_to_admin_id === assignedAdminFilter);
 
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesAssignedAdmin;
+    const matchesProcessType = processTypeFilter === 'all' ||
+      student.student_process_type === processTypeFilter;
+
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesAssignedAdmin && matchesProcessType;
 
     return finalResult;
   });
@@ -870,7 +878,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
           </div>
 
           {/* Segunda linha - Novos filtros */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Filtro por Etapa */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Process Stage</label>
@@ -888,6 +896,22 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                 <option value="acceptance">Acceptance</option>
                 <option value="i20_fee">I-20 Fee</option>
                 <option value="enrollment">Enrollment</option>
+              </select>
+            </div>
+
+            {/* Filtro por Tipo de Processo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Process Type</label>
+              <select
+                value={processTypeFilter}
+                onChange={(e) => setProcessTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="initial">Initial</option>
+                <option value="change_of_status">COS</option>
+                <option value="transfer">Transfer</option>
+                <option value="resident">Resident</option>
               </select>
             </div>
 

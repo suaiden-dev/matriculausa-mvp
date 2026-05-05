@@ -1121,7 +1121,7 @@ const QuickRegistration: React.FC = () => {
                         <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.dependents')}
                         <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          {t('rapidRegistration.form.dependentsSubtitle') || 'Family members (spouse and/or children)'}
+                          {t('rapidRegistration.form.dependentsSubtitle')}
                         </span>
                       </label>
                       <div className="relative mt-auto">
