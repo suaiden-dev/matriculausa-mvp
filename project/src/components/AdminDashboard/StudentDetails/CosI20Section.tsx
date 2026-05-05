@@ -47,6 +47,12 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
   const cosApp = cosAppData;
 
   if (!appId) return null;
+  if (!cosApp) return (
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm p-6 animate-pulse">
+      <div className="h-6 w-40 bg-blue-200 rounded mb-2" />
+      <div className="h-4 w-64 bg-blue-100 rounded" />
+    </div>
+  );
 
   const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9.-]/g, '_');
 
