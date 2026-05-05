@@ -33,7 +33,9 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     { value: 'profile_update', label: 'Profile Update' },
     { value: 'acceptance_letter_sent', label: 'Acceptance Letter Sent' },
     { value: 'document_request_created', label: 'Document Request Created' },
-    { value: 'document_request_uploaded', label: 'Document Request Uploaded' }
+    { value: 'document_request_uploaded', label: 'Document Request Uploaded' },
+    { value: 'newsletter_email_sent', label: 'Newsletter Email Sent' },
+    { value: 'newsletter_email_failed', label: 'Newsletter Email Failed' }
   ];
 
   const performerTypeOptions = [
@@ -97,8 +99,11 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     if (actionType.includes('rejection') || actionType.includes('rejected')) {
       return 'text-red-600';
     }
-    if (actionType.includes('upload') || actionType.includes('created')) {
+    if (actionType.includes('upload') || actionType.includes('created') || actionType === 'newsletter_email_sent') {
       return 'text-blue-600';
+    }
+    if (actionType === 'newsletter_email_failed') {
+      return 'text-red-600';
     }
     return 'text-slate-600';
   };

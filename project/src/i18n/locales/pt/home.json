@@ -75,8 +75,8 @@
           "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
         },
         "q2": {
-          "question": "O que é a Taxa de Processo de Seleção?",
-          "answer": "A Taxa de Processo de Seleção $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "question": "O que é o Processo Seletivo?",
+          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q3": {
           "question": "O que é a Taxa de Colocação (Placement Fee)?",
@@ -104,7 +104,7 @@
         },
         "q9": {
           "question": "Posso obter reembolso?",
-          "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reembolsáveis, pois o processamento e suporte já terão começado."
+          "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
         },
         "q10": {
           "question": "Tenho que pagar todas as taxas de uma vez?",
@@ -287,8 +287,8 @@
         "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
       },
       "q2": {
-        "question": "O que é a Taxa do Processo Seletivo?",
-        "answer": "A Taxa do Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade."
+        "question": "O que é o Processo Seletivo?",
+        "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Este valor é final e você será reembolsado caso não seja aceito em nenhuma universidade."
       },
       "q3": {
         "question": "O que é a Taxa de Colocação (Placement Fee)?",
@@ -300,7 +300,7 @@
       },
       "q5": {
         "question": "Como eu escolho minha bolsa?",
-        "answer": "Após o pagamento da Taxa do Processo Seletivo e o envio dos documentos, nossa IA e equipe de suporte apresentarão as melhores opções de bolsa para o seu perfil. Você poderá então escolher a que melhor se adapta ao seu orçamento e objetivos."
+        "answer": "Ao se inscrever no Processo Seletivo, você pode se candidatar a até 4 bolsas. A plataforma mostra as opções compatíveis com seu perfil e você decide em quais se candidatar. Se tiver dúvidas na hora de escolher, nossa equipe de suporte está pronta para te orientar."
       },
       "q6": {
         "question": "Existem outras taxas que devo conhecer?",
@@ -316,7 +316,7 @@
       },
       "q9": {
         "question": "Posso obter reembolso?",
-        "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou se você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reembolessáveis, pois o processamento e suporte já terão começado. Todas as taxas são finais e não reembolsáveis."
+        "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
       },
       "q10": {
         "question": "Tenho que pagar todas as taxas de uma vez?",
@@ -501,27 +501,27 @@
       "items": [
         {
           "question": "Quais universidades participam?",
-          "answer": "Trabalhamos com mais de 45 universidades americanas credenciadas, incluindo Arizona State University, Florida International University, University of California e muitas outras. Para conhecer a lista completa de universidades parceiras e as bolsas disponíveis para o seu perfil, é necessário realizar o Processo Seletivo."
+          "answer": "Para conhecer a lista completa de universidades parceiras e as bolsas disponíveis para o seu perfil, é necessário realizar o Processo Seletivo."
         },
         {
           "question": "Preciso falar inglês?",
           "answer": "Sim, é necessário um nível básico de inglês. Algumas universidades aceitam teste de proficiência interno ou oferecem programas preparatórios para quem precisa melhorar o idioma."
         },
         {
-          "question": "O que é a Taxa do Processo Seletivo?",
-          "answer": "A Taxa do Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "question": "O que é o Processo Seletivo?",
+          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         {
           "question": "Como funciona a escolha das bolsas?",
-          "answer": "Com uma única taxa você se candidata a até 4 bolsas. A plataforma mostra as opções compatíveis com seu perfil e você escolhe em quais quer tentar. Se tiver dúvidas na hora de escolher, nossa equipe de suporte está pronta para te orientar"
+          "answer": "Ao se inscrever no Processo Seletivo, você pode se candidatar a até 4 bolsas. A plataforma mostra as opções compatíveis com seu perfil e você decide em quais se candidatar. Se tiver dúvidas na hora de escolher, nossa equipe de suporte está pronta para te orientar."
         },
         {
           "question": "Quanto tempo demora para saber se fui aprovado?",
-          "answer": "O processo de análise e resposta das universidades varia entre 2 a 8 semanas. Você receberá atualizações constantes sobre o status da sua aplicação."
+          "answer": "O prazo de resposta das universidades é de até 1 semana, mas a maioria dos candidatos recebe o retorno antes disso. Você receberá atualizações constantes sobre o status da sua aplicação."
         },
         {
           "question": "Posso obter reembolso?",
-          "answer": "Sim — se você for recusado em todas as bolsas para as quais se candidatou, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo depois que selecionou uma bolsa, a taxa não é reembolsável, pois o processamento e suporte já terão começado."
+          "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
         },
         {
           "question": "Com quem posso entrar em contato se tiver dúvidas",
