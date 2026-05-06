@@ -516,10 +516,11 @@ const QuickRegistration: React.FC = () => {
       }
 
       // Se for apenas pré-registro, validamos localmente para a UI
+      const discountAmount = targetCode === 'TFOE' ? 300 : 50;
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
-        discountAmount: 50,
+        message: t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`,
+        discountAmount,
         codeType
       });
       setIsCouponValid(true);
