@@ -224,7 +224,7 @@ const MatriculaRewardsLanding: React.FC = () => {
   };
 
   const calculateSavings = (friends: number) => {
-    const coins = friends * 180; // 180 coins por indicação bem-sucedida
+    const coins = friends * 100; // 100 coins por indicação bem-sucedida
     const dollars = coins; // 1 coin = $1
     return { coins, dollars };
   };

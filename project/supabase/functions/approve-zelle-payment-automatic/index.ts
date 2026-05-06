@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
                   referred_student_email: referredUserProfile?.email || "",
                   payment_method: "Zelle",
                   fee_type: "Selection Process Fee",
-                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
+                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 100 MatriculaCoins when they complete the I20 payment!`
                 };
 
                 console.log('📤 [approve-zelle-payment-automatic] Payload de progresso:', progressPayload);
@@ -506,7 +506,7 @@ Deno.serve(async (req: Request) => {
                 payment_method: "Zelle",
                 fee_type: "I20 Control Fee",
                 reward_type: "MatriculaCoins",
-                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`
               };
 
               console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);
