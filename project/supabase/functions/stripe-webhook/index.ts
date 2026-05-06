@@ -1569,7 +1569,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
                   fee_type: "Selection Process Fee",
                   o_que_enviar: `Good news! Your friend ${
                     referredProfile?.full_name || "someone"
-                  } has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`,
+                  } has paid the Selection Process Fee. You'll receive 100 MatriculaCoins when they complete the I20 payment!`,
                 };
 
                 await fetch(
