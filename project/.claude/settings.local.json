@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -h \"nwh\\\\.suaiden\\\\.com/webhook\" src/**/*.ts supabase/functions/**/*.ts public/*.js cloud-functions/**/*.js)",
+      "Bash(xargs grep:*)",
+      "Read(//tmp/**)",
+      "Bash(rtk supabase:*)",
+      "Bash(grep -n \"commission\\\\|register_payment_billing\" supabase/migrations/*.sql)",
+      "Bash(grep -n \"CREATE TABLE.*affiliate\" supabase/migrations/*.sql)",
+      "Bash(grep -r \"CREATE OR REPLACE FUNCTION.*affiliate\\\\|CREATE OR REPLACE FUNCTION.*seller\\\\|CREATE OR REPLACE FUNCTION.*commission\" supabase/migrations/*.sql)"
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle } from 'lucide-react';
+import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw } from 'lucide-react';
 import { StudentRecord } from './StudentApplicationsView';
 
 import { toast } from 'react-hot-toast';
-import { useAssignAdminMutation } from './hooks/useStudentApplicationsQueries';
+import { useAssignAdminMutation, useDropStudentMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
 
 interface InternalAdmin {
@@ -23,6 +23,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const assignAdminMutation = useAssignAdminMutation();
+  const dropStudentMutation = useDropStudentMutation();
   const { userProfile } = useAuth();
   const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
 
@@ -49,6 +50,17 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showAdminDropdown]);
 
+  const handleToggleDrop = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newDropped = !student.is_dropped;
+    try {
+      await dropStudentMutation.mutateAsync({ studentId: student.student_id, isDropped: newDropped });
+      toast.success(newDropped ? 'Aluno marcado como dropped' : 'Aluno restaurado');
+    } catch {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
   const handleAssignAdmin = async (adminId: string | null) => {
     setShowAdminDropdown(false);
     try {
@@ -66,14 +78,39 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   };
   // Get initials from name
   const getInitials = (name: string) => {
-    const parts = name.split(' ');
+    const parts = name.trim().split(/\s+/).filter(p => p.length > 0);
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return (parts[0] || name).substring(0, 2).toUpperCase();
   };
 
   // Generate a consistent color for the avatar based on student ID
+  const getProcessTypeTag = (processType: string | null) => {
+    switch (processType) {
+      case 'initial':
+        return { label: 'Initial', className: 'bg-sky-50 text-sky-700 border-sky-200' };
+      case 'change_of_status':
+        return { label: 'COS', className: 'bg-violet-50 text-violet-700 border-violet-200' };
+      case 'transfer':
+        return { label: 'Transfer', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'resident':
+        return { label: 'Resident', className: 'bg-teal-50 text-teal-700 border-teal-200' };
+      default:
+        return null;
+    }
+  };
+
+  const getProcessTypeBorder = (processType: string | null) => {
+    switch (processType) {
+      case 'initial':         return 'border-l-sky-400';
+      case 'change_of_status': return 'border-l-violet-400';
+      case 'transfer':        return 'border-l-amber-400';
+      case 'resident':        return 'border-l-teal-400';
+      default:                return 'border-l-gray-200';
+    }
+  };
+
   const getAvatarColor = (id: string) => {
     const colors = [
       'bg-blue-500',
@@ -106,7 +143,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-blue-300 relative group"
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 ${getProcessTypeBorder(student.student_process_type ?? null)} p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 relative group`}
     >
       {/* Unread messages indicator */}
       {unreadMessages > 0 && (
@@ -120,12 +157,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
 
       {/* Header with avatar and name */}
       <div className="flex items-start gap-3 mb-2">
-        <div className={`${getAvatarColor(student.student_id)} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0`}>
+        <div className={`${getAvatarColor(student.student_id)} w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm`}>
           {getInitials(student.student_name)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <h3 className="text-sm font-semibold text-gray-900 truncate" title={student.student_name}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-sm font-semibold text-gray-900 truncate" title={`${student.student_name} · ${student.student_email}`}>
               {student.student_name}
             </h3>
             {student.source === 'migma' && (
@@ -133,32 +170,44 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
                 Migma
               </span>
             )}
+            {(() => {
+              const tag = getProcessTypeTag(student.student_process_type ?? null);
+              return tag ? (
+                <span className={`flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${tag.className}`}>
+                  {tag.label}
+                </span>
+              ) : null;
+            })()}
           </div>
-          <p className="text-xs text-gray-500 truncate" title={student.student_email}>
-            {student.student_email}
-          </p>
+          {student.university_name && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+              <Building className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate" title={student.university_name}>{student.university_name}</span>
+            </div>
+          )}
         </div>
+        {/* Drop button */}
+        <button
+          onClick={handleToggleDrop}
+          title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
+          className={`flex-shrink-0 p-1 rounded transition-colors ${
+            student.is_dropped
+              ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+              : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+          }`}
+        >
+          {student.is_dropped
+            ? <RotateCcw className="w-3.5 h-3.5" />
+            : <UserX className="w-3.5 h-3.5" />
+          }
+        </button>
       </div>
 
-      {/* University/Scholarship info */}
-      {(student.university_name || student.scholarship_title) && (
-        <div className="space-y-1 mb-2">
-          {student.university_name && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <Building className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate" title={student.university_name}>
-                {student.university_name}
-              </span>
-            </div>
-          )}
-          {student.scholarship_title && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <GraduationCap className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate" title={student.scholarship_title}>
-                {student.scholarship_title}
-              </span>
-            </div>
-          )}
+      {/* Scholarship info */}
+      {student.scholarship_title && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+          <GraduationCap className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
         </div>
       )}
 

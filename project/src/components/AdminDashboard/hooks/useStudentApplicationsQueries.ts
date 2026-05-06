@@ -35,6 +35,7 @@ interface StudentRecord {
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
   is_archived: boolean;
+  is_dropped: boolean;
   assigned_to_admin_id: string | null;
   assigned_to_admin_name: string | null;
   placement_fee_pending_balance: number;
@@ -70,6 +71,7 @@ export function useStudentsQuery() {
           has_paid_reinstatement_package,
           visa_transfer_active,
           is_archived,
+          is_dropped,
           assigned_to_admin_id,
           assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
           placement_fee_pending_balance,
@@ -190,6 +192,7 @@ export function useStudentsQuery() {
           has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
           visa_transfer_active: student.visa_transfer_active ?? true, // Default to true if not set
           is_archived: student.is_archived || false,
+          is_dropped: student.is_dropped || false,
           assigned_to_admin_id: student.assigned_to_admin_id || null,
           assigned_to_admin_name: (student.assigned_admin as any)?.full_name || null,
           placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
@@ -315,6 +318,27 @@ export function useFilterDataQuery() {
     gcTime: 10 * 60 * 1000, // 10 minutos
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+  });
+}
+
+/**
+ * Mutation para marcar/desmarcar aluno como dropped
+ */
+export function useDropStudentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ studentId, isDropped }: { studentId: string; isDropped: boolean }) => {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ is_dropped: isDropped })
+        .eq('id', studentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+    },
   });
 }
 

@@ -34,7 +34,8 @@
       "Bash(grep -r \"document_requests\" project/supabase/migrations/*.sql)",
       "Bash(dir \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\")",
       "mcp__supabase__list_projects",
-      "Bash(find \"c:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\" -type f -name \"*.sql\" -exec grep -l \"CREATE TABLE\" {} \\\\;)"
+      "Bash(find \"c:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\" -type f -name \"*.sql\" -exec grep -l \"CREATE TABLE\" {} \\\\;)",
+      "Bash(rtk git:*)"
     ]
   }
 }

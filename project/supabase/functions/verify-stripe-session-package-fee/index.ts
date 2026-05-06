@@ -32,6 +32,24 @@ function getCurrencyInfo(session: any) {
   return { currency: 'USD', symbol: '$', code: 'usd' };
 }
 
+function formatAmountWithCurrency(amount: number, session: any) {
+  const currencyInfo = getCurrencyInfo(session);
+  return `${currencyInfo.symbol}${amount.toFixed(2)}`;
+}
+
+async function getAllAdmins(supabase: any) {
+  try {
+    const { data: adminProfiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, email, full_name, phone')
+      .eq('role', 'admin');
+    const admins = adminProfiles ? adminProfiles.filter((a: any) => a.email) : [];
+    return admins.length > 0 ? admins : [{ user_id: '', email: 'admin@matriculausa.com', full_name: 'Admin MatriculaUSA', phone: '' }];
+  } catch {
+    return [{ user_id: '', email: 'admin@matriculausa.com', full_name: 'Admin MatriculaUSA', phone: '' }];
+  }
+}
+
 // @ts-ignore
 Deno.serve(async (req: Request) => {
   try {
@@ -155,9 +173,14 @@ Deno.serve(async (req: Request) => {
         console.warn('[Individual Fee Payment] Warning: Failed to record payment:', recordError);
       }
 
-      // 3. Log da ação
+      // 3. Log da ação + Notificações
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('id, user_id, full_name, email, phone, seller_referral_code')
+        .eq('user_id', userId)
+        .single();
+
       try {
-        const { data: userProfile } = await supabase.from('user_profiles').select('id').eq('user_id', userId).single();
         if (userProfile) {
           await supabase.rpc('log_student_action', {
             p_student_id: userProfile.id,
@@ -176,6 +199,122 @@ Deno.serve(async (req: Request) => {
         }
       } catch (logErr) {
         console.error('Log error:', logErr);
+      }
+
+      // 4. Notificações
+      try {
+        const feeLabel = (fee_type === 'ds160_package' || fee_type === 'i539_cos_package') ? 'Control Fee' : 'Reinstatement Fee';
+        const formattedAmount = formatAmountWithCurrency(paymentAmountUSD, session);
+
+        if (userProfile) {
+          // Aluno
+          fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: `Pagamento Stripe de ${feeLabel} confirmado`,
+              email_aluno: userProfile.email,
+              nome_aluno: userProfile.full_name,
+              formatted_amount: formattedAmount,
+              payment_id: sessionId,
+              fee_type: fee_type,
+              notification_target: 'student'
+            })
+          }).catch(e => console.error('Error sending student notification:', e));
+
+          // Seller e Affiliate Admin
+          if (userProfile.seller_referral_code) {
+            const { data: sellerData } = await supabase
+              .from('sellers')
+              .select('id, user_id, name, email, referral_code, commission_rate, affiliate_admin_id')
+              .eq('referral_code', userProfile.seller_referral_code)
+              .single();
+
+            if (sellerData) {
+              const { data: sellerProfile } = await supabase
+                .from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+
+              fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo_notf: `Pagamento de ${feeLabel} confirmado - Seller`,
+                  email_seller: sellerData.email,
+                  nome_seller: sellerData.name,
+                  phone_seller: sellerProfile?.phone || '',
+                  email_aluno: userProfile.email,
+                  nome_aluno: userProfile.full_name,
+                  o_que_enviar: `Parabéns! Seu aluno ${userProfile.full_name} pagou a ${feeLabel} no valor de ${formattedAmount} via Stripe. Sua comissão será calculada em breve.`,
+                  payment_id: sessionId,
+                  fee_type: fee_type,
+                  amount: paymentAmountUSD,
+                  seller_id: sellerData.user_id,
+                  referral_code: sellerData.referral_code,
+                  commission_rate: sellerData.commission_rate,
+                  payment_method: 'stripe'
+                })
+              }).catch(e => console.error('Error sending seller notification:', e));
+
+              if (sellerData.affiliate_admin_id) {
+                const { data: affiliateAdmin } = await supabase
+                  .from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
+
+                if (affiliateAdmin) {
+                  const { data: affiliateProfile } = await supabase
+                    .from('user_profiles').select('full_name, email, phone').eq('user_id', affiliateAdmin.user_id).single();
+
+                  if (affiliateProfile) {
+                    fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        tipo_notf: `Pagamento de ${feeLabel} confirmado - Affiliate Admin`,
+                        email_affiliate_admin: affiliateProfile.email,
+                        nome_affiliate_admin: affiliateProfile.full_name,
+                        phone_affiliate_admin: affiliateProfile.phone || '',
+                        email_aluno: userProfile.email,
+                        nome_aluno: userProfile.full_name,
+                        email_seller: sellerData.email,
+                        nome_seller: sellerData.name,
+                        o_que_enviar: `O aluno ${userProfile.full_name} do seu seller ${sellerData.name} pagou a ${feeLabel} no valor de ${formattedAmount} via Stripe.`,
+                        payment_id: sessionId,
+                        fee_type: fee_type,
+                        amount: paymentAmountUSD,
+                        seller_id: sellerData.user_id,
+                        referral_code: sellerData.referral_code,
+                        payment_method: 'stripe'
+                      })
+                    }).catch(e => console.error('Error sending affiliate notification:', e));
+                  }
+                }
+              }
+            }
+          }
+
+          // Admin
+          const admins = await getAllAdmins(supabase);
+          for (const admin of admins) {
+            fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tipo_notf: `Pagamento de ${feeLabel} confirmado - Admin`,
+                email_admin: admin.email,
+                nome_admin: admin.full_name,
+                phone_admin: admin.phone || '',
+                email_aluno: userProfile.email,
+                nome_aluno: userProfile.full_name,
+                o_que_enviar: `Pagamento Stripe de ${feeLabel} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi confirmado.`,
+                payment_id: sessionId,
+                fee_type: fee_type,
+                amount: paymentAmountUSD,
+                payment_method: 'stripe'
+              })
+            }).catch(e => console.error(`Error sending admin notification to ${admin.email}:`, e));
+          }
+        }
+      } catch (notifErr) {
+        console.error('Error in notifications:', notifErr);
       }
 
       return corsResponse({

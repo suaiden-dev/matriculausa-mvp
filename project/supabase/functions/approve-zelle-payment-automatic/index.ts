@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
                   referred_student_email: referredUserProfile?.email || "",
                   payment_method: "Zelle",
                   fee_type: "Selection Process Fee",
-                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
+                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 100 MatriculaCoins when they complete the I20 payment!`
                 };
 
                 console.log('📤 [approve-zelle-payment-automatic] Payload de progresso:', progressPayload);
@@ -506,7 +506,7 @@ Deno.serve(async (req: Request) => {
                 payment_method: "Zelle",
                 fee_type: "I20 Control Fee",
                 reward_type: "MatriculaCoins",
-                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`
               };
 
               console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);
@@ -802,7 +802,7 @@ Deno.serve(async (req: Request) => {
           email_aluno: userProfile.email,
           nome_aluno: userProfile.full_name,
           email_universidade: "",
-          o_que_enviar: `Your ${normalizedFeeTypeGlobal.replace(/_/g, ' ')} payment has been automatically approved by the system!`,
+          o_que_enviar: `Your ${(normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package') ? 'Control Fee' : normalizedFeeTypeGlobal.replace(/_/g, ' ')} payment has been automatically approved by the system!`,
           payment_id: paymentId,
           fee_type: normalizedFeeTypeGlobal,
           approved_by: "Automatic System",
@@ -904,7 +904,7 @@ Deno.serve(async (req: Request) => {
             nome_seller: sellerData.name,
             email_affiliate_admin: affiliateAdminEmail,
             nome_affiliate_admin: affiliateAdminName,
-            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+            o_que_enviar: `Pagamento de ${(normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package') ? 'Control Fee' : normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: paymentAmount,
@@ -960,7 +960,7 @@ Deno.serve(async (req: Request) => {
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
               phone_seller: sellerPhone || "",
-              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${(normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package') ? 'Control Fee' : normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
               amount: paymentAmount,
@@ -1006,7 +1006,7 @@ Deno.serve(async (req: Request) => {
             email_aluno: userProfileData?.email || "",
             nome_aluno: userProfileData?.full_name || "Aluno",
             phone_aluno: userProfileData?.phone || "",
-            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
+            o_que_enviar: `Parabéns! O pagamento de ${(normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package') ? 'Control Fee' : normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: paymentAmount,
