@@ -73,15 +73,15 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       }}
     >
       {/* Scholarship Image / Header Background */}
-      <div className="relative h-32 sm:h-36 overflow-hidden flex-shrink-0 bg-gradient-to-b from-slate-100/50 to-white">
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-t from-white to-transparent"></div>
+      <div className="relative w-full aspect-[8/3] overflow-hidden flex-shrink-0 bg-gradient-to-b from-slate-100/50 to-white">
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent z-0"></div>
 
         {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && !brokenImage ? (
           <img
             src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
             alt={scholarship.title}
             onError={() => setBrokenImage(true)}
-            className="w-full h-full object-contain p-4 group-hover:scale-[1.02] transition-transform duration-700"
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-700"
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-slate-400">

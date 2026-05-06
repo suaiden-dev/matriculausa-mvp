@@ -57,10 +57,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     return null;
   }
   
-  const getApplicationFeeWithDependents = (base: number): number => {
-    const deps = Number(userProfile?.dependents) || 0;
-    return deps > 0 ? base + deps * 100 : base;
-  };
+
   
   React.useEffect(() => {
     if (isOpen) {
@@ -145,9 +142,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   const canViewInternalFees = hasInternalFees && userProfile?.has_paid_selection_process_fee;
   const shouldShowInternalFeesNotice = hasInternalFees && !userProfile?.has_paid_selection_process_fee;
 
-  const applicationFee = scholarship.application_fee_amount 
-    ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount)) 
-    : getApplicationFeeWithDependents(350);
+
 
   const annualSavings = (scholarship.original_annual_value || 0) - (scholarship.annual_value_with_scholarship || 0);
 
@@ -177,25 +172,45 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Image */}
-            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
-              {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive && (
-                <img 
-                  src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
-                  alt="" 
-                  className="w-full h-full object-contain"
-                />
-              )}
-              
+            <div className="relative flex-shrink-0 w-full h-48 sm:h-72 bg-slate-50 border-b border-slate-100 z-10">
+              <div className="absolute inset-0 overflow-hidden">
+                {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive && (
+                  <img 
+                    src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
+                    alt="" 
+                    className="w-full h-full object-cover object-center block"
+                  />
+                )}
+              </div>
+
+              {/* Text Overlay Layer (Left side fade) */}
+              <div className="absolute inset-y-0 left-0 w-[60%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-5 pr-12">
+                {/* Top Left Logo & Line */}
+                <div className="absolute top-5 left-5">
+                  <img 
+                    src="/logo.png.png" 
+                    alt="Matricula USA" 
+                    className="h-6 sm:h-8 w-auto object-contain mb-1.5 drop-shadow-sm" 
+                  />
+                  <div className="w-10 sm:w-12 h-[2px] bg-[#D0151C]"></div>
+                </div>
+                
+                {/* Course / Field as Main Banner Text */}
+                <p className="w-[95%] sm:w-[85%] text-base sm:text-xl md:text-2xl font-black font-['Montserrat',sans-serif] text-[#05294E] line-clamp-3 pt-0.5 mt-10 sm:mt-12" style={{ lineHeight: 0.95 }}>
+                  {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
+                </p>
+              </div>
+
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-20 backdrop-blur-sm"
+                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-30 backdrop-blur-sm"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto z-0 relative">
               <div className="p-5 sm:p-6">
                 {/* Title Section relocated to Body */}
                 <div className="mb-6">
@@ -214,15 +229,23 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     )}
                   </div>
 
-                  <p className="text-slate-500 text-sm mb-1">
-                    {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
-                  </p>
+
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight mb-2">
                     {scholarship.title}
                   </h2>
                   <div className="flex flex-wrap items-center gap-3 text-slate-600 text-sm font-medium">
                     <div className="flex items-center gap-1.5">
-                      <Building className="h-4 w-4 text-[#05294E]" />
+                      {scholarship.universities?.logo_url && canViewSensitive ? (
+                        <div className="w-6 h-6 rounded-md bg-white shadow-sm flex items-center justify-center border border-slate-200 overflow-hidden">
+                          <img 
+                            src={scholarship.universities.logo_url} 
+                            alt={scholarship.universities.name || "University Logo"} 
+                            className="w-full h-full object-contain p-0.5" 
+                          />
+                        </div>
+                      ) : (
+                        <Building className="h-4 w-4 text-[#05294E]" />
+                      )}
                       <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
                         {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
                       </span>
@@ -307,11 +330,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                               <td className="py-3 px-4 text-right text-green-700 font-bold text-base">${formatAmount(scholarship.annual_value_with_scholarship)}</td>
                             </tr>
                             
-                            {/* Application Fee */}
-                            <tr>
-                              <td className="py-3 px-4 text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee') || 'Application Fee'}</td>
-                              <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
-                            </tr>
+
                             
                             {/* Placement Fee - exibir apenas para novos usuários */}
                             {userProfile?.placement_fee_flow && (() => {

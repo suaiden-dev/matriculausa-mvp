@@ -4,7 +4,7 @@ import type { Scholarship } from '../types';
 
 export function useScholarships() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);

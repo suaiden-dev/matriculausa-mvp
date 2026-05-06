@@ -186,13 +186,13 @@ const Home: React.FC = () => {
       <SEOHead />
       <div className="bg-white">
         {/* Split Hero Section */}
-        <section className="relative pt-32 pb-32 lg:pt-48 lg:pb-48 overflow-hidden bg-white min-h-[700px] lg:min-h-[850px] flex items-center">
+        <section className="relative pt-20 pb-8 lg:pt-0 lg:pb-0 overflow-hidden bg-white min-h-[600px] lg:h-[768px] flex items-center">
           {/* Background Image Layer — right side only */}
           <div className="absolute inset-0 z-0 flex justify-end">
             <img 
-              src="/hero-student.png" 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/new_hero_large_matriculausa.webp" 
               alt="Estudante rumo aos EUA"
-              className="w-full h-full object-contain object-right"
+              className="w-full h-full object-cover object-[86.2%_center] lg:object-right"
             />
           </div>
 
@@ -284,7 +284,7 @@ const Home: React.FC = () => {
 
         {/* Highlighted Scholarships Slider Section (Triple View) */}
         {STATIC_SCHOLARSHIPS.length > 0 && (
-          <section className="py-24 bg-slate-50 relative overflow-hidden -mt-2 z-10 pt-26">
+          <section className="py-24 bg-slate-50 relative overflow-hidden pt-26">
             {/* Background elements */}
             <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50/50 to-transparent"></div>
             

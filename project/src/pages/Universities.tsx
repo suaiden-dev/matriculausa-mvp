@@ -180,7 +180,7 @@ const Universities: React.FC = () => {
       <Header />
       <div className="bg-white min-h-screen">
         {/* Hero Section */}
-        <section className="relative pt-32 pb-32 lg:pt-44 lg:pb-40 overflow-hidden bg-[#05294E] min-h-[600px] lg:min-h-[650px] flex items-center">
+        <section className="relative pt-32 pb-32 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[600px] lg:h-[768px] flex items-center">
           {/* Background Image Layer */}
           <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 lg:left-0 lg:w-[65%]">
