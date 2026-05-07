@@ -77,6 +77,9 @@ export interface StudentRecord {
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
   source?: string;
+  has_uploaded_photo?: boolean;
+  has_submitted_form?: boolean;
+  documents_uploaded?: boolean;
 }
 
 interface StudentApplicationsViewProps {

@@ -16,9 +16,10 @@ interface KanbanColumnProps {
   getUnreadCount: (studentId: string) => number;
   internalAdmins?: InternalAdmin[];
   isDropped?: boolean;
+  showSelectionTags?: boolean;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, internalAdmins = [], isDropped = false }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, internalAdmins = [], isDropped = false, showSelectionTags = false }) => {
   const Icon = stage.icon;
 
   return (
@@ -55,8 +56,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentC
               student={student}
               onClick={() => onStudentClick(student)}
               unreadMessages={getUnreadCount(student.student_id)}
-
               internalAdmins={internalAdmins}
+              showSelectionTags={showSelectionTags}
             />
           ))
         )}

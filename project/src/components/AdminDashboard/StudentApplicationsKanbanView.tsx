@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import KanbanColumn from './KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
-  getCurrentStage,
   getStepStatus,
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
 import { StudentRecord } from './StudentApplicationsView';
-import { UserX } from 'lucide-react';
+import { UserX, UserPlus } from 'lucide-react';
 
 interface InternalAdmin {
   id: string;
@@ -41,6 +40,16 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return students.filter(s => s.is_dropped);
   }, [students]);
 
+  // Alunos registrados mas que ainda não pagaram a selection process fee
+  const registeredStudents = useMemo(() => {
+    return students.filter(s =>
+      !s.is_dropped &&
+      !s.has_paid_selection_process_fee &&
+      s.status !== 'enrolled' &&
+      s.source !== 'migma'
+    );
+  }, [students]);
+
   // Filtramos apenas os que pagaram a selection fee ou estão inscritos, excluindo dropped
   const displayStudents = useMemo(() => {
     return students.filter(s =>
@@ -57,7 +66,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     );
   }, []);
 
-  // Organize students by their last completed stage (milestone)
+  // Organize students by their current stage (first non-completed visible stage)
   const studentsByStage = useMemo(() => {
     const stageMap = new Map<ApplicationFlowStageKey, StudentRecord[]>();
 
@@ -66,44 +75,40 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       stageMap.set(stage.key, []);
     });
 
-    // Distribute students to their last completed stage that is ALSO VISIBLE
     displayStudents.forEach(student => {
-      // Prioridade máxima: se o status principal é 'enrolled', vai direto para a coluna final
+      // Enrolled goes directly to final column
       if ((student.status === 'enrolled' || student.application_status === 'enrolled') && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }
 
-      let lastVisibleCompletedStage: ApplicationFlowStageKey | null = null;
-      const { stage: currentStage } = getCurrentStage(student as any);
-
-      for (const stageDef of APPLICATION_FLOW_STAGES) {
-        // Pular transfer_form se não for transfer student
+      // Find first visible non-completed stage (current stage)
+      let placed = false;
+      for (const stageDef of visibleStages) {
+        // Skip transfer_form if not transfer student
         if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
           continue;
         }
+        // Skip process-type-specific stages
+        if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) {
+          continue;
+        }
 
-        // Pular se o aluno pulou este estágio (ex: no flow de placement_fee)
         const stepStatus = getStepStatus(student as any, stageDef.key);
         if (stepStatus === 'skipped') {
           continue;
         }
 
-        // Se o estágio foi completado e ele é visível, marcamos como o último visível completado
-        if (stepStatus === 'completed' && visibleStages.some(vs => vs.key === stageDef.key)) {
-          lastVisibleCompletedStage = stageDef.key;
-        }
-
-        // Se este é o estágio atual e NÃO está completado (ou seja, é o que falta fazer), paramos
-        if (currentStage === stageDef.key && stepStatus !== 'completed') {
+        if (stepStatus !== 'completed') {
+          stageMap.get(stageDef.key)!.push(student);
+          placed = true;
           break;
         }
       }
 
-      if (lastVisibleCompletedStage && stageMap.has(lastVisibleCompletedStage)) {
-        stageMap.get(lastVisibleCompletedStage)!.push(student);
-      } else if (student.has_paid_selection_process_fee && stageMap.has('selection_fee')) {
-        stageMap.get('selection_fee')!.push(student);
+      // All stages completed → enrollment
+      if (!placed && stageMap.has('enrollment')) {
+        stageMap.get('enrollment')!.push(student);
       }
     });
 
@@ -121,6 +126,9 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
           {displayStudents.length} students in pipeline
+          {registeredStudents.length > 0 && (
+            <span className="ml-2 text-blue-400">· {registeredStudents.length} registered</span>
+          )}
           {droppedStudents.length > 0 && (
             <span className="ml-2 text-red-400">· {droppedStudents.length} dropped</span>
           )}
@@ -144,6 +152,23 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       {/* Kanban Board - Horizontal Scrollable */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
         <div className="flex gap-4 h-full min-w-max">
+          {/* Coluna especial: Registered (primeiro) */}
+          <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
+            <KanbanColumn
+              stage={{
+                key: 'registered' as ApplicationFlowStageKey,
+                label: 'Registered',
+                shortLabel: 'Registered',
+                icon: UserPlus,
+                description: 'Students registered but haven\'t paid the Selection Process Fee yet',
+              }}
+              students={registeredStudents}
+              onStudentClick={handleStudentClick}
+              getUnreadCount={getStudentTotalUnread}
+              internalAdmins={internalAdmins}
+            />
+          </div>
+
           {visibleStages.map(stage => {
             const studentsInStage = studentsByStage.get(stage.key) || [];
 
@@ -159,6 +184,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
                   internalAdmins={internalAdmins}
+                  showSelectionTags={stage.key === 'selection_fee'}
                 />
               </div>
             );

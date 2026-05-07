@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw } from 'lucide-react';
+import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw, Camera, FileText } from 'lucide-react';
 import { StudentRecord } from './StudentApplicationsView';
 
 import { toast } from 'react-hot-toast';
@@ -17,9 +17,10 @@ interface StudentCardProps {
   onClick: () => void;
   unreadMessages?: number;
   internalAdmins?: InternalAdmin[];
+  showSelectionTags?: boolean;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [] }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [], showSelectionTags = false }) => {
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const assignAdminMutation = useAssignAdminMutation();
@@ -208,6 +209,20 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
           <GraduationCap className="w-3 h-3 flex-shrink-0" />
           <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
+        </div>
+      )}
+
+      {/* Photo + Form tags — específico da coluna Selection Process Payment */}
+      {showSelectionTags && (
+        <div className="flex flex-col gap-1 mb-2">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+            <Camera className="w-3 h-3 flex-shrink-0" />
+            {student.has_uploaded_photo ? 'Photo uploaded' : 'Pending: photo upload'}
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+            <FileText className="w-3 h-3 flex-shrink-0" />
+            {student.has_submitted_form ? 'Form submitted' : 'Pending: fill & submit form'}
+          </div>
         </div>
       )}
 

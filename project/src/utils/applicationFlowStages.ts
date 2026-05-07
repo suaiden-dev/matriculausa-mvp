@@ -11,10 +11,13 @@ import {
 
 export type ApplicationFlowStageKey =
   | 'selection_fee'
+  | 'bdp_collection'
   | 'apply'
   | 'review'
+  | 'start_admission'
   | 'application_fee'
   | 'placement_fee'
+  | 'reinstatement_fee'
   | 'scholarship_fee'
   | 'i20_fee'
   | 'ds160_package'
@@ -53,43 +56,70 @@ export interface StudentRecord {
   transfer_form_status: string | null;
   has_paid_ds160_package?: boolean;
   has_paid_i539_cos_package?: boolean;
+  has_paid_reinstatement_package?: boolean;
+  documents_uploaded?: boolean;
+  has_submitted_form?: boolean;
+  payment_status?: string | null;
+  selected_scholarship_id?: string | null;
+  visa_transfer_active?: boolean;
 }
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
   {
     key: 'selection_fee',
-    label: 'Selection Fee',
-    shortLabel: 'Selection Fee',
+    label: 'Selection Process Payment',
+    shortLabel: 'Sel. Payment',
     icon: CreditCard,
     description: 'Student has paid the Selection Process Fee'
   },
   {
     key: 'apply',
-    label: 'Application',
-    shortLabel: 'Application',
+    label: 'Choosing Scholarship',
+    shortLabel: 'Choosing',
     icon: FileText,
-    description: 'Student has submitted scholarship applications'
+    description: 'Student selected scholarships but has not yet uploaded the 3 main documents'
+  },
+  {
+    key: 'bdp_collection',
+    label: 'BDP Collection',
+    shortLabel: 'BDP',
+    icon: FileText,
+    description: 'Pending: Bank Statement, Diploma & Passport upload'
   },
   {
     key: 'review',
-    label: 'Review',
-    shortLabel: 'Review',
+    label: 'Scholarship Eligibility',
+    shortLabel: 'Eligibility',
     icon: Eye,
-    description: 'Application is under review by the university'
+    description: 'Awaiting admin approval of submitted documents and selected scholarship'
+  },
+  {
+    key: 'start_admission',
+    label: 'Start Admission',
+    shortLabel: 'Start Admission',
+    icon: BookOpen,
+    description: 'Scholarship approved — student selects a scholarship to proceed with admission'
   },
   {
     key: 'application_fee',
-    label: 'Application Fee',
+    label: 'Awaiting Application Fee',
     shortLabel: 'App Fee',
     icon: DollarSign,
-    description: 'Student has paid the Application Fee'
+    description: 'Student selected a scholarship — pending Application Fee payment'
   },
   {
     key: 'placement_fee',
-    label: 'Placement Fee',
+    label: 'Awaiting Placement Fee',
     shortLabel: 'Placement Fee',
     icon: DollarSign,
-    description: 'Student has paid the Placement Fee (for placement fee flow only)'
+    description: 'Application fee paid — pending Placement Fee payment'
+  },
+  {
+    key: 'reinstatement_fee',
+    label: 'Awaiting Reinstatement Fee',
+    shortLabel: 'Reinstatement',
+    icon: DollarSign,
+    description: 'Placement fee paid — pending Reinstatement Fee payment (transfer with inactive visa only)'
   },
   {
     key: 'scholarship_fee',
@@ -156,10 +186,15 @@ export function getStepStatus(
 
   switch (step) {
     case 'selection_fee':
-      return (student.has_paid_selection_process_fee || isMigma) ? 'completed' : 'pending';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
+      // Student stays in this column until they submit the form (photo is prerequisite)
+      return student.has_submitted_form ? 'completed' : 'in_progress';
     
     case 'apply':
       return student.total_applications > 0 ? 'completed' : 'pending';
+
+    case 'bdp_collection':
+      return student.documents_uploaded ? 'completed' : 'pending';
     
     case 'review':
       if (student.application_status === 'enrolled' || student.application_status === 'approved') {
@@ -173,6 +208,11 @@ export function getStepStatus(
       }
       return 'pending';
     
+    case 'start_admission':
+      // Moves on when student selects a scholarship to proceed (selected_scholarship_id set)
+      if (student.is_application_fee_paid) return 'completed';
+      return student.selected_scholarship_id ? 'completed' : 'pending';
+
     case 'application_fee':
       return student.is_application_fee_paid ? 'completed' : 'pending';
     
@@ -180,6 +220,11 @@ export function getStepStatus(
       if (!student.placement_fee_flow) return 'skipped';
       return (student.is_placement_fee_paid || isMigma) ? 'completed' : 'pending';
     
+    case 'reinstatement_fee':
+      // Only for transfer students with inactive visa
+      if (student.student_process_type !== 'transfer' || student.visa_transfer_active !== false) return 'skipped';
+      return student.has_paid_reinstatement_package ? 'completed' : 'pending';
+
     case 'scholarship_fee':
       if (student.placement_fee_flow) return 'skipped';
       return student.is_scholarship_fee_paid ? 'completed' : 'pending';

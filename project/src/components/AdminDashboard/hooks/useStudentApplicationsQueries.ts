@@ -43,6 +43,10 @@ interface StudentRecord {
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
   source?: string;
+  has_uploaded_photo?: boolean;
+  has_submitted_form?: boolean;
+  documents_uploaded?: boolean;
+  selected_scholarship_id?: string | null;
 }
 
 /**
@@ -79,6 +83,10 @@ export function useStudentsQuery() {
           placement_fee_installment_number,
           placement_fee_installment_enabled,
           source,
+          identity_photo_path,
+          selection_survey_passed,
+          documents_uploaded,
+          selected_scholarship_id,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -200,6 +208,10 @@ export function useStudentsQuery() {
           placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
           placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
           source: student.source,
+          has_uploaded_photo: !!student.identity_photo_path,
+          has_submitted_form: student.selection_survey_passed === true,
+          documents_uploaded: student.documents_uploaded || false,
+          selected_scholarship_id: student.selected_scholarship_id || null,
         };
       }) || [];
 
