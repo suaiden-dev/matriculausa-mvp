@@ -196,7 +196,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                 </div>
                 
                 {/* Course / Field as Main Banner Text */}
-                <p className="w-[95%] sm:w-[85%] text-base sm:text-xl md:text-2xl font-black font-['Montserrat',sans-serif] text-[#05294E] line-clamp-3 pt-0.5 mt-10 sm:mt-12" style={{ lineHeight: 0.95 }}>
+                <p className="w-[95%] sm:w-[85%] text-base sm:text-xl md:text-2xl font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-10 sm:mt-12" style={{ lineHeight: 0.95 }}>
                   {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                 </p>
               </div>
@@ -234,9 +234,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     {scholarship.title}
                   </h2>
                   <div className="flex flex-wrap items-center gap-3 text-slate-600 text-sm font-medium">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-3">
                       {scholarship.universities?.logo_url && canViewSensitive ? (
-                        <div className="w-6 h-6 rounded-md bg-white shadow-sm flex items-center justify-center border border-slate-200 overflow-hidden">
+                        <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 overflow-hidden">
                           <img 
                             src={scholarship.universities.logo_url} 
                             alt={scholarship.universities.name || "University Logo"} 
@@ -244,7 +244,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                           />
                         </div>
                       ) : (
-                        <Building className="h-4 w-4 text-[#05294E]" />
+                        <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 overflow-hidden">
+                          <Building className="h-8 w-8 text-[#05294E]" />
+                        </div>
                       )}
                       <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
                         {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}

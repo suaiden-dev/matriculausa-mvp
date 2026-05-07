@@ -730,7 +730,7 @@ const Scholarships: React.FC = () => {
                         </div>
                         
                         {/* Course / Field as Main Banner Text */}
-                        <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-[#05294E] line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.95 }}>
+                        <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.95 }}>
                           {scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}
                         </p>
                       </div>
@@ -750,7 +750,7 @@ const Scholarships: React.FC = () => {
                     {/* Card Content */}
                     <div className="p-4 sm:p-5 flex-1 flex flex-col z-0">
                       {/* Title */}
-                      <h3 id={`featured-scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                      <h3 id={`featured-scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2">
                         {scholarship.title}
                       </h3>
                       
@@ -772,8 +772,8 @@ const Scholarships: React.FC = () => {
                         {/* Info Boxes Section */}
                         <div className="space-y-1.5 mb-3">
                           {/* University Info Box */}
-                          <div className="flex items-center gap-3 py-1.5 px-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
+                          <div className="flex items-center gap-3 py-1">
+                            <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
                               {scholarship.universities?.logo_url && canViewSensitive ? (
                                 <img 
                                   src={scholarship.universities.logo_url} 
@@ -781,7 +781,7 @@ const Scholarships: React.FC = () => {
                                   className="w-full h-full object-contain p-0.5" 
                                 />
                               ) : (
-                                <Building className="h-4 w-4 text-[#05294E]" />
+                                <Building className="h-8 w-8 text-[#05294E]" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1066,7 +1066,7 @@ const Scholarships: React.FC = () => {
                         </div>
                         
                         {/* Course / Field as Main Banner Text */}
-                        <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-[#05294E] line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.85 }}>
+                        <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.85 }}>
                           {scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}
                         </p>
                       </div>
@@ -1086,7 +1086,7 @@ const Scholarships: React.FC = () => {
                     {/* Card Content */}
                     <div className="p-4 sm:p-5 flex-1 flex flex-col z-0">
                       {/* Title */}
-                      <h3 id={`scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                      <h3 id={`scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2">
                         {scholarship.title}
                       </h3>
                       
@@ -1108,8 +1108,8 @@ const Scholarships: React.FC = () => {
                         {/* Info Boxes Section */}
                         <div className="space-y-1.5 mb-3">
                           {/* University Info Box */}
-                          <div className="flex items-center gap-3 py-1.5 px-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
+                          <div className="flex items-center gap-3 py-1">
+                            <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
                               {scholarship.universities?.logo_url && canViewSensitive ? (
                                 <img 
                                   src={scholarship.universities.logo_url} 
@@ -1117,7 +1117,7 @@ const Scholarships: React.FC = () => {
                                   className="w-full h-full object-contain p-0.5" 
                                 />
                               ) : (
-                                <Building className="h-4 w-4 text-[#05294E]" />
+                                <Building className="h-8 w-8 text-[#05294E]" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
