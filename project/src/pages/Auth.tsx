@@ -409,9 +409,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
 
-        // Validate allowed password characters: letters, numbers and @#$!
-        const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
-        if (!allowedPasswordRegex.test(formData.password)) {
+        // Rejeitar apenas caracteres de controle (permite qualquer imprimível, incluindo senhas Apple/Safari)
+        if (/[\x00-\x1F\x7F]/.test(formData.password)) {
           setError(t('authPage.messages.invalidPasswordChars'));
           setLoading(false);
           return;
