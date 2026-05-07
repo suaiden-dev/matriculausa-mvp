@@ -1321,6 +1321,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
       if (insertError) throw insertError;
 
+      // Atualizar transfer_form_status para 'returned' na aplicação
+      await supabase
+        .from('scholarship_applications')
+        .update({ transfer_form_status: 'returned' })
+        .eq('id', applicationId);
+
       // Atualizar estado local
       setTransferFormUploads([{
         id: 'temp',

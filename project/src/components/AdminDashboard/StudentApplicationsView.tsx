@@ -1134,7 +1134,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   Show only students who paid Selection Process Fee
                 </label>
               </div>
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   id="onlyBlackCouponUsers"
@@ -1159,7 +1159,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   <GraduationCap className="h-4 w-4 text-blue-600" />
                   <span>Show Current Students Scholarship</span>
                 </label>
-              </div>
+              </div> */}
             </div>
             <button
               onClick={clearSavedFilters}

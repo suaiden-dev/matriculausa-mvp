@@ -3754,6 +3754,7 @@ const AdminStudentDetails: React.FC = () => {
               />
             </Suspense>
 
+            {/* I20DeadlineTimerCard oculto temporariamente
             {i20Deadline && !student.has_paid_i20_control_fee && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-32 rounded-2xl"></div>}>
                 <I20DeadlineTimerCard
@@ -3763,6 +3764,7 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
+            */}
 
             {termAcceptances.length > 0 && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>

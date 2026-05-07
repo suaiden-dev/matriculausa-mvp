@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import { queryKeys } from '../../lib/queryKeys';
 
 interface DocumentsViewProps {
   studentDocuments: any[];
@@ -43,6 +45,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   deletingStates = {},
   showGlobalRequests = true,
 }) => {
+  const queryClient = useQueryClient();
   // ✅ OTIMIZAÇÃO: Removidos console.logs desnecessários
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
@@ -958,6 +961,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+
                             // Log: acceptance letter substituída/enviada novamente
                             await logAcceptanceAction(
                               'acceptance_letter_replaced',
@@ -1125,6 +1130,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -1223,6 +1230,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_sent_at: new Date().toISOString(),
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
                             setMarkSentSuccess('Acceptance letter marked as sent.');
                           } catch (err) {
                             console.error('Error marking acceptance letter as sent:', err);

@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import KanbanColumn from './KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
@@ -7,7 +8,9 @@ import {
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
 import { StudentRecord } from './StudentApplicationsView';
-import { UserX, UserPlus } from 'lucide-react';
+import { useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+import { queryKeys } from '../../lib/queryKeys';
+import { UserX, UserPlus, RefreshCw } from 'lucide-react';
 
 interface InternalAdmin {
   id: string;
@@ -29,6 +32,28 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   internalAdmins = [],
 }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: docsStatsMap, refetch: refetchDocs } = useStudentDocsStats(students);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+      refetchDocs(),
+    ]);
+    setIsRefreshing(false);
+  };
+
+  // Merge doc stats into student records
+  const studentsWithDocs = useMemo(() => {
+    if (!docsStatsMap) return students;
+    return students.map(s => {
+      const stats = docsStatsMap.get(s.student_id);
+      return stats ? { ...s, ...stats } : s;
+    });
+  }, [students, docsStatsMap]);
 
   // Função centralizada para pegar unread counts
   const getStudentTotalUnread = (studentId: string) => {
@@ -37,32 +62,31 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
   // Separar dropped dos demais
   const droppedStudents = useMemo(() => {
-    return students.filter(s => s.is_dropped);
-  }, [students]);
+    return studentsWithDocs.filter(s => s.is_dropped);
+  }, [studentsWithDocs]);
 
   // Alunos registrados mas que ainda não pagaram a selection process fee
   const registeredStudents = useMemo(() => {
-    return students.filter(s =>
+    return studentsWithDocs.filter(s =>
       !s.is_dropped &&
       !s.has_paid_selection_process_fee &&
       s.status !== 'enrolled' &&
       s.source !== 'migma'
     );
-  }, [students]);
+  }, [studentsWithDocs]);
 
   // Filtramos apenas os que pagaram a selection fee ou estão inscritos, excluindo dropped
   const displayStudents = useMemo(() => {
-    return students.filter(s =>
+    return studentsWithDocs.filter(s =>
       !s.is_dropped &&
       (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')
     );
-  }, [students]);
+  }, [studentsWithDocs]);
 
   // Filter out stages that should be hidden
   const visibleStages = useMemo(() => {
-    return APPLICATION_FLOW_STAGES.filter(stage => 
-      stage.key !== 'scholarship_fee' && 
-      stage.key !== 'i20_fee'
+    return APPLICATION_FLOW_STAGES.filter(stage =>
+      stage.key !== 'scholarship_fee'
     );
   }, []);
 
@@ -76,8 +100,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     });
 
     displayStudents.forEach(student => {
-      // Enrolled goes directly to final column
-      if ((student.status === 'enrolled' || student.application_status === 'enrolled') && stageMap.has('enrollment')) {
+      // Alunos legados (enrolados antes da plataforma) → vão direto para Enrollment
+      if (student.student_process_type === 'enrolled' && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }
@@ -125,7 +149,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       {/* Summary Stats + Color Legend */}
       <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
-          {displayStudents.length} students in pipeline
+          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')).length} students in pipeline
           {registeredStudents.length > 0 && (
             <span className="ml-2 text-blue-400">· {registeredStudents.length} registered</span>
           )}
@@ -133,19 +157,30 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
             <span className="ml-2 text-red-400">· {droppedStudents.length} dropped</span>
           )}
         </span>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Process type:</span>
-          {[
-            { label: 'Initial',   color: 'bg-sky-400' },
-            { label: 'COS',       color: 'bg-violet-400' },
-            { label: 'Transfer',  color: 'bg-amber-400' },
-            { label: 'Resident',  color: 'bg-teal-400' },
-          ].map(({ label, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className={`w-2.5 h-2.5 rounded-sm ${color} flex-shrink-0`} />
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
+        <div className="flex items-center gap-4">
+          {/* Color legend */}
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-white border border-gray-300" />
+              Student
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-blue-50 border border-blue-200" />
+              Admin
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-purple-50 border border-purple-200" />
+              Both
+            </span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
         </div>
       </div>
 
@@ -161,7 +196,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Registered',
                 icon: UserPlus,
                 description: 'Students registered but haven\'t paid the Selection Process Fee yet',
-              }}
+                actor: 'student',
+              } as any}
               students={registeredStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
@@ -199,7 +235,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Dropped',
                 icon: UserX,
                 description: 'Students who dropped out of the process',
-              }}
+                actor: 'admin',
+              } as any}
               students={droppedStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
