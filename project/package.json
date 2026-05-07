@@ -85,6 +85,7 @@
     "react-quill": "^2.0.0",
     "react-router-dom": "^6.26.0",
     "recharts": "^3.1.2",
+    "tus-js-client": "^4.3.1",
     "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2",
     "zustand": "^5.0.7"
@@ -97,6 +98,7 @@
     "@types/react-input-mask": "^3.0.6",
     "@types/react-joyride": "^2.0.2",
     "@types/react-phone-number-input": "^3.0.17",
+    "@types/tus-js-client": "^1.8.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "cross-env": "^10.1.0",

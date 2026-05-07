@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { useResumableUpload } from '../hooks/useResumableUpload';
 import DocumentViewerModal from './DocumentViewerModal';
 import { 
   FileText, 
@@ -54,6 +55,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   onDocumentUploaded
 }) => {
   const { t } = useTranslation('dashboard');
+
+  const { progress: uploadProgress, uploading: tusUploading, startUpload } = useResumableUpload();
 
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
@@ -309,11 +312,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
   const handleFileSelect = (requestId: string, file: File | null) => {
-    if (file && file.type !== 'application/pdf') {
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
       alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
       return;
     }
-    setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: file }));
+    handleSendUpload(requestId, file);
   };
 
   // ✅ Função auxiliar para notificar admins (movida para fora do handleSendUpload para melhor escopo)
@@ -547,11 +551,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   };
 
-  const handleSendUpload = async (requestId: string) => {
+  const handleSendUpload = async (requestId: string, fileOverride?: File) => {
     if (uploading[requestId]) return;
-    
+
     console.log('[UPLOAD] 🚀 Iniciando upload de documento', { requestId });
-    const file = selectedFiles[requestId];
+    const file = fileOverride ?? selectedFiles[requestId];
     if (!file) {
       console.log('[UPLOAD] ⚠️ Nenhum arquivo selecionado');
       return;
@@ -564,15 +568,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const sanitizedName = sanitizeFileName(file.name);
       // Use user ID folder to ensure RLS access
       const filePath = `${currentUserId}/${Date.now()}_${sanitizedName}`;
-      const { data, error } = await supabase.storage.from('document-attachments').upload(filePath, file);
-      if (error) {
-        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + error.message);
-        // console.error('[UPLOAD] Erro detalhado:', error, { file, requestId, user: currentUserId });
-        alert(t('studentDashboard.documentRequests.messages.errorUploading') + ' ' + error.message + '\n' + JSON.stringify(error, null, 2));
+      let file_url: string;
+      try {
+        file_url = await startUpload(requestId, file, filePath);
+      } catch (err: any) {
+        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + err.message);
         setUploading(prev => ({ ...prev, [requestId]: false }));
         return;
       }
-      const file_url = data?.path;
 
       // Verificar se é um reenvio (já existe upload rejeitado para este request)
       const { data: existingUploads } = await supabase
@@ -584,12 +587,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const hasRejectedUpload = existingUploads?.some(upload => upload.status === 'rejected');
       const isResubmission = hasRejectedUpload;
 
-      await supabase.from('document_request_uploads').insert({
+      const { data: insertedUpload } = await supabase.from('document_request_uploads').insert({
         document_request_id: requestId,
         uploaded_by: currentUserId,
         file_url,
         status: 'under_review',
-      });
+      }).select('id').single();
 
       // Notificar universidade - diferenciando entre novo upload e reenvio
       try {
@@ -1113,14 +1116,29 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         console.error('Erro ao notificar universidade:', e);
       }
 
+      // Atualização otimista — sem re-fetch das 4 queries
+      const newUpload = {
+        id: insertedUpload?.id ?? crypto.randomUUID(),
+        document_request_id: requestId,
+        uploaded_by: currentUserId!,
+        file_url: file_url!,
+        uploaded_at: new Date().toISOString(),
+        status: 'under_review',
+        reviewed_by: null,
+        reviewed_at: null,
+        rejection_reason: null,
+        review_notes: null,
+      };
+      setUploads(prev => ({
+        ...prev,
+        [requestId]: [...(prev[requestId] || []), newUpload],
+      }));
       setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));
 
       // Chamar callback de logging se fornecido
       if (onDocumentUploaded) {
         await onDocumentUploaded(requestId, file.name, isResubmission || false);
       }
-      
-      await fetchRequests();
     } finally {
       setUploading(prev => ({ ...prev, [requestId]: false }));
     }
@@ -1279,23 +1297,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const normalizeStatus = (status: string) => (status || '').toLowerCase().replace(/\s+/g, '_');
 
   // Funções para Transfer Form
-  const handleStudentUploadTransferForm = async () => {
+  const handleStudentUploadTransferForm = async (fileOverride?: File) => {
     if (uploadingTransferForm) return;
-    if (!selectedTransferFormFile || !applicationId) return;
+    const file = fileOverride ?? selectedTransferFormFile;
+    if (!file || !applicationId) return;
 
     setUploadingTransferForm(true);
-    
+
     try {
       if (!currentUserId) throw new Error('User ID not found');
       // Upload do arquivo
-      const sanitizedName = sanitizeFileName(selectedTransferFormFile.name);
+      const sanitizedName = sanitizeFileName(file.name);
       // Use user ID in path for RLS compatibility
       const filePath = `${currentUserId}/transfer-forms-filled/${Date.now()}_${sanitizedName}`;
-      const { data, error } = await supabase.storage
-        .from('document-attachments')
-        .upload(filePath, selectedTransferFormFile);
-
-      if (error) throw error;
+      const uploadedPath = await startUpload('transfer-form', file, filePath);
+      const data = { path: uploadedPath };
 
       // Verificar se há upload rejeitado (para determinar se é reenvio)
       const hasRejectedUpload = transferFormUploads.some(upload => upload.status === 'rejected');
@@ -1426,7 +1442,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         // Não falhar o processo se a notificação falhar
       }
       if (onDocumentUploaded) {
-        await onDocumentUploaded('transfer_form', selectedTransferFormFile.name, isResubmission);
+        await onDocumentUploaded('transfer_form', file.name, isResubmission);
       }
       
     } catch (error: any) {
@@ -1733,26 +1749,40 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                    })()}
 
                    {!isSchool && (
-                      <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
+                      <div className="flex flex-col gap-1.5 sm:ml-auto w-full sm:w-auto">
+                         <label className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95 ${uploadingTransferForm ? 'opacity-50 cursor-wait' : ''}`}>
                             <Paperclip className="w-4 h-4 shrink-0" />
-                            {selectedTransferFormFile ? (
+                            {tusUploading['transfer-form'] ? (
+                              <span>{uploadProgress['transfer-form'] ?? 0}%</span>
+                            ) : uploadingTransferForm ? (
+                              <span>Sending...</span>
+                            ) : selectedTransferFormFile ? (
                               <span className="truncate max-w-[80px]">{selectedTransferFormFile.name}</span>
                             ) : t('studentDashboard.documentRequests.forms.attachPdf')}
                             <input
                               type="file"
                               className="sr-only"
                               accept=".pdf"
-                              onChange={e => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                              disabled={uploadingTransferForm}
+                              onChange={e => {
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                if (f.type !== 'application/pdf') {
+                                  alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
+                                  return;
+                                }
+                                handleStudentUploadTransferForm(f);
+                              }}
                             />
                          </label>
-                         <button
-                           disabled={!selectedTransferFormFile || uploadingTransferForm}
-                           onClick={() => handleStudentUploadTransferForm()}
-                           className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-500/10 active:scale-95"
-                         >
-                            {uploadingTransferForm ? t('studentDashboard.documentRequests.forms.sendingButton') : t('studentDashboard.documentRequests.forms.sendButton')}
-                         </button>
+                         {tusUploading['transfer-form'] && (
+                           <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                             <div
+                               className="h-full bg-emerald-500 transition-all duration-300"
+                               style={{ width: `${uploadProgress['transfer-form'] ?? 0}%` }}
+                             />
+                           </div>
+                         )}
                       </div>
                    )}
                 </div>
@@ -1857,26 +1887,30 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
                      {/* Ação de Upload - Oculta se já estiver aprovado */}
                      {!isSchool && !isApproved && (
-                        <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
-                           <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
+                        <div className="flex flex-col gap-1.5 sm:ml-auto w-full sm:w-auto">
+                           <label className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95 ${uploading[req.id] ? 'border-emerald-300 text-emerald-600 cursor-wait opacity-70' : 'border-slate-200 hover:border-emerald-600 hover:text-emerald-600 cursor-pointer'}`}>
                               <Paperclip className="w-4 h-4 shrink-0" />
-                              {selectedFiles[req.id] ? (
-                                <span className="truncate max-w-[80px]">{selectedFiles[req.id]?.name}</span>
+                              {tusUploading[req.id] ? (
+                                <span className="truncate max-w-[80px]">{uploadProgress[req.id] ?? 0}%</span>
+                              ) : uploading[req.id] ? (
+                                <span className="truncate max-w-[80px]">{t('studentDashboard.documentRequests.forms.sendingButton')}</span>
                               ) : t('studentDashboard.documentRequests.forms.attachPdf')}
                               <input
                                  type="file"
                                  className="sr-only"
                                  accept=".pdf"
+                                 disabled={uploading[req.id]}
                                  onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                               />
                            </label>
-                           <button
-                             disabled={!selectedFiles[req.id] || uploading[req.id]}
-                             onClick={() => handleSendUpload(req.id)}
-                             className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
-                           >
-                              {uploading[req.id] ? t('studentDashboard.documentRequests.forms.sendingButton') : t('studentDashboard.documentRequests.forms.sendButton')}
-                           </button>
+                           {tusUploading[req.id] && (
+                             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                               <div
+                                 className="h-full bg-emerald-500 transition-all duration-300"
+                                 style={{ width: `${uploadProgress[req.id] ?? 0}%` }}
+                               />
+                             </div>
+                           )}
                         </div>
                      )}
                   </div>
@@ -1932,6 +1966,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 <h4 className="text-xl font-bold text-slate-400 uppercase tracking-tight">{t('studentDashboard.documentRequests.uploadSection.noRequests')}</h4>
              </div>
           )}
+
         </div>
       </section>
 

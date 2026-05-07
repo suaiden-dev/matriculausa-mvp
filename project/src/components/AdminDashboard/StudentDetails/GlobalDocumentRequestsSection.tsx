@@ -193,7 +193,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                             <p className="text-slate-500 text-sm">No response submitted yet</p>
                           </div>
                         ) : (
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                          <div className="bg-white border border-slate-200 rounded-2xl p-4" data-upload-id={studentUpload.id}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                               <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
                                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -225,9 +225,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                 {/* File link - Changed to button to open modal */}
                                 {studentUpload.file_url && (
                                   <button
-                                    onClick={() => onViewDocument?.({ 
-                                      file_url: studentUpload.file_url, 
-                                      filename: request.title || 'Student Response' 
+                                    onClick={() => onViewDocument?.({
+                                      ...studentUpload,
+                                      file_url: studentUpload.file_url,
+                                      filename: request.title || 'Student Response'
                                     })}
                                     className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
                                   >

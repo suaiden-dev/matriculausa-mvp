@@ -668,7 +668,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         request.document_request_uploads.map((upload: any) => {
                           const { filename, fullUrl } = getDocumentInfo(upload);
                           return (
-                            <div key={upload.id} className="mb-4 last:mb-0 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0">
+                            <div key={upload.id} data-upload-id={upload.id} className="mb-4 last:mb-0 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0">
                               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                 <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
                                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
