@@ -105,6 +105,10 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       setError('Password contains invalid characters.');
       return;
     }
+    if (formData.password.length > 20) {
+      setError('Password must be at most 20 characters.');
+      return;
+    }
     if (!formData.phone || formData.phone.length < 8) {
       setError('Phone is required and must have at least 8 digits');
       return;

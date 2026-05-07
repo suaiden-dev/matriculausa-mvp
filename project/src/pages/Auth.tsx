@@ -409,9 +409,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
 
-        // Rejeitar apenas caracteres de controle (permite qualquer imprimível, incluindo senhas Apple/Safari)
+        // Rejeitar caracteres de controle (permite qualquer imprimível, incluindo senhas Apple/Safari)
         if (/[\x00-\x1F\x7F]/.test(formData.password)) {
           setError(t('authPage.messages.invalidPasswordChars'));
+          setLoading(false);
+          return;
+        }
+
+        // Limite de 20 caracteres para novas senhas
+        if (formData.password.length > 20) {
+          setError('Password must be at most 20 characters.');
           setLoading(false);
           return;
         }
@@ -888,6 +895,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
+                        maxLength={20}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -926,6 +934,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
+                        maxLength={20}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
