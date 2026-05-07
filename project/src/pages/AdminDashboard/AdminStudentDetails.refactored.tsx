@@ -513,10 +513,11 @@ const AdminStudentDetails: React.FC = () => {
 
   // Helpers para mapeamento de Process Type granular
   const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
+    if (!type) return 'not_specified';
     if (type === 'transfer') {
       return visaTransferActive === false ? 'transfer_reinstatement' : 'transfer_active';
     }
-    return type || 'initial';
+    return type;
   };
 
   const decomposeProcessType = (displayValue: string): { dbType: string; dbFlag: boolean } => {
@@ -3502,12 +3503,12 @@ const AdminStudentDetails: React.FC = () => {
                 onCancelEdit={() => setIsEditing(false)}
                 onEditProcessType={() => {
                   const currentDisplayValue = getDisplayValue(
-                    student.student_process_type || 'initial',
+                    student.student_process_type,
                     student.visa_transfer_active
                   );
                   // Garantir que o valor é válido (está nas opções do select)
                   const validValues = ['initial', 'transfer_active', 'transfer_reinstatement', 'change_of_status', 'resident', 'enrolled'];
-                  const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : 'initial';
+                  const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : '';
                   
                   console.log('🔍 [AdminStudentDetails] Editando Process Type (granular):', { currentDisplayValue, validValue });
                   setIsEditingProcessType(true);
@@ -3613,7 +3614,7 @@ const AdminStudentDetails: React.FC = () => {
                 }}
                 onCancelProcessType={() => {
                   setIsEditingProcessType(false);
-                  setEditingProcessType(getDisplayValue(student.student_process_type || 'initial', student.visa_transfer_active));
+                  setEditingProcessType(getDisplayValue(student.student_process_type, student.visa_transfer_active));
                 }}
                 onProcessTypeChange={(value) => {
                   console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);

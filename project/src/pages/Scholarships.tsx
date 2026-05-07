@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, AlertTriangle, Eye, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -337,31 +337,7 @@ const Scholarships: React.FC = () => {
     }
   };
 
-  const getDeliveryModeIcon = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return <Monitor className="h-3 w-3" />;
-      case 'in_person':
-        return <Building className="h-3 w-3" />;
-      case 'hybrid':
-        return <Globe className="h-3 w-3" />;
-      default:
-        return <MapPin className="h-3 w-3" />;
-    }
-  };
 
-  const getDeliveryModeColor = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return 'bg-blue-100 text-blue-700';
-      case 'in_person':
-        return 'bg-green-100 text-green-700';
-      case 'hybrid':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
 
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
@@ -688,232 +664,252 @@ const Scholarships: React.FC = () => {
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
                     )}
 
-                    {/* Scholarship Image */}
-                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
-                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent z-0"></div>
-                      {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
-                        <img
-                          src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
-                          alt={scholarship.title}
-                          className="relative z-10 w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-700"
-                        />
-                      ) : (
-                        <div className="relative z-10 flex items-center justify-center w-full h-full text-slate-400">
-                          <Building className="h-16 w-16 text-[#05294E]/30" />
-                        </div>
-                      )}
+                    {/* Scholarship Image Banner (Overlay Layout) */}
+                    <div className="relative w-full aspect-[8/3] bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
                       
-                        {/* Top Left Badges */}
-                       <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-                         {/* Timer para bolsas de $3800 ou Deadline Badge */}
-                         {/* Visual timers hidden as per request - logical behavior remains intact */}
-                         {/* {is3800Scholarship(scholarship) ? (
-                           <ScholarshipCountdownTimer scholarship={scholarship} />
-                         ) : daysLeft > 0 && (
-                           <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                             <Clock className="h-3 w-3" />
-                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
-                           </div>
-                         )} */}
-                         {/* Exclusive Badge */}
-                         {scholarship.is_exclusive && (
-                           <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                             <Star className="h-3 w-3" />
-                             {t('common.exclusive')}
-                           </div>
-                         )}
-                       </div>
+                      {/* Full Background Image */}
+                      <div className="absolute inset-0 z-0">
+                        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+                          <img
+                            src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
+                            alt={scholarship.title}
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full bg-slate-50 text-slate-400">
+                            <Building className="h-12 w-12 text-[#05294E]/20" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Text Overlay Layer (Left side fade) */}
+                      <div className="absolute inset-y-0 left-0 w-[60%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-5 pr-12">
+                        {/* Top Left Logo & Line */}
+                        <div className="absolute top-5 left-5">
+                          <img 
+                            src="/logo.png" 
+                            alt="Matricula USA" 
+                            className="h-6 w-auto object-contain mb-1.5 drop-shadow-sm" 
+                          />
+                        </div>
+                        
+                        {/* Course / Field as Main Banner Text */}
+                        <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.95 }}>
+                          {scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}
+                        </p>
+                      </div>
+                      
+                      {/* Top Right Badges */}
+                      <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
+                        {/* Exclusive Badge */}
+                        {scholarship.is_exclusive && (
+                          <div className="bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                            <Star className="h-3 w-3" />
+                            {t('common.exclusive')}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Card Content */}
-                    <div className="p-6 flex-1 flex flex-col">
-                      {/* Header Section */}
-                      <div className="mb-4 flex-1">
-                        {/* Warning for $3800 scholarships - inline version hidden as per request */}
-                        {/* <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" /> */}
-                        
-                        <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
-                          {scholarship.title}
-                        </h3>
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col z-0">
+                      {/* Title */}
+                      <h3 id={`featured-scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2">
+                        {scholarship.title}
+                      </h3>
+                      
+                      {/* Field and Level Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                          <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
+                          <span className="whitespace-normal break-words">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
+                        </span>
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5 w-fit">
+                          {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), {
+                            className: "h-3.5 w-3.5",
+                            strokeWidth: 2.5
+                          })}
+                          <span className="capitalize">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
+                        </span>
+                      </div>
 
-                        {/* Field and Level Badges */}
-                        <div className={`flex flex-wrap items-center gap-2 mb-3`}>
-                          <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
-                            <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                            <span className="whitespace-normal break-words">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
-                          </span>
-                          <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
-                            {getLevelIcon(scholarship.level || 'undergraduate')}
-                            <span className="whitespace-normal break-words">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
-                          </span>
-                        </div>
-
-                        {/* University Info Box */}
-                        <div className="flex items-center gap-3 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200 mb-4">
-                          <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0">
-                            <Building className="h-4 w-4 text-[#05294E]" />
+                        {/* Info Boxes Section */}
+                        <div className="space-y-1.5 mb-3">
+                          {/* University Info Box */}
+                          <div className="flex items-center gap-3 py-1">
+                            <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
+                              {scholarship.universities?.logo_url && canViewSensitive ? (
+                                <img 
+                                  src={scholarship.universities.logo_url} 
+                                  alt={scholarship.universities.name || "University Logo"} 
+                                  className="w-full h-full object-contain p-0.5" 
+                                />
+                              ) : (
+                                <Building className="h-8 w-8 text-[#05294E]" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                {t('scholarshipsPage.scholarshipCard.university')}
+                              </p>
+                              <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                                {canViewSensitive
+                                  ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
+                                  : '********'}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
-                              {t('scholarshipsPage.scholarshipCard.university')}
-                            </p>
-                            <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                              {canViewSensitive
-                                ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
-                                : '********'}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Program Details */}
-                        <div className="grid grid-cols-1 gap-3 mb-4">
                           {/* Course Modality */}
                           {scholarship.delivery_mode && (
-                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                              <div className="flex items-center">
-                                {getDeliveryModeIcon(scholarship.delivery_mode)}
-                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
+                            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-700">
+                                  {t('scholarshipsPage.scholarshipCard.studyMode')}
+                                </span>
                               </div>
-                              <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-slate-900">
                                 {getDeliveryModeLabel(scholarship.delivery_mode)}
                               </span>
                             </div>
                           )}
 
-                          {/* Work Permissions */}
-                          {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                            <div className="p-3 bg-white rounded-lg border border-slate-200">
-                              <div className="flex items-center mb-2">
-                                <Briefcase className="h-3 w-3 text-emerald-600" />
-                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.workAuthorization')}</span>
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {scholarship.work_permissions.filter((p: any) => String(p).toUpperCase() !== 'F1').map((permission, index) => (
-                                  <span
-                                    key={index}
-                                    className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                                  >
-                                    {permission}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                           {/* Work Permissions */}
+                           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                               <span className="text-xs font-bold text-slate-700 whitespace-nowrap mr-2">
+                                 {t('scholarshipsPage.scholarshipCard.workAuthorization')}
+                               </span>
+                               <div className="flex flex-wrap justify-end gap-1.5">
+                                 {scholarship.work_permissions.map((permission, index) => (
+                                   <span
+                                     key={index}
+                                     className="px-2 py-0.5 bg-gray-100 text-slate-700 rounded-md text-[10px] font-black uppercase border border-gray-200"
+                                   >
+                                     {permission}
+                                   </span>
+                                 ))}
+                               </div>
+                             </div>
+                           )}
+                         </div>
 
-                        {/* Financial Impact Section */}
-                        <div className="mb-6">
+                        {/* Financial Overview Table View */}
+                        <div className="mb-4">
                           <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-green-600" />
+                            <h4 className="text-[11px] font-black text-slate-800 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+                              <DollarSign className="h-3.5 w-3.5 text-green-600" />
                               {t('scholarshipsPage.scholarshipCard.financialOverview')}
                             </h4>
-
+                            
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
-                                <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
+                                <span className="text-slate-500 text-xs font-bold line-through">
                                   ${formatAmount(originalValue)}
                                 </span>
                               </div>
-                              {savingsPercentage > 0 && (
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
-                                  <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                                <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
-                                <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
+                                <span className="text-green-700 font-extrabold text-base">
+                                  ${formatAmount(scholarshipValue)}
+                                </span>
                               </div>
-
-                              {/* Subtle discount indicator */}
+                              
+                              <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
+                                <span className="text-slate-500 text-xs font-bold">
+                                  ${formatAmount(scholarship.original_value_per_credit ?? 0)}
+                                </span>
+                              </div>
+                              
+                              {/* Discount Percentage Line */}
                               {savingsPercentage > 0 && (
-                                <div className="pt-3 border-t border-slate-200">
-                                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                    <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
-                                    <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Application Fee Information */}
-                              <div className="pt-3 border-t border-slate-200">
-                                <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                  <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                                  <span className="font-semibold text-purple-600">
-                                    ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                  <span className="text-slate-400 text-xs font-medium">
+                                    {t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}
                                   </span>
+                                  <span className="text-green-600 text-xs font-black">{savingsPercentage}% OFF</span>
                                 </div>
-                                <div className="text-xs text-slate-400 text-center">
-                                  {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ?
-                                    t('scholarshipsPage.scholarshipCard.customFee') :
-                                    t('scholarshipsPage.scholarshipCard.standardFee')
-                                  }
-                                </div>
-                                {/* Placement Fee - exibir apenas para novos usuários */}
-                                {userProfile?.placement_fee_flow && (() => {
-                                  const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
-                                  const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-                                  const placementFee = getPlacementFee(annualValue, placementFeeAmount);
-                                  return (
-                                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
-                                      <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
-                                      <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
+                              )}
+
+                              {/* Placement Fee - exibir apenas para novos usuários */}
+                              {userProfile?.placement_fee_flow && (() => {
+                                const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                                const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                return (
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                    <span className="text-slate-400 text-xs font-medium">Placement Fee</span>
+                                    <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                    {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
-                    <div className="px-6 pb-6 mt-auto">
-                      <div className="flex flex-col gap-3">
-                        {/* View Details Button */}
-                        <button
-                          onClick={() => openScholarshipModal(scholarship)}
-                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                          aria-label={`View details for ${scholarship.title} scholarship`}
-                        >
-                          <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
-                        </button>
-                        
-                        {/* Apply Now Button - Maior */}
-                        {isBlocked ? (
-                          <button
-                            disabled
-                            className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
-                            aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
-                          >
-                            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
-                          </button>
-                        ) : (!isAuthenticated) ? (
-                          <button
-                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                            onClick={() => navigate(`/login${location.search}`)}
-                            aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                          </button>
-                        ) : (
-                          <button
-                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                            onClick={() => navigate('/student/onboarding')}
-                            aria-label={`Apply for ${scholarship.title} scholarship`}
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                          </button>
+                      {/* Action Buttons - Agora na mesma linha (75% / 25%) */}
+                      <div className="mt-auto">
+                        {/* Badge de bolsa inativa/expirada movido para fora do flow principal de botões */}
+                        {!scholarship.is_active && (
+                          <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
+                            <AlertTriangle className="h-3 w-3" />
+                            Expirada
+                          </div>
                         )}
+
+                        <div className="flex flex-row gap-3">
+                          {/* Apply Now Button - 75% */}
+                          {!scholarship.is_active || isBlocked ? (
+                            <button
+                              disabled
+                              className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                            >
+                              <span className="relative z-10 truncate">
+                                {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                              </span>
+                            </button>
+                          ) : (!isAuthenticated) ? (
+                            <button
+                              className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                              onClick={() => navigate(`/login${location.search}`)}
+                              aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                              <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                            </button>
+                          ) : isBlocked ? (
+                            <button
+                              disabled
+                              className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                            >
+                              <span className="relative z-10 truncate">{t('scholarshipDeadline.3800Expired')}</span>
+                            </button>
+                          ) : (
+                            <button
+                              className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                              onClick={() => navigate('/student/onboarding')}
+                              aria-label={`Apply for ${scholarship.title} scholarship`}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                              <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                            </button>
+                          )}
+
+                          {/* View Details Button - 25% (Ícone de Olhinho) */}
+                          <button
+                            onClick={() => openScholarshipModal(scholarship)}
+                            className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
+                            aria-label={`View details for ${scholarship.title} scholarship`}
+                            title={t('scholarshipsPage.scholarshipCard.details')}
+                          >
+                            <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -1024,258 +1020,251 @@ const Scholarships: React.FC = () => {
                      )}
 
                     {/* Scholarship Image */}
-                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
-                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent z-0"></div>
-                      {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
-                        <img
-                          src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
-                          alt={scholarship.title}
-                          className="relative z-10 w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-700"
-                        />
-                      ) : (
-                        <div className="relative z-10 flex items-center justify-center w-full h-full text-slate-400">
-                          <Building className="h-16 w-16 text-[#05294E]/30" />
-                        </div>
-                      )}
+                     <div className="relative w-full aspect-[8/3] bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
+                       {/* Full Background Image */}
+                       <div className="absolute inset-0 z-0">
+                         {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+                           <img
+                             src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
+                             alt={scholarship.title}
+                             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                           />
+                         ) : (
+                           <div className="flex items-center justify-center w-full h-full bg-slate-50 text-slate-400">
+                             <Building className="h-12 w-12 text-[#05294E]/20" />
+                           </div>
+                         )}
+                       </div>
 
-                      {/* Top Right Badges */}
-                      <div className="absolute top-4 right-4 flex flex-col gap-2">
-                        {/* Exclusive Badge */}
-                        {scholarship.is_exclusive && (
-                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                            <Star className="h-3 w-3" />
-                            {t('common.exclusive')}
-                          </div>
-                        )}
-                      </div>
-
-                       {/* Deadline Badge - Top Left */}
-                       <div className="absolute top-4 left-4">
-                        {/* Visual timers hidden as per request - logical behavior remains intact */}
-                        {/* {is3800Scholarship(scholarship) ? (
-                          <ScholarshipCountdownTimer scholarship={scholarship} />
-                        ) : (
-                                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                            <Clock className="h-3 w-3" />
-                            {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
-                          </div>
-                        )} */}
+                       {/* Text Overlay Layer (Left side fade) */}
+                       <div className="absolute inset-y-0 left-0 w-[60%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-5 pr-12">
+                         {/* Top Left Logo & Line */}
+                         <div className="absolute top-5 left-5">
+                           <img 
+                             src="/logo.png" 
+                             alt="Matricula USA" 
+                             className="h-6 w-auto object-contain mb-1.5 drop-shadow-sm" 
+                           />
+                         </div>
+                         
+                         {/* Course / Field as Main Banner Text */}
+                         <p className="w-[95%] sm:w-[85%] md:w-[75%] text-base md:text-lg font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-4 pt-0.5 mt-10" style={{ lineHeight: 0.95 }}>
+                           {scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}
+                         </p>
+                       </div>
+                       
+                       {/* Top Right Badges */}
+                       <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
+                         {/* Exclusive Badge */}
+                         {scholarship.is_exclusive && (
+                           <div className="bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                             <Star className="h-3 w-3" />
+                             {t('common.exclusive')}
+                           </div>
+                         )}
                        </div>
                      </div>
                      
-                     {/* Card Content */}
-                     <div className="p-6 flex-1 flex flex-col">
-                       {/* Header Section */}
-                       <div className="mb-4 flex-1">
-                          {/* Warning for $3800 scholarships - inline version hidden as per request */}
-                          {/* <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" /> */}
-                          
-                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
-                           {scholarship.title}
-                         </h3>
-                         
-                         {/* Field and Level Badges */}
-                        <div className={`flex flex-wrap items-center gap-2 mb-3`}>
-                          <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
-                            <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                            <span className="whitespace-normal break-words">{scholarship.field_of_study || 'Any Field'}</span>
+                           <div className="p-4 sm:p-5 flex-1 flex flex-col z-0">
+                        {/* Title */}
+                        <h3 id={`scholarship-title-${scholarship.id}`} className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2">
+                          {scholarship.title}
+                        </h3>
+                        
+                        {/* Field and Level Badges */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                            <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
+                            <span className="whitespace-normal break-words">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
                           </span>
-                          <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
-                            {getLevelIcon(scholarship.level || 'undergraduate')}
-                            <span className="whitespace-normal break-words">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
+                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5 w-fit">
+                            {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), {
+                              className: "h-3.5 w-3.5",
+                              strokeWidth: 2.5
+                            })}
+                            <span className="capitalize">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
                           </span>
                         </div>
 
-                        {/* University Info Box */}
-                        <div className="flex items-center gap-3 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200 mb-4">
-                          <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0">
-                            <Building className="h-4 w-4 text-[#05294E]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
-                              {t('scholarshipsPage.scholarshipCard.university')}
-                            </p>
-                            <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                              {canViewSensitive
-                                ? (scholarship.universities?.name || scholarship.university_name || 'Unknown University')
-                                : '********'}
-                            </p>
-                          </div>
-                        </div>
-                        {/* Program Details */}
-                        <div className="grid grid-cols-1 gap-3 mb-4">
-                          {/* Course Modality */}
-                          {scholarship.delivery_mode && (
-                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                              <div className="flex items-center">
-                                {getDeliveryModeIcon(scholarship.delivery_mode)}
-                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
+                          {/* Info Boxes Section */}
+                          <div className="space-y-1.5 mb-3">
+                            {/* University Info Box */}
+                            <div className="flex items-center gap-3 py-1">
+                              <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
+                                {scholarship.universities?.logo_url && canViewSensitive ? (
+                                  <img 
+                                    src={scholarship.universities.logo_url} 
+                                    alt={scholarship.universities.name || "University Logo"} 
+                                    className="w-full h-full object-contain p-0.5" 
+                                  />
+                                ) : (
+                                  <Building className="h-8 w-8 text-[#05294E]" />
+                                )}
                               </div>
-                              <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                                {getDeliveryModeLabel(scholarship.delivery_mode)}
-                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                  {t('scholarshipsPage.scholarshipCard.university')}
+                                </p>
+                                <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                                  {canViewSensitive
+                                    ? (scholarship.universities?.name || scholarship.university_name || 'Unknown University')
+                                    : '********'}
+                                </p>
+                              </div>
                             </div>
-                          )}
 
-                           {/* Work Permissions */}
-                           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                             <div className="p-3 bg-white rounded-lg border border-slate-200">
-                               <div className="flex items-center mb-2">
-                                 <Briefcase className="h-3 w-3 text-emerald-600" />
-                                 <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.workAuthorization')}</span>
-                               </div>
-                               <div className="flex flex-wrap gap-1">
-                                 {scholarship.work_permissions.map((permission, index) => (
-                                   <span
-                                     key={index}
-                                     className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                                   >
-                                     {permission}
-                                   </span>
-                                 ))}
-                               </div>
-                             </div>
-                           )}
-                         </div>
-                       </div>
+                            {/* Course Modality */}
+                            {scholarship.delivery_mode && (
+                              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-700">
+                                    {t('scholarshipsPage.scholarshipCard.studyMode')}
+                                  </span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-slate-900">
+                                  {getDeliveryModeLabel(scholarship.delivery_mode)}
+                                </span>
+                              </div>
+                            )}
 
-                       {/* Financial Impact Section */}
-                       <div className="mb-6">
-                         <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                           <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                             <DollarSign className="h-4 w-4 text-green-600" />
-                             {t('scholarshipsPage.scholarshipCard.financialOverview')}
-                           </h4>
-                           
-
-                           
-                           <div className="space-y-2">
-                             <div className="flex items-center justify-between text-sm">
-                               <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
-                               <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
-                                 ${formatAmount(originalValue)}
-                               </span>
-                             </div>
-                             {savingsPercentage > 0 && (
-                               <div className="flex items-center justify-between text-sm">
-                                 <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
-                                 <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
-                               </div>
-                             )}
-                             <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                               <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
-                               <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
-                             </div>
-                             
-                             {/* Subtle discount indicator */}
-                             {savingsPercentage > 0 && (
-                               <div className="pt-3 border-t border-slate-200">
-                                 <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                   <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
-                                   <span className="font-semibold text-green-700">{savingsPercentage}% OFF</span>
+                             {/* Work Permissions */}
+                             {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                               <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap mr-2">
+                                   {t('scholarshipsPage.scholarshipCard.workAuthorization')}
+                                 </span>
+                                 <div className="flex flex-wrap justify-end gap-1.5">
+                                   {scholarship.work_permissions.map((permission, index) => (
+                                     <span
+                                       key={index}
+                                       className="px-2 py-0.5 bg-gray-100 text-slate-700 rounded-md text-[10px] font-black uppercase border border-gray-200"
+                                     >
+                                       {permission}
+                                     </span>
+                                   ))}
                                  </div>
                                </div>
                              )}
-
-                             {/* Application Fee Information */}
-                             <div className="pt-3 border-t border-slate-200">
-                               <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                 <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                                 <span className="font-semibold text-purple-600">
-                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
-                                 </span>
-                               </div>
-                               <div className="text-xs text-slate-400 text-center">
-                                 {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
-                                   t('scholarshipsPage.scholarshipCard.customFee') : 
-                                   t('scholarshipsPage.scholarshipCard.standardFee')
-                                 }
-                               </div>
-                               {/* Placement Fee - exibir apenas para novos usuários */}
-                               {userProfile?.placement_fee_flow && (() => {
-                                 const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
-                                 const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-                                 const placementFee = getPlacementFee(annualValue, placementFeeAmount);
-                                 return (
-                                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
-                                     <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
-                                     <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
-                                   </div>
-                                 );
-                               })()}
-                             </div>
                            </div>
-                         </div>
-                       </div>
 
+                          {/* Financial Overview Table View */}
+                          <div className="mb-4">
+                            <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                              <h4 className="text-[11px] font-black text-slate-800 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+                                <DollarSign className="h-3.5 w-3.5 text-green-600" />
+                                {t('scholarshipsPage.scholarshipCard.financialOverview')}
+                              </h4>
+                              
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
+                                  <span className="text-slate-500 text-xs font-bold line-through">
+                                    ${formatAmount(originalValue)}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
+                                  <span className="text-green-700 font-extrabold text-base">
+                                    ${formatAmount(scholarshipValue)}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                  <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
+                                  <span className="text-slate-500 text-xs font-bold">
+                                    ${formatAmount(scholarship.original_value_per_credit ?? 0)}
+                                  </span>
+                                </div>
+                                
+                                {/* Discount Percentage Line */}
+                                {savingsPercentage > 0 && (
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                    <span className="text-slate-400 text-xs font-medium">
+                                      {t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}
+                                    </span>
+                                    <span className="text-green-600 text-xs font-black">{savingsPercentage}% OFF</span>
+                                  </div>
+                                )}
 
+                                {/* Placement Fee - exibir apenas para novos usuários */}
+                                {userProfile?.placement_fee_flow && (() => {
+                                  const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                                  const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                  const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                  return (
+                                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                                      <span className="text-slate-400 text-xs font-medium">Placement Fee</span>
+                                      <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+
+                        {/* Action Buttons - Agora na mesma linha (75% / 25%) */}
+                        <div className="mt-auto">
+                          {/* Badge de bolsa inativa/expirada movido para fora do flow principal de botões */}
+                          {!scholarship.is_active && (
+                            <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
+                              <AlertTriangle className="h-3 w-3" />
+                              Expirada
+                            </div>
+                          )}
+
+                          <div className="flex flex-row gap-3">
+                            {/* Apply Now Button - 75% */}
+                            {!scholarship.is_active || isBlocked ? (
+                              <button
+                                disabled
+                                className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                                aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                              >
+                                <span className="relative z-10 truncate">
+                                  {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                                </span>
+                              </button>
+                            ) : (!isAuthenticated) ? (
+                              <button
+                                className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                                onClick={() => navigate(`/login${location.search}`)}
+                                aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                                <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                              </button>
+                            ) : isBlocked ? (
+                              <button
+                                disabled
+                                className="w-3/4 bg-slate-400 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                                aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                              >
+                                <span className="relative z-10 truncate">{t('scholarshipDeadline.3800Expired')}</span>
+                              </button>
+                            ) : (
+                              <button
+                                className="w-3/4 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                                onClick={() => navigate('/student/onboarding')}
+                                aria-label={`Apply for ${scholarship.title} scholarship`}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                                <span className="relative z-10 truncate">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                              </button>
+                            )}
+
+                            {/* View Details Button - 25% (Ícone de Olhinho) */}
+                            <button
+                              onClick={() => openScholarshipModal(scholarship)}
+                              className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
+                              aria-label={`View details for ${scholarship.title} scholarship`}
+                              title={t('scholarshipsPage.scholarshipCard.details')}
+                            >
+                              <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-
-                     {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
-                     <div className="px-6 pb-6 mt-auto">
-                       <div className="flex flex-col gap-3">
-                         {/* View Details Button */}
-                         <button
-                           onClick={() => openScholarshipModal(scholarship)}
-                           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                           aria-label={`View details for ${scholarship.title} scholarship`}
-                         >
-                           <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
-                         </button>
-                         
-                         {/* Badge de bolsa inativa/expirada */}
-                         {!scholarship.is_active && (
-                           <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
-                             <AlertTriangle className="h-3 w-3" />
-                             Expirada
-                           </div>
-                         )}
-
-                         {/* Apply Now Button - Maior */}
-                         {!scholarship.is_active || isBlocked ? (
-                           <button
-                             disabled
-                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
-                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
-                           >
-                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                             <span className="relative z-10">
-                               {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
-                             </span>
-                           </button>
-                         ) : (!isAuthenticated) ? (
-                           <button
-                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                             onClick={() => navigate(`/login${location.search}`)}
-                             aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                           >
-                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                           </button>
-                         ) : isBlocked ? (
-                           <button
-                             disabled
-                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
-                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
-                           >
-                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
-                           </button>
-                         ) : (
-                           <button
-                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                             onClick={() => navigate('/student/onboarding')}
-                             aria-label={`Apply for ${scholarship.title} scholarship`}
-                           >
-                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                           </button>
-                         )}
-                       </div>
-                     </div>
                      
                      {/* Enhanced Hover Effect Overlay */}
                      <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>

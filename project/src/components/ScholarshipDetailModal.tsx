@@ -9,7 +9,6 @@ import {
   Building, 
   DollarSign, 
   Clock, 
-  Target, 
   Star,
   GraduationCap,
   Monitor,
@@ -20,7 +19,8 @@ import {
   AlertTriangle,
   Calendar,
   Info,
-  ExternalLink
+  ExternalLink,
+  Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
@@ -176,20 +176,44 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header with Image */}
-            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
-              {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive && (
-                <img 
-                  src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
-                  alt="" 
-                  className="w-full h-full object-contain"
-                />
-              )}
-              
+            {/* Header with Premium Banner */}
+            <div className="relative flex-shrink-0 w-full aspect-[8/3] bg-white overflow-hidden border-b border-slate-100 shrink-0 group">
+              {/* Full Background Image */}
+              <div className="absolute inset-0 z-0">
+                {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+                  <img 
+                    src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
+                    alt={scholarship.title} 
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full bg-slate-50 text-slate-400">
+                    <Building className="h-16 w-16 text-[#05294E]/20" />
+                  </div>
+                )}
+              </div>
+
+              {/* Text Overlay Layer (Left side fade) */}
+              <div className="absolute inset-y-0 left-0 w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-6 sm:pl-10">
+                {/* Top Left Logo & Line */}
+                <div className="absolute top-6 left-6 sm:left-10">
+                  <img 
+                    src="/logo.png" 
+                    alt="Matricula USA" 
+                    className="h-8 w-auto object-contain mb-2 drop-shadow-sm" 
+                  />
+                </div>
+                
+                {/* Course / Field as Main Banner Text */}
+                <p className="w-[85%] text-xl sm:text-2xl md:text-3xl font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-12" style={{ lineHeight: 0.95 }}>
+                  {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
+                </p>
+              </div>
+
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-20 backdrop-blur-sm"
+                className="absolute top-4 right-4 p-2.5 bg-white/80 hover:bg-white text-slate-900 shadow-lg rounded-full transition-all z-20 backdrop-blur-sm border border-slate-200 active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -197,9 +221,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-5 sm:p-6">
-                {/* Title Section relocated to Body */}
+                {/* Title Section */}
                 <div className="mb-6">
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {scholarship.is_exclusive && (
                       <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
                         <Star className="h-3 w-3" />
@@ -214,24 +238,21 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     )}
                   </div>
 
-                  <p className="text-slate-500 text-sm mb-1">
-                    {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
-                  </p>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight mb-2">
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
                     {scholarship.title}
                   </h2>
-                  <div className="flex flex-wrap items-center gap-3 text-slate-600 text-sm font-medium">
-                    <div className="flex items-center gap-1.5">
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-slate-600 text-sm font-bold">
+                    <div className="flex items-center gap-2 py-2 px-3 bg-slate-50 rounded-xl border border-slate-100">
                       <Building className="h-4 w-4 text-[#05294E]" />
-                      <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
+                      <span className={!canViewSensitive ? 'blur-sm text-slate-300' : 'text-slate-900'}>
                         {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
                       </span>
                     </div>
                     {canViewSensitive && scholarship.universities?.location && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-300 hidden sm:block">•</span>
+                      <div className="flex items-center gap-2 py-2 px-3 bg-slate-50 rounded-xl border border-slate-100">
                         <MapPin className="h-4 w-4 text-[#05294E]" />
-                        <span>{scholarship.universities.location}</span>
+                        <span className="text-slate-900">{scholarship.universities.location}</span>
                       </div>
                     )}
                   </div>
