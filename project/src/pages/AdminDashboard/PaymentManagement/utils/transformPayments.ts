@@ -501,16 +501,23 @@ export function transformPaymentsToRecordsAndStats({
     if (hasApplication) return;
 
     const paidFeeTypes = new Set(userZellePayments.map(payment => {
-      if (payment.fee_type === 'application_fee') return 'application';
-      if (payment.fee_type === 'selection_process_fee') return 'selection_process';
-      if (payment.fee_type === 'scholarship_fee') return 'scholarship';
-      if (payment.fee_type === 'i20_control_fee') return 'i20_control_fee';
-      if (payment.fee_type === 'placement_fee') return 'placement';
+      if (payment.fee_type === 'application_fee' || payment.fee_type === 'application') return 'application';
+      if (payment.fee_type === 'selection_process_fee' || payment.fee_type === 'selection_process') return 'selection_process';
+      if (payment.fee_type === 'scholarship_fee' || payment.fee_type === 'scholarship') return 'scholarship';
+      if (payment.fee_type === 'i20_control_fee' || payment.fee_type === 'i20_control') return 'i20_control_fee';
+      if (payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') return 'placement';
+      if (payment.fee_type === 'ds160_package') return 'ds160_package';
+      if (payment.fee_type === 'i539_cos_package') return 'i539_cos_package';
+      if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') return 'reinstatement_fee';
       return payment.fee_type_global;
     }));
 
     if (paidFeeTypes.has('selection_process')) {
-      const selectionPayment = userZellePayments.find((p: any) => p.fee_type_global === 'selection_process' || p.fee_type === 'selection_process_fee');
+      const selectionPayment = userZellePayments.find((p: any) => 
+        p.fee_type_global === 'selection_process' || 
+        p.fee_type === 'selection_process_fee' || 
+        p.fee_type === 'selection_process'
+      );
       paymentRecords.push({
         id: `zelle-${selectionPayment.id}-selection`,
         student_id: student.id,
@@ -538,7 +545,11 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     if (paidFeeTypes.has('application')) {
-      const applicationPayment = userZellePayments.find((p: any) => p.fee_type_global === 'application' || p.fee_type === 'application_fee');
+      const applicationPayment = userZellePayments.find((p: any) => 
+        p.fee_type_global === 'application' || 
+        p.fee_type === 'application_fee' || 
+        p.fee_type === 'application'
+      );
       const applicationAmount = Math.round(parseFloat(applicationPayment.amount) * 100);
       paymentRecords.push({
         id: `zelle-${applicationPayment.id}-application`,
@@ -567,7 +578,11 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     if (paidFeeTypes.has('scholarship') && !student.placement_fee_flow) {
-      const scholarshipPayment = userZellePayments.find((p: any) => p.fee_type_global === 'scholarship' || p.fee_type === 'scholarship_fee');
+      const scholarshipPayment = userZellePayments.find((p: any) => 
+        p.fee_type_global === 'scholarship' || 
+        p.fee_type === 'scholarship_fee' || 
+        p.fee_type === 'scholarship'
+      );
       paymentRecords.push({
         id: `zelle-${scholarshipPayment.id}-scholarship`,
         student_id: student.id,
@@ -595,7 +610,11 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     if (paidFeeTypes.has('i20_control_fee') && !student.placement_fee_flow) {
-      const i20Payment = userZellePayments.find((p: any) => p.fee_type_global === 'i20_control_fee' || p.fee_type === 'i20_control_fee');
+      const i20Payment = userZellePayments.find((p: any) => 
+        p.fee_type_global === 'i20_control_fee' || 
+        p.fee_type === 'i20_control_fee' || 
+        p.fee_type === 'i20_control'
+      );
       paymentRecords.push({
         id: `zelle-${i20Payment.id}-i20`,
         student_id: student.id,
