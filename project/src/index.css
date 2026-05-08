@@ -121,13 +121,13 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    height: 100%;
-    overflow-y: auto;
     overflow-x: hidden;
     position: relative;
   }
 
   html {
+    color-scheme: light;
+    background-color: white;
     scroll-behavior: smooth;
     height: 100%;
     overflow-y: auto;
