@@ -642,6 +642,81 @@ export const useTransferForm = (
     }
   }, [userId, getTransferApplication, student, logAction, adminEmail]);
 
+  // Handler para o aluno enviar comprovante de que enviou o Transfer Form para a escola atual
+  const handleUploadTransferProofToSchool = useCallback(async (applicationId: string, file: File): Promise<boolean> => {
+    try {
+      const sanitized = sanitizeFileName(file.name);
+      const storagePath = `${student?.user_id}/transfer-proof-to-school/${Date.now()}_${sanitized}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData?.path || storagePath);
+
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_proof_to_school_url: publicUrl,
+          transfer_proof_to_school_at: new Date().toISOString(),
+          transfer_proof_to_school_status: 'submitted'
+        })
+        .eq('id', applicationId);
+
+      if (updateError) throw updateError;
+
+      // Notificar admin via webhook
+      try {
+        const { data: studentProfile } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', student?.user_id || '')
+          .maybeSingle();
+
+        if (studentProfile?.email) {
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: 'Comprovante de Transfer Form enviado para escola',
+              email_aluno: studentProfile.email,
+              nome_aluno: studentProfile.full_name || 'Student',
+              document_type: 'Transfer Proof to School',
+              o_que_enviar: `The student ${studentProfile.full_name || 'Student'} has uploaded proof that they submitted the Transfer Form to their current school.`
+            })
+          });
+        }
+      } catch (notifyError) {
+        console.warn('[TransferProof] Webhook notification failed (non-critical):', notifyError);
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error('[TransferProof] Upload error:', error);
+      return false;
+    }
+  }, [student]);
+
+  // Handler para admin marcar comprovante como visualizado
+  const handleMarkTransferProofViewed = useCallback(async (applicationId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ transfer_proof_to_school_status: 'viewed' })
+        .eq('id', applicationId);
+
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('[TransferProof] Mark viewed error:', error);
+      return false;
+    }
+  }, []);
+
   return {
     transferFormFile,
     setTransferFormFile,
@@ -650,7 +725,9 @@ export const useTransferForm = (
     getTransferApplication,
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
-    handleRejectTransferFormUpload
+    handleRejectTransferFormUpload,
+    handleUploadTransferProofToSchool,
+    handleMarkTransferProofViewed
   };
 };
 

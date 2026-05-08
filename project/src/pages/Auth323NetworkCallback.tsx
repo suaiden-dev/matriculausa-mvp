@@ -74,7 +74,24 @@ const Auth323NetworkCallback: React.FC = () => {
             }
 
             console.log('[SSO Callback] ✅ Sessão criada com sucesso via hash!');
-            
+
+            // ✅ Sincronizar user_profiles.role com user_metadata.role
+            // (necessário quando o cadastro foi feito com confirmação de email e o update de role não rodou)
+            try {
+              const metaRole = sessionData.session?.user?.user_metadata?.role;
+              const userId = sessionData.session?.user?.id;
+              if (metaRole && userId && metaRole !== 'student') {
+                await supabase
+                  .from('user_profiles')
+                  .update({ role: metaRole, full_name: sessionData.session.user.user_metadata?.full_name || undefined })
+                  .eq('user_id', userId)
+                  .eq('role', 'student'); // só atualiza se ainda estiver como student (default)
+                console.log('[SSO Callback] 📝 user_profiles.role sincronizado:', metaRole);
+              }
+            } catch (e) {
+              console.warn('[SSO Callback] ⚠️ Erro ao sincronizar role:', e);
+            }
+
             // ✅ Atualizar IP e User-Agent dos termos auto-aceitos
             try {
               const { getClientInfo } = await import('../utils/clientInfo');
@@ -95,8 +112,17 @@ const Auth323NetworkCallback: React.FC = () => {
             setMessage(t('ssoCallback.success.returningUser'));
             toast.success(t('ssoCallback.success.loginSuccess'));
 
+            // Redirecionar baseado no role do usuário
+            const userRole = sessionData.session?.user?.user_metadata?.role;
+            const redirectPath =
+              userRole === 'affiliate' ? '/affiliate/dashboard' :
+              userRole === 'seller' ? '/seller/dashboard' :
+              userRole === 'admin' ? '/admin/dashboard' :
+              userRole === 'school' ? '/school/dashboard' :
+              '/student/dashboard';
+
             setTimeout(() => {
-              navigate('/student/dashboard');
+              navigate(redirectPath);
             }, 1500);
             return;
           } catch (hashErr: any) {

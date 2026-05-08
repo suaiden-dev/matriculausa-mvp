@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { queryKeys } from '../lib/queryKeys';
 import { requestCache } from '../lib/requestCache';
@@ -507,6 +507,30 @@ export function useAffiliateCodeQuery(userId?: string) {
     gcTime: 10 * 60 * 1000, // 10 minutos
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+  });
+}
+
+/**
+ * Hook para o aluno atualizar seu código de afiliado customizado
+ */
+export function useUpdateAffiliateCode() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, newCode }: { userId: string; newCode: string }) => {
+      const { data, error } = await supabase.rpc('update_affiliate_code', {
+        p_user_id: userId,
+        p_new_code: newCode,
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data as { success: true; code: string };
+    },
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.studentDashboard.rewards.affiliateCode(userId),
+      });
+    },
   });
 }
 
