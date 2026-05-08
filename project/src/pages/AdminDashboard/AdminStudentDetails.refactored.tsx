@@ -41,7 +41,6 @@ const StudentDocumentsCard = lazy(() => import('../../components/AdminDashboard/
 // Componentes Sidebar - Lazy Load
 const PaymentStatusCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/PaymentStatusCard'));
 const ApplicationProgressCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/ApplicationProgressCard'));
-const I20DeadlineTimerCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/I20DeadlineTimerCard'));
 const TermAcceptancesCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/TermAcceptancesCard'));
 const IdentityPhotoVerificationCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/IdentityPhotoVerificationCard'));
 
@@ -456,8 +455,6 @@ const AdminStudentDetails: React.FC = () => {
   }, [searchParams]);
   const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
-  const [i20Deadline, setI20Deadline] = useState<string | null>(null);
-  const [i20Countdown, setI20Countdown] = useState<string>('');
 
   // Estados de documentos
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
@@ -470,7 +467,7 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectDocModal, setShowRejectDocModal] = useState(false);
   const [rejectDocData, setRejectDocData] = useState<{ applicationId: string; docType: string } | null>(null);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState('manual');
+  const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [zelleProofFile, setZelleProofFile] = useState<File | null>(null);
   const [isUploadingZelle, setIsUploadingZelle] = useState(false);
@@ -550,55 +547,6 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student?.dependents]);
 
-  // Calcular I-20 deadline
-  React.useEffect(() => {
-    if (!student) return;
-
-    // Se o I-20 já foi pago, não há deadline
-    if (student.has_paid_i20_control_fee) {
-      setI20Deadline(null);
-      setI20Countdown('');
-      return;
-    }
-
-    // Buscar aplicação com acceptance letter
-    const appWithLetter = student.all_applications?.find((app: any) =>
-      app.acceptance_letter_sent_at &&
-      (app.acceptance_letter_status === 'sent' || app.acceptance_letter_status === 'approved')
-    );
-
-    if (appWithLetter) {
-      // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
-      const acceptanceDate = new Date(appWithLetter.acceptance_letter_sent_at);
-      const deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
-      setI20Deadline(deadline.toISOString());
-
-      // Calcular countdown
-      const updateCountdown = () => {
-        const now = new Date();
-        const diff = deadline.getTime() - now.getTime();
-
-        if (diff <= 0) {
-          setI20Countdown('Expired');
-          return;
-        }
-
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-        setI20Countdown(`${days}d ${hours}h ${minutes}m`);
-      };
-
-      updateCountdown();
-      const interval = setInterval(updateCountdown, 60000); // Atualizar a cada minuto
-
-      return () => clearInterval(interval);
-    } else {
-      setI20Deadline(null);
-      setI20Countdown('');
-    }
-  }, [student]);
 
   // Verificar se tem desconto do Matricula Rewards
   React.useEffect(() => {
@@ -1324,7 +1272,7 @@ const AdminStudentDetails: React.FC = () => {
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
   const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package') => {
-    setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
+    setPendingPayment({ fee_type: feeType, payment_method: 'stripe' });
     
     let amount = getFeeAmount(feeType);
     
@@ -3759,17 +3707,7 @@ const AdminStudentDetails: React.FC = () => {
               />
             </Suspense>
 
-            {/* I20DeadlineTimerCard oculto temporariamente
-            {i20Deadline && !student.has_paid_i20_control_fee && (
-              <Suspense fallback={<div className="animate-pulse bg-slate-100 h-32 rounded-2xl"></div>}>
-                <I20DeadlineTimerCard
-                  deadline={i20Deadline}
-                  countdown={i20Countdown}
-                  isPaid={student.has_paid_i20_control_fee}
-                />
-              </Suspense>
-            )}
-            */}
+
 
             {termAcceptances.length > 0 && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
