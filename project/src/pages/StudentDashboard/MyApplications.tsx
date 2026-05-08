@@ -864,7 +864,6 @@ const MyApplications: React.FC = () => {
                                   {/* Linha 3: Universidade + Level */}
                                   <div className="flex items-center gap-2 text-sm mb-3">
                                     <div className="flex items-center text-gray-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
-                                      <Building className="h-3 w-3 mr-1.5 text-gray-500 flex-shrink-0" />
                                       <span className="font-medium truncate">{scholarship.universities?.name}</span>
                                     </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>
@@ -1143,7 +1142,6 @@ const MyApplications: React.FC = () => {
                                   {/* Line 2: University + Level */}
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="flex items-center text-slate-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
-                                      <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
                                       <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
                                     </div>
                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>

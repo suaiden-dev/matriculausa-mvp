@@ -55,31 +55,16 @@ export function transformPaymentsToRecordsAndStats({
     // Dependentes só afetam Application Fee ($100 por dependente)
     const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150); // apenas selection process (legacy)
 
-    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
-    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
-      const tolerance = 0.5; // 50% de tolerância
-      const min = expectedValue * (1 - tolerance);
-      const max = expectedValue * (1 + tolerance);
-      return realValue >= min && realValue <= max;
-    };
+
 
     // Selection Process Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
-    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+
     
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
-        selectionProcessFee = Math.round(realPaid.selection_process * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.selection_process_fee !== undefined) {
-          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
-        } else {
-          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      selectionProcessFee = Math.round(realPaid.selection_process * 100);
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -91,17 +76,8 @@ export function transformPaymentsToRecordsAndStats({
     const expectedI20Control = getFeeAmount('i20_control_fee');
     
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
-        i20ControlFee = Math.round(realPaid.i20_control * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.i20_control_fee !== undefined) {
-          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-        } else {
-          i20ControlFee = Math.round(expectedI20Control * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      i20ControlFee = Math.round(realPaid.i20_control * 100);
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
@@ -113,17 +89,8 @@ export function transformPaymentsToRecordsAndStats({
     const expectedScholarship = systemType === 'simplified' ? 900 : 900;
     
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.scholarship, expectedScholarship)) {
-        scholarshipFee = Math.round(realPaid.scholarship * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.scholarship_fee !== undefined) {
-          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-        } else {
-          scholarshipFee = Math.round(expectedScholarship * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      scholarshipFee = Math.round(realPaid.scholarship * 100);
     } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
@@ -132,31 +99,12 @@ export function transformPaymentsToRecordsAndStats({
 
     // Application Fee - Prioridade: valor real pago (se razoável) > scholarship.application_fee_amount > cálculo fixo
     let applicationFee: number;
-    const expectedApplicationFee = scholarship?.application_fee_amount 
-      ? (parseFloat(scholarship.application_fee_amount) > 1000 
-          ? parseFloat(scholarship.application_fee_amount) 
-          : parseFloat(scholarship.application_fee_amount) * 100)
-      : getFeeAmount('application_fee') * 100;
-    const expectedApplicationFeeWithDeps = dependents > 0
-      ? expectedApplicationFee + (dependents * 10000) // $100 por dependente (para ambos os sistemas)
-      : expectedApplicationFee;
+
+
     
     if (realPaid?.application !== undefined && realPaid.application > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.application, expectedApplicationFeeWithDeps / 100)) {
-        applicationFee = Math.round(realPaid.application * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (scholarship?.application_fee_amount) {
-          const rawValue = parseFloat(scholarship.application_fee_amount);
-          applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
-        } else {
-          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-        }
-        if (dependents > 0) {
-          applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      applicationFee = Math.round(realPaid.application * 100);
     } else if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
@@ -718,31 +666,16 @@ export function transformPaymentsToRecordsAndStats({
     // Dependentes só afetam Application Fee ($100 por dependente)
     const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150);
 
-    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
-    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
-      const tolerance = 0.5; // 50% de tolerância
-      const min = expectedValue * (1 - tolerance);
-      const max = expectedValue * (1 + tolerance);
-      return realValue >= min && realValue <= max;
-    };
+
 
     // Selection Process Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
-    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+
     
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
-        selectionProcessFee = Math.round(realPaid.selection_process * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.selection_process_fee !== undefined) {
-          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
-        } else {
-          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      selectionProcessFee = Math.round(realPaid.selection_process * 100);
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -754,17 +687,8 @@ export function transformPaymentsToRecordsAndStats({
     const expectedI20Control = getFeeAmount('i20_control_fee');
     
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
-        i20ControlFee = Math.round(realPaid.i20_control * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.i20_control_fee !== undefined) {
-          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-        } else {
-          i20ControlFee = Math.round(expectedI20Control * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      i20ControlFee = Math.round(realPaid.i20_control * 100);
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
@@ -776,17 +700,8 @@ export function transformPaymentsToRecordsAndStats({
     const expectedScholarship = systemType === 'simplified' ? 900 : 900;
     
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.scholarship, expectedScholarship)) {
-        scholarshipFee = Math.round(realPaid.scholarship * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.scholarship_fee !== undefined) {
-          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-        } else {
-          scholarshipFee = Math.round(expectedScholarship * 100);
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      scholarshipFee = Math.round(realPaid.scholarship * 100);
     } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
@@ -796,21 +711,11 @@ export function transformPaymentsToRecordsAndStats({
     // Application Fee - Prioridade: valor real pago (se razoável) > cálculo fixo
     let applicationFee: number;
     const expectedApplicationFee = getFeeAmount('application_fee');
-    const expectedApplicationFeeWithDeps = dependents > 0
-      ? expectedApplicationFee + (dependents * 100) // $100 por dependente
-      : expectedApplicationFee;
+
     
     if (realPaid?.application !== undefined && realPaid.application > 0) {
-      // Verificar se o valor está razoável (dentro de 50% do esperado)
-      if (isValueReasonable(realPaid.application, expectedApplicationFeeWithDeps)) {
-        applicationFee = Math.round(realPaid.application * 100);
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        applicationFee = Math.round(expectedApplicationFee * 100);
-        if (systemType === 'legacy' && dependents > 0) {
-          applicationFee += dependents * 10000; // $100 por dependente
-        }
-      }
+      // ✅ PRIORIDADE: Valor real pago (Auditável)
+      applicationFee = Math.round(realPaid.application * 100);
     } else {
       applicationFee = Math.round(expectedApplicationFee * 100);
       if (systemType === 'legacy' && dependents > 0) {

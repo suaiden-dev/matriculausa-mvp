@@ -16,7 +16,8 @@ import {
   Plus,
   X,
   Trash2,
-  FileText
+  FileText,
+  Check
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -43,6 +44,8 @@ const NewScholarship: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isDataRestored, setIsDataRestored] = useState(false);
+  const [predefinedBanners, setPredefinedBanners] = useState<string[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
 
   // Novos estados para gerenciar programas
   const [availablePrograms, setAvailablePrograms] = useState<string[]>([]);
@@ -73,6 +76,7 @@ const NewScholarship: React.FC = () => {
     internal_fees: [] as { category: string; amount: string; details: string; }[],
     min_gpa: '',
     min_english_proficiency: '',
+    image_url: '',
   });
 
   // Helper texts for work permissions
@@ -211,6 +215,7 @@ const NewScholarship: React.FC = () => {
           })(),
           min_gpa: scholarship.min_gpa?.toString() || '',
           min_english_proficiency: scholarship.min_english_proficiency || '',
+          image_url: scholarship.image_url || '',
         });
 
         // Set image preview if exists
@@ -229,6 +234,43 @@ const NewScholarship: React.FC = () => {
       setLoadingScholarship(false);
     }
   }, [editScholarshipId, university, navigate]);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      setLoadingBanners(true);
+      try {
+        const { data, error } = await supabase.storage
+          .from('university-banners')
+          .list('', {
+            limit: 50,
+            offset: 0,
+            sortBy: { column: 'name', order: 'asc' },
+            search: 'banner_card'
+          });
+
+        if (error) throw error;
+
+        if (data) {
+          const urls = data.map(file => 
+            supabase.storage.from('university-banners').getPublicUrl(file.name).data.publicUrl
+          );
+          setPredefinedBanners(urls);
+        }
+      } catch (err) {
+        console.error('Error fetching banners:', err);
+      } finally {
+        setLoadingBanners(false);
+      }
+    };
+
+    fetchBanners();
+  }, []);
+
+  const handleSelectBanner = (url: string) => {
+    setFormData(prev => ({ ...prev, image_url: url }));
+    setImagePreview(url);
+    setImageFile(null);
+  };
 
   // Carregar dados salvos quando o componente monta (apenas para modo criar)
   useEffect(() => {
@@ -362,6 +404,7 @@ const NewScholarship: React.FC = () => {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setFormData(prev => ({ ...prev, image_url: '' }));
   };
 
   // Funções para gerenciar programas acadêmicos
@@ -566,7 +609,7 @@ const NewScholarship: React.FC = () => {
 
     try {
       // Helper to build payload optionally without work_permissions (fallback when column not deployed yet)
-      const buildPayload = (includeWP: boolean, includeDM: boolean, activeOverride?: boolean, preserveImage: boolean = false) => {
+      const buildPayload = (includeWP: boolean, includeDM: boolean, activeOverride?: boolean) => {
         const payload: any = {
           title: formData.title,
           description: formData.description,
@@ -591,10 +634,7 @@ const NewScholarship: React.FC = () => {
           min_english_proficiency: formData.min_english_proficiency || null,
         };
 
-        // Only set image_url to null if we're not preserving the existing image
-        if (!preserveImage) {
-          payload.image_url = null; // Will be updated after image upload
-        }
+        payload.image_url = formData.image_url || null;
 
         if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;
@@ -605,18 +645,16 @@ const NewScholarship: React.FC = () => {
 
       if (isEditMode && editScholarshipId) {
         // Update existing scholarship (try with WP first, fallback without)
-        // Preserve existing image if no new image is being uploaded
-        const preserveImage = !imageFile;
         let { error: updateErr } = await supabase
           .from('scholarships')
-          .update(buildPayload(true, true, undefined, preserveImage))
+          .update(buildPayload(true, true))
           .eq('id', editScholarshipId)
           .eq('university_id', university.id);
 
         if (updateErr && (String(updateErr.message || '').includes('work_permissions') || String(updateErr.message || '').includes('delivery_mode'))) {
           const res2 = await supabase
             .from('scholarships')
-            .update(buildPayload(false, false, undefined, preserveImage))
+            .update(buildPayload(false, false))
             .eq('id', editScholarshipId)
             .eq('university_id', university.id);
           updateErr = res2.error || null;
@@ -804,10 +842,20 @@ const NewScholarship: React.FC = () => {
                   Scholarship Image <span className="text-slate-400 ml-2">(optional)</span>
                 </h2>
 
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+                  <div className="flex items-center">
+                    <Info className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
+                    <p className="text-yellow-800 text-base">
+                      <strong>Image Requirements:</strong> Use <strong>1200x450px</strong> resolution. 
+                      Main content should be on the <strong>right side</strong>, as the left side will be covered by course info in the card.
+                    </p>
+                  </div>
+                </div>
+
                 {!imagePreview ? (
                   <div className="flex flex-col items-start gap-4">
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Upload Image (JPG, PNG, WEBP, max 2MB)
+                      Upload Image (max 2MB)
                     </label>
                     <input
                       type="file"
@@ -815,9 +863,6 @@ const NewScholarship: React.FC = () => {
                       onChange={handleImageUpload}
                       className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white hover:file:bg-[#05294E]/90 transition-colors"
                     />
-                    <p className="text-xs text-slate-500">
-                      A good image helps attract more students to your scholarship opportunity.
-                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -825,23 +870,72 @@ const NewScholarship: React.FC = () => {
                       <img
                         src={imagePreview}
                         alt="Scholarship preview"
-                        className="w-full max-w-md h-48 object-cover rounded-xl border border-slate-200"
+                        className="w-full aspect-[8/3] object-cover rounded-xl border border-slate-200 shadow-sm"
                       />
                       <button
                         type="button"
                         onClick={removeImage}
-                        className="absolute top-2 right-[325px] bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg backdrop-blur-sm"
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <X className="w-5 h-5" />
                       </button>
                     </div>
-                    <p className="text-sm text-slate-600">
-                      Image selected: {imageFile?.name}
-                    </p>
                   </div>
                 )}
+
+                {/* Predefined Banners Library */}
+                <div className="mt-8 pt-8 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Choose from Library
+                    </label>
+                    {!loadingBanners && predefinedBanners.length > 0 && (
+                      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full font-medium">
+                        {predefinedBanners.length} options
+                      </span>
+                    )}
+                  </div>
+                  
+                  {loadingBanners ? (
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="flex-shrink-0 w-32 h-20 bg-slate-100 animate-pulse rounded-lg" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {predefinedBanners.map((url) => {
+                        const isSelected = formData.image_url === url && !imageFile;
+                        return (
+                          <button
+                            key={url}
+                            type="button"
+                            onClick={() => handleSelectBanner(url)}
+                            className={`relative aspect-[8/3] rounded-lg overflow-hidden border-2 transition-all duration-200 group ${
+                              isSelected 
+                                ? 'border-[#05294E] ring-2 ring-[#05294E]/20' 
+                                : 'border-transparent hover:border-slate-300'
+                            }`}
+                          >
+                            <img 
+                              src={url} 
+                              alt="Banner option" 
+                              className="w-full h-full object-cover"
+                            />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-[#05294E]/10 flex items-center justify-center">
+                                <div className="bg-[#05294E] text-white rounded-full p-1 shadow-lg">
+                                  <Check className="w-3 h-3" />
+                                </div>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Basic Information */}
