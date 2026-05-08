@@ -389,7 +389,8 @@ const AdminStudentDetails: React.FC = () => {
     getTransferApplication,
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
-    handleRejectTransferFormUpload
+    handleRejectTransferFormUpload,
+    handleMarkTransferProofViewed
   } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
 
   // Estados para Preview de Documentos
@@ -3790,6 +3791,7 @@ const AdminStudentDetails: React.FC = () => {
               handleRejectTransferFormUpload={handleRejectTransferFormUpload}
               handleViewDocument={handleOnViewDocument}
               handleDownloadDocument={handleDownloadDocument}
+              handleMarkTransferProofViewed={handleMarkTransferProofViewed}
             />
           )}
 

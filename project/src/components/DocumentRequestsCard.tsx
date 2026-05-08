@@ -4,16 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useResumableUpload } from '../hooks/useResumableUpload';
 import DocumentViewerModal from './DocumentViewerModal';
-import { 
-  FileText, 
-  CheckCircle2, 
-  Download, 
-  AlertCircle, 
-  Clock, 
+import {
+  FileText,
+  CheckCircle2,
+  CheckCircle,
+  Download,
+  AlertCircle,
+  Clock,
   Paperclip,
   Upload,
   ChevronDown,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 interface DocumentRequest {
@@ -69,6 +71,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [selectedTransferFormFile, setSelectedTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofUploadError, setProofUploadError] = useState<string | null>(null);
+  const proofFileInputRef = React.useRef<HTMLInputElement>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
@@ -79,6 +84,42 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [viewingRejectionReason, setViewingRejectionReason] = useState<string | null>(null);
 
   // Função para sanitizar nome do arquivo
+  const handleProofUpload = async (file: File) => {
+    setUploadingProof(true);
+    setProofUploadError(null);
+    try {
+      const sanitized = sanitizeFileName(file.name);
+      const storagePath = `transfer-proof-to-school/${currentUserId}/${Date.now()}_${sanitized}`;
+      const { error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, file, { upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: publicData } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(storagePath);
+      const { error: dbError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_proof_to_school_url: publicData.publicUrl,
+          transfer_proof_to_school_at: new Date().toISOString(),
+          transfer_proof_to_school_status: 'submitted',
+        })
+        .eq('id', applicationId);
+      if (dbError) throw dbError;
+      const { data: refreshed } = await supabase
+        .from('scholarship_applications')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at, transfer_proof_to_school_url, transfer_proof_to_school_at, transfer_proof_to_school_status')
+        .eq('id', applicationId)
+        .maybeSingle();
+      if (refreshed) setTransferForm(refreshed);
+    } catch (err: any) {
+      setProofUploadError(err.message || 'Erro ao enviar comprovante');
+    } finally {
+      setUploadingProof(false);
+      if (proofFileInputRef.current) proofFileInputRef.current.value = '';
+    }
+  };
+
   const sanitizeFileName = (fileName: string): string => {
     return fileName
       .normalize('NFD') // Remove acentos
@@ -139,7 +180,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     const fetchTransferForm = async () => {
       const { data, error } = await supabase
         .from('scholarship_applications')
-        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at, transfer_proof_to_school_url, transfer_proof_to_school_at, transfer_proof_to_school_status')
         .eq('id', applicationId)
         .maybeSingle();
 
@@ -1658,26 +1699,134 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
             {/* 3. Transfer Form (Apenas se for ALUNO TRANSFER e houver URL) */}
             {studentType === 'transfer' && transferForm?.transfer_form_url && (
-              <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 flex items-center justify-between group hover:border-blue-400 transition-all shadow-sm">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <FileText className="w-8 h-8 text-blue-600" />
+              <div className="bg-blue-50 rounded-3xl border border-blue-200 overflow-hidden shadow-sm">
+                {/* Linha de download */}
+                <div className="p-6 flex items-center justify-between group hover:bg-blue-100/50 transition-all">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-900 truncate text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Formulário de Transferência</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
-                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Formulário de Transferência</p>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const signedUrl = acceptanceLetterSignedUrls['transfer_form_url'] || transferForm.transfer_form_url;
+                      if (signedUrl) setPreviewUrl(signedUrl);
+                    }}
+                    className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2 flex-shrink-0"
+                  >
+                    <Download className="w-5 h-5" />
+                    {t('common:labels.download')}
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    const signedUrl = acceptanceLetterSignedUrls['transfer_form_url'] || transferForm.transfer_form_url;
-                    if (signedUrl) setPreviewUrl(signedUrl);
-                  }}
-                  className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  {t('common:labels.download')}
-                </button>
+
+                {/* Divider */}
+                <div className="border-t border-blue-200 mx-6" />
+
+                {/* Seção de comprovante */}
+                <div className="p-6">
+                  {transferForm.transfer_proof_to_school_url ? (
+                    /* ESTADO 3: Comprovante enviado */
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm leading-tight">
+                            {t('studentDashboard.documentRequests.forms.transferProofToSchool.submitted')}
+                          </p>
+                          {transferForm.transfer_proof_to_school_at && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {t('studentDashboard.documentRequests.forms.transferProofToSchool.submittedAt')}{' '}
+                              {new Date(transferForm.transfer_proof_to_school_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <a
+                        href={transferForm.transfer_proof_to_school_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-semibold flex-shrink-0"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.viewProof')}
+                      </a>
+                    </div>
+                  ) : transferForm.transfer_proof_to_school_status === 'confirmed' ? (
+                    /* ESTADO 2: Confirmou que enviou, aguardando upload do comprovante */
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-900">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmed')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmedDescription')}
+                      </p>
+                      {proofUploadError && (
+                        <p className="text-xs text-red-600">{proofUploadError}</p>
+                      )}
+                      <input
+                        ref={proofFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleProofUpload(file);
+                        }}
+                        disabled={uploadingProof}
+                      />
+                      <button
+                        onClick={() => proofFileInputRef.current?.click()}
+                        disabled={uploadingProof}
+                        className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-white border-2 border-blue-300 rounded-2xl text-blue-700 hover:bg-blue-50 transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {uploadingProof
+                          ? t('studentDashboard.documentRequests.forms.uploading')
+                          : t('studentDashboard.documentRequests.forms.transferProofToSchool.uploadButton')}
+                      </button>
+                    </div>
+                  ) : (
+                    /* ESTADO 1: Pergunta se já enviou */
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm leading-tight">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.title')}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.description')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const { error } = await supabase
+                            .from('scholarship_applications')
+                            .update({ transfer_proof_to_school_status: 'confirmed' })
+                            .eq('id', applicationId);
+                          if (!error) {
+                            setTransferForm((prev: any) => ({ ...prev, transfer_proof_to_school_status: 'confirmed' }));
+                          }
+                        }}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmButton')}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

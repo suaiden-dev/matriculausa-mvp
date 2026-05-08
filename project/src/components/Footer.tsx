@@ -63,6 +63,9 @@ const Footer: React.FC = () => {
               <li><Link to="/matricula-rewards" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
                 {t('footer.students.matriculaRewards')} <Zap className="ml-1 h-3 w-3 text-yellow-400" />
               </Link></li>
+              <li><Link to="/affiliate/register" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
+                Torne-se Afiliado <Zap className="ml-1 h-3 w-3 text-yellow-400" />
+              </Link></li>
               <li><Link to="/how-it-works" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
             </ul>
           </div>
