@@ -101,8 +101,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       setError('Passwords do not match');
       return;
     }
-    if (!/^[A-Za-z0-9@#$!]+$/.test(formData.password)) {
-      setError('Password must contain only letters, numbers and the characters @#$!');
+    if (/[\x00-\x1F\x7F]/.test(formData.password)) {
+      setError('Password contains invalid characters.');
+      return;
+    }
+    if (formData.password.length > 20) {
+      setError('Password must be at most 20 characters.');
       return;
     }
     if (!formData.phone || formData.phone.length < 8) {

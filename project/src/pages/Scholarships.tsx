@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, AlertTriangle, ChevronLeft, ChevronRight, ArrowDown, Eye, ChevronDown } from 'lucide-react';
+import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, AlertTriangle, ChevronLeft, ChevronRight, ArrowDown, Eye, ChevronDown, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -704,7 +704,7 @@ const Scholarships: React.FC = () => {
                       
                       {/* Full Background Image */}
                       <div className="absolute inset-0 z-0">
-                        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+                        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) ? (
                           <img
                             src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                             alt={scholarship.title}
@@ -719,14 +719,13 @@ const Scholarships: React.FC = () => {
 
                       {/* Text Overlay Layer (Left side fade) */}
                       <div className="absolute inset-y-0 left-0 w-[60%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-5 pr-12">
-                        {/* Top Left Logo & Line */}
+                        {/* Top Left Logo */}
                         <div className="absolute top-5 left-5">
                           <img 
-                            src="/logo.png.png" 
+                            src="/logo.png" 
                             alt="Matricula USA" 
                             className="h-6 w-auto object-contain mb-1.5 drop-shadow-sm" 
                           />
-                          <div className="w-10 h-[2px] bg-[#D0151C]"></div>
                         </div>
                         
                         {/* Course / Field as Main Banner Text */}
@@ -739,8 +738,8 @@ const Scholarships: React.FC = () => {
                       <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
                         {/* Exclusive Badge */}
                         {scholarship.is_exclusive && (
-                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-2 py-1 rounded-lg text-[9px] sm:text-[10px] font-bold shadow-md backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                            <Star className="h-2.5 w-2.5" />
+                          <div className="bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                            <Star className="h-3 w-3" />
                             {t('common.exclusive')}
                           </div>
                         )}
@@ -774,15 +773,33 @@ const Scholarships: React.FC = () => {
                           {/* University Info Box */}
                           <div className="flex items-center gap-3 py-1">
                             <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
-                              {scholarship.universities?.logo_url && canViewSensitive ? (
-                                <img 
-                                  src={scholarship.universities.logo_url} 
-                                  alt={scholarship.universities.name || "University Logo"} 
-                                  className="w-full h-full object-contain p-0.5" 
-                                />
-                              ) : (
-                                <Building className="h-8 w-8 text-[#05294E]" />
-                              )}
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                {scholarship.universities?.logo_url ? (
+                                  <div className="relative w-full h-full flex items-center justify-center">
+                                    <img 
+                                      src={scholarship.universities.logo_url} 
+                                      alt={scholarship.universities.name || "University Logo"} 
+                                      className={`w-full h-full object-contain p-2 transition-all duration-500 ${!canViewSensitive ? 'blur-[4px] opacity-50' : ''}`} 
+                                    />
+                                    {!canViewSensitive && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="bg-white/60 backdrop-blur-[2px] p-1.5 rounded-full shadow-sm border border-white/50">
+                                          <Lock className="h-3.5 w-3.5 text-slate-600" />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="relative w-full h-full flex items-center justify-center">
+                                    <Building className={`h-8 w-8 text-[#05294E]/20 ${!canViewSensitive ? 'blur-[2px]' : ''}`} />
+                                    {!canViewSensitive && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <Lock className="h-4 w-4 text-slate-400/80" />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
@@ -1055,14 +1072,13 @@ const Scholarships: React.FC = () => {
 
                       {/* Text Overlay Layer (Left side fade) */}
                       <div className="absolute inset-y-0 left-0 w-[60%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-5 pr-12">
-                        {/* Top Left Logo & Line */}
+                        {/* Top Left Logo */}
                         <div className="absolute top-5 left-5">
                           <img 
-                            src="/logo.png.png" 
+                            src="/logo.png" 
                             alt="Matricula USA" 
                             className="h-6 w-auto object-contain mb-1.5 drop-shadow-sm" 
                           />
-                          <div className="w-10 h-[2px] bg-[#D0151C]"></div>
                         </div>
                         
                         {/* Course / Field as Main Banner Text */}
@@ -1075,8 +1091,8 @@ const Scholarships: React.FC = () => {
                       <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
                         {/* Exclusive Badge */}
                         {scholarship.is_exclusive && (
-                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-2 py-1 rounded-lg text-[9px] sm:text-[10px] font-bold shadow-md backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                            <Star className="h-2.5 w-2.5" />
+                          <div className="bg-amber-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg flex items-center gap-1.5">
+                            <Star className="h-3 w-3" />
                             {t('common.exclusive')}
                           </div>
                         )}

@@ -1130,6 +1130,69 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
 
 
+        {/* I-539 Package ($1800) — reinstatement students (transfer + inactive visa) */}
+        {student.student_process_type === 'transfer' && student.visa_transfer_active !== true && (() => {
+          const isPaid = !!student.has_paid_i539_cos_package;
+          return (
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <dt className="text-sm font-medium text-slate-600">I-539 Package</dt>
+                  <dd className="text-sm text-slate-500 mt-1">Required for transfer students with inactive visa</dd>
+                  <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                    {isPaid && realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null
+                      ? formatFeeAmount(realPaidAmounts.i539_cos_package, true)
+                      : currentOverrides?.i539_cos_package_fee !== undefined && currentOverrides?.i539_cos_package_fee !== null
+                        ? formatFeeAmount(currentOverrides.i539_cos_package_fee)
+                        : formatFeeAmount(1800)}
+                    {currentOverrides?.i539_cos_package_fee !== undefined && (
+                      <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                    )}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {isPaid ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-600">Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <button
+                          onClick={() => {
+                            onEditPaymentMethod('i539_cos_package');
+                            onPaymentMethodChange((student as any).i539_cos_package_payment_method || 'manual');
+                          }}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Edit Method</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <button
+                          onClick={() => onMarkAsPaid('i539_cos_package')}
+                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Paid</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
         {student.student_process_type === 'initial' && (() => {
           const isPaid = !!student.has_paid_ds160_package;

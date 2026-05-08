@@ -1713,7 +1713,7 @@ Deno.serve(async (req: Request) => {
                   fee_type: "I20 Control Fee",
                   reward_type: "MatriculaCoins",
                   o_que_enviar:
-                    `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`,
+                    `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`,
                 };
 
                 await fetch(
@@ -1830,6 +1830,8 @@ Deno.serve(async (req: Request) => {
           tipoNotfAluno = "Novo pagamento Stripe de application fee";
         } else if (feeType === "placement_fee" || feeType === "placement") {
           tipoNotfAluno = "Pagamento Parcelow de Placement Fee confirmado";
+        } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+          tipoNotfAluno = "Pagamento Parcelow de Control Fee confirmado";
         }
 
         let emailAlunoFinal = userProfile.email;
@@ -1846,7 +1848,7 @@ Deno.serve(async (req: Request) => {
           email_aluno: emailAlunoFinal,
           nome_aluno: userProfile.full_name,
           o_que_enviar:
-            `O pagamento da taxa ${feeType} foi confirmado via Parcelow no valor de ${formattedAmount}. Agora você pode prosseguir com o processo de matrícula.`,
+            `O pagamento da taxa ${(feeType === 'ds160_package' || feeType === 'i539_cos_package') ? 'Control Fee' : feeType} foi confirmado via Parcelow no valor de ${formattedAmount}. Agora você pode prosseguir com o processo de matrícula.`,
           payment_id: String(parcelowOrder.id),
           fee_type: feeType,
           amount: paymentAmount,
@@ -2009,6 +2011,9 @@ Deno.serve(async (req: Request) => {
               } else if (feeType === "placement_fee" || feeType === "placement") {
                 tipoNotfAdmin =
                   "Pagamento de Placement Fee confirmado - Admin";
+              } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+                tipoNotfAdmin =
+                  "Pagamento de Control Fee confirmado - Admin";
               }
 
               const adminNotificationPayload = {
@@ -2019,7 +2024,7 @@ Deno.serve(async (req: Request) => {
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
                 o_que_enviar:
-                  `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.${
+                  `Pagamento Parcelow de ${(feeType === 'ds160_package' || feeType === 'i539_cos_package') ? 'Control Fee' : feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.${
                     sellerData.user_id
                       ? ` Seller responsável: ${sellerData.name} (${sellerData.referral_code}).`
                       : ""
@@ -2102,7 +2107,7 @@ Deno.serve(async (req: Request) => {
 
             // b) NOTIFICAÇÃO PARA SELLER
             let oQueEnviarSeller =
-              `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
+              `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${(feeType === 'ds160_package' || feeType === 'i539_cos_package') ? 'Control Fee' : feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
             let tipoNotfSeller =
               `Pagamento Stripe de selection process confirmado - Seller`; // Default
 
@@ -2127,6 +2132,9 @@ Deno.serve(async (req: Request) => {
             } else if (feeType === "placement_fee" || feeType === "placement") {
               tipoNotfSeller =
                 "Pagamento de Placement Fee confirmado - Seller";
+            } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+              tipoNotfSeller =
+                "Pagamento de Control Fee confirmado - Seller";
             }
 
             let emailSellerFinal = sellerData.email;
@@ -2240,6 +2248,9 @@ Deno.serve(async (req: Request) => {
               } else if (feeType === "placement_fee" || feeType === "placement") {
                 tipoNotfAffiliate =
                   "Pagamento de Placement Fee confirmado - Affiliate Admin";
+              } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+                tipoNotfAffiliate =
+                  "Pagamento de Control Fee confirmado - Affiliate Admin";
               }
 
               let emailAffiliateFinal = affiliateAdminData.email;
@@ -2262,7 +2273,7 @@ Deno.serve(async (req: Request) => {
                 nome_aluno: userProfile.full_name,
                 email_seller: sellerData.email,
                 o_que_enviar:
-                  `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`,
+                  `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${(feeType === 'ds160_package' || feeType === 'i539_cos_package') ? 'Control Fee' : feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
                 amount: paymentAmount,
@@ -2363,6 +2374,9 @@ Deno.serve(async (req: Request) => {
               } else if (feeType === "placement_fee" || feeType === "placement") {
                 tipoNotfAdminNoSeller =
                   "Pagamento Parcelow de Placement Fee confirmado - Admin";
+              } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+                tipoNotfAdminNoSeller =
+                  "Pagamento Parcelow de Control Fee confirmado - Admin";
               }
 
               const adminNotificationPayload = {
@@ -2373,7 +2387,7 @@ Deno.serve(async (req: Request) => {
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
                 o_que_enviar:
-                  `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.`,
+                  `Pagamento Parcelow de ${(feeType === 'ds160_package' || feeType === 'i539_cos_package') ? 'Control Fee' : feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
                 amount: paymentAmount,

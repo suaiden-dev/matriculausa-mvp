@@ -516,10 +516,11 @@ const QuickRegistration: React.FC = () => {
       }
 
       // Se for apenas pré-registro, validamos localmente para a UI
+      const discountAmount = targetCode === 'TFOE' ? 300 : 50;
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
-        discountAmount: 50,
+        message: t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`,
+        discountAmount,
         codeType
       });
       setIsCouponValid(true);
@@ -1121,7 +1122,7 @@ const QuickRegistration: React.FC = () => {
                         <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.dependents')}
                         <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          {t('rapidRegistration.form.dependentsSubtitle') || 'Family members (spouse and/or children)'}
+                          {t('rapidRegistration.form.dependentsSubtitle')}
                         </span>
                       </label>
                       <div className="relative mt-auto">

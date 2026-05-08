@@ -626,7 +626,7 @@ const MatriculaRewards: React.FC = () => {
                           {referral.i20_paid_at ? (
                             <>
                               <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                              <span className="hidden xs:inline">{t('matriculaRewards.completed')}</span> (+180)
+                              <span className="hidden xs:inline">{t('matriculaRewards.completed')}</span> (+100)
                             </>
                           ) : (
                             <>

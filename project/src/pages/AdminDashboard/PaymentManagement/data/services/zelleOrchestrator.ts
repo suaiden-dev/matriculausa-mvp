@@ -680,11 +680,12 @@ export async function approveZelleFlow(params: {
     .single();
   const adminName = adminProfile?.full_name || "Admin";
   const feeTypeDisplay = payment.fee_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const feeTypeDisplayForNotif = (payment.fee_type === 'ds160_package' || payment.fee_type === 'i539_cos_package') ? 'Control Fee' : feeTypeDisplay;
 
   // Student approval notification (webhook) - NOW MAPPED EXACTLY LIKE STRIPE
   try {
     let tipoNotfAluno = "Pagamento aprovado";
-    let oQueEnviar = `Seu pagamento de ${feeTypeDisplay} no valor de $${payment.amount} foi aprovado e processado com sucesso!`;
+    let oQueEnviar = `Seu pagamento de ${feeTypeDisplayForNotif} no valor de $${payment.amount} foi aprovado e processado com sucesso!`;
 
     if (payment.fee_type === 'selection_process') {
       tipoNotfAluno = "Pagamento de selection process confirmado";
@@ -696,8 +697,8 @@ export async function approveZelleFlow(params: {
     } else if (payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee') {
       tipoNotfAluno = "Pagamento de i20 control fee confirmado";
       oQueEnviar = `O pagamento do I-20 Control Fee no valor de $${payment.amount} foi pago e aprovado. Informaremos quando o documento estiver pronto!`;
-    } else if (payment.fee_type === 'ds160_package') {
-      tipoNotfAluno = "Pagamento de ds160_package confirmado";
+    } else if (payment.fee_type === 'ds160_package' || payment.fee_type === 'i539_cos_package') {
+      tipoNotfAluno = "Pagamento de Control Fee confirmado";
     } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
       tipoNotfAluno = "Pagamento de reinstatement_fee confirmado";
     }
@@ -929,8 +930,8 @@ export async function approveZelleFlow(params: {
           tipoNotfAdmin = "Pagamento de Placement Fee confirmado - Admin";
         } else if (payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee') {
           tipoNotfAdmin = "Pagamento de i20 control fee confirmado";
-        } else if (payment.fee_type === 'ds160_package') {
-          tipoNotfAdmin = "Pagamento de ds160_package confirmado";
+        } else if (payment.fee_type === 'ds160_package' || payment.fee_type === 'i539_cos_package') {
+          tipoNotfAdmin = "Pagamento de Control Fee confirmado";
         } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
           tipoNotfAdmin = "Pagamento de reinstatement_fee confirmado";
         }
@@ -958,7 +959,7 @@ export async function approveZelleFlow(params: {
             nome_affiliate_admin:
               affiliateAdminData?.user_profiles?.full_name || "N/A",
             o_que_enviar:
-              `Pagamento de ${feeTypeDisplay} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado manualmente. ${
+              `Pagamento de ${feeTypeDisplayForNotif} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado manualmente. ${
                 sellerData
                   ? `Seller responsável: ${sellerData.name} (${sellerData.referral_code})`
                   : "Sem seller associado"
@@ -1086,7 +1087,7 @@ export async function approveZelleFlow(params: {
           email_aluno: payment.student_email,
           nome_aluno: payment.student_name,
           o_que_enviar:
-            `Parabéns! O pagamento de ${payment.fee_type} no valor de ${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
+            `Parabéns! O pagamento de ${(payment.fee_type === 'ds160_package' || payment.fee_type === 'i539_cos_package') ? 'Control Fee' : payment.fee_type} no valor de ${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
           payment_id: payment.id,
           fee_type: payment.fee_type,
           amount: payment.amount,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ApplicationFlowStage } from '../../utils/applicationFlowStages';
+import { ApplicationFlowStage, ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 import StudentCard from './StudentCard';
 import { StudentRecord } from './StudentApplicationsView';
 
@@ -15,23 +15,50 @@ interface KanbanColumnProps {
   onStudentClick: (student: StudentRecord) => void;
   getUnreadCount: (studentId: string) => number;
   internalAdmins?: InternalAdmin[];
+  isDropped?: boolean;
+  showSelectionTags?: boolean;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, internalAdmins = [] }) => {
+const actorHeaderStyles = {
+  student: {
+    header: 'bg-white border-gray-200',
+    icon: 'text-gray-600',
+    title: 'text-gray-900',
+    badge: 'bg-gray-200 text-gray-800',
+  },
+  admin: {
+    header: 'bg-blue-50 border-blue-200',
+    icon: 'text-blue-500',
+    title: 'text-blue-900',
+    badge: 'bg-blue-100 text-blue-800',
+  },
+  both: {
+    header: 'bg-purple-50 border-purple-200',
+    icon: 'text-purple-500',
+    title: 'text-purple-900',
+    badge: 'bg-purple-100 text-purple-800',
+  },
+};
+
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, internalAdmins = [], isDropped = false, showSelectionTags = false }) => {
   const Icon = stage.icon;
+  const actor = (stage as any).actor as 'student' | 'admin' | 'both' | undefined;
+  const styles = isDropped
+    ? { header: 'bg-red-50 border-red-200', icon: 'text-red-400', title: 'text-red-700', badge: 'bg-red-100 text-red-700' }
+    : actorHeaderStyles[actor ?? 'student'];
 
   return (
-    <div className="flex flex-col bg-gray-50 rounded-lg border border-gray-200 h-full">
+    <div className={`flex flex-col rounded-lg border h-full ${isDropped ? 'bg-red-50/40 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
       {/* Column Header */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg z-10">
+      <div className={`sticky top-0 border-b px-4 py-3 rounded-t-lg z-10 ${styles.header}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Icon className="w-4 h-4 text-gray-600" />
-            <h3 className="font-semibold text-sm text-gray-900">
+            <Icon className={`w-4 h-4 ${styles.icon}`} />
+            <h3 className={`font-semibold text-sm ${styles.title}`}>
               {stage.label}
             </h3>
           </div>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-800">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.badge}`}>
             {students.length}
           </span>
         </div>
@@ -54,8 +81,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentC
               student={student}
               onClick={() => onStudentClick(student)}
               unreadMessages={getUnreadCount(student.student_id)}
-
               internalAdmins={internalAdmins}
+              showSelectionTags={showSelectionTags}
+              currentStageKey={stage.key as ApplicationFlowStageKey}
             />
           ))
         )}

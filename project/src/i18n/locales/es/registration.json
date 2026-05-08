@@ -11,7 +11,7 @@
       "email": "Correo electrónico",
       "phone": "Teléfono",
       "dependents": "Número de Dependientes",
-      "dependentsSubtitle": "Miembros de la familia (cónyuge y/o hijos)",
+      "dependentsSubtitle": "Cónyuge e hijos menores de 21 años",
       "dependentOptions": {
         "count_zero": "0 Dependientes",
         "count_one": "1 Dependiente",

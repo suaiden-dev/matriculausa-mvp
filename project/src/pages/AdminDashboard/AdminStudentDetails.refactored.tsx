@@ -51,6 +51,7 @@ import RejectDocumentModal from '../../components/AdminDashboard/StudentDetails/
 
 // Novos componentes para Transfer Form e Document Requests
 import { TransferFormSection } from '../../components/AdminDashboard/StudentDetails/TransferFormSection';
+import { CosI20Section } from '../../components/AdminDashboard/StudentDetails/CosI20Section';
 import { NewRequestModal } from '../../components/AdminDashboard/StudentDetails/NewRequestModal';
 
 // Tabs já existentes
@@ -395,6 +396,8 @@ const AdminStudentDetails: React.FC = () => {
   // Estados para Preview de Documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | undefined>(undefined);
+  const [previewUploadId, setPreviewUploadId] = useState<string | undefined>(undefined);
+  const [previewUploadStatus, setPreviewUploadStatus] = useState<string | undefined>(undefined);
 
   // Hooks para Document Requests
   const {
@@ -510,10 +513,11 @@ const AdminStudentDetails: React.FC = () => {
 
   // Helpers para mapeamento de Process Type granular
   const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
+    if (!type) return 'not_specified';
     if (type === 'transfer') {
       return visaTransferActive === false ? 'transfer_reinstatement' : 'transfer_active';
     }
-    return type || 'initial';
+    return type;
   };
 
   const decomposeProcessType = (displayValue: string): { dbType: string; dbFlag: boolean } => {
@@ -2316,6 +2320,8 @@ const AdminStudentDetails: React.FC = () => {
     if (url) {
       setPreviewUrl(url);
       setPreviewFileName(name);
+      setPreviewUploadId(doc.id);
+      setPreviewUploadStatus(doc.status);
     } else {
       console.warn('⚠️ [ADMIN] Documento não tem URL para visualização:', doc);
     }
@@ -3510,12 +3516,12 @@ const AdminStudentDetails: React.FC = () => {
                 onCancelEdit={() => setIsEditing(false)}
                 onEditProcessType={() => {
                   const currentDisplayValue = getDisplayValue(
-                    student.student_process_type || 'initial',
+                    student.student_process_type,
                     student.visa_transfer_active
                   );
                   // Garantir que o valor é válido (está nas opções do select)
                   const validValues = ['initial', 'transfer_active', 'transfer_reinstatement', 'change_of_status', 'resident', 'enrolled'];
-                  const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : 'initial';
+                  const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : '';
                   
                   console.log('🔍 [AdminStudentDetails] Editando Process Type (granular):', { currentDisplayValue, validValue });
                   setIsEditingProcessType(true);
@@ -3621,7 +3627,7 @@ const AdminStudentDetails: React.FC = () => {
                 }}
                 onCancelProcessType={() => {
                   setIsEditingProcessType(false);
-                  setEditingProcessType(getDisplayValue(student.student_process_type || 'initial', student.visa_transfer_active));
+                  setEditingProcessType(getDisplayValue(student.student_process_type, student.visa_transfer_active));
                 }}
                 onProcessTypeChange={(value) => {
                   console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);
@@ -3766,6 +3772,7 @@ const AdminStudentDetails: React.FC = () => {
               />
             </Suspense>
 
+            {/* I20DeadlineTimerCard oculto temporariamente
             {i20Deadline && !student.has_paid_i20_control_fee && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-32 rounded-2xl"></div>}>
                 <I20DeadlineTimerCard
@@ -3775,6 +3782,7 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
+            */}
 
             {termAcceptances.length > 0 && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
@@ -3829,6 +3837,17 @@ const AdminStudentDetails: React.FC = () => {
                 New Request
               </button>
             </div>
+          )}
+
+          {/* I-20 Document Section - Only for COS students */}
+          {student?.student_process_type === 'change_of_status' && (
+            <CosI20Section
+              student={student}
+              isPlatformAdmin={isPlatformAdmin}
+              onRefresh={() => studentDetailsQuery.refetch()}
+              handleViewDocument={handleOnViewDocument}
+              handleDownloadDocument={handleDownloadDocument}
+            />
           )}
 
           {/* Transfer Form Section - Only for transfer students */}
@@ -4019,9 +4038,26 @@ const AdminStudentDetails: React.FC = () => {
           documentUrl={previewUrl}
           fileName={previewFileName}
           onClose={() => {
+            const targetId = previewUploadId;
             setPreviewUrl(null);
             setPreviewFileName(undefined);
+            setPreviewUploadId(undefined);
+            setPreviewUploadStatus(undefined);
+            setTimeout(() => {
+              const el = targetId
+                ? document.querySelector(`[data-upload-id="${targetId}"]`)
+                : null;
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 50);
           }}
+          uploadId={previewUploadId}
+          uploadStatus={previewUploadStatus}
+          onApprove={handleApproveDocumentRequest}
+          onReject={handleRejectDocumentRequest}
+          isApproving={!!previewUploadId && !!approvingDocumentRequest[previewUploadId]}
+          isRejecting={!!previewUploadId && !!rejectingDocumentRequest[previewUploadId]}
         />
       )}
     </div>

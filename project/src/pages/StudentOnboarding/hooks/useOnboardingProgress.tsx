@@ -173,7 +173,7 @@ export const useOnboardingProgress = () => {
 
       // 1.2 Verificação de Identidade (Foto do Termo)
       // Otimização: só busca no banco se o perfil ainda não tem identity_verified = true
-      let identityVerified = !!(freshProfile as any).identity_verified;
+      let identityVerified = !!(freshProfile as any).identity_verified || !!(freshProfile as any).identity_photo_path;
       if (!identityVerified) {
         const { data: photoAcceptance } = await supabase
           .from('comprehensive_term_acceptance')

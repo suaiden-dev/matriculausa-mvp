@@ -50,7 +50,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         hasPendingZelle 
     } = dataState;
 
-    const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance' | 'placement_installment'>('welcome');
+    const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance' | 'placement_installment' | 'i20_document'>('welcome');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const [i20Loading, setI20Loading] = useState(false);
@@ -138,6 +138,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
     const showI539Tab = isPlacementFlow && (studentProcessType === 'change_of_status' || (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false));
     const packageFeeRequired = (showDs160Tab && !ds160PackagePaid) || (showI539Tab && !i539PackagePaid);
+    const showI20DocumentTab = studentProcessType === 'change_of_status';
+    const i20DocumentAvailable = !!applicationDetails?.i20_document_url;
     
     // Status da carta de aceite consolidado (Libera taxa quando 'enrolled' ou URL presente)
     const isAcceptanceReady = !!applicationDetails?.acceptance_letter_url || applicationDetails?.status === 'enrolled';
@@ -316,15 +318,24 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     : (hasUnderReviewDocs ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.underReview') : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'))), 
             variant: (allDocsApproved ? 'success' : (hasUnderReviewDocs ? 'warning' : 'info')) as any 
         },
-        { 
-            id: 'acceptance', 
+        {
+            id: 'acceptance',
             title: t('dashboard:studentDashboard.myApplicationStep.tabs.acceptanceLetter'),
-            status: applicationDetails?.acceptance_letter_url 
-                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable') 
-                : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'), 
+            status: applicationDetails?.acceptance_letter_url
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')
+                : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'),
             variant: 'info' as any,
             disabled: !allDocsApproved && !applicationDetails?.acceptance_letter_url
         },
+        ...(showI20DocumentTab ? [{
+            id: 'i20_document',
+            title: 'I-20 Document',
+            status: i20DocumentAvailable
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')
+                : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'),
+            variant: (i20DocumentAvailable ? 'success' : 'info') as any,
+            disabled: !i20DocumentAvailable
+        }] : []),
         ...(showDs160Tab ? [{ 
             id: 'ds160', 
             title: 'Control Fee', // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
@@ -354,7 +365,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             variant: 'warning' as any,
             completed: false,
         }] : []),
-    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, applicationDetails?.acceptance_letter_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
+    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, showI20DocumentTab, i20DocumentAvailable, applicationDetails?.acceptance_letter_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
@@ -784,6 +795,72 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             }}
                                         />
                                     )}
+                                </div>
+                            )}
+
+                            {activeTab === 'i20_document' && showI20DocumentTab && (
+                                <div className="pb-12">
+                                    <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-slate-100">
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-slate-900">
+                                                I-20 Document
+                                            </h3>
+                                        </div>
+
+                                        {i20DocumentAvailable ? (
+                                            <div className="space-y-4">
+                                                <p className="text-slate-600">
+                                                    Your I-20 document is available for download. You will need this document to proceed with your Change of Status (I-539) application.
+                                                </p>
+                                                <div className="bg-slate-50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-slate-900 truncate">
+                                                            {applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document'}
+                                                        </p>
+                                                        {applicationDetails.i20_document_sent_at && (
+                                                            <p className="text-sm text-slate-500">
+                                                                Sent on {new Date(applicationDetails.i20_document_sent_at).toLocaleDateString('pt-BR')}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleViewDocument(applicationDetails.i20_document_url)}
+                                                            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-blue-700 transition-all"
+                                                        >
+                                                            View
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownloadDocument(
+                                                                applicationDetails.i20_document_url,
+                                                                applicationDetails.i20_document_url?.split('/').pop() || 'i20.pdf'
+                                                            )}
+                                                            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
+                                                        >
+                                                            Download
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+                                                    </svg>
+                                                </div>
+                                                <p className="font-bold text-slate-700 uppercase tracking-tight">Pending</p>
+                                                <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">
+                                                    Your I-20 document will be available here once it has been issued by the university.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 

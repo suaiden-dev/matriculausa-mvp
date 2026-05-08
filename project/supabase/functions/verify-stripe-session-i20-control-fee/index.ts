@@ -788,7 +788,7 @@ Deno.serve(async (req)=>{
                 payment_method: paymentMethodForUserProfile,
                 fee_type: "I20 Control Fee",
                 reward_type: "MatriculaCoins",
-                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`
               };
 
               console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle } from 'lucide-react';
+import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
 import { StudentRecord } from './StudentApplicationsView';
+import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
-import { useAssignAdminMutation } from './hooks/useStudentApplicationsQueries';
+import { useAssignAdminMutation, useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
 
 interface InternalAdmin {
@@ -17,12 +18,18 @@ interface StudentCardProps {
   onClick: () => void;
   unreadMessages?: number;
   internalAdmins?: InternalAdmin[];
+  showSelectionTags?: boolean;
+  currentStageKey?: ApplicationFlowStageKey;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [] }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [], showSelectionTags = false, currentStageKey }) => {
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const assignAdminMutation = useAssignAdminMutation();
+  const dropStudentMutation = useDropStudentMutation();
+  const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
+  const markSevisMutation = useMarkSevisCompletedMutation();
+  const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
   const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
 
@@ -49,6 +56,52 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showAdminDropdown]);
 
+  const handleToggleDrop = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newDropped = !student.is_dropped;
+    try {
+      await dropStudentMutation.mutateAsync({ studentId: student.student_id, isDropped: newDropped });
+      toast.success(newDropped ? 'Aluno marcado como dropped' : 'Aluno restaurado');
+    } catch {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleMarkSentDocs = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!student.application_id) return;
+    try {
+      await markSentDocsMutation.mutateAsync(student.application_id);
+      toast.success('Docs marcados como enviados para a universidade');
+    } catch {
+      toast.error('Erro ao atualizar');
+    }
+  };
+
+  const handleMarkSevis = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!student.application_id) return;
+    try {
+      await markSevisMutation.mutateAsync(student.application_id);
+      toast.success('SEVIS transfer marcado como concluído');
+    } catch {
+      toast.error('Erro ao atualizar');
+    }
+  };
+
+
+  const handleMarkVisa = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!student.application_id) return;
+    try {
+      await markVisaMutation.mutateAsync(student.application_id);
+      toast.success('Visto marcado como aprovado');
+    } catch {
+      toast.error('Erro ao atualizar');
+    }
+  };
+
+
   const handleAssignAdmin = async (adminId: string | null) => {
     setShowAdminDropdown(false);
     try {
@@ -66,14 +119,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   };
   // Get initials from name
   const getInitials = (name: string) => {
-    const parts = name.split(' ');
+    const parts = name.trim().split(/\s+/).filter(p => p.length > 0);
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return (parts[0] || name).substring(0, 2).toUpperCase();
+  };
+
+  const getProcessTypeTag = (processType: string | null) => {
+    switch (processType) {
+      case 'initial':          return { label: 'Initial',   className: 'text-sky-600' };
+      case 'change_of_status': return { label: 'COS',       className: 'text-violet-600' };
+      case 'transfer':         return { label: 'Transfer',  className: 'text-amber-600' };
+      case 'resident':         return { label: 'Resident',  className: 'text-teal-600' };
+      default:                 return null;
+    }
   };
 
   // Generate a consistent color for the avatar based on student ID
+
   const getAvatarColor = (id: string) => {
     const colors = [
       'bg-blue-500',
@@ -106,7 +170,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-blue-300 relative group"
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 relative group`}
     >
       {/* Unread messages indicator */}
       {unreadMessages > 0 && (
@@ -120,12 +184,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
 
       {/* Header with avatar and name */}
       <div className="flex items-start gap-3 mb-2">
-        <div className={`${getAvatarColor(student.student_id)} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0`}>
+        <div className={`${getAvatarColor(student.student_id)} w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-sm`}>
           {getInitials(student.student_name)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <h3 className="text-sm font-semibold text-gray-900 truncate" title={student.student_name}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-sm font-semibold text-gray-900 truncate" title={`${student.student_name} · ${student.student_email}`}>
               {student.student_name}
             </h3>
             {student.source === 'migma' && (
@@ -133,33 +197,185 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
                 Migma
               </span>
             )}
+            {(() => {
+              const tag = getProcessTypeTag(student.student_process_type ?? null);
+              return tag ? (
+                <span className={`flex-shrink-0 text-[9px] font-bold uppercase tracking-wider ${tag.className}`}>
+                  {tag.label}
+                </span>
+              ) : null;
+            })()}
           </div>
-          <p className="text-xs text-gray-500 truncate" title={student.student_email}>
-            {student.student_email}
-          </p>
+          {student.university_name && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+              <Building className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate" title={student.university_name}>{student.university_name}</span>
+            </div>
+          )}
         </div>
+        {/* Drop button */}
+        <button
+          onClick={handleToggleDrop}
+          title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
+          className={`flex-shrink-0 p-1 rounded transition-colors ${
+            student.is_dropped
+              ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+              : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+          }`}
+        >
+          {student.is_dropped
+            ? <RotateCcw className="w-3.5 h-3.5" />
+            : <UserX className="w-3.5 h-3.5" />
+          }
+        </button>
       </div>
 
-      {/* University/Scholarship info */}
-      {(student.university_name || student.scholarship_title) && (
-        <div className="space-y-1 mb-2">
-          {student.university_name && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <Building className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate" title={student.university_name}>
-                {student.university_name}
-              </span>
+      {/* Scholarship info */}
+      {student.scholarship_title && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+          <GraduationCap className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
+        </div>
+      )}
+
+      {/* Photo + Form tags — específico da coluna Selection Process Payment */}
+      {showSelectionTags && (
+        <div className="flex flex-col gap-1 mb-2">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+            <Camera className="w-3 h-3 flex-shrink-0" />
+            {student.has_uploaded_photo ? 'Photo uploaded' : 'Pending: photo upload'}
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+            <FileText className="w-3 h-3 flex-shrink-0" />
+            {student.has_submitted_form ? 'Form submitted' : 'Pending: fill & submit form'}
+          </div>
+        </div>
+      )}
+
+      {/* Doc status tags — Stage 1: university_docs */}
+      {currentStageKey === 'university_docs' && (
+        <div className="flex flex-col gap-1 mb-2">
+          {(student.docs_total_rejected ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+              <XCircle className="w-3 h-3 flex-shrink-0" />
+              {student.docs_total_rejected} doc(s) recusado(s)
             </div>
           )}
-          {student.scholarship_title && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <GraduationCap className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate" title={student.scholarship_title}>
-                {student.scholarship_title}
-              </span>
+          {(() => {
+            const pending = (student.docs_total_required ?? 0) - (student.docs_total_uploaded ?? 0);
+            return pending > 0 ? (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {pending} doc(s) pendente(s)
+              </div>
+            ) : null;
+          })()}
+          {(student.docs_total_under_review ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              {student.docs_total_under_review} doc(s) em revisão
             </div>
           )}
         </div>
+      )}
+
+      {/* Doc status tags — Stage 2: docs_approval */}
+      {currentStageKey === 'docs_approval' && (
+        <div className="flex flex-col gap-1 mb-2">
+          {(student.docs_total_under_review ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              {student.docs_total_under_review} em revisão
+            </div>
+          )}
+          {(student.docs_total_rejected ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+              <XCircle className="w-3 h-3 flex-shrink-0" />
+              {student.docs_total_rejected} recusado(s)
+            </div>
+          )}
+          {(student.docs_total_approved ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+              <CheckCircle className="w-3 h-3 flex-shrink-0" />
+              {student.docs_total_approved}/{student.docs_total_required} aprovado(s)
+            </div>
+          )}
+          {(() => {
+            const pending = (student.docs_total_required ?? 0) - (student.docs_total_uploaded ?? 0);
+            return pending > 0 ? (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {pending} ainda pendente(s) de upload
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
+
+      {/* Transfer form status tags — student_sends_letter */}
+      {currentStageKey === 'student_sends_letter' && (
+        <div className="flex flex-col gap-1 mb-2">
+          {!student.transfer_form_status && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              Aguardando envio do transfer form
+            </div>
+          )}
+          {student.transfer_form_status === 'sent' && (
+            <>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-blue-200 bg-blue-50 text-blue-700">
+                <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                Transfer form enviado ao aluno
+              </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                Aguardando devolução do aluno
+              </div>
+            </>
+          )}
+          {student.transfer_form_status === 'returned' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-amber-200 bg-amber-50 text-amber-700">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              Form devolvido — pendente aprovação
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Admin action button — Stage 3: send_docs_to_university */}
+      {currentStageKey === 'send_docs_to_university' && !student.has_sent_docs_to_university && (
+        <button
+          onClick={handleMarkSentDocs}
+          disabled={markSentDocsMutation.isPending}
+          className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+        >
+          <Send className="w-3 h-3 flex-shrink-0" />
+          Marcar como enviado para universidade
+        </button>
+      )}
+
+      {/* Admin action button — Stage 7: sevis_transfer */}
+      {currentStageKey === 'sevis_transfer' && !student.sevis_transfer_completed && (
+        <button
+          onClick={handleMarkSevis}
+          disabled={markSevisMutation.isPending}
+          className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3 flex-shrink-0" />
+          Marcar SEVIS como transferido
+        </button>
+      )}
+
+      {/* Admin action button — Stage 8: visa_approval */}
+      {currentStageKey === 'visa_approval' && !student.visa_approved && (
+        <button
+          onClick={handleMarkVisa}
+          disabled={markVisaMutation.isPending}
+          className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+        >
+          <Shield className="w-3 h-3 flex-shrink-0" />
+          Marcar visto como aprovado
+        </button>
       )}
 
       {/* Footer with badges */}
@@ -170,7 +386,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </div>
 
         <div className="flex items-center gap-1 flex-wrap">
-          {student.total_applications > 0 && (
+          {student.total_applications > 0 && !(['application_fee', 'placement_fee', 'reinstatement_fee', 'scholarship_fee', 'university_docs', 'docs_approval', 'send_docs_to_university', 'receive_acceptance_letter', 'send_acceptance_letter', 'i20_fee', 'student_sends_letter', 'sevis_transfer', 'visa_approval', 'enrollment'] as ApplicationFlowStageKey[]).includes(currentStageKey!) && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
               {student.total_applications} app{student.total_applications > 1 ? 's' : ''}
             </span>
