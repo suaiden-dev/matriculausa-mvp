@@ -577,7 +577,7 @@ const Home: React.FC = () => {
                 <div className="relative">
                   {/* Modern geometric decorations */}
                   <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-red-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
                   
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -598,9 +598,9 @@ const Home: React.FC = () => {
               {/* Content Column */}
               <div className="w-full lg:w-1/2 order-1 lg:order-2">
                 <div className="max-w-xl">
-                  <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-8 leading-tight">
-                    {t('home.features.titleMain')} <span className="text-[#D0151C]">{t('home.features.titleHighlight')}</span>
-                  </h2>
+                    <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-8 leading-tight">
+                      {t('home.features.titleMain')} <span className="text-[#05294E]">{t('home.features.titleHighlight')}</span>
+                    </h2>
                   
                   <div className="flex flex-col gap-6">
                     {/* Featured Item: Exclusive Scholarships */}
@@ -609,10 +609,10 @@ const Home: React.FC = () => {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: 0.1 }}
-                      className="p-8 rounded-3xl bg-gradient-to-br from-[#D0151C]/5 to-white border border-[#D0151C]/10 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
+                      className="p-8 rounded-3xl bg-gradient-to-br from-[#05294E]/5 to-white border border-[#05294E]/10 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
                     >
-                      {/* Decorative red glow */}
-                      <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#D0151C]/5 rounded-full blur-3xl group-hover:bg-[#D0151C]/10 transition-colors"></div>
+                      {/* Decorative blue glow */}
+                      <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#05294E]/5 rounded-full blur-3xl group-hover:bg-[#05294E]/10 transition-colors"></div>
                       
                       <div className="relative z-10">
                         <h3 className="text-2xl font-black text-slate-900 mb-4">{t('home.features.exclusiveScholarships.title')}</h3>
