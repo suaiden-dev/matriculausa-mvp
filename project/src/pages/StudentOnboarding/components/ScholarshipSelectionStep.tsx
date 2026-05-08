@@ -655,13 +655,23 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                     <li key={scholarship.id} className="py-6 first:pt-0 last:pb-0">
                       <div className="flex items-center justify-between gap-6">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-5">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                              {scholarship.universities?.logo_url ? (
+                                <img 
+                                  src={scholarship.universities.logo_url} 
+                                  alt={scholarship.universities.name || "University Logo"} 
+                                  className="w-full h-full object-contain p-2" 
+                                />
+                              ) : (
+                                <Building className="h-10 w-10 text-[#05294E]/20" />
+                              )}
+                            </div>
                             <div className="flex-1">
                               <div className={`font-black uppercase tracking-tight mb-1 ${isBlocked ? 'text-red-600 text-base line-through opacity-80' : 'text-slate-900 text-lg'}`}>
                                 {scholarship.title}
                               </div>
                               <div className={`text-sm mb-2 flex items-center ${isBlocked ? 'text-red-400' : 'text-slate-500'}`}>
-                                <Building className="w-4 h-4 mr-1.5" />
                                 {scholarship.universities?.name || scholarship.university_name || t('scholarshipSelection.review.unknownUniversity')}
                               </div>
                               <div className="flex items-center gap-3">

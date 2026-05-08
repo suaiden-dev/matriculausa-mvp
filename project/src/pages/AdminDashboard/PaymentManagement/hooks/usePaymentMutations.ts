@@ -1,11 +1,25 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys, invalidateZelleQueries, invalidateUniversityRequestsQueries, invalidateAffiliateRequestsQueries, invalidatePaymentQueries } from '../../../../lib/queryKeys';
-import { approveZelleStatusService, rejectZelleStatusService, addZelleAdminNotesService } from '../data/services/zellePaymentsService';
-import { approveZelleFlow, rejectZelleFlow, approvePartialZelleFlow, approveSecondInstallmentFlow } from '../data/services/zelleOrchestrator';
-import { supabase } from '../../../../lib/supabase';
-import { UniversityPaymentRequestService } from '../../../../services/UniversityPaymentRequestService';
-import { AffiliatePaymentRequestService } from '../../../../services/AffiliatePaymentRequestService';
-import type { PaymentRecord } from '../data/types';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  invalidateAffiliateRequestsQueries,
+  invalidatePaymentQueries,
+  invalidateUniversityRequestsQueries,
+  invalidateZelleQueries,
+} from "../../../../lib/queryKeys";
+import {
+  addZelleAdminNotesService,
+  approveZelleStatusService,
+  rejectZelleStatusService,
+} from "../data/services/zellePaymentsService";
+import {
+  approvePartialZelleFlow,
+  approveSecondInstallmentFlow,
+  approveZelleFlow,
+  rejectZelleFlow,
+} from "../data/services/zelleOrchestrator";
+import { supabase } from "../../../../lib/supabase";
+import { UniversityPaymentRequestService } from "../../../../services/UniversityPaymentRequestService";
+import { AffiliatePaymentRequestService } from "../../../../services/AffiliatePaymentRequestService";
+import type { PaymentRecord } from "../data/types";
 
 /**
  * Mutation para aprovar pagamento Zelle
@@ -14,9 +28,18 @@ export function useApproveZellePaymentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ paymentId, adminUserId, payment }: { paymentId: string; adminUserId: string; payment: PaymentRecord }) => {
+    mutationFn: async (
+      { paymentId, adminUserId, payment }: {
+        paymentId: string;
+        adminUserId: string;
+        payment: PaymentRecord;
+      },
+    ) => {
       // Atualizar status
-      const { error: statusError } = await approveZelleStatusService({ paymentId, adminUserId });
+      const { error: statusError } = await approveZelleStatusService({
+        paymentId,
+        adminUserId,
+      });
       if (statusError) throw statusError;
 
       // Executar fluxo completo de aprovação
@@ -25,14 +48,14 @@ export function useApproveZellePaymentMutation() {
         adminUserId,
         payment: {
           id: payment.id,
-          user_id: payment.user_id || '',
+          user_id: payment.user_id || "",
           student_id: payment.student_id,
           student_email: payment.student_email,
           student_name: payment.student_name,
           fee_type: payment.fee_type,
           fee_type_global: payment.fee_type_global,
           amount: payment.amount,
-          admin_approved_at: payment.admin_approved_at,
+          admin_approved_at: new Date().toISOString(), // Usar o momento exatado da aprovação
           created_at: payment.created_at,
           scholarships_ids: payment.scholarships_ids,
           scholarship_id: payment.scholarship_id || null,
@@ -55,9 +78,19 @@ export function useRejectZellePaymentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ paymentId, reason, adminUserId, payment }: { paymentId: string; reason: string; adminUserId: string; payment: PaymentRecord }) => {
+    mutationFn: async (
+      { paymentId, reason, adminUserId, payment }: {
+        paymentId: string;
+        reason: string;
+        adminUserId: string;
+        payment: PaymentRecord;
+      },
+    ) => {
       // Atualizar status
-      const { error: statusError } = await rejectZelleStatusService({ paymentId, reason });
+      const { error: statusError } = await rejectZelleStatusService({
+        paymentId,
+        reason,
+      });
       if (statusError) throw statusError;
 
       // Executar fluxo completo de rejeição
@@ -66,7 +99,7 @@ export function useRejectZellePaymentMutation() {
         adminUserId,
         payment: {
           id: payment.id,
-          user_id: payment.user_id || '',
+          user_id: payment.user_id || "",
           student_id: payment.student_id,
           student_email: payment.student_email,
           student_name: payment.student_name,
@@ -94,8 +127,18 @@ export function useAddZelleNotesMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ paymentId, notes, adminUserId }: { paymentId: string; notes: string; adminUserId: string }) => {
-      const { error } = await addZelleAdminNotesService({ paymentId, notes, adminUserId });
+    mutationFn: async (
+      { paymentId, notes, adminUserId }: {
+        paymentId: string;
+        notes: string;
+        adminUserId: string;
+      },
+    ) => {
+      const { error } = await addZelleAdminNotesService({
+        paymentId,
+        notes,
+        adminUserId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -128,7 +171,9 @@ export function useRejectUniversityRequestMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, adminId, reason }: { id: string; adminId: string; reason: string }) => {
+    mutationFn: async (
+      { id, adminId, reason }: { id: string; adminId: string; reason: string },
+    ) => {
       await UniversityPaymentRequestService.adminReject(id, adminId, reason);
     },
     onSuccess: () => {
@@ -145,8 +190,18 @@ export function useMarkUniversityPaidMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, adminId, reference }: { id: string; adminId: string; reference?: string }) => {
-      await UniversityPaymentRequestService.adminMarkPaid(id, adminId, reference);
+    mutationFn: async (
+      { id, adminId, reference }: {
+        id: string;
+        adminId: string;
+        reference?: string;
+      },
+    ) => {
+      await UniversityPaymentRequestService.adminMarkPaid(
+        id,
+        adminId,
+        reference,
+      );
     },
     onSuccess: () => {
       invalidateUniversityRequestsQueries(queryClient);
@@ -182,7 +237,7 @@ export function useCreateUniversityPaymentMutation() {
       universityId: string;
       adminId: string;
       amount: number;
-      payoutMethod: 'zelle' | 'bank_transfer' | 'stripe';
+      payoutMethod: "zelle" | "bank_transfer" | "stripe";
       payoutDetails: Record<string, any>;
     }) => {
       await UniversityPaymentRequestService.adminCreatePaymentRequest(data);
@@ -218,7 +273,9 @@ export function useRejectAffiliateRequestMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, adminId, reason }: { id: string; adminId: string; reason: string }) => {
+    mutationFn: async (
+      { id, adminId, reason }: { id: string; adminId: string; reason: string },
+    ) => {
       await AffiliatePaymentRequestService.adminReject(id, adminId, reason);
     },
     onSuccess: () => {
@@ -235,8 +292,18 @@ export function useMarkAffiliatePaidMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, adminId, reference }: { id: string; adminId: string; reference?: string }) => {
-      await AffiliatePaymentRequestService.adminMarkPaid(id, adminId, reference);
+    mutationFn: async (
+      { id, adminId, reference }: {
+        id: string;
+        adminId: string;
+        reference?: string;
+      },
+    ) => {
+      await AffiliatePaymentRequestService.adminMarkPaid(
+        id,
+        adminId,
+        reference,
+      );
     },
     onSuccess: () => {
       invalidateAffiliateRequestsQueries(queryClient);
@@ -252,20 +319,22 @@ export function useApprovePartialZellePaymentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ adminUserId, payment }: { adminUserId: string; payment: PaymentRecord }) => {
+    mutationFn: async (
+      { adminUserId, payment }: { adminUserId: string; payment: PaymentRecord },
+    ) => {
       await approvePartialZelleFlow({
         supabase,
         adminUserId,
         payment: {
           id: payment.id,
-          user_id: payment.user_id || '',
+          user_id: payment.user_id || "",
           student_id: payment.student_id,
           student_email: payment.student_email,
           student_name: payment.student_name,
           fee_type: payment.fee_type,
           fee_type_global: payment.fee_type_global,
           amount: payment.amount,
-          admin_approved_at: payment.admin_approved_at,
+          admin_approved_at: new Date().toISOString(), // Usar o momento exatado da aprovação
           created_at: payment.created_at,
         },
       });
@@ -273,7 +342,7 @@ export function useApprovePartialZellePaymentMutation() {
     onSuccess: () => {
       invalidateZelleQueries(queryClient);
       invalidatePaymentQueries(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     },
   });
 }
@@ -285,20 +354,22 @@ export function useApproveSecondInstallmentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ adminUserId, payment }: { adminUserId: string; payment: PaymentRecord }) => {
+    mutationFn: async (
+      { adminUserId, payment }: { adminUserId: string; payment: PaymentRecord },
+    ) => {
       await approveSecondInstallmentFlow({
         supabase,
         adminUserId,
         payment: {
           id: payment.id,
-          user_id: payment.user_id || '',
+          user_id: payment.user_id || "",
           student_id: payment.student_id,
           student_email: payment.student_email,
           student_name: payment.student_name,
           fee_type: payment.fee_type,
           fee_type_global: payment.fee_type_global,
           amount: payment.amount,
-          admin_approved_at: payment.admin_approved_at,
+          admin_approved_at: new Date().toISOString(), // Usar o momento exatado da aprovação
           created_at: payment.created_at,
         },
       });
@@ -306,7 +377,7 @@ export function useApproveSecondInstallmentMutation() {
     onSuccess: () => {
       invalidateZelleQueries(queryClient);
       invalidatePaymentQueries(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
     },
   });
 }
@@ -326,4 +397,3 @@ export function useAddAffiliateNotesMutation() {
     },
   });
 }
-
