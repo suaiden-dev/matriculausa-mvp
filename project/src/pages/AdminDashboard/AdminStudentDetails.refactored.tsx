@@ -396,6 +396,8 @@ const AdminStudentDetails: React.FC = () => {
   // Estados para Preview de Documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | undefined>(undefined);
+  const [previewUploadId, setPreviewUploadId] = useState<string | undefined>(undefined);
+  const [previewUploadStatus, setPreviewUploadStatus] = useState<string | undefined>(undefined);
 
   // Hooks para Document Requests
   const {
@@ -2305,6 +2307,8 @@ const AdminStudentDetails: React.FC = () => {
     if (url) {
       setPreviewUrl(url);
       setPreviewFileName(name);
+      setPreviewUploadId(doc.id);
+      setPreviewUploadStatus(doc.status);
     } else {
       console.warn('⚠️ [ADMIN] Documento não tem URL para visualização:', doc);
     }
@@ -3755,6 +3759,7 @@ const AdminStudentDetails: React.FC = () => {
               />
             </Suspense>
 
+            {/* I20DeadlineTimerCard oculto temporariamente
             {i20Deadline && !student.has_paid_i20_control_fee && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-32 rounded-2xl"></div>}>
                 <I20DeadlineTimerCard
@@ -3764,6 +3769,7 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
+            */}
 
             {termAcceptances.length > 0 && (
               <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
@@ -4019,9 +4025,26 @@ const AdminStudentDetails: React.FC = () => {
           documentUrl={previewUrl}
           fileName={previewFileName}
           onClose={() => {
+            const targetId = previewUploadId;
             setPreviewUrl(null);
             setPreviewFileName(undefined);
+            setPreviewUploadId(undefined);
+            setPreviewUploadStatus(undefined);
+            setTimeout(() => {
+              const el = targetId
+                ? document.querySelector(`[data-upload-id="${targetId}"]`)
+                : null;
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 50);
           }}
+          uploadId={previewUploadId}
+          uploadStatus={previewUploadStatus}
+          onApprove={handleApproveDocumentRequest}
+          onReject={handleRejectDocumentRequest}
+          isApproving={!!previewUploadId && !!approvingDocumentRequest[previewUploadId]}
+          isRejecting={!!previewUploadId && !!rejectingDocumentRequest[previewUploadId]}
         />
       )}
     </div>

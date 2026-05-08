@@ -14,15 +14,17 @@ interface SelectedScholarshipCardProps {
 const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.memo(({
   student,
 }) => {
-  // Only show if scholarship is selected and application fee is paid
-  if (!student.scholarship_title || !student.is_application_fee_paid) {
+  // Show if fee paid OR if there's an approved application (selected before payment)
+  const approvedApplication = (student.all_applications || []).find(
+    (app: any) => app.is_application_fee_paid || app.status === 'approved' || app.status === 'enrolled'
+  );
+
+  if (!student.scholarship_title && !approvedApplication) {
     return null;
   }
 
-  // Get the paid application and scholarship details
-  const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
-  const scholarship = paidApplication?.scholarships
-    ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+  const scholarship = approvedApplication?.scholarships
+    ? (Array.isArray(approvedApplication.scholarships) ? approvedApplication.scholarships[0] : approvedApplication.scholarships)
     : null;
 
   return (
@@ -74,7 +76,8 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
   return (
     prevProps.student.student_id === nextProps.student.student_id &&
     prevProps.student.scholarship_title === nextProps.student.scholarship_title &&
-    prevProps.student.is_application_fee_paid === nextProps.student.is_application_fee_paid
+    prevProps.student.is_application_fee_paid === nextProps.student.is_application_fee_paid &&
+    prevProps.student.application_status === nextProps.student.application_status
   );
 });
 

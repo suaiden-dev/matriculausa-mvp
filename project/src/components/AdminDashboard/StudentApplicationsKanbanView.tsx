@@ -1,14 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import KanbanColumn from './KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
-  getCurrentStage,
   getStepStatus,
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
 import { StudentRecord } from './StudentApplicationsView';
-import { UserX } from 'lucide-react';
+import { useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+import { queryKeys } from '../../lib/queryKeys';
+import { UserX, UserPlus, RefreshCw } from 'lucide-react';
 
 interface InternalAdmin {
   id: string;
@@ -30,6 +32,28 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   internalAdmins = [],
 }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: docsStatsMap, refetch: refetchDocs } = useStudentDocsStats(students);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+      refetchDocs(),
+    ]);
+    setIsRefreshing(false);
+  };
+
+  // Merge doc stats into student records
+  const studentsWithDocs = useMemo(() => {
+    if (!docsStatsMap) return students;
+    return students.map(s => {
+      const stats = docsStatsMap.get(s.student_id);
+      return stats ? { ...s, ...stats } : s;
+    });
+  }, [students, docsStatsMap]);
 
   // Função centralizada para pegar unread counts
   const getStudentTotalUnread = (studentId: string) => {
@@ -38,26 +62,35 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
   // Separar dropped dos demais
   const droppedStudents = useMemo(() => {
-    return students.filter(s => s.is_dropped);
-  }, [students]);
+    return studentsWithDocs.filter(s => s.is_dropped);
+  }, [studentsWithDocs]);
+
+  // Alunos registrados mas que ainda não pagaram a selection process fee
+  const registeredStudents = useMemo(() => {
+    return studentsWithDocs.filter(s =>
+      !s.is_dropped &&
+      !s.has_paid_selection_process_fee &&
+      s.status !== 'enrolled' &&
+      s.source !== 'migma'
+    );
+  }, [studentsWithDocs]);
 
   // Filtramos apenas os que pagaram a selection fee ou estão inscritos, excluindo dropped
   const displayStudents = useMemo(() => {
-    return students.filter(s =>
+    return studentsWithDocs.filter(s =>
       !s.is_dropped &&
       (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')
     );
-  }, [students]);
+  }, [studentsWithDocs]);
 
   // Filter out stages that should be hidden
   const visibleStages = useMemo(() => {
-    return APPLICATION_FLOW_STAGES.filter(stage => 
-      stage.key !== 'scholarship_fee' && 
-      stage.key !== 'i20_fee'
+    return APPLICATION_FLOW_STAGES.filter(stage =>
+      stage.key !== 'scholarship_fee'
     );
   }, []);
 
-  // Organize students by their last completed stage (milestone)
+  // Organize students by their current stage (first non-completed visible stage)
   const studentsByStage = useMemo(() => {
     const stageMap = new Map<ApplicationFlowStageKey, StudentRecord[]>();
 
@@ -66,44 +99,40 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       stageMap.set(stage.key, []);
     });
 
-    // Distribute students to their last completed stage that is ALSO VISIBLE
     displayStudents.forEach(student => {
-      // Prioridade máxima: se o status principal é 'enrolled', vai direto para a coluna final
-      if ((student.status === 'enrolled' || student.application_status === 'enrolled') && stageMap.has('enrollment')) {
+      // Alunos legados (enrolados antes da plataforma) → vão direto para Enrollment
+      if (student.student_process_type === 'enrolled' && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }
 
-      let lastVisibleCompletedStage: ApplicationFlowStageKey | null = null;
-      const { stage: currentStage } = getCurrentStage(student as any);
-
-      for (const stageDef of APPLICATION_FLOW_STAGES) {
-        // Pular transfer_form se não for transfer student
+      // Find first visible non-completed stage (current stage)
+      let placed = false;
+      for (const stageDef of visibleStages) {
+        // Skip transfer_form if not transfer student
         if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
           continue;
         }
+        // Skip process-type-specific stages
+        if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) {
+          continue;
+        }
 
-        // Pular se o aluno pulou este estágio (ex: no flow de placement_fee)
         const stepStatus = getStepStatus(student as any, stageDef.key);
         if (stepStatus === 'skipped') {
           continue;
         }
 
-        // Se o estágio foi completado e ele é visível, marcamos como o último visível completado
-        if (stepStatus === 'completed' && visibleStages.some(vs => vs.key === stageDef.key)) {
-          lastVisibleCompletedStage = stageDef.key;
-        }
-
-        // Se este é o estágio atual e NÃO está completado (ou seja, é o que falta fazer), paramos
-        if (currentStage === stageDef.key && stepStatus !== 'completed') {
+        if (stepStatus !== 'completed') {
+          stageMap.get(stageDef.key)!.push(student);
+          placed = true;
           break;
         }
       }
 
-      if (lastVisibleCompletedStage && stageMap.has(lastVisibleCompletedStage)) {
-        stageMap.get(lastVisibleCompletedStage)!.push(student);
-      } else if (student.has_paid_selection_process_fee && stageMap.has('selection_fee')) {
-        stageMap.get('selection_fee')!.push(student);
+      // All stages completed → enrollment
+      if (!placed && stageMap.has('enrollment')) {
+        stageMap.get('enrollment')!.push(student);
       }
     });
 
@@ -120,30 +149,62 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       {/* Summary Stats + Color Legend */}
       <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
-          {displayStudents.length} students in pipeline
+          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')).length} students in pipeline
+          {registeredStudents.length > 0 && (
+            <span className="ml-2 text-blue-400">· {registeredStudents.length} registered</span>
+          )}
           {droppedStudents.length > 0 && (
             <span className="ml-2 text-red-400">· {droppedStudents.length} dropped</span>
           )}
         </span>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Process type:</span>
-          {[
-            { label: 'Initial',   color: 'bg-sky-400' },
-            { label: 'COS',       color: 'bg-violet-400' },
-            { label: 'Transfer',  color: 'bg-amber-400' },
-            { label: 'Resident',  color: 'bg-teal-400' },
-          ].map(({ label, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className={`w-2.5 h-2.5 rounded-sm ${color} flex-shrink-0`} />
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
-          ))}
+        <div className="flex items-center gap-4">
+          {/* Color legend */}
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-white border border-gray-300" />
+              Student
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-blue-50 border border-blue-200" />
+              Admin
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-purple-50 border border-purple-200" />
+              Both
+            </span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
         </div>
       </div>
 
       {/* Kanban Board - Horizontal Scrollable */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
         <div className="flex gap-4 h-full min-w-max">
+          {/* Coluna especial: Registered (primeiro) */}
+          <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
+            <KanbanColumn
+              stage={{
+                key: 'registered' as ApplicationFlowStageKey,
+                label: 'Registered',
+                shortLabel: 'Registered',
+                icon: UserPlus,
+                description: 'Students registered but haven\'t paid the Selection Process Fee yet',
+                actor: 'student',
+              } as any}
+              students={registeredStudents}
+              onStudentClick={handleStudentClick}
+              getUnreadCount={getStudentTotalUnread}
+              internalAdmins={internalAdmins}
+            />
+          </div>
+
           {visibleStages.map(stage => {
             const studentsInStage = studentsByStage.get(stage.key) || [];
 
@@ -159,6 +220,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
                   internalAdmins={internalAdmins}
+                  showSelectionTags={stage.key === 'selection_fee'}
                 />
               </div>
             );
@@ -173,7 +235,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Dropped',
                 icon: UserX,
                 description: 'Students who dropped out of the process',
-              }}
+                actor: 'admin',
+              } as any}
               students={droppedStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
