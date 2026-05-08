@@ -5,7 +5,8 @@ import {
   Star,
   GraduationCap,
   DollarSign,
-  Eye
+  Eye,
+  Lock
 } from 'lucide-react';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
 import { useTranslation } from 'react-i18next';
@@ -76,7 +77,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       <div className="relative w-full aspect-[8/3] bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
         {/* Full Background Image */}
         <div className="absolute inset-0 z-0">
-          {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+          {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) ? (
             <img
               src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
               alt={scholarship.title}
@@ -150,15 +151,33 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {/* University Info Box */}
           <div className="flex items-center gap-3 py-1">
             <div className="w-16 h-16 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0 overflow-hidden">
-              {scholarship.universities?.logo_url && canViewSensitive ? (
-                <img 
-                  src={scholarship.universities.logo_url} 
-                  alt={scholarship.universities.name || "University Logo"} 
-                  className="w-full h-full object-contain p-0.5" 
-                />
-              ) : (
-                <Building className="h-8 w-8 text-[#05294E]" />
-              )}
+              <div className="relative w-full h-full flex items-center justify-center">
+                {scholarship.universities?.logo_url ? (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img 
+                      src={scholarship.universities.logo_url} 
+                      alt={scholarship.universities.name || "University Logo"} 
+                      className={`w-full h-full object-contain p-2 transition-all duration-500 ${!canViewSensitive ? 'blur-[4px] opacity-50' : ''}`} 
+                    />
+                    {!canViewSensitive && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-white/60 backdrop-blur-[2px] p-1.5 rounded-full shadow-sm border border-white/50">
+                          <Lock className="h-3.5 w-3.5 text-slate-600" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <Building className={`h-8 w-8 text-[#05294E]/20 ${!canViewSensitive ? 'blur-[2px]' : ''}`} />
+                    {!canViewSensitive && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Lock className="h-4 w-4 text-slate-400/80" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
