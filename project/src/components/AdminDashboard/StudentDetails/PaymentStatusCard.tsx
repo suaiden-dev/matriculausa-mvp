@@ -336,7 +336,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                             disabled={savingPaymentMethod}
                           >
-                            <option value="manual">Outside</option>
                             <option value="stripe">Stripe</option>
                             <option value="zelle">Zelle</option>
                             <option value="parcelow">Parcelow</option>
@@ -461,7 +460,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                             disabled={savingPaymentMethod}
                           >
-                            <option value="manual">Outside</option>
                             <option value="stripe">Stripe</option>
                             <option value="zelle">Zelle</option>
                             <option value="parcelow">Parcelow</option>
@@ -642,7 +640,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                   <option value="parcelow">Parcelow</option>
@@ -834,7 +831,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                   <option value="parcelow">Parcelow</option>
@@ -973,7 +969,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                   <option value="parcelow">Parcelow</option>
@@ -1067,7 +1062,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                 disabled={savingPaymentMethod}
                               >
-                                <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
                                 <option value="parcelow">Parcelow</option>
@@ -1258,7 +1252,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                 disabled={savingPaymentMethod}
                               >
-                                <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
                                 <option value="parcelow">Parcelow</option>
@@ -1384,7 +1377,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                 disabled={savingPaymentMethod}
                               >
-                                <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
                                 <option value="parcelow">Parcelow</option>
