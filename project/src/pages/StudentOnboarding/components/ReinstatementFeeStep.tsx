@@ -413,9 +413,9 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                         <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500 mx-auto md:mx-0">
                                             {loadingApp ? (
                                                 <Loader2 className="w-12 h-12 text-slate-300 animate-spin" />
-                                            ) : application?.scholarships?.image_url || application?.scholarships?.universities?.logo_url ? (
+                                            ) : application?.scholarships?.universities?.logo_url || application?.scholarships?.image_url ? (
                                                 <img
-                                                    src={application.scholarships.image_url || application.scholarships.universities?.logo_url || ''}
+                                                    src={application.scholarships.universities?.logo_url || application.scholarships.image_url || ''}
                                                     alt=""
                                                     className="w-full h-full object-contain p-2"
                                                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -433,7 +433,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                                         {application.scholarships.title}
                                                     </h3>
                                                     <div className="flex items-center justify-center md:justify-start gap-1.5 mt-0.5 text-gray-500">
-                                                        <Building className="w-3.5 h-3.5" />
                                                         <span className="text-xs font-bold uppercase tracking-wide">
                                                             {application.scholarships.universities?.name}
                                                         </span>

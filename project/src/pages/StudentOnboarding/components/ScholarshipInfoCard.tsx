@@ -71,8 +71,8 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
   const universityLocation = canViewSensitive ? scholarship.universities?.location : null;
 
   const logoUrl =
-    scholarship.image_url ||
     scholarship.universities?.logo_url ||
+    scholarship.image_url ||
     scholarship.universities?.image_url;
 
   const annualValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
@@ -135,12 +135,6 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
             </h3>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-white/50 font-bold text-[10px]">
               <div className="flex items-center gap-1.5">
-                <div className="relative">
-                  <Building className={`w-3.5 h-3.5 ${!canViewSensitive ? 'blur-[1px] opacity-50' : ''}`} />
-                  {!canViewSensitive && (
-                    <Lock className="absolute -top-1 -right-1 w-2 h-2 text-white/60" />
-                  )}
-                </div>
                 <span className={!canViewSensitive ? 'blur-[4px]' : ''}>{universityName}</span>
               </div>
               {universityLocation && (
