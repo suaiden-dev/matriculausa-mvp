@@ -7,7 +7,10 @@
       "Bash(rtk supabase:*)",
       "Bash(grep -n \"commission\\\\|register_payment_billing\" supabase/migrations/*.sql)",
       "Bash(grep -n \"CREATE TABLE.*affiliate\" supabase/migrations/*.sql)",
-      "Bash(grep -r \"CREATE OR REPLACE FUNCTION.*affiliate\\\\|CREATE OR REPLACE FUNCTION.*seller\\\\|CREATE OR REPLACE FUNCTION.*commission\" supabase/migrations/*.sql)"
+      "Bash(grep -r \"CREATE OR REPLACE FUNCTION.*affiliate\\\\|CREATE OR REPLACE FUNCTION.*seller\\\\|CREATE OR REPLACE FUNCTION.*commission\" supabase/migrations/*.sql)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -r \"create table\\\\|CREATE TABLE\" supabase/migrations/*.sql)",
+      "Bash(grep \"CREATE TABLE\\\\|create table\" supabase/migrations/*.sql)"
     ]
   }
 }

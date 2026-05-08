@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Gift, 
-  Copy, 
-  CheckCircle, 
-  TrendingUp, 
+import {
+  Gift,
+  Copy,
+  CheckCircle,
+  TrendingUp,
   DollarSign,
   Users,
   Clock,
@@ -13,7 +13,10 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Link2
+  Link2,
+  Edit2,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,12 +25,13 @@ import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
-import { 
+import {
   useAffiliateCodeQuery,
   useMatriculacoinCreditsQuery,
   useAffiliateReferralsQuery,
   useMatriculacoinTransactionsQuery,
-  useParticipatingUniversitiesQuery
+  useParticipatingUniversitiesQuery,
+  useUpdateAffiliateCode
 } from '../../hooks/useStudentDashboardQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
@@ -58,6 +62,8 @@ const MatriculaRewards: React.FC = () => {
   const { data: participatingUniversities = [], isPending: universitiesLoading } = useParticipatingUniversitiesQuery();
   
   
+  const updateAffiliateCode = useUpdateAffiliateCode();
+
   const [copied, setCopied] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
   const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
@@ -67,6 +73,12 @@ const MatriculaRewards: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [referralsPage, setReferralsPage] = useState(1);
   const referralsPerPage = 5;
+
+  // Edit code state
+  const [editingCode, setEditingCode] = useState(false);
+  const [editCodeValue, setEditCodeValue] = useState('');
+  const [editCodeError, setEditCodeError] = useState('');
+  const [editCodeSuccess, setEditCodeSuccess] = useState(false);
   
   // Computed values
   const loading = affiliateCodeLoading || creditsLoading || referralsLoading || transactionsLoading;
@@ -121,6 +133,57 @@ const MatriculaRewards: React.FC = () => {
       setTimeout(() => setCopiedLink(false), 2000);
     } catch (error) {
       console.error('Erro ao copiar link:', error);
+    }
+  };
+
+  const openEditCode = () => {
+    setEditCodeValue(affiliateCode?.code || '');
+    setEditCodeError('');
+    setEditCodeSuccess(false);
+    setEditingCode(true);
+  };
+
+  const closeEditCode = () => {
+    setEditingCode(false);
+    setEditCodeError('');
+    setEditCodeSuccess(false);
+  };
+
+  const handleCodeInput = (value: string) => {
+    const upper = value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+    setEditCodeValue(upper);
+    setEditCodeError('');
+  };
+
+  const handleSaveCode = async () => {
+    const code = editCodeValue.trim();
+    if (code.length < 3 || code.length > 20) {
+      setEditCodeError(t('matriculaRewards.editCode.errorLength'));
+      return;
+    }
+    if (!/^[A-Z0-9_]+$/.test(code)) {
+      setEditCodeError(t('matriculaRewards.editCode.errorChars'));
+      return;
+    }
+    if (!user?.id) return;
+
+    try {
+      await updateAffiliateCode.mutateAsync({ userId: user.id, newCode: code });
+      setEditCodeSuccess(true);
+      setTimeout(() => {
+        closeEditCode();
+      }, 1500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg === 'taken') {
+        setEditCodeError(t('matriculaRewards.editCode.errorTaken'));
+      } else if (msg === 'length') {
+        setEditCodeError(t('matriculaRewards.editCode.errorLength'));
+      } else if (msg === 'invalid_chars') {
+        setEditCodeError(t('matriculaRewards.editCode.errorChars'));
+      } else {
+        setEditCodeError(t('matriculaRewards.editCode.errorGeneric'));
+      }
     }
   };
 
@@ -439,35 +502,95 @@ const MatriculaRewards: React.FC = () => {
               {affiliateCode && (
                 <div className="mt-6 w-full space-y-3">
                   <div className="bg-white rounded-xl border-2 border-blue-200 p-3 sm:p-4 shadow-md transition-all hover:shadow-lg">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
-                          <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
+                    {!editingCode ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
+                            <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono">
+                                {affiliateCode.code}
+                              </p>
+                              <button
+                                onClick={openEditCode}
+                                className="text-slate-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                                title={t('matriculaRewards.editCode.button')}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
-                          <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono">
-                            {affiliateCode.code}
-                          </p>
-                        </div>
+                        <button
+                          onClick={() => copyToClipboard(affiliateCode.code)}
+                          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
+                        >
+                          {copied ? (
+                            <>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>{t('common.copied')}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>{t('common.copy')}</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => copyToClipboard(affiliateCode.code)}
-                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
-                      >
-                        {copied ? (
-                          <>
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            <span>{t('common.copied')}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            <span>{t('common.copy')}</span>
-                          </>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
+                            <Edit2 className="h-4 w-4" />
+                          </div>
+                          <p className="text-sm font-medium text-slate-700">{t('matriculaRewards.editCode.title')}</p>
+                          <button onClick={closeEditCode} className="ml-auto text-slate-400 hover:text-slate-600">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Warning */}
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-700">{t('matriculaRewards.editCode.warning')}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editCodeValue}
+                            onChange={e => handleCodeInput(e.target.value)}
+                            maxLength={20}
+                            placeholder={t('matriculaRewards.editCode.placeholder')}
+                            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onKeyDown={e => e.key === 'Enter' && handleSaveCode()}
+                          />
+                          <button
+                            onClick={handleSaveCode}
+                            disabled={updateAffiliateCode.isPending || editCodeSuccess}
+                            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-3 py-2 rounded-lg font-medium text-sm transition-all"
+                          >
+                            {editCodeSuccess ? (
+                              <><CheckCircle className="h-3.5 w-3.5" /><span>{t('matriculaRewards.editCode.saved')}</span></>
+                            ) : updateAffiliateCode.isPending ? (
+                              <span>{t('matriculaRewards.editCode.saving')}</span>
+                            ) : (
+                              <span>{t('matriculaRewards.editCode.save')}</span>
+                            )}
+                          </button>
+                        </div>
+
+                        <p className="text-[10px] text-slate-400">{t('matriculaRewards.editCode.hint')}</p>
+
+                        {editCodeError && (
+                          <p className="text-xs text-red-600">{editCodeError}</p>
                         )}
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Referral Link - Expanded */}

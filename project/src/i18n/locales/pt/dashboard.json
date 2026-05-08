@@ -1210,6 +1210,20 @@
     "totalEarnings": "Total Ganho",
     "yourReferralCode": "Seu Código de Indicação",
     "yourCode": "Seu Código",
+    "editCode": {
+      "button": "Editar código",
+      "title": "Personalizar código de indicação",
+      "warning": "Links compartilhados com o código atual deixarão de funcionar após a troca.",
+      "placeholder": "Ex: SEUNOME",
+      "hint": "3–20 caracteres. Letras, números e _ (underscore). Será salvo em maiúsculas.",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "saved": "Salvo!",
+      "errorLength": "Código deve ter entre 3 e 20 caracteres.",
+      "errorChars": "Apenas letras, números e underscore (_).",
+      "errorTaken": "Este código já está em uso. Escolha outro.",
+      "errorGeneric": "Erro ao salvar. Tente novamente."
+    },
     "yourLink": "Seu Link",
     "copyLink": "Copiar Link",
     "linkCopied": "Link Copiado",
@@ -1234,7 +1248,7 @@
     "step2Title": "Amigos Se Inscrevem",
     "step2Description": "Eles recebem $100 de desconto na taxa do processo seletivo.",
     "step3Title": "Ganhe Recompensas",
-    "step3Description": "Quando indicado pagar a taxa de Controle I-20, você ganha 180 coins.",
+    "step3Description": "Quando indicado pagar a taxa de Controle I-20, você ganha 100 coins.",
     "notificationSent": "Notificação enviada com sucesso!",
     "stages": {
       "selection": "Processo Seletivo",
@@ -1405,7 +1419,7 @@
         },
         "accumulateCoins": {
           "title": "Ganhe Recompensas",
-          "description": "180 coins por indicação que completar o pagamento da Placement Fee"
+          "description": "100 coins por indicação que completar o pagamento da Placement Fee"
         },
         "payLess": {
           "title": "Economize Dinheiro",
@@ -1463,7 +1477,7 @@
         "step2": {
           "title": "Amigos Se Inscrevem",
           "description": "Quando seus amigos avançam e pagam a Placement Fee, vocês ganham Matricula Coins",
-          "details": "180 coins depois que a Placement Fee for paga"
+          "details": "100 coins depois que a Placement Fee for paga"
         },
         "step3": {
           "title": "Resgate Desconto de Mensalidade",
@@ -1486,7 +1500,7 @@
         "cta": "Começar a Economizar Agora",
         "minValue": "1 amigo",
         "maxValue": "50+ amigos",
-        "coinsPerFriend": "180 coins",
+        "coinsPerFriend": "100 coins",
         "perFriend": "por amigo",
         "coinValue": "1 coin =",
         "usdValue": "$1 USD"
@@ -1517,7 +1531,7 @@
           },
           "referFriends": {
             "title": "Indique Amigos e Multiplique Seus Ganhos",
-            "description": "180 coins por cada amigo que pagar a Placement Fee"
+            "description": "100 coins por cada amigo que pagar a Placement Fee"
           }
         }
       }

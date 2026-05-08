@@ -1316,6 +1316,20 @@
       "totalEarnings": "Total Earnings",
       "yourReferralCode": "Your Referral Code",
       "yourCode": "Your Code",
+      "editCode": {
+        "button": "Edit code",
+        "title": "Customize referral code",
+        "warning": "Links shared with your current code will stop working after the change.",
+        "placeholder": "E.g.: YOURNAME",
+        "hint": "3–20 characters. Letters, numbers and _ (underscore). Saved in uppercase.",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved!",
+        "errorLength": "Code must be between 3 and 20 characters.",
+        "errorChars": "Only letters, numbers and underscore (_) allowed.",
+        "errorTaken": "This code is already taken. Choose another.",
+        "errorGeneric": "Error saving. Please try again."
+      },
       "yourLink": "Your Link",
       "copyLink": "Copy Link",
       "linkCopied": "Link Copied",
@@ -1340,7 +1354,7 @@
       "step2Title": "They pay the selection process fee",
       "step2Description": "When they use your code and pay the selection process fee, you earn coins",
       "step3Title": "Redeem your rewards",
-      "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
+      "step3Description": "When referred pays the I-20 Control Fee, you earn 100 coins.",
       "notificationSent": "Notification sent successfully!",
       "stages": {
         "selection": "Selection Process",
@@ -1470,7 +1484,7 @@
           },
           "accumulateCoins": {
             "title": "Earn Rewards",
-            "description": "180 coins per referral that completes the Placement Fee payment"
+            "description": "100 coins per referral that completes the Placement Fee payment"
           },
           "payLess": {
             "title": "Save Money",
@@ -1528,7 +1542,7 @@
           "step2": {
             "title": "Friends Sign Up",
             "description": "When your friends register using your code, you both earn Matricula Coins",
-            "details": "180 coins after Placement Fee is paid"
+            "details": "100 coins after Placement Fee is paid"
           },
           "step3": {
             "title": "Redeem Fee Discount",
@@ -1551,7 +1565,7 @@
           "cta": "Start Saving Now",
           "minValue": "1 friend",
           "maxValue": "50+ friends",
-          "coinsPerFriend": "180 coins",
+          "coinsPerFriend": "100 coins",
           "perFriend": "per friend",
           "coinValue": "1 coin =",
           "usdValue": "$1 USD"
@@ -1582,7 +1596,7 @@
             },
             "referFriends": {
               "title": "Refer Friends and Multiply Your Earnings",
-              "description": "180 coins for each friend who pays the Placement Fee using your code"
+              "description": "100 coins for each friend who pays the Placement Fee using your code"
             }
           }
         }
