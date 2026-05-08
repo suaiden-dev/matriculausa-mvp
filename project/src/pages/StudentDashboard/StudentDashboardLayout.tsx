@@ -229,7 +229,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
             </div>
 
             {/* User Profile */}
-            <div className="px-4 py-8 sm:px-6 border-b border-slate-200">
+            <div className="px-4 py-8 sm:px-6 border-b border-transparent">
               <div className="flex flex-col items-center text-center">
                 {/* Avatar */}
                 <div className="relative mb-4 group cursor-pointer" onClick={() => navigate('/student/dashboard/profile')}>

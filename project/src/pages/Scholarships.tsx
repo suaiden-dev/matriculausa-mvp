@@ -57,6 +57,7 @@ const Scholarships: React.FC = () => {
   // Approved universities ids cache
   const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number | string>>(new Set());
   const scholarshipsSectionRef = useRef<HTMLDivElement | null>(null);
+  const featuredSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
@@ -435,10 +436,12 @@ const Scholarships: React.FC = () => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
 
-  // Scroll para a seção de bolsas (chamado manualmente ao mudar página)
-  const scrollToScholarships = () => {
-    if (scholarshipsSectionRef.current) {
-      scholarshipsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Scroll para a seção de bolsas — chamado ANTES de mudar a página para evitar layout shift
+  const scrollToScholarships = (nextPage: number) => {
+    // Na página 0 voltando aos destaques, ou em qualquer outra página vai para a listagem
+    const targetRef = (nextPage === 0 && featuredSectionRef.current) ? featuredSectionRef : scholarshipsSectionRef;
+    if (targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -658,8 +661,8 @@ const Scholarships: React.FC = () => {
 
 
         {/* Featured Scholarships Section */}
-        {filteredFeaturedScholarships.length > 0 && (
-          <div className="mb-12">
+        {page === 0 && filteredFeaturedScholarships.length > 0 && (
+          <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
 
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
@@ -955,7 +958,7 @@ const Scholarships: React.FC = () => {
         )}
 
         {/* All Scholarships Section */}
-        <div className="mb-12" ref={scholarshipsSectionRef}>
+        <div className="mb-12 scroll-mt-24" ref={scholarshipsSectionRef}>
           {filteredScholarships.length > 0 && (
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
@@ -1323,7 +1326,7 @@ const Scholarships: React.FC = () => {
           <div className="flex justify-center items-center gap-16 sm:gap-24 mt-16 mb-8">
             <button
               className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-[#05294E] hover:text-white hover:border-[#05294E] hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:hover:shadow-none"
-              onClick={() => { setPage((p) => Math.max(0, p - 1)); scrollToScholarships(); }}
+              onClick={() => { const next = Math.max(0, page - 1); scrollToScholarships(next); setPage(next); }}
               disabled={page === 0 || scholarshipsLoading}
             >
               <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -1338,7 +1341,7 @@ const Scholarships: React.FC = () => {
 
             <button
               className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-[#05294E] border border-[#05294E] text-white font-bold hover:bg-[#05294E]/90 hover:shadow-lg hover:shadow-[#05294E]/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#05294E] disabled:hover:shadow-none"
-              onClick={() => { setPage((p) => Math.min(Math.ceil(totalCount / pageSize) - 1, p + 1)); scrollToScholarships(); }}
+              onClick={() => { const next = Math.min(Math.ceil(totalCount / pageSize) - 1, page + 1); scrollToScholarships(next); setPage(next); }}
               disabled={(page + 1) * pageSize >= totalCount || scholarshipsLoading}
             >
               <span className="hidden sm:inline">{t('scholarshipsPage.pagination.next')}</span>

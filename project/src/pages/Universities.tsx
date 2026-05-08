@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -29,6 +29,15 @@ const Universities: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [allUniversities, setAllUniversities] = useState<any[]>([]);
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
+  const gridSectionRef = useRef<HTMLDivElement>(null);
+  const featuredSectionRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToGrid = (nextPage: number) => {
+    const targetRef = nextPage === 0 ? featuredSectionRef : gridSectionRef;
+    if (targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   
   // TODOS OS useEffect DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   useEffect(() => {
@@ -287,8 +296,8 @@ const Universities: React.FC = () => {
 
 
         {/* Featured Universities Section */}
-        {filteredFeaturedUniversities.length > 0 && (
-          <div className="mb-12">
+        {page === 0 && filteredFeaturedUniversities.length > 0 && (
+          <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                 <span className="text-[#05294E]">{t('universitiesPage.featured.subtitle')}</span>
@@ -437,8 +446,17 @@ const Universities: React.FC = () => {
           </div>
         )}
 
-        {/* Universities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Universities Grid Section */}
+        <div className="mb-12 scroll-mt-24" ref={gridSectionRef}>
+          {!isLoadingUniversities && filteredSchools.length > 0 && (
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                <span className="text-[#05294E]">{t('scholarships:scholarshipsPage.allScholarships.title')}</span>
+              </h2>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoadingUniversities ? (
             skeletonArray.map((_, idx) => (
               <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-[480px]" />
@@ -571,12 +589,13 @@ const Universities: React.FC = () => {
             </div>
           ))}
         </div>
+      </div>
 
         {/* Paginação Premium */}
         <div className="flex justify-center items-center gap-16 sm:gap-24 mt-16 mb-8">
           <button
             className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-[#05294E] hover:text-white hover:border-[#05294E] hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:hover:shadow-none"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            onClick={() => { const next = Math.max(0, page - 1); scrollToGrid(next); setPage(next); }}
             disabled={page === 0 || isLoadingUniversities}
           >
             <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -591,7 +610,7 @@ const Universities: React.FC = () => {
 
           <button
             className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-[#05294E] border border-[#05294E] text-white font-bold hover:bg-[#05294E]/90 hover:shadow-lg hover:shadow-[#05294E]/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#05294E] disabled:hover:shadow-none"
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            onClick={() => { const next = Math.min(totalPages - 1, page + 1); scrollToGrid(next); setPage(next); }}
             disabled={page >= totalPages - 1 || isLoadingUniversities}
           >
             <span className="hidden sm:inline">{t('universitiesPage.pagination.next')}</span>
