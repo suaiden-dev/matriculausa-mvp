@@ -386,16 +386,21 @@ export const useTransferForm = (
         }
       }
       
-      // Recarregar uploads
+      // Atualizar transfer_form_status para 'approved' e recarregar uploads
       const transferApp = getTransferApplication();
-      
+
       if (transferApp) {
+        await supabase
+          .from('scholarship_applications')
+          .update({ transfer_form_status: 'approved' })
+          .eq('id', transferApp.id);
+
         const { data: newUploads } = await supabase
           .from('transfer_form_uploads')
           .select('*')
           .eq('application_id', transferApp.id)
           .order('uploaded_at', { ascending: false });
-        
+
         if (newUploads) {
           setTransferFormUploads(newUploads);
         }
