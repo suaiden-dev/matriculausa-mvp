@@ -57,7 +57,6 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
               }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
             >
-              <option value="manual">Outside Platform</option>
               <option value="stripe">Stripe</option>
               <option value="zelle">Zelle</option>
               <option value="parcelow">Parcelow</option>
