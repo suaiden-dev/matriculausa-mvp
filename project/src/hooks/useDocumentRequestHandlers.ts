@@ -11,7 +11,8 @@ export const useDocumentRequestHandlers = (
   userId?: string,
   setDocumentRequests?: (requests: any[]) => void,
   logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>,
-  studentId?: string
+  studentId?: string,
+  onSuccess?: () => void
 ) => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<Record<string, boolean>>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<Record<string, boolean>>({});
@@ -122,17 +123,17 @@ export const useDocumentRequestHandlers = (
         .eq('id', uploadId)
         .maybeSingle();
 
-      // Buscar dados do aluno através do uploaded_by (user_id) ou scholarship_application
+      // Buscar dados do aluno através do uploaded_by (user_profiles.id) ou scholarship_application
       let studentProfile: { user_id?: string; email?: string; full_name?: string } | null = null;
       if (uploadData) {
-        // Tentar buscar pelo uploaded_by primeiro
+        // uploaded_by armazena user_profiles.id — buscar pelo campo 'id', não 'user_id'
         if (uploadData.uploaded_by) {
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('user_id, email, full_name')
-            .eq('user_id', uploadData.uploaded_by)
+            .eq('id', uploadData.uploaded_by)
             .maybeSingle();
-          
+
           if (profile) {
             studentProfile = profile;
           }
@@ -246,16 +247,8 @@ export const useDocumentRequestHandlers = (
             const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
             const studentProfileId = scholarshipApp?.student_id;
 
-            // Buscar o student_id do user_profiles se ainda não temos
-            let finalStudentId = studentProfileId;
-            if (!finalStudentId && studentProfile?.user_id) {
-              const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('id')
-                .eq('user_id', studentProfile.user_id)
-                .single();
-              finalStudentId = profile?.id;
-            }
+            // uploaded_by já é user_profiles.id — usar diretamente como fallback
+            const finalStudentId = studentProfileId || uploadData.uploaded_by;
 
             const notificationPayload = {
               student_id: finalStudentId,
@@ -294,14 +287,25 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      window.location.reload();
+      // Optimistic update — só o upload afetado, sem re-fetch nem scroll reset
+      if (setDocumentRequests) {
+        (setDocumentRequests as any)((prev: any[]) => prev.map((req: any) => ({
+          ...req,
+          document_request_uploads: (req.document_request_uploads || []).map((upload: any) =>
+            upload.id === uploadId
+              ? { ...upload, status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: userId }
+              : upload
+          ),
+        })));
+      }
+      onSuccess?.();
     } catch (error: any) {
       console.error('Error approving document:', error);
       alert('Failed to approve document: ' + error.message);
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
-  }, [userId, logAction, studentId, student]);
+  }, [userId, logAction, studentId, student, setDocumentRequests, onSuccess]);
 
   // Handler para rejeitar documento
   const handleRejectDocumentRequest = useCallback(async (uploadId: string, reason: string) => {
@@ -424,16 +428,8 @@ export const useDocumentRequestHandlers = (
             const documentTitle = uploadData.document_requests.title || 'Document';
             const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
 
-            // Buscar o student_id do user_profiles se ainda não temos
-            let finalStudentId = studentProfileId;
-            if (!finalStudentId && studentProfile?.user_id) {
-              const { data: profile } = await supabase
-                .from('user_profiles')
-                .select('id')
-                .eq('user_id', studentProfile.user_id)
-                .single();
-              finalStudentId = profile?.id;
-            }
+            // uploaded_by já é user_profiles.id — usar diretamente como fallback
+            const finalStudentId = studentProfileId || uploadData.uploaded_by;
 
             const notificationPayload = {
               student_id: finalStudentId,
@@ -472,14 +468,25 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      // window.location.reload();
+      // Optimistic update — só o upload afetado, sem re-fetch nem scroll reset
+      if (setDocumentRequests) {
+        (setDocumentRequests as any)((prev: any[]) => prev.map((req: any) => ({
+          ...req,
+          document_request_uploads: (req.document_request_uploads || []).map((upload: any) =>
+            upload.id === uploadId
+              ? { ...upload, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString(), reviewed_by: userId }
+              : upload
+          ),
+        })));
+      }
+      onSuccess?.();
     } catch (error: any) {
       console.error('Error rejecting document:', error);
       alert('Failed to reject document: ' + error.message);
     } finally {
       setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
-  }, [userId, logAction, studentId, student]);
+  }, [userId, logAction, studentId, student, setDocumentRequests, onSuccess]);
 
   // Handler para fazer download de documento
   const handleDownloadDocument = useCallback(async (doc: { file_url: string; filename?: string }) => {
