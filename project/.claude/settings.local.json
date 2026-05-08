@@ -12,7 +12,8 @@
       "Bash(grep -r \"create table\\\\|CREATE TABLE\" supabase/migrations/*.sql)",
       "Bash(grep \"CREATE TABLE\\\\|create table\" supabase/migrations/*.sql)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__supabase__execute_sql"
     ]
   }
 }
