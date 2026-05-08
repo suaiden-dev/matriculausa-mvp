@@ -64,7 +64,7 @@ export function useScholarships() {
             min_gpa,
             min_english_proficiency,
             universities (id, name, logo_url, image_url, location, is_approved, university_fees_page_url)
-          `);
+          `)
           .eq('is_active', true)
           .neq('is_test', true)
         
