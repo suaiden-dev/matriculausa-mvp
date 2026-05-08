@@ -378,6 +378,17 @@
         "transferFormReceived": "Formulario de Transferencia Recibido",
         "transferFormReadyMessage": "Tu formulario de transferencia está listo para descargar. Descárgalo, complétalo y envíalo de vuelta a la universidad.",
         "sentOn": "Enviado el",
+        "transferProofToSchool": {
+          "title": "¿Ya enviaste el formulario a tu escuela actual?",
+          "description": "Haz clic en \"Sí, ya lo envié\" para registrar que reenviaste el formulario.",
+          "confirmButton": "Sí, ya lo envié",
+          "confirmed": "¡Genial! Ahora sube el comprobante.",
+          "confirmedDescription": "Sube el comprobante (captura del email enviado, recibo, etc.).",
+          "uploadButton": "Subir Comprobante",
+          "submitted": "Comprobante registrado",
+          "submittedAt": "Enviado el",
+          "viewProof": "Ver comprobante"
+        },
         "studentUploads": "Archivos del estudiante:",
         "yourUploads": "Tus archivos:",
         "uploading": "Subiendo...",

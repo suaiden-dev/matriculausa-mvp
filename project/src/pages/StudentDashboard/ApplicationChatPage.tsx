@@ -1734,7 +1734,7 @@ const ApplicationChatPage: React.FC = () => {
                 }}
               />
                {/* Seção de Acceptance Letter - Mostrar apenas quando I-20 pago e enviado */}
-               {applicationDetails.acceptance_letter_url && 
+               {applicationDetails.acceptance_letter_url &&
                  (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && 
                  (userProfile as any)?.has_paid_i20_control_fee && (
                  <div className="bg-white rounded-xl mb-3 max-w-3xl mx-auto p-4 sm:p-6 outline outline-1 outline-slate-300">

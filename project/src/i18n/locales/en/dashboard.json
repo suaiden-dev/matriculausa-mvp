@@ -1164,6 +1164,17 @@
         "transferFormReceived": "Transfer Form Received",
         "transferFormReadyMessage": "Your transfer form is ready for download. Download it, fill it out, and send it back to the university.",
         "sentOn": "Sent on",
+        "transferProofToSchool": {
+          "title": "Did you already send the form to your current school?",
+          "description": "Click \"Yes, I already sent it\" to register that you forwarded the form.",
+          "confirmButton": "Yes, I already sent it",
+          "confirmed": "Great! Now upload the proof.",
+          "confirmedDescription": "Upload the proof (screenshot of the email sent, receipt, etc.).",
+          "uploadButton": "Upload Proof",
+          "submitted": "Proof submitted",
+          "submittedAt": "Submitted on",
+          "viewProof": "View proof"
+        },
         "studentUploads": "Student uploads:",
         "yourUploads": "Your uploads:",
         "uploading": "Uploading...",

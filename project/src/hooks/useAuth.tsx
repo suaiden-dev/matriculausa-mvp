@@ -8,7 +8,7 @@ interface User {
   avatar_url: string | null;
   email: string;
   name?: string;
-  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
@@ -40,7 +40,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   is_placement_fee_paid?: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -113,7 +113,7 @@ interface AuthProviderProps {
 
 interface SignUpOptions {
   referralCode?: string;
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
   utm?: StoredUtmAttribution | null;
 }
 
@@ -143,7 +143,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const buildUser = async (sessionUser: any, currentProfile: UserProfile | null): Promise<User> => {
       // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> verificar se é vendedor -> perfil.is_admin -> fallback por email
       let role = currentProfile?.role as User['role'] | undefined;
-      if (!role) role = sessionUser?.user_metadata?.role as User['role'] | undefined;
+      const metaRoleRaw = sessionUser?.user_metadata?.role as string | undefined;
+      // Se user_metadata.role é uma role não-default (ex: affiliate), tem prioridade
+      // sobre user_profiles.role = 'student' que pode ser apenas o valor default do trigger
+      if (metaRoleRaw && metaRoleRaw !== 'student' && (!role || role === 'student')) {
+        role = metaRoleRaw as User['role'];
+      }
+      if (!role) role = metaRoleRaw as User['role'] | undefined;
 
       // Se ainda não tem role, verificar se é uma universidade
       if (!role) {
