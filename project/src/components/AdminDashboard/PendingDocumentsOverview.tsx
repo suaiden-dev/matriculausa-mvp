@@ -151,60 +151,64 @@ const PendingDocumentsOverview: React.FC = () => {
     useEffect(() => {
         const channelName = 'admin-pending-documents';
 
-        channelManager.subscribe(channelName)
-            // Escutar mudanças em student_documents
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // INSERT, UPDATE, DELETE
-                    schema: 'public',
-                    table: 'student_documents'
-                },
-                () => {
-                    // Recarregar documentos quando houver mudanças
-                    fetchAllPendingDocuments();
-                }
-            )
-            // Escutar mudanças em document_request_uploads
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'document_request_uploads'
-                },
-                (payload: any) => {
-                    // Só recarregar se o status for pending ou under_review ou mudou disso
-                    const newStatus = payload.new?.status;
-                    const oldStatus = payload.old?.status;
+        channelManager.subscribe(
+            channelName,
+            {},
+            (ch) => {
+                ch.on(
+                    'postgres_changes',
+                    {
+                        event: '*', // INSERT, UPDATE, DELETE
+                        schema: 'public',
+                        table: 'student_documents'
+                    },
+                    () => {
+                        // Recarregar documentos quando houver mudanças
+                        fetchAllPendingDocuments();
+                    }
+                )
+                // Escutar mudanças em document_request_uploads
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'document_request_uploads'
+                    },
+                    (payload: any) => {
+                        // Só recarregar se o status for pending ou under_review ou mudou disso
+                        const newStatus = payload.new?.status;
+                        const oldStatus = payload.old?.status;
 
-                    if (
-                        newStatus === 'pending' ||
-                        newStatus === 'under_review' ||
-                        oldStatus === 'pending' || oldStatus === 'under_review'
-                    ) {
-                        fetchAllPendingDocuments();
+                        if (
+                            newStatus === 'pending' ||
+                            newStatus === 'under_review' ||
+                            oldStatus === 'pending' || oldStatus === 'under_review'
+                        ) {
+                            fetchAllPendingDocuments();
+                        }
                     }
-                }
-            )
-            // Escutar mudanças em comprehensive_term_acceptance (identity photos)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'comprehensive_term_acceptance'
-                },
-                (payload: any) => {
-                    // Recarregar se o status mudar para pending ou de pending para outra coisa
-                    const newStatus = payload.new?.identity_photo_status;
-                    const oldStatus = payload.old?.identity_photo_status;
-                    
-                    if (newStatus === 'pending' || oldStatus === 'pending') {
-                        fetchAllPendingDocuments();
+                )
+                // Escutar mudanças em comprehensive_term_acceptance (identity photos)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'comprehensive_term_acceptance'
+                    },
+                    (payload: any) => {
+                        // Recarregar se o status mudar para pending ou de pending para outra coisa
+                        const newStatus = payload.new?.identity_photo_status;
+                        const oldStatus = payload.old?.identity_photo_status;
+                        
+                        if (newStatus === 'pending' || oldStatus === 'pending') {
+                            fetchAllPendingDocuments();
+                        }
                     }
-                }
-            );
+                );
+            }
+        );
 
         // Cleanup: remover subscription quando componente desmontar
         return () => {

@@ -223,19 +223,24 @@ export const AdminNotificationsProvider: React.FC<{ children: ReactNode }> = ({ 
     if (!user || user.role !== 'admin') return;
 
     const channelName = `admin-merged-notifications-ctx-${user.id}`;
-    channelManager.subscribe(channelName)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'admin_student_chat_notifications',
-        filter: `recipient_id=eq.${user.id}`
-      }, () => throttledFetch.current())
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'admin_notifications',
-        filter: `user_id=eq.${user.id}`
-      }, () => throttledFetch.current());
+    channelManager.subscribe(
+      channelName,
+      {},
+      (ch) => {
+        ch.on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'admin_student_chat_notifications',
+          filter: `recipient_id=eq.${user.id}`
+        }, () => throttledFetch.current())
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'admin_notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => throttledFetch.current());
+      }
+    );
 
     return () => {
       channelManager.unsubscribe(channelName);

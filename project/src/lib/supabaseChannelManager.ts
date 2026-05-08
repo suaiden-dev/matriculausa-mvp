@@ -19,24 +19,34 @@ class SupabaseChannelManager {
 
   /**
    * Subscribe to a channel with reference counting
+   * @param setup Optional callback to configure the channel (e.g., add .on() listeners) before subscribing
    */
-  subscribe(channelName: string, config?: any) {
+  subscribe(channelName: string, config?: any, setup?: (channel: any) => void) {
     const count = this.referenceCounts.get(channelName) || 0;
     this.referenceCounts.set(channelName, count + 1);
 
-    if (count > 0) {
-      // console.log(`[ChannelManager] Channel ${channelName} already has ${count} subscribers, incrementing...`);
-      return this.channels.get(channelName);
-    }
-
     const channel = this.getChannel(channelName, config);
-    channel.subscribe((status: string) => {
-      if (status === 'SUBSCRIBED') {
-        // console.log(`[ChannelManager] ✅ Subscribed to ${channelName}`);
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        // console.warn(`[ChannelManager] ⚠️ Subscription ${status} for ${channelName}`);
+
+    if (count === 0) {
+      if (setup) {
+        setup(channel);
       }
-    });
+      
+      channel.subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          // console.log(`[ChannelManager] ✅ Subscribed to ${channelName}`);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          // console.warn(`[ChannelManager] ⚠️ Subscription ${status} for ${channelName}`);
+        }
+      });
+    } else {
+      // If already subscribed and setup is provided, it might be a bug in the caller 
+      // because Supabase doesn't allow adding listeners after subscribe.
+      if (setup) {
+        // console.warn(`[ChannelManager] Warning: setup callback provided for already subscribed channel ${channelName}. Listeners might not be added.`);
+      }
+    }
+    
     return channel;
   }
 

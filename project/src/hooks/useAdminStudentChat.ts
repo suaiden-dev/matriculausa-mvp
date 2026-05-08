@@ -286,98 +286,103 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     const channelName = `admin-student-messages-${currentConversationId}`;
 
-    const channel = channelManager.subscribe(channelName)
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'admin_student_messages', 
-          filter: `conversation_id=eq.${currentConversationId}` 
-        },
-        async (payload: any) => {
-          // Fetch the complete message with attachments
-          const { data: fullMessage } = await supabase
-            .from('admin_student_messages')
-            .select(`
-              *,
-              admin_student_message_attachments(file_url, file_name, created_at)
-            `)
-            .eq('id', payload.new.id)
-            .single();
+    const channel = channelManager.subscribe(
+      channelName,
+      {},
+      (ch) => {
+        ch.on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'admin_student_messages', 
+            filter: `conversation_id=eq.${currentConversationId}` 
+          },
+          async (payload: any) => {
+            // Fetch the complete message with attachments
+            const { data: fullMessage } = await supabase
+              .from('admin_student_messages')
+              .select(`
+                *,
+                admin_student_message_attachments(file_url, file_name, created_at)
+              `)
+              .eq('id', payload.new.id)
+              .single();
 
-          if (fullMessage) {
-            const attachments = fullMessage.admin_student_message_attachments?.map((att: any) => ({
-              file_url: att.file_url,
-              file_name: att.file_name,
-              uploaded_at: att.created_at,
-            })) || [];
+            if (fullMessage) {
+              const attachments = fullMessage.admin_student_message_attachments?.map((att: any) => ({
+                file_url: att.file_url,
+                file_name: att.file_name,
+                uploaded_at: att.created_at,
+              })) || [];
 
-            const newMessage = formatMessage({
-              id: fullMessage.id,
-              sender_id: fullMessage.sender_id,
-              recipient_id: fullMessage.recipient_id,
-              message: fullMessage.message,
-              created_at: fullMessage.created_at,
-              read_at: fullMessage.read_at,
-              edited_at: fullMessage.edited_at,
-              is_deleted: fullMessage.is_deleted,
-              attachments,
-            });
+              const newMessage = formatMessage({
+                id: fullMessage.id,
+                sender_id: fullMessage.sender_id,
+                recipient_id: fullMessage.recipient_id,
+                message: fullMessage.message,
+                created_at: fullMessage.created_at,
+                read_at: fullMessage.read_at,
+                edited_at: fullMessage.edited_at,
+                is_deleted: fullMessage.is_deleted,
+                attachments,
+              });
 
-            // Only add if it's not from current user (avoid duplicates)
-            if (newMessage.senderId !== user?.id) {
-              setMessages((prevMessages) => [...prevMessages, newMessage]);
+              // Only add if it's not from current user (avoid duplicates)
+              if (newMessage.senderId !== user?.id) {
+                setMessages((prevMessages) => [...prevMessages, newMessage]);
+              }
             }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'admin_student_messages', 
-          filter: `conversation_id=eq.${currentConversationId}` 
-        },
-        async (payload: any) => {
-          // Handle message updates (edit/delete/read status)
-          const { data: updatedMessage } = await supabase
-            .from('admin_student_messages')
-            .select(`
-              *,
-              admin_student_message_attachments(file_url, file_name, created_at)
-            `)
-            .eq('id', payload.new.id)
-            .single();
+        )
+        .on(
+          'postgres_changes',
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'admin_student_messages', 
+            filter: `conversation_id=eq.${currentConversationId}` 
+          },
+          async (payload: any) => {
+            // Handle message updates (edit/delete/read status)
+            const { data: updatedMessage } = await supabase
+              .from('admin_student_messages')
+              .select(`
+                *,
+                admin_student_message_attachments(file_url, file_name, created_at)
+              `)
+              .eq('id', payload.new.id)
+              .single();
 
-          if (updatedMessage) {
-            const attachments = updatedMessage.admin_student_message_attachments?.map((att: any) => ({
-              file_url: att.file_url,
-              file_name: att.file_name,
-              uploaded_at: att.created_at,
-            })) || [];
+            if (updatedMessage) {
+              const attachments = updatedMessage.admin_student_message_attachments?.map((att: any) => ({
+                file_url: att.file_url,
+                file_name: att.file_name,
+                uploaded_at: att.created_at,
+              })) || [];
 
-            const formattedMessage = formatMessage({
-              id: updatedMessage.id,
-              sender_id: updatedMessage.sender_id,
-              recipient_id: updatedMessage.recipient_id,
-              message: updatedMessage.message,
-              created_at: updatedMessage.created_at,
-              read_at: updatedMessage.read_at,
-              edited_at: updatedMessage.edited_at,
-              is_deleted: updatedMessage.is_deleted,
-              attachments,
-            });
+              const formattedMessage = formatMessage({
+                id: updatedMessage.id,
+                sender_id: updatedMessage.sender_id,
+                recipient_id: updatedMessage.recipient_id,
+                message: updatedMessage.message,
+                created_at: updatedMessage.created_at,
+                read_at: updatedMessage.read_at,
+                edited_at: updatedMessage.edited_at,
+                is_deleted: updatedMessage.is_deleted,
+                attachments,
+              });
 
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) =>
-                msg.id === updatedMessage.id ? formattedMessage : msg
-              )
-            );
+              setMessages((prevMessages) =>
+                prevMessages.map((msg) =>
+                  msg.id === updatedMessage.id ? formattedMessage : msg
+                )
+              );
+            }
           }
-        }
-      );
+        );
+      }
+    );
 
     messagesChannelRef.current = channel;
 
@@ -559,7 +564,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     }
 
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
@@ -605,7 +610,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     }
 
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
@@ -821,34 +826,39 @@ export const useAdminStudentConversations = () => {
       const channelName = `admin-student-conversations-updates-${user.id}`;
 
       // Set up real-time subscription for conversation updates
-      const channel = channelManager.subscribe(channelName)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'admin_student_conversations' },
-          () => {
-            console.log('Conversation updated, refetching...');
-            fetchConversations(false); // Don't show loading for real-time updates
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'admin_student_messages' },
-          (payload: any) => {
-            console.log('New message inserted, refetching conversations...', payload);
-            fetchConversations(false); // Don't show loading for real-time updates
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'admin_student_messages' },
-          (payload: any) => {
-            console.log('Message updated (likely marked as read), refetching conversations...', payload);
-            // Add a small delay to ensure the database has been updated
-            setTimeout(() => {
+      const channel = channelManager.subscribe(
+        channelName,
+        {},
+        (ch) => {
+          ch.on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'admin_student_conversations' },
+            () => {
+              console.log('Conversation updated, refetching...');
               fetchConversations(false); // Don't show loading for real-time updates
-            }, 100);
-          }
-        );
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'admin_student_messages' },
+            (payload: any) => {
+              console.log('New message inserted, refetching conversations...', payload);
+              fetchConversations(false); // Don't show loading for real-time updates
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'admin_student_messages' },
+            (payload: any) => {
+              console.log('Message updated (likely marked as read), refetching conversations...', payload);
+              // Add a small delay to ensure the database has been updated
+              setTimeout(() => {
+                fetchConversations(false); // Don't show loading for real-time updates
+              }, 100);
+            }
+          );
+        }
+      );
 
       conversationsChannelRef.current = channel;
 
