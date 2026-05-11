@@ -84,6 +84,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 navigate('/seller/dashboard', { replace: true });
               } else if (userRole === 'school') {
                 navigate('/school/dashboard', { replace: true });
+              } else if (userRole === 'affiliate') {
+                navigate('/affiliate/dashboard', { replace: true });
               } else {
                 navigate('/login?info=email_already_confirmed&message=' + encodeURIComponent('Seu email já foi confirmado! Você pode fazer login agora.'));
               }
@@ -111,7 +113,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         '/school/dashboard',
         '/admin/dashboard',
         '/affiliate-admin/dashboard',
-        '/seller/dashboard'
+        '/seller/dashboard',
+        '/affiliate/dashboard'
       ];
       const isProtectedPath = protectedPaths.some(path => currentPath.startsWith(path));
 
@@ -162,6 +165,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if (user.role === 'admin') { navigate('/admin/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
 
         if (user.role === 'student') {
           if (hasPendingOrRejectedSelectionPayment) {
@@ -207,6 +211,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
         navigate('/seller/dashboard', { replace: true }); return;
+      }
+
+      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/') || currentPath.startsWith('/seller/'))) {
+        navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
       // VERIFICAÇÃO ADICIONAL PARA ESCOLAS

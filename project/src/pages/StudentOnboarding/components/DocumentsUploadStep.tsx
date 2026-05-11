@@ -734,10 +734,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               <div className="sm:hidden flex items-center justify-between mb-4 w-full">
                                 {/* Left Side: University Logo */}
                                 <div className="relative group/image flex-shrink-0">
-                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                  {scholarship?.universities?.logo_url || scholarship?.image_url ? (
                                     <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm">
                                       <img 
-                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        src={scholarship?.universities?.logo_url || scholarship?.image_url} 
                                         alt="" 
                                         className="w-full h-full object-contain p-1.5"
                                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -782,10 +782,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               {/* Desktop Content Block - Hidden on Mobile */}
                               <div className="hidden sm:flex gap-4 items-center mb-4">
                                 <div className="relative group/image flex-shrink-0">
-                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                  {scholarship?.universities?.logo_url || scholarship?.image_url ? (
                                     <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center overflow-hidden border border-gray-100/50 shadow-sm relative">
                                       <img 
-                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        src={scholarship?.universities?.logo_url || scholarship?.image_url} 
                                         alt="" 
                                         className="w-full h-full object-contain transform scale-100 p-2 group-hover/image:scale-110 transition-transform duration-500"
                                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}

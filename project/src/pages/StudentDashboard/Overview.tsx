@@ -563,10 +563,10 @@ const Overview: React.FC = () => {
                       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
                         {/* University Logo */}
                         <div className="flex-shrink-0 self-center sm:self-start">
-                          {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                          {scholarship?.universities?.logo_url || scholarship?.image_url ? (
                             <div className="relative">
                               <img
-                                src={scholarship.image_url || scholarship.universities.logo_url}
+                                src={scholarship.universities?.logo_url || scholarship.image_url}
                                 alt={scholarship?.universities?.name || 'University'}
                                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300"
                                 onError={(e) => {

@@ -724,7 +724,7 @@ Deno.serve(async (req)=>{
       
       // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
       // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
-      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 1. Credita 100 MatriculaCoins quando has_paid_i20_control_fee muda para true
       // 2. Atualiza o status do referral para 'i20_paid'
       // Aqui apenas enviamos a notificação de recompensa para o padrinho
       try {

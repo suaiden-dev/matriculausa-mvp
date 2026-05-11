@@ -76,6 +76,7 @@ const Header: React.FC = () => {
       case 'admin': return '/admin/dashboard';
       case 'affiliate_admin': return '/affiliate-admin/dashboard';
       case 'seller': return '/seller/dashboard';
+      case 'affiliate': return '/affiliate/dashboard';
       default: return '/';
     }
   };
@@ -88,6 +89,7 @@ const Header: React.FC = () => {
       case 'admin': return t('nav.adminDashboard');
       case 'affiliate_admin': return t('nav.affiliateDashboard');
       case 'seller': return t('nav.sellerDashboard');
+      case 'affiliate': return 'MatriculaRewards';
       default: return t('nav.dashboard');
     }
   };

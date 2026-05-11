@@ -401,10 +401,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                   <div className="flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex items-center space-x-6">
-                        {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
+                        {app.scholarships?.universities?.logo_url || app.scholarships?.image_url ? (
                           <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 relative group/image">
                             <img
-                              src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''}
+                              src={app.scholarships.universities?.logo_url || app.scholarships.image_url || ''}
                               alt=""
                               className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500"
                               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -422,7 +422,6 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                             </h3>
                           </div>
                           <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                            <Building className="w-3 h-3" />
                             {app.scholarships?.universities?.name || 'University'}
                           </p>
                         </div>
