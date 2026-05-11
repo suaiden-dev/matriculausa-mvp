@@ -222,14 +222,13 @@
       },
       "placementFee": {
         "title": "Placement Fee",
-        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support for your visa process.",
+        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support.",
         "items": [
           "Analysis of your academic and financial profile",
           "Identification of the best university options for you",
           "Negotiation or guarantee of scholarship opportunities",
           "Documentation coordination with the institution",
-          "Enrollment process support",
-          "Full visa process support"
+          "Enrollment process support"
         ]
       }
     },
