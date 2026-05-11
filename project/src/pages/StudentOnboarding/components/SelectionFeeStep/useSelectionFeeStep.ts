@@ -11,6 +11,7 @@ import { useStudentLogs } from '../../../../hooks/useStudentLogs';
 import { supabase } from '../../../../lib/supabase';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../../../../utils/stripeFeeCalculator';
 import { Term, PaymentMethod, ValidationResult, PromotionalCouponValidation } from './types';
+import { PayerInfo } from '../../../../components/PayerAlternativeForm';
 
 export const useSelectionFeeStep = (onNext: () => void) => {
   const { t } = useTranslation();
@@ -60,6 +61,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [inlineCpf, setInlineCpf] = useState('');
   const [savingCpf, setSavingCpf] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
 
   // Promotional coupon
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
@@ -598,6 +600,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         ...(discountCodeToSend && { discount_code: discountCodeToSend }),
         promotional_coupon: (window as any).__checkout_promotional_coupon || null,
         ...(Object.keys(metadata).length > 0 && { metadata }),
+        ...(paymentMethod === 'parcelow' && payerInfo && { payer_info: payerInfo }),
       };
 
       console.log('🚀 [useSelectionFeeStep] Iniciando Checkout:', { apiUrl, paymentMethod, requestBody });
@@ -632,6 +635,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     showCpfModal, setShowCpfModal, codeApplied, setCodeApplied,
     showInlineCpf, setShowInlineCpf, inlineCpf, setInlineCpf,
     savingCpf, cpfError, setCpfError,
+    payerInfo, setPayerInfo,
     promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon,
     promotionalCouponValidation, setPromotionalCouponValidation,
     // Computed

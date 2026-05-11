@@ -795,6 +795,18 @@
         "downloadFailed": "Falha ao baixar arquivo.",
         "paymentSessionError": "Erro ao criar sessão de pagamento.",
         "paymentRedirectError": "Erro ao redirecionar para o pagamento."
+      },
+      "placementFee": {
+        "installmentPlan": "Placement Fee — Plano de Parcelamento",
+        "firstInstallment": "1ª Parcela",
+        "secondInstallment": "2ª Parcela",
+        "paid": "Pago",
+        "pending": "pendente",
+        "due": "Vencimento",
+        "unlockMessage": "O download dos documentos (Carta de Aceite e I-20) será liberado após a aprovação da 2ª parcela.",
+        "downloadPendingTitle": "Download de Documento Pendente — 2ª Parcela Necessária",
+        "downloadPendingDescription": "Seu documento está pronto, mas o download será liberado após o pagamento e aprovação da 2ª parcela do Placement Fee ({{amount}}).",
+        "dueDate": "Data de vencimento: {{date}}"
       }
     },
     "myApplicationStep": {

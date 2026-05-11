@@ -266,6 +266,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     onCpfChange={setInlineCpf}
                     onCpfErrorClear={() => setCpfError(null)}
                     formatCpf={formatCpf}
+                    payerInfo={payerInfo}
+                    onPayerInfoChange={setPayerInfo}
                     t={t}
                   />
                 );

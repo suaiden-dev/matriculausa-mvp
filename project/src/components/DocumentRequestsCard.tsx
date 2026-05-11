@@ -1677,7 +1677,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     <FileText className="w-5 h-5 md:w-7 md:h-7 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-sm md:text-lg leading-tight">{req.title}</h4>
+                    <h4 className="font-bold text-slate-900 truncate whitespace-nowrap text-sm md:text-lg leading-tight">{req.title}</h4>
                     <p className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{t('studentDashboard.documentRequests.forms.templateOfficial')}</p>
                   </div>
                 </div>
@@ -1707,7 +1707,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       <FileText className="w-8 h-8 text-blue-600" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 truncate text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <h4 className="font-bold text-slate-900 truncate whitespace-nowrap text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
                       <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Formulário de Transferência</p>
                     </div>
                   </div>
@@ -1857,7 +1857,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-blue-600" />
                    </div>
                    <div className="min-w-0 flex-1 overflow-hidden">
-                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
                       <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{t('studentDashboard.documentRequests.forms.transferFormUploadDescriptionStudent')}</p>
                    </div>
                 </div>
@@ -2001,7 +2001,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                         <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
                      </div>
                      <div className="min-w-0 flex-1 overflow-hidden">
-                        <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate" title={req.title}>{req.title}</h4>
+                        <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
                         <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
                      </div>
                   </div>

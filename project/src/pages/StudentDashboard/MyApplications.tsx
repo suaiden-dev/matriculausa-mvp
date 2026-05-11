@@ -177,11 +177,11 @@ const MyApplications: React.FC = () => {
         const appIds = apps.map(a => a.id);
         const uniIds = apps.map(a => a.scholarships?.university_id).filter(Boolean);
 
-        // Buscar requests individuais da aplicação e globais por universidade
+        // Buscar requests individuais da aplicação e globais (por universidade ou gerais)
         const { data: reqs } = await supabase
           .from('document_requests')
           .select('id,title,scholarship_application_id,university_id,is_global')
-          .or(`scholarship_application_id.in.(${appIds.join(',')}),and(is_global.eq.true,university_id.in.(${uniIds.join(',')}))`);
+          .or(`scholarship_application_id.in.(${appIds.join(',')}),and(is_global.eq.true,university_id.in.(${uniIds.join(',')})),and(is_global.eq.true,university_id.is.null)`);
 
         const requestIds = (reqs || []).map(r => r.id);
 
@@ -197,9 +197,14 @@ const MyApplications: React.FC = () => {
           (reqs || []).forEach((r: any) => {
             if (r.scholarship_application_id) {
               reqMeta[r.id] = { title: r.title, appIds: [r.scholarship_application_id] };
-            } else if (r.is_global && r.university_id) {
-              const targetApps = apps.filter(a => a.scholarships?.university_id === r.university_id).map(a => a.id);
-              reqMeta[r.id] = { title: r.title, appIds: targetApps };
+            } else if (r.is_global) {
+              if (r.university_id) {
+                const targetApps = apps.filter(a => a.scholarships?.university_id === r.university_id).map(a => a.id);
+                reqMeta[r.id] = { title: r.title, appIds: targetApps };
+              } else {
+                // Truly global: aplica-se a todas as aplicações
+                reqMeta[r.id] = { title: r.title, appIds: apps.map(a => a.id) };
+              }
             }
           });
 

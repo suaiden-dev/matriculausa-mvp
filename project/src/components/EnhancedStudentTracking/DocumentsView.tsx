@@ -184,9 +184,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       
       let filteredGlobalRequests: any[] = [];
       
-      // Buscar requests globais se tivermos university_id e showGlobalRequests estiver ativo
-      if (universityId && showGlobalRequests) {
-        const { data: globalRequests, error: globalError } = await supabase
+      // Buscar requests globais se showGlobalRequests estiver ativo
+      if (showGlobalRequests) {
+        let globalQuery = supabase
           .from('document_requests')
           .select(`
             *,
@@ -196,9 +196,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               reviewed_at
             )
           `)
-          .eq('is_global', true)
-          .eq('university_id', universityId)
-          .order('created_at', { ascending: false });
+          .eq('is_global', true);
+
+        // Se tivermos um universityId, buscamos os globais daquela universidade OU os truly globais (null)
+        // Se não tivermos, buscamos apenas os truly globais
+        if (universityId) {
+          globalQuery = globalQuery.or(`university_id.eq.${universityId},university_id.is.null`);
+        } else {
+          globalQuery = globalQuery.is('university_id', null);
+        }
+
+        const { data: globalRequests, error: globalError } = await globalQuery.order('created_at', { ascending: false });
 
         if (globalError) throw globalError;
         

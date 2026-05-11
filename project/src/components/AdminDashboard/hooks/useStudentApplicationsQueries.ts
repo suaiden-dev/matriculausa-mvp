@@ -483,19 +483,35 @@ export function useStudentDocsStats(students: StudentRecord[]) {
   return useQuery({
     queryKey: ['student-docs-stats'],
     queryFn: async (): Promise<Map<string, DocStats>> => {
-      const [{ data: docRequests, error: drError }, { data: uploads, error: upError }] = await Promise.all([
+      const appIds = students.map(s => s.application_id).filter(Boolean) as string[];
+
+      const [{ data: globalDocs, error: drError }, { data: appDocs, error: appDrError }, { data: uploads, error: upError }] = await Promise.all([
         supabase
           .from('document_requests')
-          .select('id, university_id, applicable_student_types')
+          .select('id, university_id, applicable_student_types, scholarship_application_id')
           .eq('is_global', true)
           .eq('status', 'open'),
+        appIds.length > 0
+          ? supabase
+              .from('document_requests')
+              .select('id, university_id, applicable_student_types, scholarship_application_id')
+              .in('scholarship_application_id', appIds)
+              .eq('status', 'open')
+          : Promise.resolve({ data: [] as any[], error: null }),
         supabase
           .from('document_request_uploads')
           .select('document_request_id, uploaded_by, status, uploaded_at'),
       ]);
 
       if (drError) throw drError;
+      if (appDrError) throw appDrError;
       if (upError) throw upError;
+
+      // Merge global + app-specific docs, deduplicating by id
+      const allDocsMap = new Map<string, any>();
+      for (const d of [...(globalDocs || []), ...(appDocs || [])]) {
+        allDocsMap.set(d.id, d);
+      }
 
       // Latest upload per (doc_request_id, uploaded_by)
       const latestUpload = new Map<string, string>();
@@ -513,8 +529,13 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         if (!student.university_id || !student.user_id) continue;
 
         const processType = student.student_process_type;
-        const requiredDocs = (docRequests || []).filter(dr => {
-          if (dr.university_id !== student.university_id) return false;
+        const requiredDocs = Array.from(allDocsMap.values()).filter(dr => {
+          // App-specific doc linked to this student's application
+          if (dr.scholarship_application_id) {
+            return dr.scholarship_application_id === student.application_id;
+          }
+          // Global doc for this student's university and process type
+          if (dr.university_id && dr.university_id !== student.university_id) return false;
           const types: string[] = dr.applicable_student_types || [];
           return types.includes('all') || (processType ? types.includes(processType) : false);
         });

@@ -159,7 +159,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         let allApproved = true;
 
         documentRequests.forEach(req => {
-            const uploads = req.document_request_uploads || [];
+            const allUploads = req.document_request_uploads || [];
+            // Para docs globais, filtrar apenas os uploads do aluno atual
+            const uploads = allUploads.filter((u: any) => !u.uploaded_by || u.uploaded_by === userProfile?.user_id);
             const isApproved = uploads.some((u: any) => u.status === 'approved');
             const isUnderReview = uploads.some((u: any) => u.status === 'under_review');
 
@@ -182,7 +184,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             allDocsApproved: allApproved,
             pendingDocNames: pendingNames
         };
-    }, [documentRequests]);
+    }, [documentRequests, userProfile?.user_id]);
 
     const currentStatusInfo = useMemo(() => {
         if (!applicationDetails) {
@@ -205,7 +207,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         };
 
         // 2. CARTA DE ACEITE PRONTA (Gatilho para Pagamento do Pacote ou Download Final)
-        if (isAcceptanceReady) {
+        // Só ignora docs pendentes se houver URL de carta ou pacote pago — não apenas status 'enrolled'
+        if (isAcceptanceReady && !hasPendingUploads && !hasUnderReviewDocs) {
             // 2.1 Pagamento do Pacote Pendente (DS160/I539)
             if (packageFeeRequired) {
                 const feeName = 'Control Fee'; // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' independentemente do tipo de pacote 
@@ -410,14 +413,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                 const reqQuery = supabase
                     .from('document_requests')
-                    .select('id, title, status, document_request_uploads(status)');
+                    .select('id, title, status, document_request_uploads(status, uploaded_by)');
 
                 if (universityId) {
                     reqQuery.or(
-                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,university_id.eq.${universityId})`
+                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,or(university_id.eq.${universityId},university_id.is.null))`
                     );
                 } else {
-                    reqQuery.eq('scholarship_application_id', data.id);
+                    reqQuery.or(
+                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,university_id.is.null)`
+                    );
                 }
 
                 const { data: reqs } = await reqQuery;
@@ -859,7 +864,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 </p>
                                                 <div className="bg-slate-50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full overflow-hidden">
                                                     <div className="flex-1 min-w-0 w-full sm:w-auto">
-                                                        <p className="font-medium text-slate-900 truncate block max-w-full" title={applicationDetails.i20_document_url !== 'blocked' ? (applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document') : (applicationDetails.i20_document_preview_url?.split('/').pop() || 'I-20_Preview.svg')}>
+                                                        <p className="font-medium text-slate-900 truncate whitespace-nowrap block max-w-full" title={applicationDetails.i20_document_url !== 'blocked' ? (applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document') : (applicationDetails.i20_document_preview_url?.split('/').pop() || 'I-20_Preview.svg')}>
                                                             {applicationDetails.i20_document_url !== 'blocked'
                                                                 ? (applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document')
                                                                 : (applicationDetails.i20_document_preview_url?.split('/').pop() || 'I-20_Preview.svg')}
@@ -907,7 +912,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                             {blurredPreviewLoading ? (
                                                                 <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />Carregando...</>
                                                             ) : (
-                                                                applicationDetails.i20_document_url !== 'blocked' ? 'View' : 'View Preview'
+                                                                applicationDetails.i20_document_url !== 'blocked' ? t('common:labels.view') : t('registration:i20Preview.title')
                                                             )}
                                                         </button>
                                                         {applicationDetails.i20_document_url !== 'blocked' && (
@@ -918,7 +923,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                                 )}
                                                                 className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
                                                             >
-                                                                Download
+                                                                {t('common:labels.download')}
                                                             </button>
                                                         )}
                                                     </div>
@@ -931,7 +936,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
                                                     </svg>
                                                 </div>
-                                                <p className="font-bold text-slate-700 uppercase tracking-tight">Pending</p>
+                                                <p className="font-bold text-slate-700 uppercase tracking-tight">{t('common:status.waiting_acceptance')}</p>
                                                 <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">
                                                     Your I-20 document will be available here once it has been issued by the university.
                                                 </p>

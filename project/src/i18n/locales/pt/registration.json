@@ -80,6 +80,8 @@
       "notes": {
         "processingFees": "* Podem incluir taxas de processamento",
         "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+        "parcelowAddressNoticeTitle": "Atenção ao Endereço",
+        "parcelowAddressNoticeContent": "Para segurança da transação, o endereço de cobrança (Billing Address) deve ser o do titular do cartão e precisará ser preenchido diretamente na próxima tela (Checkout da Parcelow).",
         "zelleTime": "Processamento pode levar até 48 horas"
       },
       "payWith": "Continuar com {{method}}",

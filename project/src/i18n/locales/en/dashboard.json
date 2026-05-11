@@ -790,6 +790,18 @@
         "downloadFailed": "Failed to download file.",
         "paymentSessionError": "Error creating payment session.",
         "paymentRedirectError": "Error redirecting to payment."
+      },
+      "placementFee": {
+        "installmentPlan": "Placement Fee — Installment Plan",
+        "firstInstallment": "1st Installment",
+        "secondInstallment": "2nd Installment",
+        "paid": "Paid",
+        "pending": "pending",
+        "due": "Due",
+        "unlockMessage": "Document downloads (Acceptance Letter & I-20) will be released after the 2nd installment is approved.",
+        "downloadPendingTitle": "Document Download Pending — 2nd Installment Required",
+        "downloadPendingDescription": "Your document is ready, but the download will be released after the 2nd installment of the Placement Fee ({{amount}}) is paid and approved.",
+        "dueDate": "Due date: {{date}}"
       }
     },
     "myApplicationStep": {

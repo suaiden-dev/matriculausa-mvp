@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { PaymentMethodSelectorDrawer } from './PaymentMethodSelectorDrawer';
+import { PayerInfo } from './PayerAlternativeForm';
 import { ProfileRequiredModal } from './ProfileRequiredModal';
 import { getTranslatedProductNameByProductId } from '../lib/productNameUtils';
 import { getExchangeRate } from '../utils/stripeFeeCalculator';
@@ -71,6 +72,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
   const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,10 +184,12 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
 
   const [currentExchangeRate, setCurrentExchangeRate] = useState<number | undefined>(undefined);
 
-  const handlePaymentMethodSelect = async (method: string, exchangeRate?: number) => {
+  const handlePaymentMethodSelect = async (method: string, exchangeRate?: number, payerInfoParam?: PayerInfo | null) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method, 'exchangeRate:', exchangeRate);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
     setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix' | 'parcelow');
+
+    if (payerInfoParam) setPayerInfo(payerInfoParam);
 
     // Salvar taxa de câmbio se for PIX
     if (method === 'pix' && exchangeRate) {
@@ -486,7 +490,8 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
               promotional_coupon: promotionalCoupon
             },
             promotional_coupon: promotionalCoupon,
-            scholarships_ids: scholarshipsIds
+            scholarships_ids: scholarshipsIds,
+            ...(payerInfo && { payer_info: payerInfo }),
           })
         });
 
@@ -500,14 +505,13 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
             return;
           }
           setShowPaymentMethodSelector(false);
-          if (errorData.error === 'document_number_required') {
-            setProfileErrorType('cpf_missing');
-            setShowProfileRequiredModal(true);
-            setLoading(false);
-            return;
-          }
-          if (errorData.error === 'User profile not found') {
-            setProfileErrorType('profile_incomplete');
+          if (errorData.error === 'document_number_required' || errorData.error === 'User profile not found') {
+            // Se tivermos informações de titular de Cartão de Outra Pessoa, não deveríamos cair aqui,
+            // mas por segurança vamos verificar
+            if (payerInfo) {
+              throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+            }
+            setProfileErrorType(errorData.error === 'document_number_required' ? 'cpf_missing' : 'profile_incomplete');
             setShowProfileRequiredModal(true);
             setLoading(false);
             return;

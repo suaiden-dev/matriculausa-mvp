@@ -79,7 +79,9 @@
       },
       "notes": {
         "processingFees": "* May include processing fees",
-        "parcelowFees": "* May include carrier and platform processing fees",
+        "parcelowFees": "* May include operator and platform processing fees",
+        "parcelowAddressNoticeTitle": "Billing Address Notice",
+        "parcelowAddressNoticeContent": "For security reasons, the billing address must be that of the cardholder and will need to be entered directly on the next screen (Parcelow Checkout).",
         "zelleTime": "Processing can take up to 48 hours"
       },
       "payWith": "Continue with {{method}}",

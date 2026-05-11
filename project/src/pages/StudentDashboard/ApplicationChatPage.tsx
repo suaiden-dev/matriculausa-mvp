@@ -13,6 +13,7 @@ import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { PayerInfo } from '../../components/PayerAlternativeForm';
 import { ZelleCheckout } from '../../components/ZelleCheckout';
 import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
@@ -68,6 +69,7 @@ const ApplicationChatPage: React.FC = () => {
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -350,9 +352,10 @@ const ApplicationChatPage: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number, payerInfoParam?: PayerInfo | null) => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
+    if (payerInfoParam) setPayerInfo(payerInfoParam);
     if (method === 'pix' && exchangeRateParam) {
       setExchangeRate(exchangeRateParam);
       console.log('🔍 [ApplicationChatPage] Taxa de câmbio armazenada:', exchangeRateParam);
@@ -512,7 +515,8 @@ const ApplicationChatPage: React.FC = () => {
               promotional_coupon: promotionalCoupon
             },
             promotional_coupon: promotionalCoupon,
-            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : [],
+            ...(payerInfo && { payer_info: payerInfo }),
           }),
         });
         
@@ -520,15 +524,13 @@ const ApplicationChatPage: React.FC = () => {
           const errorData = await res.json();
           console.error('🔍 [ApplicationChatPage] Erro Parcelow:', errorData);
           
-          if (errorData.error === 'document_number_required') {
-            setProfileErrorType('cpf_missing');
-            setShowProfileRequiredModal(true);
-            setI20Loading(false);
-            return;
-          }
-          
-          if (errorData.error === 'User profile not found') {
-            setProfileErrorType('profile_incomplete');
+          if (errorData.error === 'document_number_required' || errorData.error === 'User profile not found') {
+            // Se tivermos informações de titular de Cartão de Outra Pessoa, não deveríamos cair aqui,
+            // mas por segurança vamos verificar
+            if (payerInfo) {
+              throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+            }
+            setProfileErrorType(errorData.error === 'document_number_required' ? 'cpf_missing' : 'profile_incomplete');
             setShowProfileRequiredModal(true);
             setI20Loading(false);
             return;
@@ -1295,7 +1297,7 @@ const ApplicationChatPage: React.FC = () => {
                                         await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
                                       }}
                                     >
-                                      {t('studentDashboard.applicationChatPage.details.studentDocuments.download')}
+                                      {t('common:labels.download')}
                                     </button>
                                   </>
                                 ) : (
@@ -1607,7 +1609,7 @@ const ApplicationChatPage: React.FC = () => {
                     <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Placement Fee — Installment Plan
+                    {t('studentDashboard.applicationChatPage.placementFee.installmentPlan')}
                   </h3>
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-sm">
@@ -1615,29 +1617,29 @@ const ApplicationChatPage: React.FC = () => {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        1st Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.firstInstallment')}
                       </span>
-                      <span className="text-green-700 font-semibold">Paid</span>
+                      <span className="text-green-700 font-semibold">{t('studentDashboard.applicationChatPage.placementFee.paid')}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-amber-800 font-medium">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        2nd Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.secondInstallment')}
                       </span>
                       <span className="text-amber-800 font-bold">
-                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} pending
+                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} {t('studentDashboard.applicationChatPage.placementFee.pending')}
                       </span>
                     </div>
                     {(userProfile as any)?.placement_fee_due_date && (
                       <p className="text-xs text-amber-700 mt-1">
-                        Due: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {t('studentDashboard.applicationChatPage.placementFee.due')}: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
                     )}
                   </div>
                   <p className="text-xs text-amber-700 mb-4">
-                    Document downloads (Acceptance Letter &amp; I-20) will be released after the 2nd installment is approved.
+                    {t('studentDashboard.applicationChatPage.placementFee.unlockMessage')}
                   </p>
                   <ZelleCheckout
                     feeType="placement_fee"
@@ -1706,12 +1708,12 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-amber-900 mb-2">
-                        Document Download Pending — 2nd Installment Required
+                        {t('studentDashboard.applicationChatPage.placementFee.downloadPendingTitle')}
                       </h3>
                       <p className="text-amber-800 text-sm">
-                        Your document is ready, but the download will be released after the 2nd installment of the Placement Fee (${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}) is paid and approved.
+                        {t('studentDashboard.applicationChatPage.placementFee.downloadPendingDescription', { amount: `$${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}` })}
                         {(userProfile as any)?.placement_fee_due_date && (
-                          <> Due date: <strong>{new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</>
+                          <> {t('studentDashboard.applicationChatPage.placementFee.dueDate', { date: new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}.</>
                         )}
                       </p>
                     </div>
@@ -1852,7 +1854,7 @@ const ApplicationChatPage: React.FC = () => {
                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                        </svg>
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
+                                   {t('common:labels.download')}
                                 </button>
                                 <button
                        className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
