@@ -95,31 +95,50 @@ const Header: React.FC = () => {
   };
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
-    const handleScroll = (e: Event) => {
-      // Pega o scroll do window, document.body, ou qualquer container principal que causou o scroll
-      const target = e.target as HTMLElement | Document;
-      const scrollY = window.scrollY || 
-                      document.documentElement.scrollTop || 
-                      document.body.scrollTop ||
-                      (target instanceof HTMLElement ? target.scrollTop : 0);
-      setIsScrolled(scrollY > 20);
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY || 
+                            document.documentElement.scrollTop || 
+                            document.body.scrollTop;
+      
+      // Lógica de isScrolled (muda aparência do header)
+      setIsScrolled(currentScrollY > 20);
+
+      // Lógica de esconder/mostrar APENAS NO MOBILE E NA HOME
+      const isHomePage = location.pathname === '/';
+      const isMobile = window.innerWidth < 1024; // lg: breakpoint
+
+      if (isHomePage && isMobile && !isMenuOpen) {
+        if (currentScrollY > lastScrollY && currentScrollY > 80) {
+          // Scrollando para baixo - esconde
+          setIsVisible(false);
+        } else {
+          // Scrollando para cima - mostra
+          setIsVisible(true);
+        }
+      } else {
+        // Garante visibilidade em outras páginas, no desktop ou com menu aberto
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
     };
 
-    // Use capture: true para interceptar eventos de scroll de qualquer container interno (ex: body)
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
-  }, []);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY, location.pathname, isMenuOpen]);
 
   return (
     <>
     <header 
-      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
+      className={`fixed w-full top-0 z-50 transition-all duration-300 transform ${
         isScrolled 
           ? 'bg-white/70 backdrop-blur-md shadow-lg border-b border-slate-200/50' 
           : 'bg-white border-b border-slate-200/50'
-      }`}
+      } ${!isVisible ? '-translate-y-full' : 'translate-y-0'}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">

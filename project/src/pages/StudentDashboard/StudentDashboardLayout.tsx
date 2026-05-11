@@ -233,7 +233,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
               <div className="flex flex-col items-center text-center">
                 {/* Avatar */}
                 <div className="relative mb-4 group cursor-pointer" onClick={() => navigate('/student/dashboard/profile')}>
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden ring-4 ring-white relative z-10 group-hover:scale-105 transition-transform duration-300">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#05294E] via-[#0b3a66] to-[#05294E] rounded-2xl flex items-center justify-center shadow-xl overflow-hidden ring-4 ring-white relative z-10 group-hover:scale-105 transition-transform duration-300">
                     {user?.avatar_url ? (
                       <img
                         src={user.avatar_url}
@@ -281,7 +281,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                     to={item.path}
                     className={`group flex items-center justify-between px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl font-semibold transition-all duration-200 
                       ${isActive
-                        ? 'bg-blue-600 text-white shadow-lg'
+                        ? 'bg-[#05294E] text-white shadow-lg shadow-[#05294E]/20'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     onClick={() => {
@@ -303,8 +303,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
 
                         {item.id === 'chat' && displayChatUnreadCount > 0 && (
                           <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${isActive
-                            ? 'bg-white border-2 border-blue-500'
-                            : 'bg-blue-500'
+                            ? 'bg-white border-2 border-[#05294E]'
+                            : 'bg-blue-600'
                             }`}></div>
                         )}
                       </div>

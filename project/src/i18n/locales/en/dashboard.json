@@ -145,7 +145,8 @@
       "completeProfile": "Complete your profile to unlock more opportunities",
       "completeNow": "Complete now",
       "profileComplete": "Profile Complete!",
-      "viewProfile": "View Profile"
+      "viewProfile": "View Profile",
+      "pending": "Pending"
     },
     "successTips": {
       "title": "Success Tips",

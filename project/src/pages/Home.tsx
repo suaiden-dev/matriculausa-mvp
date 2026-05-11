@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Star, BookOpen, ChevronRight, Clock, Gift } from 'lucide-react';
+import { ArrowRight, Star, BookOpen, ChevronRight, Clock, Gift, Image } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
@@ -24,101 +24,74 @@ const Home: React.FC = () => {
     {
       id: 'b1069ada-917d-4f08-a5d0-3d6592e0a875',
       title: 'Master of Computer Information Systems',
-      university: {
-        name: 'Caroline University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'STEM Scholarship',
-      description: 'STEM Degree Scholarship covers 53% tuition of MCIS program for qualified students. During the enrollment students may apply for full-time or part-time CPT and 3 years OPT upon graduation.'
+      description: 'STEM Degree Scholarship covers 53% tuition of MCIS program for qualified students. During the enrollment students may apply for full-time or part-time CPT and 3 years OPT upon graduation.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_01_campus_bandeira.webp',
     },
     {
       id: '8e44fc08-3363-4c5e-a236-572206ecad65',
       title: 'Master of Business Administration',
-      university: {
-        name: 'Oikos University Los Angeles',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'Leadership Scholarship',
-      description: 'Established for students who demonstrate leadership. Award: Up to $4,000 tuition per semester. Eligibility: Must have completed two semesters with a 3.5/4.0 GPA.'
+      description: 'Established for students who demonstrate leadership. Award: Up to $4,000 tuition per semester. Eligibility: Must have completed two semesters with a 3.5/4.0 GPA.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_03_masculino_campus_edificio.webp',
     },
     {
       id: 'aad50945-c9c4-4284-84e7-ca2779dcab1b',
       title: 'Master of Philosophy',
-      university: {
-        name: 'Caroline University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: "Dean's Scholarship",
-      description: "The Dean's Scholarship covers 15% or more of tuition ONLY. Other fees such as registration, technology fees, etc. are not included in the tuition."
+      description: "The Dean's Scholarship covers 15% or more of tuition ONLY. Other fees such as registration, technology fees, etc. are not included in the tuition.",
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_09_feminino_mochila_bandeira.webp',
     },
     {
       id: '83f80002-f56f-45d9-90bd-3f7931d78e4e',
       title: 'Bachelor of Arts in Biblical Studies',
-      university: {
-        name: 'Oikos University Los Angeles',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
-      },
       level: 'Graduação / Bacharelado',
       field_of_study: 'Faculty and Staff Scholarship',
-      description: 'Established by the faculty and staff of Oikos University for deserving students chosen by the scholarship committee. Award: Up to 10% of tuition per semester.'
+      description: 'Established by the faculty and staff of Oikos University for deserving students chosen by the scholarship committee. Award: Up to 10% of tuition per semester.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_12_masculino_campus_bandeira.webp',
     },
     {
       id: '9a010b5e-df72-4a03-ab2e-9f032646ba40',
       title: 'Master of Divinity',
-      university: {
-        name: 'Oikos University Los Angeles',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'Chaplain Scholarship',
-      description: 'Chaplain’s Scholarship has been established to honor students who have vowed and being trained as a professional pastor. Award: Up to 50% of tuition.'
+      description: 'Chaplain’s Scholarship has been established to honor students who have vowed and being trained as a professional pastor. Award: Up to 50% of tuition.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_13_feminino_bolsa_bandeira.webp',
     },
     {
       id: '59daad29-68be-43e3-851c-44ce3c014948',
       title: 'Doctor of Philosophy',
-      university: {
-        name: 'Oikos University Los Angeles',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
-      },
       level: 'Doutorado',
       field_of_study: "President's Sacrificial Scholarship",
-      description: "The President's Sacrificial Leadership Scholarship has been established to honor students who have exhibited extraordinary leadership qualities."
+      description: "The President's Sacrificial Leadership Scholarship has been established to honor students who have exhibited extraordinary leadership qualities.",
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_07_feminino_campus_edificio.webp',
     },
     {
       id: 'b7bbfb1c-8e65-4624-84be-b6cae1e5ca18',
       title: 'Master of Business In Business Analytics',
-      university: {
-        name: 'Adelphi University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/adelphi-university.png',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'STEM',
-      description: 'Prepare-se para o mercado com o programa STEM de Business Analytics. Carga horária de 30 Credit hours para formação completa.'
+      description: 'Prepare-se para o mercado com o programa STEM de Business Analytics. Carga horária de 30 Credit hours para formação completa.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_08_feminino_mochila_bandeira.webp',
     },
     {
       id: 'fb5e4a34-ba94-41b9-b14f-cd126f8119e7',
       title: 'Master Of Science In Computer Science',
-      university: {
-        name: 'Anderson University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/anderson-university.png',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'STEM',
-      description: 'Aprofunde seus conhecimentos em tecnologia e desenvolvimento de software. Carga horária total de 31 Credit hours.'
+      description: 'Aprofunde seus conhecimentos em tecnologia e desenvolvimento de software. Carga horária total de 31 Credit hours.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_02_feminino_campus_edificio.webp',
     },
     {
       id: 'cfbcc249-da4f-4892-9ecf-a3f9d2e694f7',
       title: 'MBA With Data Analytics Concentration',
-      university: {
-        name: 'Baptist University of Florida',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/baptist-university-of-florida.png',
-      },
       level: 'Mestrado / Pós-Graduação',
       field_of_study: 'STEM',
-      description: 'Combine administração de negócios com análise de dados avançada. Carga horária de 36 Credit hours.'
+      description: 'Combine administração de negócios com análise de dados avançada. Carga horária de 36 Credit hours.',
+      image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_05_masculino_campus_edificio.webp',
     }
   ];
 
@@ -186,9 +159,9 @@ const Home: React.FC = () => {
       <SEOHead />
       <div className="bg-white">
         {/* Split Hero Section */}
-        <section className="relative pt-20 pb-8 lg:pt-0 lg:pb-0 overflow-hidden bg-white min-h-[600px] lg:h-[768px] flex items-center">
+        <section className="relative flex flex-col lg:block lg:h-[768px] overflow-hidden bg-white">
           {/* Background Image Layer — right side only */}
-          <div className="absolute inset-0 z-0 flex justify-end">
+          <div className="relative h-[350px] sm:h-[450px] lg:absolute lg:inset-0 lg:z-0 lg:h-full flex justify-end">
             <img 
               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/new_hero_large_matriculausa.webp" 
               alt="Estudante rumo aos EUA"
@@ -196,10 +169,7 @@ const Home: React.FC = () => {
             />
           </div>
 
-
-
-
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 w-full lg:h-full lg:flex lg:items-center">
             <div className="max-w-4xl lg:mr-auto">
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
@@ -349,13 +319,24 @@ const Home: React.FC = () => {
                         style={{ width: slideItemWidth > 0 ? `${slideItemWidth}px` : '100%' }}
                       >
                         <motion.div
-                          className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 flex flex-col h-[400px] group relative"
+                          className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 flex flex-col h-[550px] group relative"
                           whileHover={{ y: -10 }}
                           transition={{ duration: 0.3 }}
                         >
-                          {/* Top accent line */}
-                          <div className="h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] opacity-80"></div>
-
+                          {/* Image Section */}
+                          <div className="relative h-48 w-full overflow-hidden">
+                            {scholarship.image_url ? (
+                              <img 
+                                src={scholarship.image_url} 
+                                alt={scholarship.title}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-200 transition-colors">
+                                <Image className="h-10 w-10 opacity-20" />
+                              </div>
+                            )}
+                          </div>
 
                           {/* Content Part */}
                           <div className="p-8 flex flex-col flex-grow">
@@ -519,7 +500,7 @@ const Home: React.FC = () => {
                             <img
                               src={university.logoUrl}
                               alt={`${university.name} logo`}
-                              className="max-h-full max-w-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-700 opacity-70 group-hover:opacity-100"
+                              className="max-h-full max-w-full object-contain transition-all duration-700 opacity-100"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';

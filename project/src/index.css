@@ -668,4 +668,30 @@ select:focus,
 
 .animate-bounce-subtle {
   animation: bounce-subtle 2s infinite ease-in-out;
-}
+}
+/* ======================================================
+   Efeito de 'acender e apagar' para grid de universidades
+   ====================================================== */
+@keyframes university-glow {
+  0%, 100% {
+    opacity: 0.45;
+    box-shadow: none;
+    filter: grayscale(100%);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(5, 41, 78, 0.12), 0 8px 32px rgba(5, 41, 78, 0.12);
+    filter: grayscale(0%);
+  }
+}
+
+.university-card-glow {
+  animation: university-glow var(--glow-duration, 4s) ease-in-out infinite;
+  animation-delay: var(--glow-delay, 0s);
+}
+
+.university-card-glow img {
+  filter: inherit !important;
+  opacity: inherit !important;
+  transition: none !important;
+}

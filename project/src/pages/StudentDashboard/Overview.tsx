@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Award,
   FileText,
   CheckCircle,
   Clock,
   Search,
-  Target,
   ArrowUpRight,
+  ArrowRight,
   Calendar,
-  Route,
-  XCircle
+  XCircle,
+  GraduationCap,
+  Briefcase,
+  RefreshCw
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -27,13 +29,165 @@ import {
 
 import './Overview.css';
 
+// --- Sub-componente do Passo 1 do Onboarding ---
+interface Step1SelectionFeeCTAProps {
+  onStart: () => void;
+}
+
+const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) => {
+  return (
+    <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-[#05294E] p-6 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-8 border border-white/10 ring-1 ring-white/5">
+      {/* Dynamic Background Blobs */}
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] animate-pulse pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5 pointer-events-none" />
+
+      {/* Glassmorphism Overlay Layer */}
+      <div className="absolute inset-0 bg-white/[0.01] backdrop-blur-[2px] pointer-events-none" />
+      
+      <div className="relative z-10">
+        {/* Step Progress Trail */}
+        <div className="w-full flex justify-center mb-10">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-4"
+          >
+            {/* Dots Trail */}
+            <div className="flex items-center gap-3">
+              {/* Ghost dot and line for Step 1 to keep the active dot centered */}
+              <div className="w-2 h-2 opacity-0" />
+              <div className="w-10 h-0.5 opacity-0" />
+
+              {/* Active Dot */}
+              <div className="relative">
+                <motion.div 
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="w-3 h-3 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)] relative z-10" 
+                />
+                <div className="absolute inset-0 w-3 h-3 bg-white rounded-full animate-ping opacity-40" />
+              </div>
+              
+              {/* Connector line and Next dot */}
+              <div className="w-10 h-0.5 bg-gradient-to-r from-white/60 to-white/10 rounded-full" />
+              <div className="w-2 h-2 bg-white/20 rounded-full" />
+            </div>
+
+            {/* Label */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-1.5">
+              <span className="text-white font-bold text-[10px] sm:text-xs uppercase tracking-[0.15em]">
+                Processo Seletivo
+              </span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Main Content Area: Text + Image */}
+        <div className="flex flex-col lg:flex-row items-center gap-10 mb-10">
+          <div className="flex-1 lg:max-w-2xl">
+            {/* Title & Description */}
+            <div className="mb-8">
+              <motion.h1 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight"
+              >
+                Sua bolsa nos EUA começa aqui
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-white/80 text-sm sm:text-lg md:text-xl leading-relaxed"
+              >
+                Pague o Processo Seletivo e libere seu acesso completo — 
+                as melhores bolsas de estudos para os Estados Unidos.
+              </motion.p>
+            </div>
+
+            {/* Benefit Tags */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-wrap gap-3"
+            >
+              <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
+                <GraduationCap className="w-5 h-5 mr-3 text-blue-400" />
+                Bolsas presenciais, online e híbridas
+              </div>
+              <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
+                <Briefcase className="w-5 h-5 mr-3 text-blue-400" />
+                Autorização de trabalho OPT e CPT
+              </div>
+              <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
+                <RefreshCw className="w-5 h-5 mr-3 text-blue-400" />
+                Reembolso se não for aceito em nenhuma bolsa
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Right Side Image */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+            className="w-full lg:w-1/3 aspect-[16/9] lg:aspect-[4/3] rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 relative group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/60 to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
+            <img 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-four-students-graduation-blue-gown.webp" 
+              alt="Estudantes em uma universidade moderna"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+              style={{ objectPosition: '65% 50%' }} // Ajuste aqui a posição da imagem (X% Y%)
+            />
+          </motion.div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-8" />
+
+        {/* Footer Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="flex items-center text-white/80"
+          >
+            <p className="text-sm sm:text-base font-medium tracking-wide text-center sm:text-left">
+              As bolsas disponíveis são <span className="text-white font-bold">limitadas</span>! Garanta sua vaga!
+            </p>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-col items-center sm:items-end gap-2"
+          >
+            <button
+              onClick={onStart}
+              className="group relative inline-flex items-center justify-center bg-white text-[#05294E] px-12 py-5 rounded-2xl font-black text-xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] shadow-[0_15px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
+            >
+              Começar
+            </button>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Overview: React.FC = () => {
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { user, userProfile, refetchUserProfile } = useAuth();
-  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+  const { isGuideOpen, closeGuide } = useStepByStepGuide();
 
   // Hooks de dados — declarados antes dos useMemos que dependem deles
   const { data: applications = [] } = useStudentApplicationsQuery(userProfile?.id);
@@ -250,32 +404,7 @@ const Overview: React.FC = () => {
   const academicDetailsComplete = checkAcademicDetailsComplete();
   const documentsComplete = checkDocumentsUploaded();
 
-  const quickActions = [
-    {
-      title: t('studentDashboard.quickActions.findScholarships'),
-      description: t('studentDashboard.quickActions.findDescription'),
-      icon: Search,
-      color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      link: '/student/dashboard/scholarships',
-      count: stats.availableScholarships
-    },
-    {
-      title: t('studentDashboard.quickActions.myApplications'),
-      description: t('studentDashboard.quickActions.myApplicationsDescription'),
-      icon: FileText,
-      color: 'bg-gradient-to-r from-green-500 to-green-600',
-      link: '/student/dashboard/applications',
-      count: stats.totalApplications
-    },
-    {
-      title: t('studentDashboard.quickActions.updateProfile'),
-      description: t('studentDashboard.quickActions.updateDescription'),
-      icon: Target,
-      color: 'bg-gradient-to-r from-purple-500 to-purple-600',
-      link: '/student/dashboard/profile',
-      count: null
-    }
-  ];
+
 
   // Mapeamento de step de onboarding para número de exibição
   type OnboardingStepKey =
@@ -320,6 +449,8 @@ const Overview: React.FC = () => {
     }
   }
 
+  const isStep1Pending = currentStepKey === 'selection_fee' && !userProfile?.has_paid_selection_process_fee;
+
   return (
     <div className="overview-dashboard-container pt-2">
 
@@ -336,205 +467,120 @@ const Overview: React.FC = () => {
       </div>
 
       {/* Onboarding Banner / Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 pb-8 sm:pb-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl mb-8">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative z-10">
-          {/* Indicador de passo atual do onboarding - Seamless Style Vertical */}
-          {!userProfile?.onboarding_completed && (
-            <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">
-              {/* Badge da Etapa - Posicionada acima do título */}
-              {currentStepKey !== 'my_applications' && (
-                <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
-                  <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
-                    PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
-                  </span>
-                </div>
-              )}
+      {isStep1Pending ? (
+        <Step1SelectionFeeCTA
+          onStart={() => navigate('/student/onboarding?step=selection_fee')}
+        />
+      ) : (
+        <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-[#05294E] p-6 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-8 border border-white/10 ring-1 ring-white/5">
+          {/* Dynamic Background Blobs */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] animate-pulse pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
+          
+          {/* Glassmorphism Overlay Layer */}
+          <div className="absolute inset-0 bg-white/[0.01] backdrop-blur-[2px] pointer-events-none" />
 
-              {/* Texto do passo */}
-              <div className="flex flex-col items-center justify-center min-w-0">
-                <p className="text-white font-black text-2xl sm:text-3xl md:text-4xl leading-tight tracking-tighter">{currentStepLabel}</p>
-                <p className="text-white/80 text-sm sm:text-base md:text-lg mt-2 sm:mt-3 mb-6 sm:mb-10 leading-relaxed max-w-2xl">{currentStepDescription}</p>
-              </div>
-            </div>
-          )}
+          <div className="relative z-10">
+            {/* Indicador de passo atual do onboarding - Seamless Style Vertical */}
+            {!userProfile?.onboarding_completed && (
+              <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">
+                {/* New Premium Progress Trail */}
+                {currentStepKey !== 'my_applications' && (
+                  <div className="flex flex-col items-center gap-6 mb-12 sm:mb-16">
+                    {/* Dots Trail */}
+                    <div className="flex items-center gap-3">
+                      {/* Ghost dot if first step, or real Previous Step Dot */}
+                      {currentStepNumber === 1 ? (
+                        <>
+                          <div className="w-2 h-2 opacity-0" />
+                          <div className="w-10 h-0.5 opacity-0" />
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-white/20 rounded-full" />
+                          <div className="w-10 h-0.5 bg-gradient-to-r from-white/10 to-white/40 rounded-full" />
+                        </>
+                      )}
 
-          {/* Botão de Continuar/Iniciar Onboarding - Estilo Vidro Simplificado */}
-          {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
-            <button
-              onClick={() => {
-                const targetStep = userProfile?.onboarding_completed ? 'my_applications' : (savedOnboardingStep || 'selection_fee');
-                navigate(`/student/onboarding?step=${targetStep}`);
-              }}
-              className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center mb-6"
-            >
-              {/* Background Glows animadas */}
-              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] group-hover:bg-blue-400/30 transition-colors duration-700" />
-              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
+                      {/* Active Step Dot */}
+                      <div className="relative">
+                        <div className="w-3.5 h-3.5 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.8)] relative z-10" />
+                        <div className="absolute inset-0 w-3.5 h-3.5 bg-white rounded-full animate-ping opacity-40" />
+                      </div>
 
-              <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                {(!userProfile?.onboarding_completed && !isOnboardingStarted)
-                  ? t('studentDashboard.progressBar.onboardingBanner.startProcess')
-                  : t('studentDashboard.progressBar.onboardingBanner.continueProcess')}
-              </h3>
-            </button>
-          )}
-          {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
-        </div >
-      </div >
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openGuide();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              openGuide();
-            }
-          }}
-          role="button"
-          tabIndex={0}
-          className="hidden bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
-        >
-          <div className="relative z-10 pointer-events-none">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <Route className="h-7 w-7 text-white" />
-              </div>
-            </div>
-            <h3 className="font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">{t('studentDashboard.stepByStepTour.title')}</h3>
-            <p className="text-slate-600 text-sm mb-4">{t('studentDashboard.stepByStepTour.description')}</p>
-            <div className="flex justify-end">
-              <div className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
-                {t('studentDashboard.stepByStepTour.startTour')}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.myApplications')}</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.totalApplications}</p>
-              <div className="flex items-center mt-2">
-                <FileText className="h-4 w-4 text-blue-500 mr-1" />
-                <span className="text-sm font-medium text-blue-600">{t('studentDashboard.stats.totalSubmitted')}</span>
-              </div>
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <FileText className="h-7 w-7 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.approved')}</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.approvedApplications}</p>
-              <div className="flex items-center mt-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">{t('studentDashboard.stats.successful')}</span>
-              </div>
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <CheckCircle className="h-7 w-7 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.pending')}</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.pendingApplications}</p>
-              <div className="flex items-center mt-2">
-                <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                <span className="text-sm font-medium text-yellow-600">{t('studentDashboard.stats.underReview')}</span>
-              </div>
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Clock className="h-7 w-7 text-white" />
-            </div>
-          </div>
-        </div>
-      </div >
-
-      {/* Quick Actions */}
-      < div className="overview-quick-actions" >
-        {
-          quickActions.map((action) => (
-            <Link
-              to={action.link}
-              key={action.title}
-              className="overview-card overview-action-card"
-            >
-              <div className={`overview-card-icon ${action.color}`}>
-                <action.icon className="h-6 w-6 text-white" />
-              </div>
-              <div className="overview-card-content">
-                <div className="overview-card-title">{action.title}</div>
-                <div className="overview-card-desc">{action.description}</div>
-                {action.count !== null && (
-                  <div className="overview-card-count">{action.count}</div>
-                )}
-              </div>
-              <ArrowUpRight className="ml-auto h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-            </Link>
-          ))
-        }
-      </div >
-      {/* Step by Step Guide */}
-      {/* <div className="overview-stepbystep-wrapper">
-        <div
-          className="overview-card overview-stepbystep-card"
-          tabIndex={0}
-          role="button"
-          onClick={() => document.getElementById('step-by-step-btn')?.click()}
-          onKeyPress={e => { if (e.key === 'Enter') document.getElementById('step-by-step-btn')?.click(); }}
-        >
-          <div className="overview-stepbystep-content">
-            <div className="overview-stepbystep-title">Step by Step Guide</div>
-            <div className="overview-stepbystep-desc">Follow the onboarding steps to complete your journey.</div>
-          </div>
-          <StepByStepButton id="step-by-step-btn" className="hidden-mobile" />
-        </div>
-      </div> */}
-      {/* Progress Bar */}
-      {/* <div className="overview-progressbar-wrapper">
-        <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
-      </div> */}
-      {/* Recent Applications and Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4 sm:p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900">{t('studentDashboard.recentApplications.title')}</h3>
-                  <p className="text-slate-600 text-sm">{t('studentDashboard.recentApplications.subtitle')}</p>
-                </div>
-              </div>
-              <div className="text-left sm:text-right">
-                <div className="flex items-baseline gap-2">
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{recentApplications.length}</div>
-                  {recentApplications.length > visibleApplications && (
-                    <div className="text-sm text-slate-500">
-                      ({visibleApplications} {t('studentDashboard.recentApplications.shown')})
+                      {/* Next Step Dot or Ghost dot if last step */}
+                      {currentStepNumber < TOTAL_ONBOARDING_STEPS ? (
+                        <>
+                          <div className="w-10 h-0.5 bg-gradient-to-r from-white/40 to-white/10 rounded-full" />
+                          <div className="w-2 h-2 bg-white/20 rounded-full" />
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-0.5 opacity-0" />
+                          <div className="w-2 h-2 opacity-0" />
+                        </>
+                      )}
                     </div>
-                  )}
+
+                    {/* Step Label - Translucent Glass Style */}
+                    <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 shadow-xl ring-1 ring-white/10">
+                      <span className="text-white font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em]">
+                        {currentStepLabel}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Texto do passo */}
+                <div className="flex flex-col items-center justify-center min-w-0">
+                  <p className="text-white font-black text-2xl sm:text-3xl md:text-4xl leading-tight tracking-tighter">{currentStepLabel}</p>
+                  <p className="text-white/80 text-sm sm:text-base md:text-lg mt-2 sm:mt-3 mb-6 sm:mb-10 leading-relaxed max-w-2xl">{currentStepDescription}</p>
                 </div>
-                <div className="text-slate-500 text-xs">{t('studentDashboard.recentApplications.totalApplications')}</div>
               </div>
+            )}
+
+            {/* Botão de Continuar/Iniciar Onboarding - Estilo Premium Glass */}
+            {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
+              <button
+                onClick={() => {
+                  const targetStep = userProfile?.onboarding_completed ? 'my_applications' : (savedOnboardingStep || 'selection_fee');
+                  navigate(`/student/onboarding?step=${targetStep}`);
+                }}
+                className="max-w-md mx-auto w-full group relative overflow-hidden bg-white text-[#05294E] rounded-2xl p-5 transition-all duration-300 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.3)] flex items-center justify-center text-center mb-6"
+              >
+                <h3 className="relative text-lg md:text-xl font-black uppercase tracking-widest leading-tight">
+                  {(!userProfile?.onboarding_completed && !isOnboardingStarted)
+                    ? t('studentDashboard.progressBar.onboardingBanner.startProcess')
+                    : t('studentDashboard.progressBar.onboardingBanner.continueProcess')}
+                </h3>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Grid: Recent Applications & Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-10">
+        {/* Recent Applications (Main Column) */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-[2rem] shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 p-4 sm:p-6 lg:p-8">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-[#05294E] flex items-center gap-3">
+                  <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
+                  {t('studentDashboard.recentApplications.title')}
+                </h2>
+                <p className="text-slate-500 text-sm sm:text-base mt-1">
+                  {t('studentDashboard.recentApplications.subtitle')}
+                </p>
+              </div>
+              <Link
+                to="/student/dashboard/applications"
+                className="hidden sm:flex items-center gap-2 text-[#05294E] hover:text-blue-700 font-bold text-sm transition-colors group/all"
+              >
+                {t('studentDashboard.quickActions.myApplications')}
+                <ArrowRight className="w-4 h-4 group-hover/all:translate-x-1 transition-transform" />
+              </Link>
             </div>
 
             {recentApplications.length === 0 ? (
@@ -545,216 +591,266 @@ const Overview: React.FC = () => {
                 <h4 className="text-lg sm:text-xl font-semibold text-slate-700 mb-2">{t('studentDashboard.recentApplications.noApplications')}</h4>
                 <p className="text-slate-500 mb-6 px-4">{t('studentDashboard.recentApplications.startJourneyMessage')}</p>
                 <Link
-                  to="/student/onboarding"
-                  className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm sm:text-base"
+                  to="/student/dashboard/scholarships"
+                  className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-[#05294E] text-white rounded-xl hover:bg-[#0a3a6b] transition-colors font-semibold text-sm sm:text-base"
                 >
                   <Search className="w-4 h-4" />
-                  Começar Processo
+                  {t('studentDashboard.recentApplications.browseScholarships')}
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-4 sm:space-y-6">
                 {displayedApplications.map((app) => {
                   const scholarship = app.scholarship || app.scholarships;
                   const StatusIcon = getStatusIcon(app.status);
 
                   return (
-                    <div key={app.id} className="group bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300">
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
-                        {/* University Logo */}
-                        <div className="flex-shrink-0 self-center sm:self-start">
-                          {scholarship?.universities?.logo_url || scholarship?.image_url ? (
-                            <div className="relative">
-                              <img
-                                src={scholarship.universities?.logo_url || scholarship.image_url}
-                                alt={scholarship?.universities?.name || 'University'}
-                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300"
-                                onError={(e) => {
-                                  // Fallback para ícone se a imagem falhar
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                  e.currentTarget.nextElementSibling?.classList.add('flex');
-                                }}
-                              />
-                              <div className="hidden w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl items-center justify-center border-2 border-slate-200 shadow-lg">
-                                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                              </div>
-                            </div >
-                          ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
-                              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-                            </div>
-                          )}
+                    <Link 
+                      key={app.id} 
+                      to={`/student/dashboard/application/${app.id}/chat`}
+                      className="group bg-white rounded-[1.5rem] p-3 sm:p-4 border border-slate-100 hover:border-[#05294E]/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 block"
+                    >
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 transition-colors">
+                          <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-[#05294E]" />
                         </div>
-
-                        {/* Content */}
-                        < div className="flex-1 min-w-0" >
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 sm:mb-3 gap-2 sm:gap-0">
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                                {scholarship?.title || t('studentDashboard.recentApplications.scholarshipApplication')}
-                              </h4>
-                              <p className="text-slate-600 font-medium text-sm sm:text-base truncate">
-                                {scholarship?.universities?.name || t('studentDashboard.recentApplications.university')}
-                              </p>
-                            </div>
-                            <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
-                              <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span>
-                                {getStatusLabel(app.status)}
-                              </span>
-                            </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-bold text-slate-900 text-sm sm:text-base truncate group-hover:text-blue-700 transition-colors">
+                              {scholarship?.title || t('studentDashboard.recentApplications.unknownScholarship')}
+                            </h3>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border whitespace-nowrap ${getStatusColor(app.status)}`}>
+                              <StatusIcon className="w-3 h-3 mr-1" />
+                              {getStatusLabel(app.status)}
+                            </span>
                           </div>
+                          <p className="text-slate-500 text-xs sm:text-sm mt-0.5 truncate font-medium">
+                            {scholarship?.universities?.name || t('studentDashboard.recentApplications.unknownUniversity')}
+                          </p>
 
-                          {/* Tags */}
-                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-                            {scholarship?.level && (
-                              <span className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
-                                {scholarship.level}
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3">
+                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg">
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span className="font-medium">
+                                {t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString()}
                               </span>
-                            )}
-                            {scholarship?.field_of_study && (
-                              <span className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium truncate max-w-32 sm:max-w-none">
-                                {scholarship.field_of_study}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Dates and Details */}
-                          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
                             </div>
                             {scholarship?.deadline && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                })}</span>
+                              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span className="font-bold">
+                                  {t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString()}
+                                </span>
                               </div>
                             )}
                           </div>
-                        </div >
-                      </div >
-                    </div >
+                        </div>
+                      </div>
+
+                      {/* Action Button in Card */}
+                      <div className="mt-4 pt-3 border-t border-slate-50 flex items-center justify-between">
+                        <span className="text-[10px] sm:text-xs text-slate-400 font-medium italic">
+                          {t('studentDashboard.recentApplications.scholarshipApplication')}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-blue-600 font-bold text-xs sm:text-sm group-hover:translate-x-1 transition-transform">
+                          {t('studentDashboard.myApplications.general.accessYourApplication')}
+                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                      </div>
+                    </Link>
                   );
                 })}
 
                 {/* Load More & View All */}
                 {recentApplications.length > 0 && (
                   <div className="text-center space-y-3 sm:space-y-4">
-                    {/* Contador de Applications */}
-                    <div className="text-xs sm:text-sm text-slate-600">
+                    <div className="text-xs sm:text-sm text-slate-600 font-medium">
                       {t('studentDashboard.recentApplications.showingApplications', {
                         count: displayedApplications.length,
                         total: recentApplications.length
                       })}
                     </div>
 
-                    {/* Load More Button */}
-                    {hasMoreApplications && (
-                      <button
-                        onClick={handleLoadMore}
-                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-200 font-semibold flex items-center justify-center gap-2 mb-3 sm:mb-4 text-sm sm:text-base"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                        {t('studentDashboard.recentApplications.loadMoreApplications')}
-                      </button>
-                    )}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                      {hasMoreApplications && (
+                        <button
+                          onClick={handleLoadMore}
+                          className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl transition-all duration-200 font-bold flex items-center justify-center gap-2 text-sm"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          {t('studentDashboard.recentApplications.loadMoreApplications')}
+                        </button>
+                      )}
 
-                    {/* View All Link */}
-                    <Link
-                      to="/student/dashboard/applications"
-                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 font-semibold border-2 border-blue-200 hover:border-blue-300 text-sm sm:text-base"
-                    >
-                      <FileText className="w-4 h-4" />
-                      {t('studentDashboard.recentApplications.viewAllApplications')}
-                      <ArrowUpRight className="w-4 h-4" />
-                    </Link>
+                      <Link
+                        to="/student/dashboard/applications"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 font-bold border-2 border-blue-200 hover:border-blue-300 text-sm"
+                      >
+                        <FileText className="w-4 h-4" />
+                        {t('studentDashboard.recentApplications.viewAllApplications')}
+                        <ArrowUpRight className="w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
             )}
-          </div >
-        </div >
+          </div>
+        </div>
 
-        {/* Recommended Scholarships & Profile Status */}
-        < div className="space-y-4 sm:space-y-6" >
+        {/* Sidebar (Right Column) */}
+        <div className="space-y-4 sm:space-y-6">
+          {/* Find Scholarships (Moved from Quick Actions) */}
+          <Link
+            to="/student/dashboard/scholarships"
+            className="group relative bg-white rounded-[2rem] p-6 border border-slate-100 shadow-lg hover:shadow-2xl hover:border-[#05294E]/10 hover:-translate-y-1 transition-all duration-500 overflow-hidden flex flex-col gap-4 no-underline"
+          >
+            {/* Decorative number watermark */}
+            <div className="absolute -top-4 -right-4 text-7xl font-black pointer-events-none leading-none select-none transition-all duration-500 text-blue-50 group-hover:opacity-0">
+              01
+            </div>
+
+            {/* Elegant hover highlight */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#05294E] rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                  <Search className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-[#05294E] transition-colors">
+                  {t('studentDashboard.quickActions.findScholarships')}
+                </h3>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                  {t('studentDashboard.quickActions.findDescription')}
+                </p>
+              </div>
+
+              {/* Count badge */}
+              <div className="flex items-baseline justify-center gap-1.5 mt-auto">
+                <span className="text-3xl font-black text-[#05294E] transition-colors">{stats.availableScholarships}</span>
+                <span className="text-xs text-slate-400 font-medium">bolsas</span>
+              </div>
+
+            </div>
+          </Link>
+
           {/* Profile Completion */}
-          < div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4 sm:p-6" >
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4 flex items-center">
-              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mr-2" />
-              {t('studentDashboard.profileStatus.title')}
-            </h3>
+          <div className="bg-white rounded-[2rem] shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 p-4 sm:p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2 px-4">
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-base sm:text-lg font-bold text-[#05294E]">
+                  {t('studentDashboard.profileStatus.title')}
+                </h3>
+              </div>
+              {/* Progresso em % */}
+              <span className={`text-sm font-black px-3 py-1 rounded-full ${
+                basicInfoComplete && academicDetailsComplete && documentsComplete
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {Math.round(([basicInfoComplete, academicDetailsComplete, documentsComplete].filter(Boolean).length / 3) * 100)}%
+              </span>
+            </div>
 
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
-                {basicInfoComplete ? (
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-                ) : (
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+            {/* Barra de Progresso */}
+            <div className="mb-4 px-4">
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all duration-700 ${
+                    basicInfoComplete && academicDetailsComplete && documentsComplete
+                      ? 'bg-gradient-to-r from-green-400 to-green-600'
+                      : 'bg-gradient-to-r from-blue-400 to-indigo-500'
+                  }`}
+                  style={{
+                    width: `${Math.round(([basicInfoComplete, academicDetailsComplete, documentsComplete].filter(Boolean).length / 3) * 100)}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Itens de Status */}
+            <div className="mx-2 bg-slate-50/50 rounded-[1.5rem] p-2">
+              {/* Informações Básicas */}
+              <div className="flex items-center gap-4 p-3.5 rounded-xl transition-all">
+                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                  basicInfoComplete ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'
+                }`} />
+                <span className={`text-base font-bold flex-1 ${
+                  basicInfoComplete ? 'text-green-800' : 'text-[#05294E]'
+                }`}>
+                  {t('studentDashboard.profileStatus.basicInformation')}
+                </span>
+                {!basicInfoComplete && (
+                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    {t('studentDashboard.profileStatus.pending')}
+                  </span>
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.academicDetails')}</span>
-                {academicDetailsComplete ? (
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-                ) : (
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+              {/* Detalhes Acadêmicos */}
+              <div className="flex items-center gap-4 p-3.5 rounded-xl transition-all">
+                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                  academicDetailsComplete ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'
+                }`} />
+                <span className={`text-base font-bold flex-1 ${
+                  academicDetailsComplete ? 'text-green-800' : 'text-[#05294E]'
+                }`}>
+                  {t('studentDashboard.profileStatus.academicDetails')}
+                </span>
+                {!academicDetailsComplete && (
+                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    {t('studentDashboard.profileStatus.pending')}
+                  </span>
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.documentsUploaded')}</span>
-                {documentsComplete ? (
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
-                ) : (
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+              {/* Documentos */}
+              <div className="flex items-center gap-4 p-3.5 rounded-xl transition-all">
+                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                  documentsComplete ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'
+                }`} />
+                <span className={`text-base font-bold flex-1 ${
+                  documentsComplete ? 'text-green-800' : 'text-[#05294E]'
+                }`}>
+                  {t('studentDashboard.profileStatus.documentsUploaded')}
+                </span>
+                {!documentsComplete && (
+                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    {t('studentDashboard.profileStatus.pending')}
+                  </span>
                 )}
               </div>
             </div>
 
-            {(basicInfoComplete && academicDetailsComplete && documentsComplete) ? (
-              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200">
-                <p className="text-sm font-medium text-green-800 mb-2 flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {t('studentDashboard.profileStatus.profileComplete')}
-                </p>
-                <Link
-                  to="/student/dashboard/profile"
-                  className="text-sm font-bold text-green-700 hover:text-green-800 transition-colors"
-                >
-                  {t('studentDashboard.profileStatus.viewProfile')} →
-                </Link>
-              </div>
-            ) : (
-              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                <p className="text-sm font-medium text-blue-800 mb-2">
-                  {t('studentDashboard.profileStatus.completeProfile')}
-                </p>
-                <Link
-                  to="/student/dashboard/profile"
-                  className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
-                >
-                  {t('studentDashboard.profileStatus.completeNow')} →
-                </Link>
-              </div>
-            )}
+            {/* CTA */}
+            <Link
+              to="/student/dashboard/profile"
+              className={`mt-5 flex items-center justify-center gap-2 w-fit mx-auto px-8 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+                basicInfoComplete && academicDetailsComplete && documentsComplete
+                  ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                  : 'bg-[#05294E] text-white hover:bg-blue-900 shadow-md hover:shadow-lg'
+              }`}
+            >
+              {basicInfoComplete && academicDetailsComplete && documentsComplete ? (
+                <>
+                  {t('studentDashboard.profileStatus.viewProfile')}
+                </>
+              ) : (
+                <>
+                  {t('studentDashboard.profileStatus.completeNow')}
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </Link>
           </div>
 
           {/* Study Tips */}
-          < div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-md text-white p-4 sm:p-6 ring-1 ring-white/10" >
+          <div className="relative overflow-hidden bg-[#05294E] rounded-[2rem] shadow-lg text-white p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
               💡 {t('studentDashboard.successTips.title')}
             </h3>
@@ -778,9 +874,13 @@ const Overview: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div >
-        </div >
-      </div >
+            {/* Decorative blob */}
+            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
+
 
       {/* Step By Step Guide Modal */}
       < StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
