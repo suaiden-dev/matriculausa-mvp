@@ -27,6 +27,7 @@ interface StudentRecord {
   student_process_type: string | null;
   transfer_form_status: string | null;
   scholarship_title: string | null;
+  course_name?: string | null;
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -102,6 +103,7 @@ export function useStudentsQuery() {
           identity_photo_path,
           selection_survey_passed,
           documents_uploaded,
+          field_of_interest,
           selected_scholarship_id,
           student_process_type,
           scholarship_applications!scholarship_applications_student_id_fkey (
@@ -126,6 +128,7 @@ export function useStudentsQuery() {
               scholarships (
                 id,
                 title,
+                field_of_study,
                 university_id,
                 universities (
                   name
@@ -142,7 +145,7 @@ export function useStudentsQuery() {
 
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
-        let scholarshipInfo = null;
+        let scholarshipInfo = { title: null, university: null, course: null };
         let applicationStatus = null;
         
         let lockedApplication = null;
@@ -158,7 +161,8 @@ export function useStudentsQuery() {
           if (lockedApplication) {
             scholarshipInfo = {
               title: lockedApplication.scholarships?.title || 'N/A',
-              university: lockedApplication.scholarships?.universities?.name || 'N/A'
+              university: lockedApplication.scholarships?.universities?.name || 'N/A',
+              course: lockedApplication.scholarships?.field_of_study || student.field_of_interest || null
             };
             applicationStatus = lockedApplication.status;
           }
@@ -218,6 +222,7 @@ export function useStudentsQuery() {
           sevis_transfer_completed: lockedApplication?.sevis_transfer_completed || false,
           visa_approved: lockedApplication?.visa_approved || false,
           scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
+          course_name: scholarshipInfo ? scholarshipInfo.course : student.field_of_interest || null,
           university_name: scholarshipInfo ? scholarshipInfo.university : null,
           university_id: lockedApplication?.scholarships?.university_id || null,
           reviewed_at: lockedApplication?.reviewed_at || null,

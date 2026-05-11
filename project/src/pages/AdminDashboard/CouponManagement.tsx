@@ -70,12 +70,9 @@ const CouponManagement: React.FC = () => {
   const feeTypes = [
     { id: 'selection_process', label: 'Selection Process Fee' },
     { id: 'application_fee', label: 'Application Fee' },
-    { id: 'scholarship_fee', label: 'Scholarship Fee' },
-    { id: 'i20_control', label: 'I-20 Control Fee' },
     { id: 'placement_fee', label: 'Placement Fee' },
     { id: 'reinstatement_package', label: 'Reinstatement Package' },
-    { id: 'ds160_package', label: 'DS-160 Package' },
-    { id: 'i539_package', label: 'I-539 Package' }
+    { id: 'control_fee', label: 'Control Fee' }
   ];
 
   useEffect(() => {
@@ -438,8 +435,9 @@ const CouponManagement: React.FC = () => {
       'i20_control_fee': 'I-20 Control',
       'placement_fee': 'Placement Fee',
       'reinstatement_package': 'Reinstatement Package',
-      'ds160_package': 'DS-160 Package',
-      'i539_package': 'I-539 Package'
+      'ds160_package': 'Control Fee',
+      'i539_package': 'Control Fee',
+      'control_fee': 'Control Fee'
     };
     return feeTypeMap[feeType] || feeType;
   };

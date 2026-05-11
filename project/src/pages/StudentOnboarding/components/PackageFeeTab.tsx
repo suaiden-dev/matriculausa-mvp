@@ -241,7 +241,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
       const currentUrl = window.location.origin + window.location.pathname;
-      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
+      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=control_fee`;
       const cancelUrl = `${currentUrl}?step=${currentStep}&payment=cancelled`;
 
       const payload: any = {

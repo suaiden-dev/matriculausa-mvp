@@ -303,11 +303,13 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </button>
       </div>
 
-      {/* Scholarship info */}
-      {student.scholarship_title && (
+      {/* Course / Scholarship info */}
+      {(student.course_name || student.scholarship_title) && (
         <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
           <GraduationCap className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
+          <span className="truncate" title={student.course_name || student.scholarship_title || ''}>
+            {student.course_name || student.scholarship_title}
+          </span>
         </div>
       )}
 

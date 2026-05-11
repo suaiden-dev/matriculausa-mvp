@@ -15,7 +15,8 @@
       "Bash(node:*)",
       "mcp__supabase__execute_sql",
       "Bash(echo.:*)",
-      "Bash(rtk tsc:*)"
+      "Bash(rtk tsc:*)",
+      "Bash(rtk git:*)"
     ]
   }
 }
