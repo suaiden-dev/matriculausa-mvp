@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
-import DateRangeFilter, { DateRange, DateRangePreset } from '../../components/DateRangeFilter';
+import DateRangeFilter, { DateRange } from '../../components/DateRangeFilter';
 import { formatCurrency } from '../../utils/currency';
 
 interface PerformanceProps {
@@ -34,7 +34,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{ [key: string]: any }>({});
   const [studentSystemTypes, setStudentSystemTypes] = useState<{ [key: string]: string }>({});
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
-  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
+  // Removido loadingRealPaidAmounts que não estava sendo lido
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
@@ -59,118 +59,82 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     return Array.from(groupedByStudent.values());
   }, [students]);
 
-  // Helpers para carregar pacotes e dependentes
-  const loadStudentPackageFees = async (studentUserId: string) => {
-    if (!studentUserId || studentPackageFees[studentUserId]) return;
-    try {
-      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
-        user_id_param: studentUserId
-      });
-      if (!error && packageFees && packageFees.length > 0) {
-        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: packageFees[0] }));
-      } else {
-        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
-      }
-    } catch {
-      setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
-    }
-  };
-
-  const loadStudentDependents = async (student: any) => {
-    const studentUserId = student.id;
-    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
-
-    // 🚨 CRITICAL: Usar user_id para buscar dependentes, como no Overview.tsx corrigido
-    console.log('🔍 [PERFORMANCE] Carregando dependents para', student.email, 'user_id:', studentUserId);
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('user_id, dependents, system_type')
-        .eq('user_id', studentUserId) // 🚨 Usar user_id direto como no Overview corrigido
-        .single();
-
-      if (!error && data) {
-        const deps = Number(data.dependents || 0);
-        const systemType = data.system_type || 'legacy';
-        console.log('🔍 [PERFORMANCE] Dependents e system_type carregados para', student.email, ':', deps, systemType);
-        setStudentDependents(prev => ({ ...prev, [studentUserId]: deps }));
-        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: systemType }));
-      } else {
-        console.log('🔍 [PERFORMANCE] Nenhum dependent encontrado para', student.email, '- usando 0 e legacy');
-        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
-        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
-      }
-    } catch (err) {
-      console.warn('🔍 [PERFORMANCE] Erro ao carregar dependents para', student.email, ':', err);
-      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
-      setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
-    }
-  };
-
-  const loadStudentFeeOverrides = async (studentUserId: string) => {
-    if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
-
-    // 🚨 CRITICAL: HABILITAR overrides para consistência com MyStudents.tsx
-    // O wilfried8078@uorak.com precisa mostrar $2,398 que é o valor COM override
-    console.log('🔄 [PERFORMANCE] Carregando overrides para:', studentUserId);
-
-    try {
-      // Tentar primeiro via RPC function (security definer)
-      let overrides = null;
-      let error = null;
-
-      try {
-        const rpcResult = await supabase.rpc('get_user_fee_overrides', { target_user_id: studentUserId });
-        if (!rpcResult.error && rpcResult.data) {
-          overrides = rpcResult.data;
-          // Debug log para wilfried8078@uorak.com
-          if (studentUserId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
-            console.log('🔍 [PERFORMANCE_LOAD] Carregando overrides para wilfried8078@uorak.com:', {
-              studentUserId,
-              overrides
-            });
-          }
-        } else {
-          error = rpcResult.error;
-        }
-      } catch (rpcError) {
-        console.warn('⚠️ [PERFORMANCE] RPC get_user_fee_overrides failed, trying direct query:', rpcError);
-        // Fallback para query direta
-        const directResult = await supabase
-          .from('user_fee_overrides')
-          .select('*')
-          .eq('user_id', studentUserId)
-          .single();
-        overrides = directResult.data;
-        error = directResult.error;
-      }
-
-      if (!error && overrides) {
-        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
-      } else {
-        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
-      }
-    } catch (error) {
-      console.warn('⚠️ [PERFORMANCE] Erro ao carregar override para', studentUserId, ':', error);
-      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
-    }
-    return;
-
-  };
-
+  // Carregar dependents, system_type e fee overrides em lote (evita padrão N+1)
   useEffect(() => {
-    if (!students || students.length === 0) return;
+    const loadBatch = async () => {
+      const uniqueStudents = getUniqueStudents;
+      if (uniqueStudents.length === 0) return;
 
-    const uniqueStudents = getUniqueStudents;
-    console.log('🔄 [PERFORMANCE] Carregando dados para', uniqueStudents.length, 'estudantes únicos de', students.length, 'originais');
+      const ids = uniqueStudents.map((s: any) => s.id).filter(Boolean);
+      const idsToLoadDeps = ids.filter((id: string) => studentDependents[id] === undefined);
+      const idsToLoadOverrides = ids.filter((id: string) => studentFeeOverrides[id] === undefined);
+      const idsToLoadFees = ids.filter((id: string) => studentPackageFees[id] === undefined);
 
-    uniqueStudents.forEach((s: any) => {
-      if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
-      if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s); // Passa o student completo
-      if (s.id && studentFeeOverrides[s.id] === undefined) loadStudentFeeOverrides(s.id);
-    });
-  }, [getUniqueStudents]); // Usar getUniqueStudents em vez de students
+      if (idsToLoadDeps.length === 0 && idsToLoadOverrides.length === 0 && idsToLoadFees.length === 0) return;
+
+      // Dependents e system_type em uma única query batch
+      if (idsToLoadDeps.length > 0) {
+        const { data: depsRows, error: depsError } = await supabase
+          .from('user_profiles')
+          .select('user_id, dependents, system_type')
+          .in('user_id', idsToLoadDeps);
+
+        const newDeps: { [key: string]: number } = {};
+        const newSystemTypes: { [key: string]: string } = {};
+        idsToLoadDeps.forEach((id: string) => { newDeps[id] = 0; newSystemTypes[id] = 'legacy'; });
+
+        if (!depsError && depsRows) {
+          depsRows.forEach((r: any) => {
+            if (r.user_id) {
+              newDeps[r.user_id] = Number(r.dependents || 0);
+              newSystemTypes[r.user_id] = r.system_type || 'legacy';
+            }
+          });
+        }
+        setStudentDependents(prev => ({ ...prev, ...newDeps }));
+        setStudentSystemTypes(prev => ({ ...prev, ...newSystemTypes }));
+      }
+
+      // Fee overrides em paralelo (RPC não suporta batch nativo)
+      if (idsToLoadOverrides.length > 0) {
+        const results = await Promise.allSettled(
+          idsToLoadOverrides.map((id: string) =>
+            supabase.rpc('get_user_fee_overrides', { target_user_id: id })
+          )
+        );
+        const newOverrides: { [key: string]: any } = {};
+        results.forEach((res: any, idx: number) => {
+          const id = idsToLoadOverrides[idx];
+          newOverrides[id] = (res.status === 'fulfilled' && !res.value.error && res.value.data)
+            ? res.value.data
+            : null;
+        });
+        setStudentFeeOverrides(prev => ({ ...prev, ...newOverrides }));
+      }
+
+      // Package fees em paralelo (sem endpoint batch)
+      if (idsToLoadFees.length > 0) {
+        const results = await Promise.allSettled(
+          idsToLoadFees.map((id: string) =>
+            supabase.rpc('get_user_package_fees', { user_id_param: id })
+          )
+        );
+        const newFees: { [key: string]: any } = {};
+        results.forEach((res: any, idx: number) => {
+          const id = idsToLoadFees[idx];
+          if (res.status === 'fulfilled' && res.value && !res.value.error) {
+            const arr = res.value.data;
+            newFees[id] = (arr && arr.length > 0) ? arr[0] : null;
+          } else {
+            newFees[id] = null;
+          }
+        });
+        setStudentPackageFees(prev => ({ ...prev, ...newFees }));
+      }
+    };
+
+    loadBatch();
+  }, [getUniqueStudents]);
 
   // Carregar valores reais pagos e datas de pagamento para todos os estudantes
   useEffect(() => {
@@ -179,11 +143,8 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       if (uniqueUserIds.length === 0) {
         setStudentRealPaidAmounts({});
         setStudentPaymentDates({});
-        setLoadingRealPaidAmounts(false);
         return;
       }
-
-      setLoadingRealPaidAmounts(true);
       const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
       const paymentDatesMap: Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }> = {};
 
@@ -222,7 +183,6 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
 
       setStudentRealPaidAmounts(amountsMap);
       setStudentPaymentDates(paymentDatesMap);
-      setLoadingRealPaidAmounts(false);
     };
     loadRealPaidAmounts();
   }, [students]);
@@ -456,27 +416,6 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     return () => clearTimeout(timeoutId);
   }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData, performanceData, dateRange, studentPaymentDates]); // Incluído dateRange e studentPaymentDates
 
-  // Debug específico para checar discrepância do Irving
-  useEffect(() => {
-    const uniqueStudents = getUniqueStudents;
-    const target = uniqueStudents.find((s: any) => s?.email === 'irving1745@uorak.com');
-    if (target) {
-      const packageFees = studentPackageFees[target.id];
-      const deps = studentDependents[target.id] || 0;
-      // eslint-disable-next-line no-console
-      console.log('[PERFORMANCE][DEBUG] Irving student data:', {
-        id: target.id,
-        email: target.email,
-        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
-        is_application_fee_paid: target.is_application_fee_paid,
-        dependents: deps,
-        packageFees,
-        calculated: calculateStudentAdjustedPaid(target)
-      });
-    }
-  }, [getUniqueStudents, studentPackageFees, studentDependents]);
 
   if (loading) {
     return (

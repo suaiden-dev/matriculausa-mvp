@@ -1,19 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useSellerNotifications } from './useSellerNotifications';
 
 interface SellerI20DeadlineMonitorConfig {
   sellerId: string;
   checkInterval?: number; // em milissegundos, padrão 5 minutos
+  createI20DeadlineExpiredNotification: (studentId: string, studentName: string) => Promise<void>;
 }
 
 export const useSellerI20DeadlineMonitor = ({ 
   sellerId, 
-  checkInterval = 5 * 60 * 1000 // 5 minutos por padrão
+  checkInterval = 5 * 60 * 1000, // 5 minutos por padrão
+  createI20DeadlineExpiredNotification
 }: SellerI20DeadlineMonitorConfig) => {
-  const { createI20DeadlineExpiredNotification } = useSellerNotifications({
-    sellerId
-  });
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const processedStudentsRef = useRef<Set<string>>(new Set());
