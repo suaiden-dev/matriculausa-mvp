@@ -222,14 +222,13 @@
       },
       "placementFee": {
         "title": "Cuota de Colocación",
-        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado para su proceso de visa.",
+        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado.",
         "items": [
           "Análisis de su perfil académico y financiero",
           "Identificación de las mejores opciones de universidad para usted",
           "Negociación o garantía de oportunidades de beca",
           "Coordinación de documentación con la institución",
-          "Soporte al proceso de matrícula",
-          "Soporte completo al proceso de visa"
+          "Soporte al proceso de matrícula"
         ]
       }
     },

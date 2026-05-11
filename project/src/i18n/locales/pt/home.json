@@ -222,14 +222,13 @@
       },
       "placementFee": {
         "title": "Taxa de Colocação",
-        "description": "No MatriculaUSA, a taxa de colocação é uma taxa de serviço relacionada ao suporte total para garantir sua bolsa, matrícula e suporte especializado para seu processo de visto.",
+        "description": "No MatriculaUSA, a taxa de colocação é uma taxa de serviço relacionada ao suporte total para garantir sua bolsa, matrícula e suporte especializado.",
         "items": [
           "Análise do seu perfil acadêmico e financeiro",
           "Identificação das melhores opções de universidade para você",
           "Negociação ou garantia de oportunidades de bolsa",
           "Coordenação de documentação com a instituição",
-          "Suporte ao processo de matrícula",
-          "Suporte completo ao processo de visto"
+          "Suporte ao processo de matrícula"
         ]
       }
     },
