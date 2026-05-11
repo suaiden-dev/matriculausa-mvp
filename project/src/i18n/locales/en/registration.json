@@ -298,32 +298,6 @@
         "text": "WhatsApp (with country code)",
         "placeholder": "+1 123 456-7890"
       },
-      "3_1": {
-        "text": "What is your main course or field of interest?",
-        "options": {
-          "engineering": "Engineering",
-          "business": "Business",
-          "computer-science": "Computer Science",
-          "medicine": "Medicine",
-          "law": "Law",
-          "arts": "Arts & Humanities",
-          "sciences": "Natural Sciences",
-          "other": "Other"
-        }
-      },
-      "3_2": {
-        "text": "What is your current academic level?",
-        "options": {
-          "high-school": "High School",
-          "undergraduate": "Bachelor's / Undergraduate",
-          "graduate": "Master's / Graduate",
-          "doctorate": "Doctorate"
-        }
-      },
-      "3_3": {
-        "text": "What is your approximate GPA?",
-        "placeholder": "e.g., 3.5"
-      },
       "4": {
         "text": "Are you currently in the US?",
         "extraLabel": "Current status?"
@@ -338,19 +312,6 @@
           "nao_sei": "I don't know (I need guidance)"
         },
         "errorNaoSei": "Please select your actual profile (Initial, Transfer, or COS) to continue."
-      },
-      "5_1": {
-        "text": "Is your status active?",
-        "options": {
-          "sim": "Yes",
-          "nao": "No (terminated/cancelled)"
-        }
-      },
-      "5_2": {
-        "text": "What is your status limit (deadline)?"
-      },
-      "5_3": {
-        "text": "Have you already applied for an extension? If yes, what is your case number?"
       },
       "6": {
         "text": "What is your main goal with the program?",
@@ -701,6 +662,45 @@
         "text": "Final declaration",
         "placeholder": "Write your declaration...",
         "prompt": "\"I understand that my result depends on my discipline. If I don't follow the plan, I can harm my status and my project.\""
+      },
+      "3_1": {
+        "text": "What is your main course or field of interest?",
+        "options": {
+          "engineering": "Engineering",
+          "business": "Business",
+          "computer-science": "Computer Science",
+          "medicine": "Medicine",
+          "law": "Law",
+          "arts": "Arts & Humanities",
+          "sciences": "Natural Sciences",
+          "other": "Other"
+        }
+      },
+      "3_2": {
+        "text": "What is your current academic level?",
+        "options": {
+          "high-school": "High School",
+          "undergraduate": "Bachelor's / Undergraduate",
+          "graduate": "Master's / Graduate",
+          "doctorate": "Doctorate"
+        }
+      },
+      "3_3": {
+        "text": "What is your approximate GPA?",
+        "placeholder": "e.g., 3.5"
+      },
+      "5_1": {
+        "text": "Is your status active?",
+        "options": {
+          "sim": "Yes",
+          "nao": "No (terminated/cancelled)"
+        }
+      },
+      "5_2": {
+        "text": "What is your status limit (deadline)?"
+      },
+      "5_3": {
+        "text": "Have you already applied for an extension? If yes, what is your case number?"
       }
     }
   },
@@ -763,5 +763,10 @@
     "annualTuition": "Annual scholarship value: {{amount}}",
     "confirmedMessage": "Your reinstatement fee has been successfully confirmed.",
     "paidSuccess": "Payment Confirmed"
+  },
+  "i20Preview": {
+    "title": "I-20 Awaiting Release",
+    "description": "Your I-20 has been sent. Please pay the Control Fee to release the full, high-quality document.",
+    "payButton": "Go to Payment"
   }
 }

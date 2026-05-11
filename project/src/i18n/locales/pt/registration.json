@@ -297,32 +297,6 @@
         "text": "WhatsApp (com DDI)",
         "placeholder": "+55 11 99999-9999"
       },
-      "3_1": {
-        "text": "Qual o seu curso ou área de interesse principal?",
-        "options": {
-          "engineering": "Engenharia",
-          "business": "Negócios",
-          "computer-science": "Ciência da Computação",
-          "medicine": "Medicina",
-          "law": "Direito",
-          "arts": "Artes e Humanidades",
-          "sciences": "Ciências Naturais",
-          "other": "Outro"
-        }
-      },
-      "3_2": {
-        "text": "Qual o seu nível acadêmico atual?",
-        "options": {
-          "high-school": "Ensino Médio",
-          "undergraduate": "Bacharelado / Graduação",
-          "graduate": "Mestrado / Pós-graduação",
-          "doctorate": "Doutorado"
-        }
-      },
-      "3_3": {
-        "text": "Qual o seu GPA (Média de Notas) aproximado?",
-        "placeholder": "Ex: 3.5"
-      },
       "4": {
         "text": "Você está atualmente nos EUA?",
         "extraLabel": "Qual status atual?",
@@ -338,19 +312,6 @@
           "nao_sei": "Não sei (preciso de orientação)"
         },
         "errorNaoSei": "Por favor, selecione seu perfil real (Initial, Transfer ou COS) para continuar."
-      },
-      "5_1": {
-        "text": "O seu status está ativo?",
-        "options": {
-          "sim": "Sim",
-          "nao": "Não (terminado/cancelado)"
-        }
-      },
-      "5_2": {
-        "text": "Qual o limite do seu status (prazo)?"
-      },
-      "5_3": {
-        "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
       },
       "6": {
         "text": "Qual é o seu objetivo principal com o programa?",
@@ -701,6 +662,45 @@
         "text": "Declaração final",
         "placeholder": "Escreva sua declaração...",
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
+      },
+      "3_1": {
+        "text": "Qual o seu curso ou área de interesse principal?",
+        "options": {
+          "engineering": "Engenharia",
+          "business": "Negócios",
+          "computer-science": "Ciência da Computação",
+          "medicine": "Medicina",
+          "law": "Direito",
+          "arts": "Artes e Humanidades",
+          "sciences": "Ciências Naturais",
+          "other": "Outro"
+        }
+      },
+      "3_2": {
+        "text": "Qual o seu nível acadêmico atual?",
+        "options": {
+          "high-school": "Ensino Médio",
+          "undergraduate": "Bacharelado / Graduação",
+          "graduate": "Mestrado / Pós-graduação",
+          "doctorate": "Doutorado"
+        }
+      },
+      "3_3": {
+        "text": "Qual o seu GPA (Média de Notas) aproximado?",
+        "placeholder": "Ex: 3.5"
+      },
+      "5_1": {
+        "text": "O seu status está ativo?",
+        "options": {
+          "sim": "Sim",
+          "nao": "Não (terminado/cancelado)"
+        }
+      },
+      "5_2": {
+        "text": "Qual o limite do seu status (prazo)?"
+      },
+      "5_3": {
+        "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
       }
     }
   },
@@ -763,5 +763,10 @@
     "annualTuition": "Valor anual da bolsa: {{amount}}",
     "confirmedMessage": "Sua taxa de reintegração foi confirmada com sucesso.",
     "paidSuccess": "Pagamento Confirmado"
+  },
+  "i20Preview": {
+    "title": "I-20 Aguardando Liberação",
+    "description": "Seu I-20 foi enviado. Efetue o pagamento da Control Fee para liberar o documento completo e em alta qualidade.",
+    "payButton": "Ir para Pagamento"
   }
 }

@@ -83,19 +83,20 @@ const ApplicationChatPage: React.FC = () => {
           console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
           console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
           
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se o I-20 não foi pago
-          // Isso previne que o aluno veja a URL no Network tab do DevTools
-          // Mas mantém o status visível para que o aluno saiba que a carta foi enviada
+          // ✅ SEGURANÇA: Ocultar URLs originais se o I-20 não foi pago
+          // Usa um valor sentinela 'blocked' para manter i20DocumentAvailable = true
+          // mas sem expor a URL real no Network tab do DevTools
           if (data && !(userProfile as any)?.has_paid_i20_control_fee) {
-            data.acceptance_letter_url = null;
-            // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
-            // para que o aluno saiba que a carta foi enviada
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            // Manter i20_document_url como 'blocked' para que o tab apareça habilitado
+            // O componente usa !!i20_document_url para determinar se o doc foi enviado
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
 
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se há saldo devedor de Placement Fee
-          // (1ª parcela aprovada mas 2ª ainda não paga)
+          // ✅ SEGURANÇA: Ocultar URLs originais se há saldo devedor de Placement Fee
           if (data && ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0) {
-            data.acceptance_letter_url = null;
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
           
           setApplicationDetails(data);
@@ -1382,8 +1383,8 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Timer and Button Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                      {/* Payment Button */}
-                      <div>
+                      {/* Payment Button and Preview */}
+                      <div className="space-y-4">
                         <button
                           onClick={handlePayI20}
                           disabled={i20Loading}
@@ -1403,6 +1404,28 @@ const ApplicationChatPage: React.FC = () => {
                             </>
                           )}
                         </button>
+
+                        {/* I-20 Preview Button */}
+                        {applicationDetails.i20_document_preview_url && (
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center gap-3">
+                            <p className="text-xs text-slate-500 font-medium text-center uppercase tracking-wider">
+                              Preview Available
+                            </p>
+                            <button
+                              onClick={() => setPreviewUrl(applicationDetails.i20_document_preview_url)}
+                              className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View I-20 Preview
+                            </button>
+                            <p className="text-[10px] text-slate-400 text-center leading-tight">
+                              Low-resolution preview for verification only. Official document released after payment.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Countdown Timer */}
@@ -1632,23 +1655,38 @@ const ApplicationChatPage: React.FC = () => {
                 applicationDetails.acceptance_letter_sent_at) && 
                !(userProfile as any)?.has_paid_i20_control_fee && (
                 <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
-                  <div className="flex items-start gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-blue-900 mb-2">
                         {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
                       </h3>
-                      <p className="text-blue-800 text-sm mb-3">
+                      <p className="text-blue-800 text-sm mb-4">
                         {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
                       </p>
-                      <button
-                        onClick={() => setActiveTab('i20')}
-                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
-                      </button>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => setActiveTab('i20')}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
+                        </button>
+                        
+                        {applicationDetails.acceptance_letter_preview_url && (
+                          <button
+                            onClick={() => setPreviewUrl(applicationDetails.acceptance_letter_preview_url)}
+                            className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewPreviewButton') || 'View Preview'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

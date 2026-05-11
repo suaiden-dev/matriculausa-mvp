@@ -103,6 +103,7 @@ export function useStudentsQuery() {
           selection_survey_passed,
           documents_uploaded,
           selected_scholarship_id,
+          student_process_type,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -211,7 +212,7 @@ export function useStudentsQuery() {
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           acceptance_letter_url: lockedApplication?.acceptance_letter_url || null,
           payment_status: lockedApplication?.payment_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || student.student_process_type || null,
           transfer_form_status: lockedApplication?.transfer_form_status || null,
           has_sent_docs_to_university: lockedApplication?.has_sent_docs_to_university || false,
           sevis_transfer_completed: lockedApplication?.sevis_transfer_completed || false,
