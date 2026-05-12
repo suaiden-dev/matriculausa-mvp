@@ -65,8 +65,6 @@ export interface StudentRecord {
   identity_photo_path?: string | null;
   identity_photo_status?: 'pending' | 'approved' | 'rejected' | null;
   identity_photo_rejection_reason?: string | null;
-  assigned_to_admin_id?: string | null;
-  assigned_to_admin_name?: string | null;
   source?: string | null;
 }
 
@@ -153,9 +151,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             has_paid_reinstatement_package,
             visa_transfer_active,
             university_id,
-            assigned_to_admin_id,
             source,
-            assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
               scholarship_id,

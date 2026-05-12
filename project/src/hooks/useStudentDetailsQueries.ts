@@ -166,9 +166,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             identity_photo_path,
             identity_photo_status,
             identity_photo_rejection_reason,
-            assigned_to_admin_id,
             source,
-            assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
               scholarship_id,
@@ -385,9 +383,6 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         identity_photo_status: (s as any).identity_photo_status ?? null,
         identity_photo_rejection_reason:
           (s as any).identity_photo_rejection_reason ?? null,
-        assigned_to_admin_id: s.assigned_to_admin_id || null,
-        assigned_to_admin_name: s.assigned_to_admin_name ||
-          (s.assigned_admin as any)?.full_name || null,
         source: s.source || null,
       };
 

@@ -8,7 +8,7 @@ interface User {
   avatar_url: string | null;
   email: string;
   name?: string;
-  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
@@ -40,7 +40,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   is_placement_fee_paid?: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -88,8 +88,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
-  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
+  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales') => void;
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;

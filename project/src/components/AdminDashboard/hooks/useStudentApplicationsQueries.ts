@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { queryKeys } from '../../../lib/queryKeys';
 
-interface StudentRecord {
+export interface StudentRecord {
   student_id: string;
   user_id: string;
   student_name: string;
@@ -41,8 +41,6 @@ interface StudentRecord {
   visa_transfer_active?: boolean;
   is_archived: boolean;
   is_dropped: boolean;
-  assigned_to_admin_id: string | null;
-  assigned_to_admin_name: string | null;
   placement_fee_pending_balance: number;
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
@@ -93,8 +91,6 @@ export function useStudentsQuery() {
           visa_transfer_active,
           is_archived,
           is_dropped,
-          assigned_to_admin_id,
-          assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
           placement_fee_pending_balance,
           placement_fee_due_date,
           placement_fee_installment_number,
@@ -266,8 +262,6 @@ export function useStudentsQuery() {
           visa_transfer_active: student.visa_transfer_active ?? true, // Default to true if not set
           is_archived: student.is_archived || false,
           is_dropped: student.is_dropped || false,
-          assigned_to_admin_id: student.assigned_to_admin_id || null,
-          assigned_to_admin_name: (student.assigned_admin as any)?.full_name || null,
           placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
           placement_fee_due_date: student.placement_fee_due_date || null,
           placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
@@ -378,22 +372,10 @@ export function useFilterDataQuery() {
         .eq('is_approved', true)
         .order('name', { ascending: true });
 
-      // Carregar admins internos (Raíssa, Romeu, Luiz etc.)
-      const { data: internalAdminsData } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email')
-        .eq('role', 'admin')
-        .order('full_name', { ascending: true });
-
       return {
         affiliates: affiliates || [],
         scholarships: scholarshipsData || [],
         universities: universitiesData || [],
-        internalAdmins: (internalAdminsData || []).map((a: any) => ({
-          id: a.id,
-          name: a.full_name || a.email,
-          email: a.email,
-        })),
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - dados de filtro mudam ocasionalmente
@@ -410,16 +392,68 @@ export function useDropStudentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ studentId, isDropped }: { studentId: string; isDropped: boolean }) => {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_dropped: isDropped })
-        .eq('id', studentId);
+    mutationFn: async ({ studentId, isDropped, reason, adminId, adminName }: { studentId: string; isDropped: boolean; reason?: string; adminId?: string; adminName?: string }) => {
+      // Se estiver marcando como dropped e houver uma razão, salvar nas admin_notes
+      if (isDropped && reason) {
+        // Buscar notas atuais primeiro para não sobrescrever
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('admin_notes')
+          .eq('id', studentId);
 
-      if (error) throw error;
+        const profile = profileData && profileData.length > 0 ? profileData[0] : null;
+
+        let currentNotes: any[] = [];
+        if (profile?.admin_notes) {
+          if (Array.isArray(profile.admin_notes)) {
+            currentNotes = profile.admin_notes;
+          } else {
+            try {
+              currentNotes = JSON.parse(profile.admin_notes);
+              if (!Array.isArray(currentNotes)) currentNotes = [];
+            } catch (e) {
+              console.error('Error parsing admin notes:', e);
+              currentNotes = [];
+            }
+          }
+        }
+
+        const newNote = {
+          id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+          content: `[DROPPED] ${reason.trim()}`,
+          created_by: adminId || 'unknown',
+          created_by_name: adminName || 'Admin',
+          created_at: new Date().toISOString()
+        };
+
+        const updatedNotes = [newNote, ...currentNotes];
+
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_dropped: isDropped,
+            admin_notes: JSON.stringify(updatedNotes),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', studentId);
+
+        if (error) throw error;
+      } else {
+        // Toggle normal (restaurar ou toggle sem razão)
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_dropped: isDropped,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', studentId);
+
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(variables.studentId) });
     },
   });
 }
@@ -609,23 +643,4 @@ export function useStudentDocsStats(students: StudentRecord[]) {
   });
 }
 
-/**
- * Mutation para atribuir (ou remover) um admin responsável de um aluno
- */
-export function useAssignAdminMutation() {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ studentId, adminId }: { studentId: string; adminId: string | null }) => {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ assigned_to_admin_id: adminId })
-        .eq('id', studentId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
-    },
-  });
-}

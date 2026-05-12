@@ -40,7 +40,10 @@ const RejectDocumentModal: React.FC<RejectDocumentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Reject Document</h3>
@@ -55,10 +58,40 @@ const RejectDocumentModal: React.FC<RejectDocumentModalProps> = ({
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg resize-none text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
             rows={4}
             placeholder="Enter rejection reason..."
           />
+
+          {/* Sugestões de motivos */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Common Reasons</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "ID only (missing selfie)",
+                "Selfie only (missing ID)",
+                "Blurry or low quality photo",
+                "Cropped or incomplete document",
+                "Unreadable information",
+                "Face does not match ID",
+                "Expired document",
+                "Glare or shadow hiding data"
+              ].map((sug) => (
+                <button
+                  key={sug}
+                  type="button"
+                  onClick={() => setReason(sug)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                    reason === sug 
+                      ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' 
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex items-center space-x-3 pt-4">
             <button
               onClick={handleSubmit}
