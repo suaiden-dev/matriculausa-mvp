@@ -145,23 +145,30 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             }
 
             if (isVisible && q.required) {
-                if (!answers[q.id]) {
+                const answer = answers[q.id];
+                if (!answer || String(answer).trim() === '') {
                     newErrors[q.id] = 'selectionSurvey.required';
                     isValid = false;
-                } else if (q.id === 5 && answers[5] === 'nao_sei') {
+                } else if (q.id === 5 && answer === 'nao_sei') {
                     newErrors[5] = t('registration:selectionSurvey.questions.5.errorNaoSei');
                     isValid = false;
                 } else if (q.id === 4) {
-                    const answer = answers[q.id];
                     if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
-                        if (!answers[-4]) {
+                        if (!answers[-4] || String(answers[-4]).trim() === '') {
                             newErrors[-4] = 'selectionSurvey.required';
                             isValid = false;
                         }
-                        if (!answers[-41]) {
+                        if (!answers[-41] || String(answers[-41]).trim() === '') {
                             newErrors[-41] = 'selectionSurvey.required';
                             isValid = false;
                         }
+                    }
+                } else if (q.id === 3.3) {
+                    const gpaValue = parseFloat(String(answer).replace(',', '.'));
+                    if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+                        newErrors[q.id] = 'selectionSurvey.required'; // Pode ser melhor adicionar uma chave específica de erro, mas aproveitamos o existing por ora
+                        toast.error('GPA deve ser um valor entre 0.0 e 4.0');
+                        isValid = false;
                     }
                 }
             }
@@ -245,6 +252,23 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         if (!overrideAnswers && !validateSection()) {
             toast.error(t('selectionSurvey.toastErrorFields'));
             return;
+        }
+
+        // Validação global do GPA antes de enviar ao backend para evitar crash
+        const gpaAnswer = currentAnswers[3.3];
+        if (gpaAnswer) {
+            const gpaValue = parseFloat(String(gpaAnswer).replace(',', '.'));
+            if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+                toast.error('O seu GPA (Média) inserido no Passo 1 é inválido. Por favor, ajuste para um valor entre 0.0 e 4.0.', { duration: 6000 });
+                setCurrentSection(0); // Força retorno para a primeira seção
+                setTimeout(() => {
+                    const element = document.getElementById('survey-top');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+                return;
+            }
         }
 
         setIsSaving(true);
