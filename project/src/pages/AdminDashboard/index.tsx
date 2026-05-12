@@ -5,11 +5,12 @@ import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import AdminDashboardLayout from './AdminDashboardLayout';
+import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
 // ✅ OTIMIZAÇÃO: Lazy loading de sub-módulos administrativos
 import Overview from './Overview'; // Manter Overview estático por ser a "Home" do dash
 const UniversityManagement = lazy(() => import('./UniversityManagement'));
 const UniversityDetails = lazy(() => import('./UniversityDetails'));
-const UsersHub = lazy(() => import('./UsersHub'));
+import UsersHub from './UsersHub';
 const ScholarshipManagement = lazy(() => import('./ScholarshipManagement'));
 const AdminScholarshipEdit = lazy(() => import('./AdminScholarshipEdit'));
 const PaymentManagement = lazy(() => import('./PaymentManagement'));
@@ -76,7 +77,6 @@ interface Application {
   notes?: string;
   source?: string;
 }
-import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
 
 const AdminDashboard: React.FC = () => {
   const location = useLocation();
@@ -89,8 +89,11 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins
-  if (user && user.role !== 'admin') {
+  // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins (exceto post_sales)
+  const isAdmin = user?.role === 'admin';
+  const isPostSales = user?.role === 'post_sales';
+
+  if (user && !isAdmin && !isPostSales) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
@@ -164,7 +167,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const path = location.pathname;
 
-    if (!user || user.role !== 'admin') return;
+    if (!user || (!isAdmin && !isPostSales)) return;
 
     if (path.includes('/payments')) {
       // Rota de payments: PaymentManagement carrega seus próprios dados
@@ -611,23 +614,31 @@ const AdminDashboard: React.FC = () => {
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
-            <Route path="payments" element={<PaymentManagement />} />
-            <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
-            <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
-            <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
+            
+            {/* Rotas restritas para Pós-Vendas */}
+            {!isPostSales && (
+              <>
+                <Route path="payments" element={<PaymentManagement />} />
+                <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
+                <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
+                <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
+                <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
+                <Route path="/payout-requests" element={<AdminPayoutRequests />} />
+                <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
+                <Route path="affiliate-management" element={<AffiliateManagement />} />
+                <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
+                <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
+                <Route path="/transfer-management" element={<AdminTransferManagement />} />
+                <Route path="/transfer-settings" element={<AutoTransferSettings />} />
+                <Route path="/financial-analytics" element={<FinancialAnalytics />} />
+                <Route path="/coupons" element={<CouponManagement />} />
+                <Route path="/newsletter" element={<NewsletterManagement />} />
+                <Route path="/terms" element={<TermsManagement />} />
+              </>
+            )}
+
+            {/* Rotas permitidas para todos os admins (incluindo Pós-Vendas) */}
             <Route path="/students/:profileId" element={<AdminStudentDetailsRefactored />} />
-            <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
-            <Route path="/payout-requests" element={<AdminPayoutRequests />} />
-            <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
-            <Route path="affiliate-management" element={<AffiliateManagement />} />
-            <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
-            <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
-            <Route path="/transfer-management" element={<AdminTransferManagement />} />
-            <Route path="/transfer-settings" element={<AutoTransferSettings />} />
-            <Route path="/financial-analytics" element={<FinancialAnalytics />} />
-            <Route path="/coupons" element={<CouponManagement />} />
-            <Route path="/newsletter" element={<NewsletterManagement />} />
-            <Route path="/terms" element={<TermsManagement />} />
           </Routes>
         </Suspense>
 

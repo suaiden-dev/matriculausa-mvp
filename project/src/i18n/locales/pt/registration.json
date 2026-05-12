@@ -246,6 +246,8 @@
     "securityNotice": "Seus dados estão protegidos e criptografados",
     "profilesIdentified": "Perfil Identificado",
     "identityVerifiedSuccess": "Você já enviou sua foto de identidade e ela está em análise.",
+    "identityRejectedTitle": "Documento Rejeitado",
+    "identityRejectedDefaultReason": "Sua foto de identidade foi recusada. Por favor, envie uma nova foto nítida.",
     "title": "Questionário",
     "subtitle": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo <0>80% de acerto</0> nas questões.",
     "mandatoryBadge": "Processo Seletivo Obrigatório",

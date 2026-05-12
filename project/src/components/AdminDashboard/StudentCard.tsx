@@ -1,32 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
-import { StudentRecord } from './StudentApplicationsView';
+import React from 'react';
+import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
+import { StudentRecord } from './hooks/useStudentApplicationsQueries';
 import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
-import { useAssignAdminMutation, useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
+import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
+import DropStudentModal from './DropStudentModal';
 
-interface InternalAdmin {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface StudentCardProps {
   student: StudentRecord;
   onClick: () => void;
   unreadMessages?: number;
-  internalAdmins?: InternalAdmin[];
   showSelectionTags?: boolean;
   currentStageKey?: ApplicationFlowStageKey;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [], showSelectionTags = false, currentStageKey }) => {
-  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const assignAdminMutation = useAssignAdminMutation();
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
@@ -34,39 +26,34 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
   const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
-
-  // Atribuído a outro admin: restringe se o atual for restrito
-  const assignedToOther = student.assigned_to_admin_id &&
-    student.assigned_to_admin_id !== currentAdminProfileId;
   
-  // Pode editar se: não for admin (super), se o admin não for restrito, se não houver atribuição, ou se for pra ele mesmo
+  // Pode editar se: não for admin (super) ou se o admin não for restrito
   const canEdit = !currentAdminProfileId ||
-    userProfile?.is_restricted_admin === false ||
-    !student.assigned_to_admin_id ||
-    student.assigned_to_admin_id === currentAdminProfileId;
+    userProfile?.is_restricted_admin === false;
 
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAdminDropdown(false);
-      }
-    };
-    if (showAdminDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showAdminDropdown]);
+  const [showDropModal, setShowDropModal] = React.useState(false);
 
   const handleToggleDrop = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newDropped = !student.is_dropped;
+    
+    // Se estiver marcando como dropped, abrir o modal
+    if (!student.is_dropped) {
+      setShowDropModal(true);
+      return;
+    }
+    
+    // Se estiver restaurando, fazer direto (com confirmação simples)
+    if (!window.confirm('Restaurar este aluno para o pipeline ativo?')) return;
+    
     try {
-      await dropStudentMutation.mutateAsync({ studentId: student.student_id, isDropped: newDropped });
+      await dropStudentMutation.mutateAsync({ 
+        studentId: student.student_id, 
+        isDropped: false 
+      });
       
       await logAction(
-        newDropped ? 'student_dropped' : 'student_restored',
-        newDropped ? 'Student was marked as dropped from the process' : 'Student was restored to the process',
+        'student_restored',
+        'Student was restored to the process',
         userProfile?.user_id || '',
         'admin',
         { 
@@ -75,9 +62,38 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         }
       );
       
-      toast.success(newDropped ? 'Aluno marcado como dropped' : 'Aluno restaurado');
+      toast.success('Aluno restaurado');
     } catch {
-      toast.error('Erro ao atualizar status');
+      toast.error('Erro ao restaurar aluno');
+    }
+  };
+
+  const handleConfirmDrop = async (reason: string) => {
+    try {
+      await dropStudentMutation.mutateAsync({ 
+        studentId: student.student_id, 
+        isDropped: true,
+        reason,
+        adminId: userProfile?.user_id,
+        adminName: userProfile?.full_name
+      });
+      
+      await logAction(
+        'student_dropped',
+        `Student was marked as dropped: ${reason}`,
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          reason,
+          admin_name: userProfile?.full_name 
+        }
+      );
+      
+      toast.success('Aluno marcado como dropped');
+    } catch (error) {
+      console.error('Error in handleConfirmDrop:', error);
+      throw error; // Repassar para o modal tratar
     }
   };
 
@@ -155,47 +171,8 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   };
 
 
-  const handleAssignAdmin = async (adminId: string | null) => {
-    setShowAdminDropdown(false);
-    try {
-      await assignAdminMutation.mutateAsync({ studentId: student.student_id, adminId });
-      
-      let adminName = 'Unknown Admin';
-      if (adminId) {
-        const foundAdmin = internalAdmins.find(a => a.id === adminId);
-        if (foundAdmin) adminName = foundAdmin.name;
-      }
-
-      await logAction(
-        adminId ? 'admin_assigned' : 'admin_unassigned',
-        adminId ? `Student assigned to admin: ${adminName}` : 'Student unassigned from admin',
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          assigned_admin_id: adminId,
-          assigned_admin_name: adminId ? adminName : null,
-          admin_name: userProfile?.full_name 
-        }
-      );
-
-      toast.success(adminId ? 'Aluno atribuído' : 'Atribuição removida');
-    } catch {
-      toast.error('Erro ao atribuir responsável');
-    }
-  };
-
-  const getAdminInitials = (name: string) => {
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  };
-  // Get initials from name
   const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(p => p.length > 0);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
+    const parts = name.split(' ');
     return (parts[0] || name).substring(0, 2).toUpperCase();
   };
 
@@ -516,71 +493,14 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </div>
       </div>
 
-      {/* Assigned admin row */}
-      {internalAdmins.length > 0 && (
-        <div className="pt-2 border-t border-gray-100 mt-1" ref={dropdownRef}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (canEdit) setShowAdminDropdown((v) => !v);
-            }}
-            disabled={!canEdit}
-            className={`flex items-center justify-between gap-1.5 w-full text-left rounded-md border px-2 py-1 transition-colors text-xs
-              ${assignedToOther && userProfile?.is_restricted_admin
-                ? 'border-gray-100 bg-gray-50 cursor-default text-gray-600'
-                : student.assigned_to_admin_name
-                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer'
-                  : 'border-dashed border-gray-300 bg-white text-gray-500 hover:border-indigo-300 hover:text-indigo-600 cursor-pointer'
-              }`}
-            title={assignedToOther && userProfile?.is_restricted_admin ? 'Atribuído a outro admin' : 'Clique para atribuir'}
-          >
-            <span className="flex items-center gap-1.5 truncate">
-              <UserCheck className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">
-                {student.assigned_to_admin_name || 
-                 internalAdmins.find(a => a.id === student.assigned_to_admin_id)?.name || 
-                 'Atribuir responsável'}
-              </span>
-            </span>
-            {canEdit && <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60" />}
-          </button>
 
-          {showAdminDropdown && canEdit && (
-            <div className="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-              {(student.assigned_to_admin_id === currentAdminProfileId || userProfile?.is_restricted_admin === false) && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAssignAdmin(null); }}
-                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
-                  >
-                    Remover atribuição
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                </>
-              )}
-              {/* Admin restrito só vê a si mesmo; sem restrição vê todos */}
-              {(userProfile?.is_restricted_admin === true
-                ? internalAdmins.filter(a => a.id === currentAdminProfileId)
-                : internalAdmins
-              ).map((admin) => (
-                <button
-                  key={admin.id}
-                  onClick={(e) => { e.stopPropagation(); handleAssignAdmin(admin.id); }}
-                  className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 ${
-                    student.assigned_to_admin_id === admin.id ? 'text-indigo-700 font-semibold' : 'text-gray-700'
-                  }`}
-                >
-                  <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold flex-shrink-0 text-[10px]">
-                    {getAdminInitials(admin.name)}
-                  </span>
-                  <span className="truncate">{admin.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Modal de confirmação de Drop */}
+      <DropStudentModal
+        isOpen={showDropModal}
+        onClose={() => setShowDropModal(false)}
+        onConfirm={handleConfirmDrop}
+        studentName={student.student_name}
+      />
     </div>
   );
 };

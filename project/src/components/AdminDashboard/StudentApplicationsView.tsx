@@ -14,13 +14,12 @@ import {
   BookOpen,
   Sparkles,
   LayoutGrid,
-  Table,
-  UserCheck
+  Table
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
 import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
-import { useStudentsQuery, useFilterDataQuery, useAssignAdminMutation } from './hooks/useStudentApplicationsQueries';
+import { useStudentsQuery, useFilterDataQuery, StudentRecord } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
 import RefreshButton from '../RefreshButton';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -31,57 +30,8 @@ import { toast } from 'react-hot-toast';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 import StudentApplicationsKanbanView from './StudentApplicationsKanbanView';
 
-export interface StudentRecord {
-  // Dados do estudante (sempre presentes)
-  student_id: string;
-  user_id: string;
-  student_name: string;
-  student_email: string;
-  student_created_at: string;
-  has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee: boolean;
-  seller_referral_code: string | null;
+// OTIMIZAÇÃO: Interface movida para o hook useStudentApplicationsQueries
 
-  // Dados da aplicação (podem ser null se não aplicou ainda)
-  application_id: string | null;
-  scholarship_id: string | null;
-  status: string | null;
-  application_status: string | null;
-  applied_at: string | null;
-  is_application_fee_paid: boolean;
-  is_scholarship_fee_paid: boolean;
-  placement_fee_flow?: boolean;
-  is_placement_fee_paid?: boolean;
-  acceptance_letter_status: string | null;
-  payment_status: string | null;
-  student_process_type: string | null;
-  transfer_form_status: string | null;
-  scholarship_title: string | null;
-  course_name?: string | null;
-  university_name: string | null;
-  reviewed_at: string | null;
-  reviewed_by: string | null;
-
-  // Campos adicionais para múltiplas aplicações
-  is_locked: boolean;
-  total_applications: number;
-  all_applications: any[];
-  most_recent_activity?: Date;
-  has_paid_reinstatement_package?: boolean;
-  visa_transfer_active?: boolean;
-  is_archived: boolean;
-  is_dropped: boolean;
-  assigned_to_admin_id: string | null;
-  assigned_to_admin_name: string | null;
-  placement_fee_pending_balance: number;
-  placement_fee_due_date: string | null;
-  placement_fee_installment_number: number;
-  placement_fee_installment_enabled: boolean;
-  source?: string;
-  has_uploaded_photo?: boolean;
-  has_submitted_form?: boolean;
-  documents_uploaded?: boolean;
-}
 
 interface StudentApplicationsViewProps {
 }
@@ -120,7 +70,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   // React Query Hooks
   const studentsQuery = useStudentsQuery();
   const filterDataQuery = useFilterDataQuery();
-  const assignAdminMutation = useAssignAdminMutation();
 
   // Extrair dados dos queries
   const students = studentsQuery.data || [];
@@ -128,7 +77,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const affiliates = filterDataQuery.data?.affiliates || [];
   const scholarships = filterDataQuery.data?.scholarships || [];
   const universities = filterDataQuery.data?.universities || [];
-  const internalAdmins = filterDataQuery.data?.internalAdmins || [];
 
   // Função para refresh de todos os dados
   const handleRefresh = async () => {
@@ -178,7 +126,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [timeFilter, setTimeFilter] = useState('all');
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
-  const [assignedAdminFilter, setAssignedAdminFilter] = useState('all');
   const [processTypeFilter, setProcessTypeFilter] = useState('all');
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
@@ -207,7 +154,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       onlyPaidSelectionFee,
       onlyBlackCouponUsers,
       showCurrentStudents,
-      assignedAdminFilter,
       processTypeFilter,
       currentPage
     };
@@ -232,7 +178,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setOnlyPaidSelectionFee(filters.onlyPaidSelectionFee || false);
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
-        setAssignedAdminFilter(filters.assignedAdminFilter || 'all');
         setProcessTypeFilter(filters.processTypeFilter || 'all');
         setCurrentPage(filters.currentPage || 1);
       }
@@ -257,7 +202,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     setOnlyPaidSelectionFee(false);
     setOnlyBlackCouponUsers(false);
     setShowCurrentStudents(false);
-    setAssignedAdminFilter('all');
     setProcessTypeFilter('all');
     setCurrentPage(1);
   };
@@ -353,7 +297,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     onlyPaidSelectionFee,
     onlyBlackCouponUsers,
     showCurrentStudents,
-    assignedAdminFilter,
     currentPage
   ]);
 
@@ -649,15 +592,11 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       }
     })();
 
-    const matchesAssignedAdmin = assignedAdminFilter === 'all' ||
-      (assignedAdminFilter === 'unassigned'
-        ? !student.assigned_to_admin_id
-        : student.assigned_to_admin_id === assignedAdminFilter);
+    // Filtro por tipo de processo
+    const matchesProcessType = processTypeFilter === 'all' || 
+      (student.student_process_type && student.student_process_type === processTypeFilter);
 
-    const matchesProcessType = processTypeFilter === 'all' ||
-      student.student_process_type === processTypeFilter;
-
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesAssignedAdmin && matchesProcessType;
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType;
 
     return finalResult;
   });
@@ -1099,25 +1038,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
               </select>
             </div>
 
-            {/* Filtro por Atribuído (admin interno) */}
-            {internalAdmins.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Atribuído</label>
-                <select
-                  value={assignedAdminFilter}
-                  onChange={(e) => setAssignedAdminFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
-                >
-                  <option value="all">Todos</option>
-                  <option value="unassigned">Sem responsável</option>
-                  {internalAdmins.map((admin) => (
-                    <option key={admin.id} value={admin.id}>
-                      {admin.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
 
           {/* Checkboxes para filtros e botão para limpar filtros */}
@@ -1189,7 +1109,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
           students={filteredStudents}
           getUnreadCount={getUnreadCount}
           getGlobalUnreadCount={getGlobalUnreadCount}
-          internalAdmins={internalAdmins}
         />
       ) : (
         /* Applications List - Table View */
@@ -1221,11 +1140,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Activity
                   </th>
-                  {internalAdmins.length > 0 && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Atribuído
-                    </th>
-                  )}
 
                 </tr>
               </thead>
@@ -1352,57 +1266,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                         })()}
                       </div>
                     </td>
-                    {internalAdmins.length > 0 && (() => {
-                      const assignedToOther = student.assigned_to_admin_id &&
-                        student.assigned_to_admin_id !== userProfile?.id;
-                      const isRestricted = userProfile?.is_restricted_admin;
-                      const canEdit = !isRestricted || // não é admin restrito
-                        !student.assigned_to_admin_id ||         // sem atribuição
-                        student.assigned_to_admin_id === userProfile?.id; // atribuído a si mesmo
-
-                      // Garantia extra: buscar o nome na lista de admins se o campo estiver vazio
-                      const assignedName = student.assigned_to_admin_name || 
-                                          internalAdmins.find(a => a.id === student.assigned_to_admin_id)?.name || 
-                                          'Responsável';
-
-                      return (
-                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          {assignedToOther && isRestricted ? (
-                            // Atribuído a outro admin e o atual é restrito: mostrar em modo somente leitura com destaque
-                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-sm text-gray-700 shadow-sm">
-                              <UserCheck className="w-4 h-4 text-indigo-500" />
-                              <span className="font-medium">{assignedName}</span>
-                            </div>
-                          ) : (
-                            <select
-                              value={student.assigned_to_admin_id || ''}
-                              disabled={!canEdit}
-                              onChange={async (e) => {
-                                const adminId = e.target.value || null;
-                                try {
-                                  await assignAdminMutation.mutateAsync({ studentId: student.student_id, adminId });
-                                  toast.success(adminId ? 'Aluno atribuído' : 'Atribuição removida');
-                                } catch {
-                                  toast.error('Erro ao atribuir');
-                                }
-                              }}
-                              className="text-sm border border-gray-200 rounded-md px-2 py-1 text-gray-700 focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] bg-white min-w-[120px] disabled:opacity-50"
-                            >
-                              <option value="">Sem atribuição</option>
-                              {/* Admin restrito só vê a si mesmo; outros vêem todos */}
-                              {(isRestricted
-                                ? internalAdmins.filter(a => a.id === userProfile?.id)
-                                : internalAdmins
-                              ).map((admin) => (
-                                <option key={admin.id} value={admin.id}>
-                                  {admin.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                      );
-                    })()}
 
                   </tr>
                 ))}
