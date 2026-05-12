@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { handleDownloadDocument as centralizedDownloadDocument } from '../components/EnhancedStudentTracking/utils/documentUtils';
+import { toast } from 'react-hot-toast';
 
 interface StudentRecord {
   user_id: string;
@@ -48,7 +49,7 @@ export const useDocumentRequestHandlers = (
         .insert({
           document_request_id: requestId,
           file_url: publicUrl,
-          uploaded_by: userId,
+          uploaded_by: student.user_id, // Always associate with student for visibility
           status: 'under_review',
           uploaded_at: new Date().toISOString()
         });
@@ -78,7 +79,7 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      alert('Document uploaded successfully!');
+      toast.success('Document uploaded successfully!');
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
@@ -94,7 +95,7 @@ export const useDocumentRequestHandlers = (
       }
     } catch (error: any) {
       console.error('Error uploading document:', error);
-      alert('Failed to upload document: ' + error.message);
+      toast.error('Failed to upload document: ' + error.message);
     } finally {
       setUploadingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }
@@ -301,7 +302,7 @@ export const useDocumentRequestHandlers = (
       onSuccess?.();
     } catch (error: any) {
       console.error('Error approving document:', error);
-      alert('Failed to approve document: ' + error.message);
+      toast.error('Failed to approve document: ' + error.message);
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
@@ -482,7 +483,7 @@ export const useDocumentRequestHandlers = (
       onSuccess?.();
     } catch (error: any) {
       console.error('Error rejecting document:', error);
-      alert('Failed to reject document: ' + error.message);
+      toast.error('Failed to reject document: ' + error.message);
     } finally {
       setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
@@ -520,7 +521,7 @@ export const useDocumentRequestHandlers = (
 
   // Handler para deletar document request
   const handleDeleteDocumentRequest = useCallback(async (requestId: string) => {
-    if (!window.confirm('Delete this document request?') || !student) return;
+    if (!student) return;
     
     setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
     try {
@@ -561,7 +562,7 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      alert('Document request deleted successfully!');
+      toast.success('Document request deleted successfully!');
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
@@ -577,7 +578,7 @@ export const useDocumentRequestHandlers = (
       }
     } catch (error: any) {
       console.error('Error deleting document request:', error);
-      alert('Failed to delete document request: ' + error.message);
+      toast.error('Failed to delete document request: ' + error.message);
     } finally {
       setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }

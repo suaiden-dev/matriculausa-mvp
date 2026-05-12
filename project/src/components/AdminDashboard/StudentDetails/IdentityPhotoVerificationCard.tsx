@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, CheckCircle, XCircle, Clock, Eye, AlertCircle, X, Edit2, Save } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 import RejectDocumentModal from './RejectDocumentModal';
 
@@ -99,7 +100,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
   const handleSaveEditReason = async () => {
     if (!identityData.acceptanceId || !onUpdateRejectionReason) return;
     if (!editedReason.trim()) {
-      alert('Rejection reason cannot be empty');
+      toast.error('Rejection reason cannot be empty');
       return;
     }
     setIsSavingReason(true);
@@ -108,7 +109,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
       setIsEditingReason(false);
     } catch (error: any) {
       console.error('Error updating rejection reason:', error);
-      alert('Error updating rejection reason: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      toast.error('Error updating rejection reason: ' + (error?.message || 'Unknown error occurred. Please try again.'));
     } finally {
       setIsSavingReason(false);
     }
@@ -121,7 +122,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
       setShowRejectModal(false);
     } catch (error: any) {
       console.error('Error rejecting identity photo:', error);
-      alert('Error rejecting identity photo: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      toast.error('Error rejecting identity photo: ' + (error?.message || 'Unknown error occurred. Please try again.'));
     }
   };
 

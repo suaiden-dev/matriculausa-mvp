@@ -6,6 +6,7 @@ import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import AdminDashboardLayout from './AdminDashboardLayout';
 import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
+import { ConfirmationProvider } from '../../contexts/AdminConfirmationContext';
 // ✅ OTIMIZAÇÃO: Lazy loading de sub-módulos administrativos
 import Overview from './Overview'; // Manter Overview estático por ser a "Home" do dash
 const UniversityManagement = lazy(() => import('./UniversityManagement'));
@@ -590,7 +591,8 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <AdminNotificationsProvider>
-      <AdminDashboardLayout user={user} loading={loading}>
+      <ConfirmationProvider>
+        <AdminDashboardLayout user={user} loading={loading}>
         <Suspense fallback={<AdminContentSkeleton />}>
           <Routes>
             <Route 
@@ -750,6 +752,7 @@ const AdminDashboard: React.FC = () => {
           </Dialog>
         )}
       </AdminDashboardLayout>
+      </ConfirmationProvider>
     </AdminNotificationsProvider>
   );
 };

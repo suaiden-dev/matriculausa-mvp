@@ -9,7 +9,10 @@ import {
   DollarSign,
   Building,
   ArrowRight,
-  GraduationCap
+  GraduationCap,
+  Download,
+  Eye,
+  Inbox
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -1461,6 +1464,64 @@ const MyApplications: React.FC = () => {
                                            </div>
                                          </div>
                                        )}
+
+                                       {/* Admin Uploaded Documents (Attachments) */}
+                                       {(() => {
+                                         const adminDocs = (application as any).documents && Array.isArray((application as any).documents)
+                                           ? (application as any).documents.filter((d: any) => d.source === 'admin')
+                                           : [];
+                                         
+                                         if (adminDocs.length === 0) return null;
+
+                                         return (
+                                           <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 p-4 shadow-sm">
+                                             <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                               <Inbox className="h-4 w-4 mr-2 text-blue-600" />
+                                               Documentos Recebidos
+                                             </h5>
+                                             <div className="grid gap-2">
+                                               {adminDocs.map((doc: any, idx: number) => (
+                                                 <div key={`admin-doc-${idx}`} className="flex items-center justify-between p-3 bg-white border border-blue-100 rounded-xl hover:shadow-md transition-all group">
+                                                   <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                       <FileText className="h-4 w-4" />
+                                                     </div>
+                                                     <div className="min-w-0 flex-1">
+                                                       <p className="text-xs font-bold text-slate-900 truncate">
+                                                         {doc.title || 'Documento Adicional'}
+                                                       </p>
+                                                       {doc.uploaded_at && (
+                                                         <p className="text-[10px] text-slate-500">
+                                                           Recebido em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                                                         </p>
+                                                       )}
+                                                     </div>
+                                                   </div>
+                                                   <div className="flex items-center space-x-1 ml-2">
+                                                     <button
+                                                       onClick={() => window.open(doc.url, '_blank')}
+                                                       className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                       title="Visualizar"
+                                                     >
+                                                       <Eye className="h-4 w-4" />
+                                                     </button>
+                                                     <a
+                                                       href={doc.url}
+                                                       download
+                                                       target="_blank"
+                                                       rel="noopener noreferrer"
+                                                       className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                       title="Baixar"
+                                                     >
+                                                       <Download className="h-4 w-4" />
+                                                     </a>
+                                                   </div>
+                                                 </div>
+                                               ))}
+                                             </div>
+                                           </div>
+                                         );
+                                       })()}
                                      </div>
                                    </div>
                                  </div>
