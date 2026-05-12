@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -57,7 +57,25 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const referralCodeProcessedRef = useRef(false);
 
   
-  const { login, register } = useAuth();
+  const { user, loading: authLoading, login, register } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionamento se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const timer = setTimeout(() => {
+        const role = user.role || 'student';
+        const dashboardPath = 
+          role === 'affiliate' ? '/affiliate/dashboard' :
+          role === 'seller' ? '/seller/dashboard' :
+          role === 'admin' ? '/admin/dashboard' :
+          '/student/dashboard';
+        navigate(dashboardPath, { replace: true });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, authLoading, navigate]);
+
   const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
   const { captureLead, markAsConverted } = useLeadCapture();
 
@@ -605,6 +623,35 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setActiveTab(tab);
   };
 
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-slate-50 p-10 rounded-3xl shadow-lg border border-slate-200 text-center">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-[#05294E]" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tight">Você já está logado!</h1>
+          <p className="text-slate-600 mb-8">
+            Você já possui uma sessão ativa. Redirecionando para o seu dashboard em instantes...
+          </p>
+          <button
+            onClick={() => {
+              const role = user.role || 'student';
+              const dashboardPath = 
+                role === 'affiliate' ? '/affiliate/dashboard' :
+                role === 'seller' ? '/seller/dashboard' :
+                role === 'admin' ? '/admin/dashboard' :
+                '/student/dashboard';
+              navigate(dashboardPath);
+            }}
+            className="w-full py-4 bg-[#05294E] text-white font-bold rounded-2xl hover:bg-[#041f38] transition-all shadow-md"
+          >
+            Ir para o Dashboard agora
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (mode === 'login') {
     return (

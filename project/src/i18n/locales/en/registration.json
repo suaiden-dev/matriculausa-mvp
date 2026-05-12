@@ -767,8 +767,10 @@
     "paidSuccess": "Payment Confirmed"
   },
   "i20Preview": {
-    "title": "I-20 Awaiting Release",
-    "description": "Your I-20 has been sent. Please pay the Control Fee to release the full, high-quality document.",
-    "payButton": "Go to Payment"
+    "title": "Control Fee I-20 Document",
+    "description": "Your preview (limited) of the I-20 is available for verification. Pay the fee to release the original document.",
+    "payButton": "Go to Payment",
+    "viewPreview": "View I-20",
+    "watermark": "MATRÍCULA USA"
   }
 }

@@ -891,7 +891,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                                         if (error || !data?.scrambledData) throw error || new Error('Sem dados embaralhados');
                                                                         
                                                                         // Descriptografar e gerar Imagem Blob
-                                                                        const imageBlob = await generateDecryptedPDFImage(data.scrambledData, "matriculausa-secure-i20-key");
+                                                                        const imageBlob = await generateDecryptedPDFImage(
+                                                                            data.scrambledData, 
+                                                                            "matriculausa-secure-i20-key",
+                                                                            t('registration:i20Preview.watermark')
+                                                                        );
                                                                         const objectUrl = URL.createObjectURL(imageBlob);
                                                                         
                                                                         setBlurredPreviewUrl(objectUrl);
@@ -913,7 +917,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                             {blurredPreviewLoading ? (
                                                                 <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />Carregando...</>
                                                             ) : (
-                                                                applicationDetails.i20_document_url !== 'blocked' ? t('common:labels.view') : t('registration:i20Preview.title')
+                                                                applicationDetails.i20_document_url !== 'blocked' ? t('common:labels.view') : t('registration:i20Preview.viewPreview')
                                                             )}
                                                         </button>
                                                         {applicationDetails.i20_document_url !== 'blocked' && (

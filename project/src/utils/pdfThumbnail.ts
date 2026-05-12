@@ -65,7 +65,11 @@ export async function generatePDFThumbnail(file: File, scale: number = 0.3, qual
  * Decrypts a base64 XOR-scrambled PDF and renders the first page to a high-quality image blob.
  * This prevents the real PDF bytes from ever being accessible in the browser's Network tab.
  */
-export async function generateDecryptedPDFImage(base64Data: string, xorKey: string): Promise<Blob> {
+export async function generateDecryptedPDFImage(
+  base64Data: string, 
+  xorKey: string,
+  watermarkText: string | null = null
+): Promise<Blob> {
   try {
     // 1. Decode base64 to binary string
     const binaryString = atob(base64Data);
@@ -107,6 +111,78 @@ export async function generateDecryptedPDFImage(base64Data: string, xorKey: stri
     };
     
     await page.render(renderContext).promise;
+
+    // 5. Add Security Layers
+    if (watermarkText) {
+      // 5a. Load logo for watermark
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+      
+      await new Promise<void>((resolve) => {
+        logoImg.onload = () => resolve();
+        logoImg.onerror = () => resolve();
+      });
+
+      context.save();
+      
+      // --- LAYER 1: Signature & Barcode Redaction (Destructive) ---
+      // This is the most secure part: it physically removes the signatures from the preview
+      const redactionHeight = canvas.height * 0.28; // Covers roughly the bottom 28%
+      const redactionY = canvas.height - redactionHeight;
+      
+      // Draw a solid dark redaction box
+      context.fillStyle = '#1e293b'; // Slate 800
+      context.fillRect(0, redactionY, canvas.width, redactionHeight);
+      
+      // Add text over redaction
+      context.fillStyle = '#ffffff';
+      context.font = 'bold 30px sans-serif';
+      context.textAlign = 'center';
+      context.fillText(
+        'SIGNATURES BLOCKED - PAY CONTROL FEE TO UNLOCK FULL DOCUMENT', 
+        canvas.width / 2, 
+        redactionY + (redactionHeight / 2) - 15
+      );
+      context.font = '20px sans-serif';
+      context.fillText(
+        'ASSINATURAS BLOQUEADAS - PAGUE A TAXA PARA LIBERAR O DOCUMENTO ORIGINAL', 
+        canvas.width / 2, 
+        redactionY + (redactionHeight / 2) + 25
+      );
+
+      // --- LAYER 2: Tiled Watermark (Visual Protection) ---
+      const fontSize = 55;
+      context.font = `bold ${fontSize}px sans-serif`;
+      context.fillStyle = 'rgba(120, 120, 120, 0.35)';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+
+      // Rotate for the tiled pattern
+      context.rotate(-Math.PI / 6);
+
+      const stepX = 350;
+      const stepY = 250;
+
+      for (let x = -canvas.height; x < canvas.width * 1.5; x += stepX) {
+        for (let y = -canvas.width; y < canvas.height * 1.5; y += stepY) {
+          // Only draw watermark ABOVE the redaction area to keep it clean
+          // (Actually, drawing everywhere is fine, but let's stick to the grid)
+          
+          if (logoImg.complete && logoImg.naturalWidth > 0) {
+            const logoWidth = 100;
+            const logoHeight = (logoImg.naturalHeight / logoImg.naturalWidth) * logoWidth;
+            context.globalAlpha = 0.25;
+            context.drawImage(logoImg, x - 50, y - logoHeight - 15, logoWidth, logoHeight);
+            context.globalAlpha = 1.0;
+          }
+          
+          context.fillStyle = 'rgba(120, 120, 120, 0.35)';
+          context.fillText(watermarkText, x, y);
+        }
+      }
+
+      context.restore();
+    }
     
     return new Promise((resolve, reject) => {
       canvas.toBlob(
