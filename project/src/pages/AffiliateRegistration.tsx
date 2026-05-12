@@ -27,7 +27,13 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
   const handleResend = async () => {
     setResending(true);
     try {
-      await supabase.auth.resend({ type: 'signup', email });
+      await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/affiliate/dashboard`,
+        },
+      });
       setResent(true);
     } finally {
       setResending(false);
@@ -158,7 +164,7 @@ const AffiliateRegistration: React.FC = () => {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/affiliate/dashboard`,
           data: {
             full_name: formData.full_name,
             role: 'affiliate',

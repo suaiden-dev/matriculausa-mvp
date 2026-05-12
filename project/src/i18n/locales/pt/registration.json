@@ -767,8 +767,10 @@
     "paidSuccess": "Pagamento Confirmado"
   },
   "i20Preview": {
-    "title": "I-20 Aguardando Liberação",
-    "description": "Seu I-20 foi enviado. Efetue o pagamento da Control Fee para liberar o documento completo e em alta qualidade.",
-    "payButton": "Ir para Pagamento"
+    "title": "Control Fee I-20 Document",
+    "description": "Sua via prévia (limitada) do I-20 está disponível para verificação. Efetue o pagamento da taxa para liberar o documento original.",
+    "payButton": "Ir para Pagamento",
+    "viewPreview": "Ver I-20",
+    "watermark": "MATRÍCULA USA"
   }
 }
