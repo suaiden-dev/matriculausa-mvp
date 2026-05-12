@@ -368,6 +368,38 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // ✅ Validação de campos obrigatórios no registro
+    if (mode === 'register') {
+      const isStudentMissing = activeTab === 'student' && (
+        !formData.full_name?.trim() || 
+        !formData.email?.trim() || 
+        !formData.phone?.trim() || 
+        !formData.password?.trim() || 
+        !formData.confirmPassword?.trim() || 
+        formData.dependents === null
+      );
+
+      const isUniversityMissing = activeTab === 'university' && (
+        !formData.full_name?.trim() || 
+        !formData.email?.trim() || 
+        !formData.phone?.trim() || 
+        !formData.password?.trim() || 
+        !formData.confirmPassword?.trim() || 
+        !formData.universityName?.trim()
+      );
+
+      if (isStudentMissing || isUniversityMissing) {
+        setError('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+
+      if (!termsAccepted) {
+        setError(t('authPage.messages.mustAcceptTerms'));
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -893,28 +925,38 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
           {/* Tab Navigation */}
-          <div className="flex justify-center mb-10">
-            <div className="bg-slate-100 p-1.5 rounded-2xl flex space-x-2 w-full">
+          <div className="flex justify-center mb-10 border-b border-slate-200">
+            <div className="flex relative w-full">
+              {/* Active Indicator Line */}
+              <div 
+                className={`absolute bottom-0 left-0 w-1/2 h-0.5 transition-all duration-500 ease-in-out ${
+                  activeTab === 'student' 
+                    ? 'translate-x-0 bg-[#05294E]' 
+                    : 'translate-x-full bg-[#D0151C]'
+                }`}
+              />
+              
               <button
                 onClick={() => handleTabChange('student')}
-                className={`flex items-center justify-center px-4 py-3.5 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
+                className={`relative z-10 flex items-center justify-center px-4 py-4 flex-1 font-bold transition-all duration-300 text-sm ${
                   activeTab === 'student'
-                    ? 'bg-white text-[#05294E] shadow-sm ring-1 ring-slate-200'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'text-[#05294E]'
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <GraduationCap className={`h-5 w-5 mr-2 ${activeTab === 'student' ? 'text-[#05294E]' : 'text-slate-400'}`} />
+                <GraduationCap className={`h-5 w-5 mr-2 transition-colors duration-300 ${activeTab === 'student' ? 'text-[#05294E]' : 'text-slate-400'}`} />
                 <span>{t('authPage.register.tabStudent')}</span>
               </button>
+              
               <button
                 onClick={() => handleTabChange('university')}
-                className={`flex items-center justify-center px-4 py-3.5 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
+                className={`relative z-10 flex items-center justify-center px-4 py-4 flex-1 font-bold transition-all duration-300 text-sm ${
                   activeTab === 'university'
-                    ? 'bg-white text-[#D0151C] shadow-sm ring-1 ring-slate-200'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'text-[#D0151C]'
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Building className={`h-5 w-5 mr-2 ${activeTab === 'university' ? 'text-[#D0151C]' : 'text-slate-400'}`} />
+                <Building className={`h-5 w-5 mr-2 transition-colors duration-300 ${activeTab === 'university' ? 'text-[#D0151C]' : 'text-slate-400'}`} />
                 <span>{t('authPage.register.tabUniversity')}</span>
               </button>
             </div>
@@ -925,9 +967,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <h2 className="text-3xl xl:text-4xl font-black text-slate-900 mb-2">
               {t('authPage.register.title')}
             </h2>
-            <p className="text-slate-500 font-medium max-w-lg mx-auto">
-              {t('authPage.register.subtitle')}
-            </p>
           </div>
 
           {/* Error Message */}
@@ -995,7 +1034,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Phone */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.phoneNumber')}
                     </label>
@@ -1032,7 +1071,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Dependents */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="dependents" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.dependentsLabel')}
                     </label>
@@ -1066,7 +1105,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Password */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
@@ -1100,7 +1139,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Confirm Password */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
@@ -1208,7 +1247,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Contact Name */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.contactPersonName')}
                     </label>
@@ -1229,7 +1268,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* University Email */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.officialEmail')}
                     </label>
@@ -1281,7 +1320,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Password */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
@@ -1314,7 +1353,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   {/* Confirm Password */}
-                  <div className="sm:col-span-1">
+                  <div className="sm:col-span-2">
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
@@ -1385,6 +1424,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   <a href="/privacy-policy" target="_blank" className="text-[#05294E] font-bold hover:underline ml-1">
                     {t('authPage.register.privacyPolicy')}
                   </a>
+                  <span className="text-red-500 ml-0.5">*</span>
                 </span>
               </label>
             </div>
@@ -1392,8 +1432,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !termsAccepted}
-              className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100 mt-8 ${
+              disabled={loading}
+              className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 cursor-pointer disabled:active:scale-100 mt-8 ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#041f3a]' 
                   : 'bg-[#D0151C] hover:bg-[#B01218]'
