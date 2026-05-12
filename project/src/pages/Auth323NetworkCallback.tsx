@@ -113,7 +113,7 @@ const Auth323NetworkCallback: React.FC = () => {
             toast.success(t('ssoCallback.success.loginSuccess'));
 
             // Redirecionar baseado no role do usuário
-            const userRole = sessionData.session?.user?.user_metadata?.role;
+            const userRole = sessionData.session?.user?.user_metadata?.role || metaRole;
             const redirectPath =
               userRole === 'affiliate' ? '/affiliate/dashboard' :
               userRole === 'seller' ? '/seller/dashboard' :
@@ -121,9 +121,15 @@ const Auth323NetworkCallback: React.FC = () => {
               userRole === 'school' ? '/school/dashboard' :
               '/student/dashboard';
 
+            console.log('[SSO Callback] 🎯 Redirecionando para:', redirectPath);
+
+            // Se for afiliado, redirecionar IMEDIATAMENTE para ser "direto" como solicitado
+            // Para outros, manter um pequeno delay para feedback visual de sucesso
+            const delay = userRole === 'affiliate' ? 0 : 1000;
+            
             setTimeout(() => {
               navigate(redirectPath);
-            }, 1500);
+            }, delay);
             return;
           } catch (hashErr: any) {
             console.error('[SSO Callback] ❌ Erro ao processar tokens do hash:', hashErr);
