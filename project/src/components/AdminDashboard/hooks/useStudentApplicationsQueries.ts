@@ -151,11 +151,14 @@ export function useStudentsQuery() {
         let lockedApplication = null;
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
+          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved, etc
           lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              student.scholarship_applications.find((app: any) => app.is_application_fee_paid && app.acceptance_letter_url) ||
                              student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
-                             student.scholarship_applications.find((app: any) => app.status === 'approved');
+                             student.scholarship_applications.find((app: any) => app.status === 'approved') ||
+                             student.scholarship_applications.find((app: any) => app.status === 'under_review') ||
+                             student.scholarship_applications.find((app: any) => app.status !== 'rejected') ||
+                             student.scholarship_applications[0];
           
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship
           if (lockedApplication) {
@@ -191,6 +194,32 @@ export function useStudentsQuery() {
         };
 
         const mostRecentActivity = getMostRecentActivity();
+
+        // Calculate basic documents statistics (passport, diploma, funds_proof)
+        let basicDocsRequired = 3; // Basic docs are always 3 (passport, diploma, funds_proof)
+        let basicDocsUploaded = 0;
+        let basicDocsApproved = 0;
+        let basicDocsRejected = 0;
+        let basicDocsUnderReview = 0;
+
+        if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
+          const requiredBasicTypes = ['passport', 'diploma', 'funds_proof'];
+          const latestStatusMap = new Map<string, string>();
+          
+          lockedApplication.documents.forEach((doc: any) => {
+            if (doc.type && requiredBasicTypes.includes(doc.type.toLowerCase())) {
+              // Simplistic deduction: Since they are in the array, they are uploaded
+              latestStatusMap.set(doc.type.toLowerCase(), (doc.status || 'pending').toLowerCase());
+            }
+          });
+          
+          basicDocsUploaded = latestStatusMap.size;
+          latestStatusMap.forEach(status => {
+            if (status === 'approved') basicDocsApproved++;
+            else if (status === 'rejected') basicDocsRejected++;
+            else if (status === 'under_review') basicDocsUnderReview++;
+          });
+        }
 
         return {
           student_id: student.id,
@@ -248,6 +277,11 @@ export function useStudentsQuery() {
           has_submitted_form: student.selection_survey_passed === true,
           documents_uploaded: student.documents_uploaded || false,
           selected_scholarship_id: student.selected_scholarship_id || null,
+          basic_docs_total_required: basicDocsRequired,
+          basic_docs_total_uploaded: basicDocsUploaded,
+          basic_docs_total_approved: basicDocsApproved,
+          basic_docs_total_rejected: basicDocsRejected,
+          basic_docs_total_under_review: basicDocsUnderReview,
         };
       }) || [];
 
@@ -531,7 +565,7 @@ export function useStudentDocsStats(students: StudentRecord[]) {
       const result = new Map<string, DocStats>();
 
       for (const student of students) {
-        if (!student.university_id || !student.user_id) continue;
+        if (!student.user_id) continue;
 
         const processType = student.student_process_type;
         const requiredDocs = Array.from(allDocsMap.values()).filter(dr => {

@@ -88,6 +88,13 @@ export interface StudentRecord {
   docs_total_approved?: number;
   docs_total_rejected?: number;
   docs_total_under_review?: number;
+  
+  // Basic docs aggregation fields (passport, diploma, funds_proof)
+  basic_docs_total_required?: number;
+  basic_docs_total_uploaded?: number;
+  basic_docs_total_approved?: number;
+  basic_docs_total_rejected?: number;
+  basic_docs_total_under_review?: number;
 }
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
