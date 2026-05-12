@@ -239,8 +239,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
   },
   {
     key: 'enrollment',
-    label: 'Enrollment',
-    shortLabel: 'Enrollment',
+    label: 'Admitted Enrollment',
+    shortLabel: 'Admitted',
     icon: GraduationCap,
     description: 'Student has been enrolled in the program',
     actor: 'admin'

@@ -16,8 +16,8 @@ const FEE_TYPES = [
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-700 border-orange-200' },
   { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  { value: 'ds160_package', label: 'DS-160 Package', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
-  { value: 'i539_cos_package', label: 'I-539 COS Package', color: 'bg-teal-100 text-teal-700 border-teal-200' },
+  { value: 'ds160_package', label: 'Control Fee', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+  { value: 'i539_cos_package', label: 'Control Fee', color: 'bg-teal-100 text-teal-700 border-teal-200' },
   { value: 'reinstatement_fee', label: 'Reinstatement Fee', color: 'bg-rose-100 text-rose-700 border-rose-200' }
 ];
 

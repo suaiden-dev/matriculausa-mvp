@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 
 
 const PixIcon = ({ className }: { className?: string }) => (
@@ -119,6 +120,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
   const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const couponInputRef = useRef<HTMLInputElement>(null);
 
   // Chave de window para persistência entre re-renders
@@ -239,7 +241,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
       const currentUrl = window.location.origin + window.location.pathname;
-      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
+      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=control_fee`;
       const cancelUrl = `${currentUrl}?step=${currentStep}&payment=cancelled`;
 
       const payload: any = {
@@ -282,6 +284,12 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
 
   // ── Checkout Parcelow ────────────────────────────────────────────────────
   const handleParcelowCheckout = async () => {
+    // Verificar se há informações de titular de Cartão de Outra Pessoa
+    if (payerInfo) {
+      await launchParcelowCheckout();
+      return;
+    }
+
     if (!userProfile?.cpf_document) {
       setShowInlineCpf(true);
       return;
@@ -309,6 +317,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
             final_amount: effectiveAmount.toString(),
             promotional_coupon: appliedCoupon,
           },
+          ...(payerInfo && { payer_info: payerInfo }),
         }),
       });
 
@@ -670,7 +679,12 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                           )}
                         </button>
 
-                        {showInlineCpf && (
+                        {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
+                        <div className="mt-4">
+                          <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                        </div>
+
+                        {showInlineCpf && !payerInfo && (
                           <div className="p-6 bg-blue-50 border border-slate-200 border-t-0 rounded-b-[2rem] space-y-4 animate-in fade-in slide-in-from-top-2">
                             <div className="flex items-center justify-between">
                               <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] flex items-center gap-2">

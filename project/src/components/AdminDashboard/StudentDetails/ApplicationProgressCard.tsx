@@ -43,8 +43,8 @@ const ApplicationProgressCard: React.FC<ApplicationProgressCardProps> = React.me
       case 'acceptance_letter': return 'University sends acceptance letter';
       case 'transfer_form': return 'University sends transfer form (for transfer students)';
       case 'i20_fee': return 'Student pays I-20 control fee';
-      case 'ds160_package': return 'Student pays the DS-160 Package fee (initial F-1 students)';
-      case 'i539_cos_package': return 'Student pays the I-539 COS Package fee (change of status students)';
+      case 'ds160_package': return 'Student pays the Control Fee (initial F-1 students)';
+      case 'i539_cos_package': return 'Student pays the Control Fee (change of status students)';
       case 'enrollment': return 'Student enrolls in the program';
       default: return 'Process step';
     }

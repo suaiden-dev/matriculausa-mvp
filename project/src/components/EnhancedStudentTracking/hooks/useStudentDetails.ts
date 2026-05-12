@@ -391,7 +391,7 @@ export const useStudentDetails = () => {
                 .from('document_requests')
                 .select('*')
                 .eq('is_global', true)
-                .in('university_id', universityIds);
+                .or(`university_id.in.(${universityIds.join(',')}),university_id.is.null`);
               
               if (globalError) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching global requests:', globalError);

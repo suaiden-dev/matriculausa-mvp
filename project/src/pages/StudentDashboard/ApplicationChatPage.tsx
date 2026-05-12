@@ -13,6 +13,7 @@ import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { PayerInfo } from '../../components/PayerAlternativeForm';
 import { ZelleCheckout } from '../../components/ZelleCheckout';
 import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
@@ -68,6 +69,7 @@ const ApplicationChatPage: React.FC = () => {
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -83,19 +85,20 @@ const ApplicationChatPage: React.FC = () => {
           console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
           console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
           
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se o I-20 não foi pago
-          // Isso previne que o aluno veja a URL no Network tab do DevTools
-          // Mas mantém o status visível para que o aluno saiba que a carta foi enviada
+          // ✅ SEGURANÇA: Ocultar URLs originais se o I-20 não foi pago
+          // Usa um valor sentinela 'blocked' para manter i20DocumentAvailable = true
+          // mas sem expor a URL real no Network tab do DevTools
           if (data && !(userProfile as any)?.has_paid_i20_control_fee) {
-            data.acceptance_letter_url = null;
-            // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
-            // para que o aluno saiba que a carta foi enviada
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            // Manter i20_document_url como 'blocked' para que o tab apareça habilitado
+            // O componente usa !!i20_document_url para determinar se o doc foi enviado
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
 
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se há saldo devedor de Placement Fee
-          // (1ª parcela aprovada mas 2ª ainda não paga)
+          // ✅ SEGURANÇA: Ocultar URLs originais se há saldo devedor de Placement Fee
           if (data && ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0) {
-            data.acceptance_letter_url = null;
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
           
           setApplicationDetails(data);
@@ -349,9 +352,10 @@ const ApplicationChatPage: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number, payerInfoParam?: PayerInfo | null) => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
+    if (payerInfoParam) setPayerInfo(payerInfoParam);
     if (method === 'pix' && exchangeRateParam) {
       setExchangeRate(exchangeRateParam);
       console.log('🔍 [ApplicationChatPage] Taxa de câmbio armazenada:', exchangeRateParam);
@@ -511,7 +515,8 @@ const ApplicationChatPage: React.FC = () => {
               promotional_coupon: promotionalCoupon
             },
             promotional_coupon: promotionalCoupon,
-            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : [],
+            ...(payerInfo && { payer_info: payerInfo }),
           }),
         });
         
@@ -519,15 +524,13 @@ const ApplicationChatPage: React.FC = () => {
           const errorData = await res.json();
           console.error('🔍 [ApplicationChatPage] Erro Parcelow:', errorData);
           
-          if (errorData.error === 'document_number_required') {
-            setProfileErrorType('cpf_missing');
-            setShowProfileRequiredModal(true);
-            setI20Loading(false);
-            return;
-          }
-          
-          if (errorData.error === 'User profile not found') {
-            setProfileErrorType('profile_incomplete');
+          if (errorData.error === 'document_number_required' || errorData.error === 'User profile not found') {
+            // Se tivermos informações de titular de Cartão de Outra Pessoa, não deveríamos cair aqui,
+            // mas por segurança vamos verificar
+            if (payerInfo) {
+              throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+            }
+            setProfileErrorType(errorData.error === 'document_number_required' ? 'cpf_missing' : 'profile_incomplete');
             setShowProfileRequiredModal(true);
             setI20Loading(false);
             return;
@@ -1294,7 +1297,7 @@ const ApplicationChatPage: React.FC = () => {
                                         await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
                                       }}
                                     >
-                                      {t('studentDashboard.applicationChatPage.details.studentDocuments.download')}
+                                      {t('common:labels.download')}
                                     </button>
                                   </>
                                 ) : (
@@ -1382,8 +1385,8 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Timer and Button Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                      {/* Payment Button */}
-                      <div>
+                      {/* Payment Button and Preview */}
+                      <div className="space-y-4">
                         <button
                           onClick={handlePayI20}
                           disabled={i20Loading}
@@ -1403,6 +1406,28 @@ const ApplicationChatPage: React.FC = () => {
                             </>
                           )}
                         </button>
+
+                        {/* I-20 Preview Button */}
+                        {applicationDetails.i20_document_preview_url && (
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center gap-3">
+                            <p className="text-xs text-slate-500 font-medium text-center uppercase tracking-wider">
+                              Preview Available
+                            </p>
+                            <button
+                              onClick={() => setPreviewUrl(applicationDetails.i20_document_preview_url)}
+                              className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View I-20 Preview
+                            </button>
+                            <p className="text-[10px] text-slate-400 text-center leading-tight">
+                              Low-resolution preview for verification only. Official document released after payment.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Countdown Timer */}
@@ -1584,7 +1609,7 @@ const ApplicationChatPage: React.FC = () => {
                     <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Placement Fee — Installment Plan
+                    {t('studentDashboard.applicationChatPage.placementFee.installmentPlan')}
                   </h3>
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-sm">
@@ -1592,29 +1617,29 @@ const ApplicationChatPage: React.FC = () => {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        1st Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.firstInstallment')}
                       </span>
-                      <span className="text-green-700 font-semibold">Paid</span>
+                      <span className="text-green-700 font-semibold">{t('studentDashboard.applicationChatPage.placementFee.paid')}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-amber-800 font-medium">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        2nd Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.secondInstallment')}
                       </span>
                       <span className="text-amber-800 font-bold">
-                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} pending
+                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} {t('studentDashboard.applicationChatPage.placementFee.pending')}
                       </span>
                     </div>
                     {(userProfile as any)?.placement_fee_due_date && (
                       <p className="text-xs text-amber-700 mt-1">
-                        Due: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {t('studentDashboard.applicationChatPage.placementFee.due')}: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
                     )}
                   </div>
                   <p className="text-xs text-amber-700 mb-4">
-                    Document downloads (Acceptance Letter &amp; I-20) will be released after the 2nd installment is approved.
+                    {t('studentDashboard.applicationChatPage.placementFee.unlockMessage')}
                   </p>
                   <ZelleCheckout
                     feeType="placement_fee"
@@ -1632,23 +1657,38 @@ const ApplicationChatPage: React.FC = () => {
                 applicationDetails.acceptance_letter_sent_at) && 
                !(userProfile as any)?.has_paid_i20_control_fee && (
                 <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
-                  <div className="flex items-start gap-3">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-blue-900 mb-2">
                         {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
                       </h3>
-                      <p className="text-blue-800 text-sm mb-3">
+                      <p className="text-blue-800 text-sm mb-4">
                         {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
                       </p>
-                      <button
-                        onClick={() => setActiveTab('i20')}
-                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
-                      </button>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => setActiveTab('i20')}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
+                        </button>
+                        
+                        {applicationDetails.acceptance_letter_preview_url && (
+                          <button
+                            onClick={() => setPreviewUrl(applicationDetails.acceptance_letter_preview_url)}
+                            className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewPreviewButton') || 'View Preview'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1668,12 +1708,12 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-amber-900 mb-2">
-                        Document Download Pending — 2nd Installment Required
+                        {t('studentDashboard.applicationChatPage.placementFee.downloadPendingTitle')}
                       </h3>
                       <p className="text-amber-800 text-sm">
-                        Your document is ready, but the download will be released after the 2nd installment of the Placement Fee (${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}) is paid and approved.
+                        {t('studentDashboard.applicationChatPage.placementFee.downloadPendingDescription', { amount: `$${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}` })}
                         {(userProfile as any)?.placement_fee_due_date && (
-                          <> Due date: <strong>{new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</>
+                          <> {t('studentDashboard.applicationChatPage.placementFee.dueDate', { date: new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}.</>
                         )}
                       </p>
                     </div>
@@ -1814,7 +1854,7 @@ const ApplicationChatPage: React.FC = () => {
                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                        </svg>
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
+                                   {t('common:labels.download')}
                                 </button>
                                 <button
                        className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"

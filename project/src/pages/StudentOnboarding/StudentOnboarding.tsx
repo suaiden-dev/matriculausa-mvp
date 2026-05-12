@@ -403,7 +403,7 @@ const StudentOnboarding: React.FC = () => {
             } else if (stepParam === 'my_applications') {
               // Detectar se é uma taxa de pacote (ds160 ou i539) ou i20 padrão
               const feeTypeParam = searchParams.get('fee_type');
-              if (feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package') {
+              if (feeTypeParam === 'control_fee' || feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package') {
                 edgeFunctionName = 'verify-stripe-session-package-fee';
               } else {
                 edgeFunctionName = 'verify-stripe-session-i20-control-fee';
@@ -455,7 +455,7 @@ const StudentOnboarding: React.FC = () => {
                 // Package fees (ds160/i539) within my_applications don't advance the
                 // onboarding step — they are sub-payments that don't complete the step.
                 const feeTypeParam = searchParams.get('fee_type');
-                const isPackageFee = feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package';
+                const isPackageFee = feeTypeParam === 'control_fee' || feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package';
                 if (stepParam === 'my_applications' && isPackageFee) {
                   console.log(`[Onboarding] 💳 Package fee (${feeTypeParam}) confirmado. Permanecendo em my_applications.`);
                   goToStep('my_applications');

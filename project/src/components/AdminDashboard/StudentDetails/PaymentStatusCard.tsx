@@ -1131,7 +1131,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-539 Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for transfer students with inactive visa</dd>
                   <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                     {isPaid && realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null
@@ -1194,7 +1194,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">DS-160 Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for initial F-1 visa students</dd>
                   {editingFees ? (
                     <div className="mt-2">
@@ -1319,7 +1319,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-539 COS Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for change of status students</dd>
                   {editingFees ? (
                     <div className="mt-2">

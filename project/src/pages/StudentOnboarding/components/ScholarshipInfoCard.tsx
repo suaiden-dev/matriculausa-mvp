@@ -450,7 +450,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
                         className="inline-flex items-center gap-2 px-4 py-2.5 border-2 border-emerald-200 text-emerald-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-100 transition-all"
                       >
                         <Award className="w-3.5 h-3.5" />
-                        {t('common:labels.view', 'Visualizar')}
+                        {t('common:labels.view')}
                       </button>
                     )}
                     {acceptanceLetter?.onDownload && (
@@ -459,7 +459,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        {t('common:labels.download', 'Download')}
+                        {t('common:labels.download')}
                       </button>
                     )}
                   </div>
