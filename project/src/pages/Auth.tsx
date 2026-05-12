@@ -608,200 +608,356 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   if (mode === 'login') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-6 sm:space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <div className="flex justify-center mb-6 sm:mb-8">
-              <img 
-                src="/favicon-branco.png" 
-                alt="Matrícula USA" 
-                className="h-12 sm:h-16 w-auto"
-              />
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-3 sm:mb-4">
-              {t('authPage.login.title')}
-            </h2>
-            <p className="text-slate-600 text-base sm:text-lg px-4">
-              {t('authPage.login.subtitle')}
-            </p>
-            <p className="mt-4 text-sm text-slate-500 px-4">
-              {t('authPage.login.noAccount')}{' '}
-              <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
-                {t('authPage.login.signUpHere')}
-              </Link>
-            </p>
+      <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Side: Branding & Copywriting (Hidden on Mobile) */}
+        <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-center items-center p-12 lg:p-16 xl:p-24">
+          {/* Abstract Background Elements */}
+          <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+            <div className="absolute top-1/2 -left-24 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
           </div>
 
-          {/* Form */}
-          <form className="mt-6 sm:mt-8 space-y-6 bg-slate-50 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200" onSubmit={handleSubmit}>
+          {/* Content Wrapper for Vertical Centering */}
+          <div className="relative z-10 w-full max-w-xl space-y-12 xl:space-y-16">
+            {/* Logo & Identity */}
+            <div className="flex flex-col items-center">
+              <Link to="/">
+                <img 
+                  src="/favicon-branco.png" 
+                  alt="Matrícula USA" 
+                  className="h-16 w-auto mb-10 hover:scale-105 transition-transform duration-300"
+                />
+              </Link>
+              
+              <div className="space-y-6">
+                <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight text-center">
+                  Transforme seu sonho de estudar nos EUA em realidade.
+                </h1>
+              </div>
+            </div>
+
+            {/* Identity Points / Features */}
+            <div className="space-y-8">
+              <div className="flex items-center space-x-4 group">
+                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Bolsas Exclusivas</h3>
+                  <p className="text-blue-100/70 text-sm leading-relaxed">
+                    Acesso a descontos de até 75% na anuidade através de parcerias diretas.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 group">
+                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Processo Simplificado</h3>
+                  <p className="text-blue-100/70 text-sm leading-relaxed">
+                    Nós cuidamos da burocracia para que você foque apenas nos seus estudos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 group">
+                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Suporte Especializado</h3>
+                  <p className="text-blue-100/70 text-sm leading-relaxed">
+                    Mentoria personalizada em português durante todas as etapas da jornada.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Login Form */}
+        <div className="w-full lg:w-1/2 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar">
+          <div className="max-w-lg w-full mx-auto p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-center min-h-full">
+            {/* Mobile Header (Hidden on Desktop) */}
+            <div className="lg:hidden text-center mb-10">
+              <div className="flex justify-center mb-6">
+                <Link to="/">
+                  <img 
+                    src="/logo.png.png" 
+                    alt="Matrícula USA" 
+                    className="h-12 w-auto"
+                  />
+                </Link>
+              </div>
+              <h1 className="text-3xl font-black text-slate-900 mb-2">
+                {t('authPage.login.title')}
+              </h1>
+              <p className="text-slate-600">
+                {t('authPage.login.subtitle')}
+              </p>
+            </div>
+
+            {/* Login Header (Desktop only) */}
+            <div className="hidden lg:block mb-10">
+              <h2 className="text-3xl xl:text-4xl font-black text-slate-900 mb-4">
+                {t('authPage.login.title')}
+              </h2>
+              <p className="text-slate-500 font-medium">
+                {t('authPage.login.noAccount')}{' '}
+                <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+                  {t('authPage.login.signUpHere')}
+                </Link>
+              </p>
+            </div>
+
             {error && (
-              <div className={`${error.includes('já foi confirmado') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'} px-4 py-3 rounded-2xl text-sm`}>
-                <div className={`font-medium ${error.includes('já foi confirmado') ? 'text-green-800' : 'text-red-800'} mb-1`}>
-                  {error.includes('já foi confirmado') 
-                    ? t('authPage.login.emailConfirmed') 
-                    : t('authPage.login.loginFailed')}
+              <div className={`${error.includes('já foi confirmado') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'} px-5 py-4 rounded-2xl text-sm mb-8`}>
+                <div className={`font-bold ${error.includes('já foi confirmado') ? 'text-green-800' : 'text-red-800'} mb-1`}>
+                  {error.includes('já foi confirmado') ? 'Sucesso!' : t('authPage.login.loginFailed')}
                 </div>
                 <div>{error}</div>
               </div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
-                {t('authPage.login.emailAddress')}
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email || ''}
-                  onChange={handleInputChange}
-                  className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
-                  placeholder={t('authPage.login.enterEmail')}
-                  autoComplete="username"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
-                {t('authPage.login.password')}
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password || ''}
-                  onChange={handleInputChange}
-                  className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
-                  placeholder={t('authPage.login.enterPassword')}
-                  autoComplete="current-password"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Link
-                to="/forgot-password"
-                className="text-sm text-[#D0151C] hover:text-[#B01218] font-medium transition-colors"
-              >
-                {t('authPage.login.forgotPassword')}
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-sm sm:text-base font-bold rounded-2xl text-white bg-[#05294E] hover:bg-[#041f3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  <span className="text-sm sm:text-base">{t('authPage.login.signingIn')}</span>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
+                    {t('authPage.login.emailAddress')}
+                  </label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email || ''}
+                      onChange={handleInputChange}
+                      className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:bg-white transition-all duration-300 text-base"
+                      placeholder={t('authPage.login.enterEmail')}
+                      autoComplete="username"
+                    />
+                  </div>
                 </div>
-              ) : (
-                <span className="text-sm sm:text-base">{t('authPage.login.signIn')}</span>
-              )}
-            </button>
-          </form>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="password" className="block text-sm font-bold text-slate-900">
+                      {t('authPage.login.password')}
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-xs font-bold text-[#D0151C] hover:text-[#B01218] transition-colors"
+                    >
+                      {t('authPage.login.forgotPassword')}
+                    </Link>
+                  </div>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      value={formData.password || ''}
+                      onChange={handleInputChange}
+                      className="block w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:bg-white transition-all duration-300 text-base"
+                      placeholder={t('authPage.login.enterPassword')}
+                      autoComplete="current-password"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center py-4 px-6 border border-transparent text-lg font-black rounded-2xl text-white bg-[#05294E] hover:bg-[#041f3a] transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100 mt-8"
+              >
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white mr-3"></div>
+                    <span>{t('authPage.login.signingIn')}</span>
+                  </div>
+                ) : (
+                  <span>{t('authPage.login.signIn')}</span>
+                )}
+              </button>
+
+              {/* Mobile Sign Up Link */}
+              <div className="lg:hidden text-center mt-8">
+                <p className="text-slate-500 font-medium text-sm">
+                  {t('authPage.login.noAccount')}{' '}
+                  <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+                    {t('authPage.login.signUpHere')}
+                  </Link>
+                </p>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex justify-center mb-6 sm:mb-8">
-            <img 
-              src="/favicon-branco.png" 
-              alt="Matrícula USA" 
-              className="h-12 sm:h-16 w-auto"
-            />
-          </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 mb-3 sm:mb-4 px-4">
-            {t('authPage.register.title')}
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto px-4">
-            {t('authPage.register.subtitle')}
-          </p>
-          <p className="mt-4 text-sm text-slate-500 px-4">
-            {t('authPage.register.hasAccount')}{' '}
-            <Link to={`/login${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
-              {t('authPage.register.signInHere')}
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+      {/* Left Side: Branding & Copywriting (Hidden on Mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-center items-center p-12 lg:p-16 xl:p-24">
+        {/* Abstract Background Elements */}
+        <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 -left-24 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
+        </div>
+
+        {/* Content Wrapper for Vertical Centering */}
+        <div className="relative z-10 w-full max-w-xl space-y-12 xl:space-y-16">
+          {/* Logo & Identity */}
+          <div className="flex flex-col items-center">
+            <Link to="/">
+              <img 
+                src="/favicon-branco.png" 
+                alt="Matrícula USA" 
+                className="h-16 w-auto mb-10 hover:scale-105 transition-transform duration-300"
+              />
             </Link>
-            </p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex justify-center mb-6 sm:mb-8 px-4">
-          <div className="bg-slate-100 p-1 sm:p-2 rounded-2xl flex space-x-1 sm:space-x-2 w-full max-w-md">
-            <button
-              onClick={() => handleTabChange('student')}
-              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
-                activeTab === 'student'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="truncate">{t('authPage.register.tabStudent')}</span>
-            </button>
-            <button
-              onClick={() => handleTabChange('university')}
-              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
-                activeTab === 'university'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-              <span className="truncate">{t('authPage.register.tabUniversity')}</span>
-            </button>
+            <div className="space-y-6">
+              <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight text-center">
+                Transforme seu sonho de estudar nos EUA em realidade.
+              </h1>
+            </div>
           </div>
-        </div>
 
-        {/* Form Container */}
-        <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-slate-200 mx-4 sm:mx-0">
+          {/* Identity Points / Features */}
+          <div className="space-y-8">
+            <div className="flex items-center space-x-4 group">
+              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Bolsas Exclusivas</h3>
+                <p className="text-blue-100/70 text-sm leading-relaxed">
+                  Acesso a descontos de até 75% na anuidade através de parcerias diretas.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 group">
+              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Processo Simplificado</h3>
+                <p className="text-blue-100/70 text-sm leading-relaxed">
+                  Nós cuidamos da burocracia para que você foque apenas nos seus estudos.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 group">
+              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
+                <User className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Suporte Especializado</h3>
+                <p className="text-blue-100/70 text-sm leading-relaxed">
+                  Mentoria personalizada em português durante todas as etapas da jornada.
+                </p>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+
+      {/* Right Side: Registration Form */}
+      <div className="w-full lg:w-1/2 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar">
+        <div className="max-w-3xl w-full mx-auto p-6 sm:p-12 lg:p-16 xl:p-20 flex flex-col justify-center min-h-full">
+          {/* Mobile Logo Only */}
+          <div className="lg:hidden text-center mb-6">
+            <div className="flex justify-center">
+              <Link to="/">
+                <img 
+                  src="/logo.png.png" 
+                  alt="Matrícula USA" 
+                  className="h-12 w-auto"
+                />
+              </Link>
+            </div>
+          </div>
+
+
+
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-10">
+            <div className="bg-slate-100 p-1.5 rounded-2xl flex space-x-2 w-full">
+              <button
+                onClick={() => handleTabChange('student')}
+                className={`flex items-center justify-center px-4 py-3.5 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
+                  activeTab === 'student'
+                    ? 'bg-white text-[#05294E] shadow-sm ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <GraduationCap className={`h-5 w-5 mr-2 ${activeTab === 'student' ? 'text-[#05294E]' : 'text-slate-400'}`} />
+                <span>{t('authPage.register.tabStudent')}</span>
+              </button>
+              <button
+                onClick={() => handleTabChange('university')}
+                className={`flex items-center justify-center px-4 py-3.5 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
+                  activeTab === 'university'
+                    ? 'bg-white text-[#D0151C] shadow-sm ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Building className={`h-5 w-5 mr-2 ${activeTab === 'university' ? 'text-[#D0151C]' : 'text-slate-400'}`} />
+                <span>{t('authPage.register.tabUniversity')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Registration Title (Moved below toggle) */}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl xl:text-4xl font-black text-slate-900 mb-2">
+              {t('authPage.register.title')}
+            </h2>
+            <p className="text-slate-500 font-medium max-w-lg mx-auto">
+              {t('authPage.register.subtitle')}
+            </p>
+          </div>
+
+          {/* Error Message */}
           {error && 
             error !== t('authPage.messages.invalidDependents') && 
             error !== t('authPage.messages.passwordsNotMatch') && 
             error !== t('authPage.messages.invalidPasswordChars') && 
             error !== t('authPage.messages.weakPassword') && 
             error !== t('authPage.messages.invalidPhone') && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
-              <div className="font-medium text-red-800 mb-1">{t('authPage.messages.registrationFailed')}</div>
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl text-sm mb-8 flex items-start">
+              <AlertCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="font-bold text-red-800 mb-0.5">{t('authPage.messages.registrationFailed')}</div>
+                <div className="opacity-90">{error}</div>
+              </div>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Student Form */}
-            {activeTab === 'student' && (
-              <>
-                <div className="text-center mb-6 sm:mb-8">
-                  <div className="bg-[#05294E] w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <GraduationCap className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">{t('authPage.register.studentRegistration')}</h2>
-                  <p className="text-sm sm:text-base text-slate-600 px-4">{t('authPage.register.studentSubtitle')}</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="lg:col-span-1">
-                    <label htmlFor="full_name" className="block text-sm font-bold text-slate-900 mb-2">
+            {/* Form Fields Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {activeTab === 'student' ? (
+                <>
+                  {/* Full Name */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="full_name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.fullName')}
                     </label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
                       <input
                         id="full_name"
                         name="full_name"
@@ -810,18 +966,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-base"
                         placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Email */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.emailAddress')}
                     </label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
                       <input
                         id="email"
                         name="email"
@@ -830,15 +987,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-base"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Phone */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.phoneNumber')}
                     </label>
                     <div className="relative">
@@ -849,10 +1007,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.phone}
                         onBlur={() => handleFieldBlur('phone')}
                         onChange={(value) => {
-                          setFormData(prev => {
-                            const newData = { ...prev, phone: value || '' };
-                            return newData;
-                          });
+                          setFormData(prev => ({ ...prev, phone: value || '' }));
                         }}
                         style={{
                           '--PhoneInputCountryFlag-height': '1.2em',
@@ -860,28 +1015,63 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#05294E'
                         }}
                         maxLength={20}
-                        className={`phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
+                        className={`phone-input-custom register w-full pl-4 pr-4 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-base ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
-                            : 'border-slate-300'
+                            : 'border-slate-200 focus-within:border-[#05294E] focus-within:bg-white'
                         }`}
                         placeholder={t('authPage.register.enterPhone')}
                       />
                       {error === t('authPage.messages.invalidPhone') && (
-                        <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <div className="mt-1.5 flex items-center text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1">
+                          <AlertCircle className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span>{error}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Dependents */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="dependents" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+                      {t('authPage.register.dependentsLabel')}
+                    </label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] pointer-events-none transition-colors z-10" />
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none transition-colors z-10" />
+                      <select
+                        id="dependents"
+                        name="dependents"
+                        value={formData.dependents ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? null : parseInt(e.target.value);
+                          setFormData(prev => ({ ...prev, dependents: val }));
+                        }}
+                        className={`appearance-none relative block w-full pl-12 pr-12 py-4 bg-slate-50 border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base cursor-pointer ${
+                          error === t('authPage.messages.invalidDependents')
+                            ? 'border-red-500 focus:ring-red-500/20'
+                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
+                        }`}
+                        onBlur={() => trackFieldFilled('dependents')}
+                      >
+                        <option value="" disabled>{t('authPage.register.selectDependents')}</option>
+                        <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
+                        <option value={1}>1 {t('authPage.register.dependentsLabel').slice(0, -1)}</option>
+                        <option value={2}>2 {t('authPage.register.dependentsLabel')}</option>
+                        <option value={3}>3 {t('authPage.register.dependentsLabel')}</option>
+                        <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
+                        <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
                       <input
                         id="password"
                         name="password"
@@ -890,37 +1080,32 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                            ? 'border-red-500 focus:ring-red-500/20'
+                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
                         }`}
                         maxLength={20}
-                        placeholder={t('authPage.register.createPassword')}
+                        placeholder="••••••••"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#05294E] focus:outline-none transition-colors"
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
-                    {(error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')) && (
-                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Confirm Password */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
@@ -929,40 +1114,35 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
                           error === t('authPage.messages.passwordsNotMatch')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                            ? 'border-red-500 focus:ring-red-500/20'
+                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
                         }`}
                         maxLength={20}
-                        placeholder={t('authPage.register.confirmYourPassword')}
+                        placeholder="••••••••"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#05294E] focus:outline-none transition-colors"
                       >
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
-                    {error === t('authPage.messages.passwordsNotMatch') && (
-                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="referralCode" className="block text-sm font-bold text-slate-900 mb-2">
-                      Referral Code (Optional)
+                  {/* Referral Code */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="referralCode" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+                      {t('authPage.register.referralCodeAutoApplied')} (Opcional)
                     </label>
-                    <div className="relative">
+                    <div className="relative group">
                       {isReferralCodeLocked ? (
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
                       ) : (
-                        <Gift className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                        <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
                       )}
                       <input
                         id="referralCode"
@@ -971,121 +1151,48 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.referralCode || ''}
                         onChange={handleReferralCodeChange}
                         readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
                           isReferralCodeLocked 
-                            ? 'bg-gray-50 cursor-not-allowed border-slate-300' 
-                            : ''
+                            ? 'bg-green-50/50 cursor-not-allowed border-green-200' 
+                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
                         } ${
                           referralCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                            ? 'border-green-300 focus:ring-green-500/20 focus:border-green-500' 
                             : referralCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500'
+                            : ''
                         }`}
-                        placeholder={isReferralCodeLocked ? t('authPage.register.referralCodeAutoApplied') : t('authPage.register.referralCodePlaceholderSellerMatr')}
+                        placeholder={t('authPage.register.referralCodePlaceholderSellerMatr')}
                         onBlur={() => trackFieldFilled('referral_code')}
                         maxLength={20}
                       />
                       {referralCodeLoading && (
-                        <div className="absolute right-4 top-4">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#05294E]"></div>
                         </div>
                       )}
                       {referralCodeValid === true && !referralCodeLoading && (
-                        <div className="absolute right-4 top-4">
-                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <CheckCircle className="h-5 w-5 text-green-500 animate-in zoom-in duration-300" />
                         </div>
                       )}
                       {referralCodeValid === false && formData.referralCode && !referralCodeLoading && (
-                        <div className="absolute right-4 top-4">
-                          <X className="h-5 w-5 text-red-500" />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <X className="h-5 w-5 text-red-500 animate-in zoom-in duration-300" />
                         </div>
                       )}
                     </div>
-                    
-                    {/* Feedback de tipo detectado */}
-                    {formData.referralCode && (
-                      <div className="mt-1 text-xs">
-                        {referralCodeValid === true && (
-                          <p className="text-green-600 flex items-center">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Detected: {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.title') : t('authPage.register.referralCode.title')}
-                          </p>
-                        )}
-                        {referralCodeValid === false && (
-                          <p className="text-red-600 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            {t('authPage.register.referralCode.invalid')}
-                          </p>
-                        )}
-                      </div>
-                    )}
                   </div>
-
-                  {/* Dependents field - Always shown for all students - placed right after Referral Code */}
-                  {activeTab === 'student' && (
-                    <div className="lg:col-span-1">
-                      <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
-                        {t('authPage.register.dependentsLabel')} <span className="text-xs font-normal text-slate-500">{t('authPage.register.dependentsHint')}</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
-                        <ChevronDown className="absolute right-4 top-4 h-5 w-5 text-slate-400 pointer-events-none z-10" />
-                        <select
-                          id="dependents"
-                          name="dependents"
-                          value={formData.dependents === null ? '' : formData.dependents}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? null : parseInt(e.target.value);
-                            setFormData(prev => ({ ...prev, dependents: val }));
-                          }}
-                          className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${
-                            error === t('authPage.messages.invalidDependents')
-                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                              : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                          }`}
-                          onBlur={() => trackFieldFilled('dependents')}
-                        >
-                          <option value="" disabled>{t('authPage.register.selectDependents')}</option>
-                          <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={1}>1 {t('authPage.register.dependentsLabel').slice(0, -1)}</option>
-                          <option value={2}>2 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={3}>3 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
-                        </select>
-                        {error === t('authPage.messages.invalidDependents') && (
-                          <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                            <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                            <span>{error}</span>
-                          </div>
-                        )}
-                      </div>
-              </div>
-            )}
-
-                </div>
-              </>
-            )}
-
-            {/* University Form */}
-            {activeTab === 'university' && (
-              <>
-                <div className="text-center mb-6 sm:mb-8">
-                  <div className="bg-[#D0151C] w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">{t('authPage.register.universityRegistration')}</h2>
-                  <p className="text-sm sm:text-base text-slate-600 px-4">{t('authPage.register.universitySubtitle')}</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="lg:col-span-1">
-                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-900 mb-2">
+                </>
+              ) : (
+                <>
+                  {/* University Name */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.universityName')}
                     </label>
-                    <div className="relative">
-                      <Building className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Building className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
                       <input
                         id="universityName"
                         name="universityName"
@@ -1094,18 +1201,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.universityName || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('university_name')}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
                         placeholder={t('authPage.register.enterUniversityName')}
                       />
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="name" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Contact Name */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.contactPersonName')}
                     </label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
                       <input
                         id="name"
                         name="full_name"
@@ -1114,18 +1222,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
                         placeholder={t('authPage.register.yourFullName')}
                       />
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* University Email */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.officialEmail')}
                     </label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
                       <input
                         id="email"
                         name="email"
@@ -1134,15 +1243,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
                         placeholder={t('authPage.register.officialUniversityEmail')}
                       />
                     </div>
                   </div>
-                  
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Phone */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.phoneNumber')}
                     </label>
                     <div className="relative">
@@ -1152,12 +1261,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         addInternationalOption={false}
                         value={formData.phone}
                         onChange={(value) => {
-                          console.log('📞 [PHONEINPUT-UNI] Valor capturado:', value);
-                          setFormData(prev => {
-                            const newData = { ...prev, phone: value || '' };
-                            console.log('📞 [PHONEINPUT-UNI] Novo formData:', newData);
-                            return newData;
-                          });
+                          setFormData(prev => ({ ...prev, phone: value || '' }));
                         }}
                         style={{
                           '--PhoneInputCountryFlag-height': '1.2em',
@@ -1166,28 +1270,23 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         }}
                         maxLength={20}
                         onBlur={() => handleFieldBlur('phone')}
-                        className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
+                        className={`phone-input-custom university w-full pl-4 pr-4 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-base ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
-                            : 'border-slate-300'
+                            : 'border-slate-200 focus-within:border-[#D0151C] focus-within:bg-white'
                         }`}
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
-                      {error === t('authPage.messages.invalidPhone') && (
-                        <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                          <span>{error}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Password */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
                       <input
                         id="password"
                         name="password"
@@ -1196,36 +1295,31 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                            ? 'border-red-500 focus:ring-red-500/20'
+                            : 'border-slate-200 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white'
                         }`}
-                        placeholder={t('authPage.register.createPassword')}
+                        placeholder="••••••••"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#D0151C] focus:outline-none transition-colors"
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
-                    {(error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')) && (
-                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="lg:col-span-1">
-                    <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* Confirm Password */}
+                  <div className="sm:col-span-1">
+                    <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
@@ -1234,76 +1328,64 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
                           error === t('authPage.messages.passwordsNotMatch')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                            ? 'border-red-500 focus:ring-red-500/20'
+                            : 'border-slate-200 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white'
                         }`}
-                        placeholder={t('authPage.register.confirmYourPassword')}
+                        placeholder="••••••••"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#D0151C] focus:outline-none transition-colors"
                       >
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
-                    {error === t('authPage.messages.passwordsNotMatch') && (
-                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                        <span>{error}</span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </>
-            )}
-
-            {/* Terms and Privacy Policy Notice */}
-            <div className="flex items-center space-x-3 mb-4">
-              <input
-                type="checkbox"
-                id="terms-acceptance"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
-              />
-              <label htmlFor="terms-acceptance" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
-                {t('authPage.register.termsNotice')}
-                <a 
-                  href="/terms-of-service" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
-                >
-                  {t('authPage.register.terms')}
-                </a>
-                {t('authPage.register.and')}
-                <a 
-                  href="/privacy-policy" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
-                >
-                  {t('authPage.register.privacyPolicy')}
-                </a>
-                .
-              </label>
+                </>
+              )}
             </div>
 
-            {/* Newsletter Consent Checkbox */}
-            <div className="flex items-center space-x-3 mb-6">
-              <input
-                type="checkbox"
-                id="newsletter-consent"
-                checked={newsletterConsent}
-                onChange={(e) => setNewsletterConsent(e.target.checked)}
-                className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
-              />
-              <label htmlFor="newsletter-consent" className="text-sm text-slate-600 cursor-pointer">
-                {t('authPage.register.newsletterConsent')}
+            {/* Checkboxes Area */}
+            <div className="space-y-4 pt-2">
+              <label className="flex items-start space-x-3 cursor-pointer group">
+                <div className="relative flex items-center mt-1">
+                  <input
+                    type="checkbox"
+                    id="newsletter-consent"
+                    checked={newsletterConsent}
+                    onChange={(e) => setNewsletterConsent(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]/20 transition-all duration-200 cursor-pointer accent-[#05294E]"
+                  />
+                </div>
+                <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
+                  {t('authPage.register.newsletterConsent')}
+                </span>
+              </label>
+
+              <label className="flex items-start space-x-3 cursor-pointer group">
+                <div className="relative flex items-center mt-1">
+                  <input
+                    type="checkbox"
+                    id="terms-acceptance"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]/20 transition-all duration-200 cursor-pointer accent-[#05294E]"
+                  />
+                </div>
+                <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
+                  {t('authPage.register.termsNotice')}
+                  <a href="/terms-of-service" target="_blank" className="text-[#05294E] font-bold hover:underline mx-1">
+                    {t('authPage.register.terms')}
+                  </a>
+                  {t('authPage.register.and')}
+                  <a href="/privacy-policy" target="_blank" className="text-[#05294E] font-bold hover:underline ml-1">
+                    {t('authPage.register.privacyPolicy')}
+                  </a>
+                </span>
               </label>
             </div>
 
@@ -1311,33 +1393,35 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <button
               type="submit"
               disabled={loading || !termsAccepted}
-              className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100 mt-8 ${
                 activeTab === 'student' 
-                  ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 
-                  : 'bg-[#D0151C] hover:bg-[#B01218] focus:ring-[#D0151C]'
+                  ? 'bg-[#05294E] hover:bg-[#041f3a]' 
+                  : 'bg-[#D0151C] hover:bg-[#B01218]'
               }`}
             >
               {loading ? (
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
-                  <span className="text-sm sm:text-base">{t('authPage.register.creatingAccount')}</span>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white mr-3"></div>
+                  <span>{t('authPage.register.creatingAccount')}</span>
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <span className="text-sm sm:text-base">
+                  <span>
                     {activeTab === 'student' ? t('authPage.register.createStudentAccount') : t('authPage.register.createUniversityAccount')}
                   </span>
                 </div>
               )}
             </button>
+
+            <div className="text-center mt-6">
+              <p className="text-slate-500 font-medium text-sm">
+                {t('authPage.register.hasAccount')}{' '}
+                <Link to={`/login${location.search}`} className="text-[#D0151C] hover:text-[#B01218] font-bold transition-colors">
+                  {t('authPage.register.signInHere')}
+                </Link>
+              </p>
+            </div>
           </form>
-
-
-
-
-
-
-          {/* Formulário de registro de estudante */}
         </div>
       </div>
     </div>
