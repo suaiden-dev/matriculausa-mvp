@@ -1628,7 +1628,6 @@ const QuickRegistration: React.FC = () => {
                                 <PayerAlternativeForm 
                                   onPayerInfoChange={setPayerInfo} 
                                   initialCpf={formData.cpf}
-                                  onPayButtonClick={() => handlePaymentCheckout('parcelow')}
                                   isProcessing={loading}
                                 />
                               </div>

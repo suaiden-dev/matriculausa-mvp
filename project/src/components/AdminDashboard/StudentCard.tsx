@@ -395,6 +395,39 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </div>
       )}
 
+      {/* Basic Doc status tags — Scholarship Eligibility (review) */}
+      {currentStageKey === 'review' && (
+        <div className="flex flex-col gap-1 mb-2">
+          {(student.basic_docs_total_under_review ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              {student.basic_docs_total_under_review} em revisão
+            </div>
+          )}
+          {(student.basic_docs_total_rejected ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+              <XCircle className="w-3 h-3 flex-shrink-0" />
+              {student.basic_docs_total_rejected} recusado(s)
+            </div>
+          )}
+          {(student.basic_docs_total_approved ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+              <CheckCircle className="w-3 h-3 flex-shrink-0" />
+              {student.basic_docs_total_approved}/{student.basic_docs_total_required} aprovado(s)
+            </div>
+          )}
+          {(() => {
+            const pending = (student.basic_docs_total_required ?? 0) - (student.basic_docs_total_uploaded ?? 0);
+            return pending > 0 ? (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {pending} documento(s) pendente(s)
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
+
       {/* Transfer form status tags — student_sends_letter */}
       {currentStageKey === 'student_sends_letter' && (
         <div className="flex flex-col gap-1 mb-2">
