@@ -4,6 +4,7 @@ import { Mail, Lock, User, Share2, Coins, GraduationCap, Sparkles, Eye, EyeOff, 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 const getPasswordStrength = (password: string) => {
   let strength = 0;
@@ -116,7 +117,24 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
 };
 
 const AffiliateRegistration: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirecionamento se já estiver logado
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      const timer = setTimeout(() => {
+        const role = user.role || 'student';
+        const dashboardPath = 
+          role === 'affiliate' ? '/affiliate/dashboard' :
+          role === 'seller' ? '/seller/dashboard' :
+          role === 'admin' ? '/admin/dashboard' :
+          '/student/dashboard';
+        navigate(dashboardPath, { replace: true });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, authLoading, navigate]);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -125,6 +143,37 @@ const AffiliateRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
   });
+
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#05294E] via-[#083a6e] to-[#0a4a8a] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-10 shadow-2xl text-center">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-[#05294E]" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Você já está logado!</h1>
+          <p className="text-slate-500 mb-8">
+            Você já possui uma conta ativa. Redirecionando para o seu dashboard em instantes...
+          </p>
+          <button
+            onClick={() => {
+              const role = user.role || 'student';
+              const dashboardPath = 
+                role === 'affiliate' ? '/affiliate/dashboard' :
+                role === 'seller' ? '/seller/dashboard' :
+                role === 'admin' ? '/admin/dashboard' :
+                '/student/dashboard';
+              navigate(dashboardPath);
+            }}
+            className="w-full py-3 bg-[#05294E] text-white font-bold rounded-xl hover:bg-[#041f38] transition-colors"
+          >
+            Ir para o Dashboard agora
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

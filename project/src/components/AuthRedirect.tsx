@@ -148,7 +148,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       const isWhitelistedInternalRegister = currentPath === '/student/register';
 
       // REDIRECIONAMENTO APÓS LOGIN
-      if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
+      // REDIRECIONAMENTO APÓS LOGIN (REMOVIDO PARA MOSTRAR MENSAGEM NO COMPONENTE)
+      const isRegistrationPath = false;
+
+      if (isRegistrationPath) {
         const searchParams = new URLSearchParams(location.search);
         const redirectParam = searchParams.get('redirect');
 

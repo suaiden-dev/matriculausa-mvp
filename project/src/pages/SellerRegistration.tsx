@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Phone, CheckCircle, UserCheck, Shield, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Header from '../components/Header';
@@ -11,8 +12,25 @@ interface SellerRegistrationProps {}
 
 const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
   const { t: _t } = useTranslation();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Redirecionamento se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const timer = setTimeout(() => {
+        const role = user.role || 'student';
+        const dashboardPath = 
+          role === 'affiliate' ? '/affiliate/dashboard' :
+          role === 'seller' ? '/seller/dashboard' :
+          role === 'admin' ? '/admin/dashboard' :
+          '/student/dashboard';
+        navigate(dashboardPath, { replace: true });
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, authLoading, navigate]);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -22,6 +40,39 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     phone: '',
     registration_code: ''
   });
+
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md mx-auto bg-slate-50 rounded-3xl p-10 shadow-lg border border-slate-200 text-center">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-[#05294E]" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 mb-2 text-center uppercase tracking-tight">You are already logged in!</h1>
+            <p className="text-slate-600 mb-8">
+              You already have an active account. Redirecting to your dashboard in a few seconds...
+            </p>
+            <button
+              onClick={() => {
+                const role = user.role || 'student';
+                const dashboardPath = 
+                  role === 'affiliate' ? '/affiliate/dashboard' :
+                  role === 'seller' ? '/seller/dashboard' :
+                  role === 'admin' ? '/admin/dashboard' :
+                  '/student/dashboard';
+                navigate(dashboardPath);
+              }}
+              className="w-full py-4 bg-[#05294E] text-white font-bold rounded-2xl hover:bg-[#041f38] transition-all shadow-md"
+            >
+              Go to Dashboard Now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
