@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IdentityPhotoUpload, IdentityPhotoUploadRef } from '../../../components/IdentityPhotoUpload';
 import { supabase } from '../../../lib/supabase';
@@ -20,6 +20,8 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
   const [saving, setSaving] = useState(false);
   const [alreadyVerified, setAlreadyVerified] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const photoUploadRef = useRef<IdentityPhotoUploadRef>(null);
 
   // Verificar se já existe foto enviada anteriormente (lê de user_profiles)
@@ -32,13 +34,18 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
       try {
         const { data } = await supabase
           .from('user_profiles')
-          .select('identity_photo_path')
+          .select('identity_photo_path, identity_photo_status, identity_photo_rejection_reason')
           .eq('user_id', user.id)
           .maybeSingle();
 
         if (data?.identity_photo_path) {
-          setAlreadyVerified(true);
           setUploadedPath(data.identity_photo_path);
+          setStatus(data.identity_photo_status);
+          setRejectionReason(data.identity_photo_rejection_reason);
+          
+          if (data.identity_photo_status !== 'rejected') {
+            setAlreadyVerified(true);
+          }
         }
       } catch (e) {
         console.warn('[IdentityStep] Erro ao checar foto existente:', e);
@@ -127,6 +134,19 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
       </div>
       <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 space-y-6">
+          {status === 'rejected' && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-red-800 uppercase tracking-tight mb-1">
+                  {t('selectionSurvey.identityRejectedTitle') || 'Documento Rejeitado'}
+                </p>
+                <p className="text-sm text-red-700">
+                  {rejectionReason || t('selectionSurvey.identityRejectedDefaultReason') || 'Sua foto de identidade foi recusada. Por favor, envie uma nova foto nítida.'}
+                </p>
+              </div>
+            </div>
+          )}
           <IdentityPhotoUpload
             ref={photoUploadRef}
             onUploadSuccess={(path) => handleUploadSuccess(path)}

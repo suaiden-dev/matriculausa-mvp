@@ -120,17 +120,18 @@ export const useOnboardingProgress = () => {
   }, [saveStep]);
 
   // Função mestre de verificação de progresso (Mecanismo Anti-Elástico)
-  const checkProgress = useCallback(async () => {
+  const checkProgress = useCallback(async (force: boolean = false): Promise<OnboardingStep | null> => {
     if (!user?.id) {
       if (loading) setLoading(false);
-      return;
+      return null;
     }
 
     // LOCK: Evita regressão automática durante transições manuais ou salvamentos ativos
+    // Bypassed se force === true (útil para saltos de navegação)
     const now = Date.now();
-    if (isSavingStepRef.current || (now - lastManualNavRef.current < 1500)) {
+    if (!force && (isSavingStepRef.current || (now - lastManualNavRef.current < 1500))) {
        if (loading) setLoading(false);
-       return;
+       return currentStepRef.current;
     }
 
     const currentCheckId = ++lastCheckId.current;
@@ -156,7 +157,7 @@ export const useOnboardingProgress = () => {
       if (profileError || !freshData) {
         console.warn(`[OnboardingHook] 🕵️‍♂️ Perfil inacessível. (AuthID: ${user?.id}). Tentando manter estado anterior.`, profileError);
         if (loading) setLoading(false);
-        return;
+        return currentStepRef.current;
       }
       const freshProfile = freshData;
       const studentId = freshProfile.id;
@@ -164,7 +165,7 @@ export const useOnboardingProgress = () => {
       if (!studentId) {
         console.warn('[OnboardingHook] ⚠️ Perfil sem ID de banco (studentId).');
         if (loading) setLoading(false);
-        return;
+        return currentStepRef.current;
       }
 
       // 1.1 Verificações de Etapa (Pagamento, Termos, etc.)
@@ -172,8 +173,10 @@ export const useOnboardingProgress = () => {
       const selectionSurveyPassed = !!freshProfile.selection_survey_passed;
 
       // 1.2 Verificação de Identidade (Foto do Termo)
-      // Otimização: só busca no banco se o perfil ainda não tem identity_verified = true
-      let identityVerified = !!(freshProfile as any).identity_verified || !!(freshProfile as any).identity_photo_path;
+      // Se estiver rejected, não é considerado verificado para o fluxo de onboarding (força reenvio)
+      let identityVerified = !!(freshProfile as any).identity_verified || 
+        (!!(freshProfile as any).identity_photo_path && (freshProfile as any).identity_photo_status !== 'rejected');
+        
       if (!identityVerified) {
         const { data: photoAcceptance } = await supabase
           .from('comprehensive_term_acceptance')
@@ -197,7 +200,6 @@ export const useOnboardingProgress = () => {
         await fetchCart(user.id);
         const currentCart = useCartStore.getState().cart;
         // ✅ scholarshipsSelected depende apenas de evidências concretas de bolsa escolhida.
-        // student_process_type NÃO é evidência de seleção de bolsa — isso causava o pulo da etapa 3.
         scholarshipsSelected = !!(
           currentCart.length > 0 ||
           (appsData && appsData.length > 0) ||
@@ -234,7 +236,7 @@ export const useOnboardingProgress = () => {
       else if (!selectionSurveyPassed) maxAllowedStep = 'selection_survey';
       else if (!scholarshipsSelected) maxAllowedStep = 'scholarship_selection';
       else if (!processTypeSelected) maxAllowedStep = 'process_type';
-      else if (!documentsUploaded) maxAllowedStep = 'documents_upload'; // Exige apenas o envio para liberar pagamentos
+      else if (!documentsUploaded) maxAllowedStep = 'documents_upload'; 
       else if (!applicationFeePaid) maxAllowedStep = 'payment';
       else if (isNewFlowUser && !placementFeePaid) maxAllowedStep = 'placement_fee';
       else if (!isNewFlowUser && !scholarshipFeePaid && freshProfile.student_process_type !== 'resident') maxAllowedStep = 'scholarship_fee';
@@ -242,7 +244,7 @@ export const useOnboardingProgress = () => {
       else maxAllowedStep = 'my_applications';
 
       // DECISÃO FINAL DE PASSO A REPRESENTAR NA UI
-      const uiStep = currentStepRef.current; // Valor MAIS ATUAL da intenção da UI
+      const uiStep = currentStepRef.current;
       const savedStep = (freshProfile.onboarding_current_step as OnboardingStep) || 'selection_fee';
       
       const uiIdx = VALID_STEPS.indexOf(uiStep);
@@ -253,23 +255,24 @@ export const useOnboardingProgress = () => {
       if (onboardingCompleted) {
         chosenStep = 'completed';
       } else {
-        // 3. Se a UI estiver atrás do banco (ex: refresh), tentamos usar o banco MAS limitado pelo progresso real.
-        
-        if (uiIdx !== -1 && uiIdx <= maxIdx && uiIdx >= savedIdx) {
+        // 🎯 Lógica de Salto Inteligente:
+        // Se a verificação foi forçada (clique em Próximo ou conclusão), 
+        // vamos direto para o passo mais avançado disponível.
+        if (force) {
+          chosenStep = maxAllowedStep;
+        } 
+        // Caso contrário (refresh ou navegação passiva), respeitamos onde o aluno estava,
+        // desde que seja um passo válido (<= maxIdx).
+        else if (uiIdx !== -1 && uiIdx <= maxIdx && uiIdx >= savedIdx) {
           chosenStep = uiStep;
         } else if (uiIdx > maxIdx) {
-          // Bloqueio de tentativa de pular etapas
           chosenStep = maxAllowedStep;
         } else {
-          // Fallback para o valor persistido no banco, mas NUNCA permitindo ultrapassar o limite real de progresso
-          // Isso corrige bugs onde o banco pode ter um step inconsistente (ex: salvo por erro ou fluxo anterior)
           chosenStep = (savedIdx <= maxIdx) ? savedStep : maxAllowedStep;
         }
       }
 
-      // console.log(`[Onboarding] 🚧 DECISÃO FINAL: | UI: ${uiStep} | Banco: ${savedStep} | Permitido: ${maxAllowedStep} | ESCOLHIDO: ${chosenStep}`);
-
-      if (currentCheckId !== lastCheckId.current) return;
+      if (currentCheckId !== lastCheckId.current) return chosenStep;
 
       currentStepRef.current = chosenStep;
       setState({
@@ -296,8 +299,11 @@ export const useOnboardingProgress = () => {
         saveStep(chosenStep);
       }
 
+      return chosenStep;
+
     } catch (error) {
       console.error('[OnboardingHook] Error checking progress:', error);
+      return currentStepRef.current;
     } finally {
       if (currentCheckId === lastCheckId.current) {
         setLoading(false);
@@ -310,7 +316,8 @@ export const useOnboardingProgress = () => {
   }, [checkProgress]);
 
   const markStepComplete = useCallback(async () => {
-    await checkProgress();
+    // Ao marcar como completo, forçamos o checkProgress para pular etapas se necessário
+    return await checkProgress(true);
   }, [checkProgress]);
 
   return {
