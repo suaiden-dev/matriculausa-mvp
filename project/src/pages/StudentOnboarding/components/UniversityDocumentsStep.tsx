@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, GraduationCap, 
@@ -980,7 +981,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
             {previewUrl && <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />}
 
-            {blurredPreviewUrl && (
+            {blurredPreviewUrl && createPortal(
                 <div
                     className="fixed inset-0 bg-black/80 flex items-center justify-center transition-opacity z-[9999999]"
                     onClick={() => setBlurredPreviewUrl(null)}
@@ -1013,30 +1014,30 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             <img
                                 src={blurredPreviewUrl}
                                 alt="I-20 Preview"
-                                className="w-full h-full object-cover filter blur-sm brightness-95 scale-105"
+                                className="w-full h-full object-cover filter brightness-95 scale-105"
                                 style={{ pointerEvents: 'none', userSelect: 'none' }}
                             />
                             
                             {/* Overlay de bloqueio */}
-                            <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <div style={{
                                 background: 'white',
-                                borderRadius: 20,
-                                padding: '32px 40px',
+                                borderRadius: 24,
+                                padding: '40px 48px',
                                 textAlign: 'center',
-                                maxWidth: 320,
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                maxWidth: 420,
+                                boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
                             }}>
-                                <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
-                                <h3 style={{ fontWeight: 900, fontSize: 18, color: '#1e293b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                <div style={{ fontSize: 64, marginBottom: 16 }}>🔒</div>
+                                <h3 style={{ fontWeight: 900, fontSize: 22, color: '#1e293b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
                                     {t('registration:i20Preview.title')}
                                 </h3>
-                                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
+                                <p style={{ color: '#64748b', fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
                                     {t('registration:i20Preview.description')}
                                 </p>
                                 <button
                                     onClick={() => { setBlurredPreviewUrl(null); setActiveTab('ds160'); }}
-                                    style={{ background: '#1e40af', color: 'white', border: 'none', borderRadius: 10, padding: '10px 24px', fontWeight: 700, fontSize: 13, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}
+                                    style={{ background: '#1e40af', color: 'white', border: 'none', borderRadius: 12, padding: '14px 32px', fontWeight: 700, fontSize: 15, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1, width: '100%' }}
                                 >
                                     {t('registration:i20Preview.payButton')}
                                 </button>
@@ -1045,7 +1046,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         {/* Fecha Corpo do Modal */}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
