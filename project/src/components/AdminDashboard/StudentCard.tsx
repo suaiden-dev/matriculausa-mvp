@@ -6,6 +6,7 @@ import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 import { toast } from 'react-hot-toast';
 import { useAssignAdminMutation, useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 
 interface InternalAdmin {
   id: string;
@@ -31,6 +32,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
+  const { logAction } = useStudentLogs(student.student_id);
   const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
 
   // Atribuído a outro admin: restringe se o atual for restrito
@@ -61,6 +63,18 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     const newDropped = !student.is_dropped;
     try {
       await dropStudentMutation.mutateAsync({ studentId: student.student_id, isDropped: newDropped });
+      
+      await logAction(
+        newDropped ? 'student_dropped' : 'student_restored',
+        newDropped ? 'Student was marked as dropped from the process' : 'Student was restored to the process',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          admin_name: userProfile?.full_name 
+        }
+      );
+      
       toast.success(newDropped ? 'Aluno marcado como dropped' : 'Aluno restaurado');
     } catch {
       toast.error('Erro ao atualizar status');
@@ -72,6 +86,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markSentDocsMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'docs_sent_to_university',
+        'Documents were marked as sent to the university',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('Docs marcados como enviados para a universidade');
     } catch {
       toast.error('Erro ao atualizar');
@@ -83,6 +110,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markSevisMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'sevis_transfer_completed',
+        'SEVIS transfer was marked as completed',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('SEVIS transfer marcado como concluído');
     } catch {
       toast.error('Erro ao atualizar');
@@ -95,6 +135,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markVisaMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'visa_approved',
+        'Visa was marked as approved',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('Visto marcado como aprovado');
     } catch {
       toast.error('Erro ao atualizar');
@@ -106,6 +159,26 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     setShowAdminDropdown(false);
     try {
       await assignAdminMutation.mutateAsync({ studentId: student.student_id, adminId });
+      
+      let adminName = 'Unknown Admin';
+      if (adminId) {
+        const foundAdmin = internalAdmins.find(a => a.id === adminId);
+        if (foundAdmin) adminName = foundAdmin.name;
+      }
+
+      await logAction(
+        adminId ? 'admin_assigned' : 'admin_unassigned',
+        adminId ? `Student assigned to admin: ${adminName}` : 'Student unassigned from admin',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          assigned_admin_id: adminId,
+          assigned_admin_name: adminId ? adminName : null,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success(adminId ? 'Aluno atribuído' : 'Atribuição removida');
     } catch {
       toast.error('Erro ao atribuir responsável');
@@ -230,22 +303,32 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </button>
       </div>
 
-      {/* Scholarship info */}
-      {student.scholarship_title && (
+      {/* Course / Scholarship info */}
+      {(student.course_name || student.scholarship_title) && (
         <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
           <GraduationCap className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
+          <span className="truncate" title={student.course_name || student.scholarship_title || ''}>
+            {student.course_name || student.scholarship_title}
+          </span>
         </div>
       )}
 
       {/* Photo + Form tags — específico da coluna Selection Process Payment */}
       {showSelectionTags && (
         <div className="flex flex-col gap-1 mb-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border ${
+            student.has_uploaded_photo 
+              ? 'border-green-200 bg-green-50 text-green-700' 
+              : 'border-amber-200 bg-amber-50 text-amber-700'
+          }`}>
             <Camera className="w-3 h-3 flex-shrink-0" />
             {student.has_uploaded_photo ? 'Photo uploaded' : 'Pending: photo upload'}
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border ${
+            student.has_submitted_form 
+              ? 'border-green-200 bg-green-50 text-green-700' 
+              : 'border-amber-200 bg-amber-50 text-amber-700'
+          }`}>
             <FileText className="w-3 h-3 flex-shrink-0" />
             {student.has_submitted_form ? 'Form submitted' : 'Pending: fill & submit form'}
           </div>

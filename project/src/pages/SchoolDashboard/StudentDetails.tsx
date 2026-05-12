@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { generatePDFThumbnail } from '../../utils/pdfThumbnail'; // TODO: remover após migração completa
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, UserCircle, CheckCircle2 } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
@@ -1408,8 +1409,10 @@ const StudentDetails: React.FC = () => {
     try {
       // Sanitizar o nome do arquivo e gerar chave segura
       const sanitizedFileName = sanitizeFileName(acceptanceLetterFile.name);
-      const fileName = `acceptance_letters/${Date.now()}_${sanitizedFileName}`;
+      const timestamp = Date.now();
+      const fileName = `acceptance_letters/${timestamp}_${sanitizedFileName}`;
       
+      // Upload do arquivo original
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(fileName, acceptanceLetterFile);
@@ -1418,14 +1421,39 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to upload file: ' + uploadError.message);
       }
 
-      // Obter a URL pública do arquivo
+      // Obter a URL pública do arquivo original
       const { data: { publicUrl } } = supabase.storage
         .from('document-attachments')
         .getPublicUrl(uploadData.path);
 
-      // Atualizar a aplicação com a URL da carta de aceite
+      // Gerar preview via Edge Function no backend (seguro e confiável)
+      let previewUrl: string | null = null;
+      if (acceptanceLetterFile.type === 'application/pdf') {
+        console.log('[StudentDetails] Requesting backend preview generation...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+
+        const res = await supabase.functions.invoke('generate-document-preview', {
+          body: {
+            storagePath: uploadData.path,
+            applicationId: application.id,
+            documentType: 'acceptance_letter',
+          },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (res.error) {
+          console.error('[StudentDetails] Preview generation failed:', res.error);
+        } else {
+          previewUrl = res.data?.previewUrl ?? null;
+          console.log('[StudentDetails] Preview generated:', previewUrl);
+        }
+      }
+
+      // Atualizar a aplicação com a URL da carta de aceite e o preview
       const updateData = {
         acceptance_letter_url: publicUrl,
+        acceptance_letter_preview_url: previewUrl,
         acceptance_letter_status: 'sent',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
@@ -1451,6 +1479,7 @@ const StudentDetails: React.FC = () => {
       setApplication(prev => prev ? ({
         ...prev,
         acceptance_letter_url: publicUrl,
+        acceptance_letter_preview_url: previewUrl,
         acceptance_letter_status: 'sent',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
@@ -1797,10 +1826,10 @@ const StudentDetails: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Student Application
+                Admitted Enrollment
               </h1>
               <p className="mt-1 text-sm text-slate-600">
-                Review and manage {application?.user_profiles?.full_name || 'Student'}'s application details
+                Review and manage {application?.user_profiles?.full_name || 'Student'}'s admitted enrollment details
               </p>
             </div>
             <div className="flex items-center space-x-3">

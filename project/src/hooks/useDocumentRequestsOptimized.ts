@@ -92,16 +92,19 @@ export const useDocumentRequestsOptimized = (
         );
       }
 
+      // ✅ OTIMIZAÇÃO 3: Sempre buscar globais truly (null university_id) e unir com globais de universidades
+      let globalQuery = supabase
+        .from('document_requests')
+        .select(fields)
+        .eq('is_global', true);
+
       if (uniqueUniversityIds.length > 0) {
-        promises.push(
-          supabase
-            .from('document_requests')
-            .select(fields)
-            .eq('is_global', true)
-            .in('university_id', uniqueUniversityIds)
-            .order('created_at', { ascending: false })
-        );
+        globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+      } else {
+        globalQuery = globalQuery.is('university_id', null);
       }
+
+      promises.push(globalQuery.order('created_at', { ascending: false }));
 
       // Executar todas as queries em paralelo
       const results = await Promise.all(promises);

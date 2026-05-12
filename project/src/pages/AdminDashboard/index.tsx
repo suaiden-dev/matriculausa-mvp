@@ -301,11 +301,13 @@ const AdminDashboard: React.FC = () => {
           user_profile: userProfilesMap[university.user_id] || null
         }));
 
-      const processedScholarships = scholarshipsData.map((scholarship: any) => ({
-        ...scholarship,
-        application_count: applicationCounts[scholarship.id] || 0,
-        cart_count: cartCounts[scholarship.id] || 0
-      }));
+      const processedScholarships = scholarshipsData
+        .filter((s: any) => !s.title?.includes('(Migma)'))
+        .map((scholarship: any) => ({
+          ...scholarship,
+          application_count: applicationCounts[scholarship.id] || 0,
+          cart_count: cartCounts[scholarship.id] || 0
+        }));
 
       const finalUsersData = adminUsersData
         .filter((u: any) => {
@@ -329,9 +331,13 @@ const AdminDashboard: React.FC = () => {
 
       const processedApplications = applicationsData
         .filter((app: any) => {
-          if (!shouldFilterTestEmails) return true;
-          const email = userEmails[app.student_id] || '';
-          return !email.toLowerCase().includes('@uorak.com');
+          // Filtrar por email de teste
+          if (shouldFilterTestEmails) {
+            const email = userEmails[app.student_id] || '';
+            if (email.toLowerCase().includes('@uorak.com')) return false;
+          }
+          // Filtrar bolsas Migma
+          return !app.scholarships?.title?.includes('(Migma)');
         })
         .map((app: any) => ({
           id: app.id,

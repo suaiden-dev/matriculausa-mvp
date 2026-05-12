@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { useTranslation } from 'react-i18next';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
@@ -118,6 +119,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const couponInputRef = useRef<HTMLInputElement>(null);
 
   const fetchApplications = useCallback(async () => {
@@ -336,8 +338,11 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   };
 
   const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow', skipCpfCheck = false) => {
-    // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem
-    if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck) {
+    // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
+    const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
+
+    // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem e não houver payerInfo
+    if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck && !hasPayerInfo) {
       setPendingParcelowApp(application);
       setShowInlineCpf(application.id);
       // Fechar Zelle se aberto
@@ -391,7 +396,8 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             // final_amount = valor com desconto do cupom (ou valor cheio se sem cupom)
             final_amount: finalAmount.toString(),
             promotional_coupon: appliedCoupon
-          }
+          },
+          ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo })
         })
       });
 
@@ -845,8 +851,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 )}
                               </button>
 
-                              {/* Campo inline de CPF para Parcelow */}
-                              {showInlineCpf === app.id && (
+                              {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
+                              <div className="mt-4">
+                                <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                              </div>
+
+                              {/* Campo inline de CPF para Parcelow (apenas se não houver PayerInfo e o perfil não tiver CPF) */}
+                              {showInlineCpf === app.id && !payerInfo && (
                                 <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                     <div className="flex-initial sm:w-[300px]">

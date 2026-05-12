@@ -47,16 +47,18 @@ const ApplicationMonitoring: React.FC = () => {
       setLoading(false);
       return;
     }
-    const apps = (data || []).map((app: any) => ({
-      id: app.id,
-      student_name: app.user_profiles?.full_name || 'Unknown',
-      student_email: app.user_profiles?.email || '',
-      scholarship_title: app.scholarships?.title || 'Unknown',
-      university_name: app.scholarships?.universities?.name || 'Unknown',
-      amount: app.scholarships?.amount || 0,
-      status: app.status,
-      applied_at: app.applied_at
-    }));
+    const apps = (data || [])
+      .filter((app: any) => !app.scholarships?.title?.includes('(Migma)'))
+      .map((app: any) => ({
+        id: app.id,
+        student_name: app.user_profiles?.full_name || 'Unknown',
+        student_email: app.user_profiles?.email || '',
+        scholarship_title: app.scholarships?.title || 'Unknown',
+        university_name: app.scholarships?.universities?.name || 'Unknown',
+        amount: app.scholarships?.amount || 0,
+        status: app.status,
+        applied_at: app.applied_at
+      }));
     setApplications(apps);
     // Populate university filter
     const uniqueUniversities = Array.from(new Set(apps.map(a => a.university_name)));

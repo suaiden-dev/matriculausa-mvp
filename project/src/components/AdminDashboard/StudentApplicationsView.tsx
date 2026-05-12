@@ -57,6 +57,7 @@ export interface StudentRecord {
   student_process_type: string | null;
   transfer_form_status: string | null;
   scholarship_title: string | null;
+  course_name?: string | null;
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -1296,8 +1297,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
-                        {student.scholarship_title ? (
-                          student.scholarship_title
+                        {student.course_name || student.scholarship_title ? (
+                          student.course_name || student.scholarship_title
                         ) : student.total_applications > 0 ? (
                           <span className="text-amber-600">
                             {student.total_applications} Application{student.total_applications > 1 ? 's' : ''} (Pending Payment)

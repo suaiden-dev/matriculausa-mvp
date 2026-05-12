@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { metadata, cpf: bodyCpf } = await req.json();
+    const { metadata, cpf: bodyCpf, payer_info } = await req.json();
 
     console.log("[parcelow-checkout-application-fee] 📥 Payload recebido:", {
       metadata,
@@ -95,13 +95,14 @@ Deno.serve(async (req) => {
       return corsResponse({ error: "User profile not found" }, 404);
     }
 
-    // Definir CPF final (Body > Profile)
-    const rawCpf = bodyCpf || userProfile.cpf_document;
+    // Definir CPF final (Body > Profile > PayerInfo)
+    const rawCpf = bodyCpf || userProfile.cpf_document || payer_info?.cpf;
     const finalCpf = rawCpf ? String(rawCpf).replace(/\D/g, "") : null;
 
     console.log("[parcelow-checkout-application-fee] 📄 Verificação de documento:", {
       profileCpf: !!userProfile.cpf_document,
       bodyCpf: !!bodyCpf,
+      payerInfoCpf: !!payer_info?.cpf,
       finalCpfLength: finalCpf?.length || 0,
       isNewFlow: userProfile.placement_fee_flow
     });
@@ -295,10 +296,37 @@ Deno.serve(async (req) => {
         amount: amountInCents, // em centavos (USD cents)
       }],
       client: {
-        name: userProfile.full_name,
-        email: userProfile.email,
-        cpf: finalCpf,
-        phone: userProfile.phone || "",
+        name: payer_info?.name || userProfile.full_name,
+        email: (() => {
+          const email = payer_info?.email || userProfile.email;
+          const isSandbox = config.apiBaseUrl.includes("sandbox");
+          if (isSandbox && email) {
+            const [userPart, domainPart] = email.split("@");
+            const dirtyEmail = `${userPart}+${Date.now()}@${domainPart}`;
+            console.log(`[parcelow-checkout-application-fee] 🧪 Sandbox detected. Using dirty email bypass: ${dirtyEmail}`);
+            return dirtyEmail;
+          }
+          return email;
+        })(),
+        cpf: (payer_info?.cpf || finalCpf || "").replace(/\D/g, ""),
+        phone: (payer_info?.phone || userProfile.phone || "").replace(/\D/g, ""),
+        // Campos de endereço para Cartão de Terceiro
+        is_diferent_card_address: payer_info ? 1 : 0,
+        address_street: payer_info?.address_street || "",
+        address_number: parseInt(payer_info?.address_number || "0") || 0,
+        address_neighborhood: payer_info?.address_neighborhood || "",
+        address_city: payer_info?.address_city || "",
+        address_state: (payer_info?.address_state || "").substring(0, 2).toUpperCase(),
+        cep: (payer_info?.postal_code || "").replace(/\D/g, ""),
+        address_complement: payer_info?.address_complement || "",
+        // Mapeamento explícito para campos card_address_* caso a API exija (redundância de segurança)
+        card_address_cep: (payer_info?.postal_code || "").replace(/\D/g, ""),
+        card_address_street: payer_info?.address_street || "",
+        card_address_number: parseInt(payer_info?.address_number || "0") || 0,
+        card_address_neighborhood: payer_info?.address_neighborhood || "",
+        card_address_city: payer_info?.address_city || "",
+        card_address_state: (payer_info?.address_state || "").substring(0, 2).toUpperCase(),
+        card_address_complement: payer_info?.address_complement || "",
       },
       redirect: {
         success: redirectSuccess,
@@ -358,6 +386,18 @@ Deno.serve(async (req) => {
     );
 
     // A resposta da Parcelow pode ter diferentes formatos, vamos extrair os dados corretamente
+    if (parcelowOrder.success === false) {
+      console.error(
+        "[parcelow-checkout-application-fee] ❌ Parcelow retornou erro de negócio:",
+        parcelowOrder.message,
+      );
+      return corsResponse({
+        error: "parcelow_api_error",
+        message: parcelowOrder.message || "Erro desconhecido na API da Parcelow",
+        response: parcelowOrder,
+      }, 400);
+    }
+
     const orderId = parcelowOrder.data?.order_id || parcelowOrder.order_id ||
       parcelowOrder.id;
     const checkoutUrl = parcelowOrder.data?.url_checkout ||

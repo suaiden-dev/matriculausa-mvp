@@ -139,12 +139,18 @@ export const useDocumentRequests = (
                 return Promise.resolve({ data: [] });
               }
               
-              return supabase
+              let globalQuery = supabase
                 .from('document_requests')
                 .select(fields)
-                .eq('is_global', true)
-                .in('university_id', uniqueUniversityIds)
-                .order('created_at', { ascending: false });
+                .eq('is_global', true);
+
+              if (uniqueUniversityIds.length > 0) {
+                globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+              } else {
+                globalQuery = globalQuery.is('university_id', null);
+              }
+
+              return globalQuery.order('created_at', { ascending: false });
             })()
           ]);
 

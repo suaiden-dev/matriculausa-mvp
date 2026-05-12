@@ -27,6 +27,7 @@ interface StudentRecord {
   student_process_type: string | null;
   transfer_form_status: string | null;
   scholarship_title: string | null;
+  course_name?: string | null;
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -102,7 +103,9 @@ export function useStudentsQuery() {
           identity_photo_path,
           selection_survey_passed,
           documents_uploaded,
+          field_of_interest,
           selected_scholarship_id,
+          student_process_type,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -125,6 +128,7 @@ export function useStudentsQuery() {
               scholarships (
                 id,
                 title,
+                field_of_study,
                 university_id,
                 universities (
                   name
@@ -141,7 +145,7 @@ export function useStudentsQuery() {
 
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
-        let scholarshipInfo = null;
+        let scholarshipInfo = { title: null, university: null, course: null };
         let applicationStatus = null;
         
         let lockedApplication = null;
@@ -157,7 +161,8 @@ export function useStudentsQuery() {
           if (lockedApplication) {
             scholarshipInfo = {
               title: lockedApplication.scholarships?.title || 'N/A',
-              university: lockedApplication.scholarships?.universities?.name || 'N/A'
+              university: lockedApplication.scholarships?.universities?.name || 'N/A',
+              course: lockedApplication.scholarships?.field_of_study || student.field_of_interest || null
             };
             applicationStatus = lockedApplication.status;
           }
@@ -211,12 +216,13 @@ export function useStudentsQuery() {
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           acceptance_letter_url: lockedApplication?.acceptance_letter_url || null,
           payment_status: lockedApplication?.payment_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || student.student_process_type || null,
           transfer_form_status: lockedApplication?.transfer_form_status || null,
           has_sent_docs_to_university: lockedApplication?.has_sent_docs_to_university || false,
           sevis_transfer_completed: lockedApplication?.sevis_transfer_completed || false,
           visa_approved: lockedApplication?.visa_approved || false,
           scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
+          course_name: scholarshipInfo ? scholarshipInfo.course : student.field_of_interest || null,
           university_name: scholarshipInfo ? scholarshipInfo.university : null,
           university_id: lockedApplication?.scholarships?.university_id || null,
           reviewed_at: lockedApplication?.reviewed_at || null,
@@ -482,19 +488,35 @@ export function useStudentDocsStats(students: StudentRecord[]) {
   return useQuery({
     queryKey: ['student-docs-stats'],
     queryFn: async (): Promise<Map<string, DocStats>> => {
-      const [{ data: docRequests, error: drError }, { data: uploads, error: upError }] = await Promise.all([
+      const appIds = students.map(s => s.application_id).filter(Boolean) as string[];
+
+      const [{ data: globalDocs, error: drError }, { data: appDocs, error: appDrError }, { data: uploads, error: upError }] = await Promise.all([
         supabase
           .from('document_requests')
-          .select('id, university_id, applicable_student_types')
+          .select('id, university_id, applicable_student_types, scholarship_application_id')
           .eq('is_global', true)
           .eq('status', 'open'),
+        appIds.length > 0
+          ? supabase
+              .from('document_requests')
+              .select('id, university_id, applicable_student_types, scholarship_application_id')
+              .in('scholarship_application_id', appIds)
+              .eq('status', 'open')
+          : Promise.resolve({ data: [] as any[], error: null }),
         supabase
           .from('document_request_uploads')
           .select('document_request_id, uploaded_by, status, uploaded_at'),
       ]);
 
       if (drError) throw drError;
+      if (appDrError) throw appDrError;
       if (upError) throw upError;
+
+      // Merge global + app-specific docs, deduplicating by id
+      const allDocsMap = new Map<string, any>();
+      for (const d of [...(globalDocs || []), ...(appDocs || [])]) {
+        allDocsMap.set(d.id, d);
+      }
 
       // Latest upload per (doc_request_id, uploaded_by)
       const latestUpload = new Map<string, string>();
@@ -512,8 +534,13 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         if (!student.university_id || !student.user_id) continue;
 
         const processType = student.student_process_type;
-        const requiredDocs = (docRequests || []).filter(dr => {
-          if (dr.university_id !== student.university_id) return false;
+        const requiredDocs = Array.from(allDocsMap.values()).filter(dr => {
+          // App-specific doc linked to this student's application
+          if (dr.scholarship_application_id) {
+            return dr.scholarship_application_id === student.application_id;
+          }
+          // Global doc for this student's university and process type
+          if (dr.university_id && dr.university_id !== student.university_id) return false;
           const types: string[] = dr.applicable_student_types || [];
           return types.includes('all') || (processType ? types.includes(processType) : false);
         });

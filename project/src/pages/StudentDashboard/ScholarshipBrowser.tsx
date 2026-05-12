@@ -697,12 +697,12 @@ const ScholarshipBrowser: React.FC = () => {
 
 
   // Função para lidar com seleção de método de pagamento
-  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
-    console.log('🔍 [ScholarshipBrowser] Método de pagamento selecionado:', method);
+  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number, payerInfo?: any) => {
+    console.log('🔍 [ScholarshipBrowser] Método de pagamento selecionado:', method, 'Payer Info:', payerInfo);
     setSelectedPaymentMethod(method);
 
     try {
-      await handleCheckout(method);
+      await handleCheckout(method, payerInfo);
     } catch (error) {
       console.error('Error processing payment:', error);
       // Em caso de erro, fechar modal e redirecionar para página de erro
@@ -713,7 +713,7 @@ const ScholarshipBrowser: React.FC = () => {
   };
 
   // ✅ ÚNICA função handleCheckout (igual ao StripeCheckout) para os 3 métodos
-  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
+  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow', payerInfo?: any) => {
     setIsOpeningStripe(true);
 
     try {
@@ -767,17 +767,18 @@ const ScholarshipBrowser: React.FC = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            amount: finalAmountToUse,
-            fee_type: 'selection_process',
-            metadata: {
-              source: 'ScholarshipBrowser',
+            body: JSON.stringify({
+              amount: finalAmountToUse,
+              fee_type: 'selection_process',
+              metadata: {
+                source: 'ScholarshipBrowser',
+                promotional_coupon: (window as any).__checkout_promotional_coupon || null,
+                referral_code: discountCode || null
+              },
               promotional_coupon: (window as any).__checkout_promotional_coupon || null,
-              referral_code: discountCode || null
-            },
-            promotional_coupon: (window as any).__checkout_promotional_coupon || null
-          })
-        });
+              ...(payerInfo && { payer_info: payerInfo })
+            })
+          });
 
         if (!response.ok) {
           const errorData = await response.json();

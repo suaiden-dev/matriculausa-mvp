@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, GraduationCap, 
@@ -21,6 +22,7 @@ import { ApplicationSidebar } from './ApplicationSidebar';
 import { ApplicationStatusHero } from './ApplicationStatusHero';
 import ScholarshipInfoCard from './ScholarshipInfoCard';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { generateDecryptedPDFImage } from '../../../utils/pdfThumbnail';
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     console.log('[UniversityDocumentsStep] Renderizando...');
@@ -52,6 +54,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
     const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance' | 'placement_installment' | 'i20_document'>('welcome');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [blurredPreviewUrl, setBlurredPreviewUrl] = useState<string | null>(null);
+    const [blurredPreviewLoading, setBlurredPreviewLoading] = useState(false);
 
     const [i20Loading, setI20Loading] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
@@ -138,6 +142,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
     const showI539Tab = isPlacementFlow && (studentProcessType === 'change_of_status' || (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false));
     const packageFeeRequired = (showDs160Tab && !ds160PackagePaid) || (showI539Tab && !i539PackagePaid);
+    const canDownloadOriginal = !hasPlacementInstallmentPending && !packageFeeRequired;
     const showI20DocumentTab = studentProcessType === 'change_of_status';
     const i20DocumentAvailable = !!applicationDetails?.i20_document_url;
     
@@ -155,7 +160,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         let allApproved = true;
 
         documentRequests.forEach(req => {
-            const uploads = req.document_request_uploads || [];
+            const allUploads = req.document_request_uploads || [];
+            // Para docs globais, filtrar apenas os uploads do aluno atual
+            const uploads = allUploads.filter((u: any) => !u.uploaded_by || u.uploaded_by === userProfile?.user_id);
             const isApproved = uploads.some((u: any) => u.status === 'approved');
             const isUnderReview = uploads.some((u: any) => u.status === 'under_review');
 
@@ -178,7 +185,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             allDocsApproved: allApproved,
             pendingDocNames: pendingNames
         };
-    }, [documentRequests]);
+    }, [documentRequests, userProfile?.user_id]);
 
     const currentStatusInfo = useMemo(() => {
         if (!applicationDetails) {
@@ -201,7 +208,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         };
 
         // 2. CARTA DE ACEITE PRONTA (Gatilho para Pagamento do Pacote ou Download Final)
-        if (isAcceptanceReady) {
+        // Só ignora docs pendentes se houver URL de carta ou pacote pago — não apenas status 'enrolled'
+        if (isAcceptanceReady && !hasPendingUploads && !hasUnderReviewDocs) {
             // 2.1 Pagamento do Pacote Pendente (DS160/I539)
             if (packageFeeRequired) {
                 const feeName = 'Control Fee'; // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' independentemente do tipo de pacote 
@@ -329,11 +337,17 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         },
         ...(showI20DocumentTab ? [{
             id: 'i20_document',
-            title: 'I-20 Document',
+            title: i20DocumentAvailable && applicationDetails?.i20_document_url === 'blocked' 
+                ? t('registration:i20Preview.title') 
+                : 'I-20 Document',
             status: i20DocumentAvailable
-                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')
+                ? (applicationDetails?.i20_document_url === 'blocked' 
+                    ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired') 
+                    : t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable'))
                 : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'),
-            variant: (i20DocumentAvailable ? 'success' : 'info') as any,
+            variant: (i20DocumentAvailable 
+                ? (applicationDetails?.i20_document_url === 'blocked' ? 'warning' : 'success') 
+                : 'info') as any,
             disabled: !i20DocumentAvailable
         }] : []),
         ...(showDs160Tab ? [{ 
@@ -365,7 +379,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             variant: 'warning' as any,
             completed: false,
         }] : []),
-    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, showI20DocumentTab, i20DocumentAvailable, applicationDetails?.acceptance_letter_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
+    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, showI20DocumentTab, i20DocumentAvailable, applicationDetails?.acceptance_letter_url, applicationDetails?.i20_document_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
@@ -400,14 +414,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                 const reqQuery = supabase
                     .from('document_requests')
-                    .select('id, title, status, document_request_uploads(status)');
+                    .select('id, title, status, document_request_uploads(status, uploaded_by)');
 
                 if (universityId) {
                     reqQuery.or(
-                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,university_id.eq.${universityId})`
+                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,or(university_id.eq.${universityId},university_id.is.null))`
                     );
                 } else {
-                    reqQuery.eq('scholarship_application_id', data.id);
+                    reqQuery.or(
+                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,university_id.is.null)`
+                    );
                 }
 
                 const { data: reqs } = await reqQuery;
@@ -443,6 +459,20 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         i539PaidFinal = i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package;
                         hasPendingZelleFinal = hasPending;
                     }
+                }
+
+                // ✅ SEGURANÇA: Ocultar URL real do I-20 se não foi pago
+                // Usar sentinel 'blocked' para manter i20DocumentAvailable = true
+                // mas sem expor a URL real no Network tab
+                const isI539COS = data?.student_process_type === 'change_of_status' || (data?.student_process_type === 'transfer' && userProfile?.visa_transfer_active === false);
+                const hasPaidI20 = !!(userProfile as any)?.has_paid_i20_control_fee || (isI539COS && i539PaidFinal);
+                
+                const hasPlacementDebt = ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0;
+                if (data && !hasPaidI20 && data.i20_document_url) {
+                    data.i20_document_url = 'blocked';
+                }
+                if (data && hasPlacementDebt && data.i20_document_url && data.i20_document_url !== 'blocked') {
+                    data.i20_document_url = 'blocked';
                 }
 
                 // ✅ ATUALIZAÇÃO ÚNICA: Consolidando todos os dados em um único render
@@ -570,9 +600,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             scholarship={applicationDetails.scholarships}
                                             userProfile={userProfile}
                                             acceptanceLetter={{
-                                                url: applicationDetails.acceptance_letter_url,
-                                                onView: handleViewDocument,
-                                                onDownload: handleDownloadDocument,
+                                                url: canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url,
+                                                onView: () => {
+                                                    const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
+                                                    if (!urlToView) {
+                                                        alert('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
+                                                        return;
+                                                    }
+                                                    handleViewDocument(urlToView);
+                                                },
+                                                onDownload: canDownloadOriginal ? handleDownloadDocument : undefined,
                                             }}
                                         />
                                     )}
@@ -789,9 +826,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             scholarship={applicationDetails.scholarships}
                                             userProfile={userProfile}
                                             acceptanceLetter={{
-                                                url: applicationDetails.acceptance_letter_url,
-                                                onView: handleViewDocument,
-                                                onDownload: handleDownloadDocument,
+                                                url: canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url,
+                                                onView: () => {
+                                                    const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
+                                                    if (!urlToView) {
+                                                        alert('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
+                                                        return;
+                                                    }
+                                                    handleViewDocument(urlToView);
+                                                },
+                                                onDownload: canDownloadOriginal ? handleDownloadDocument : undefined,
                                             }}
                                         />
                                     )}
@@ -815,35 +859,74 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                         {i20DocumentAvailable ? (
                                             <div className="space-y-4">
                                                 <p className="text-slate-600">
-                                                    Your I-20 document is available for download. You will need this document to proceed with your Change of Status (I-539) application.
+                                                    {applicationDetails.i20_document_url !== 'blocked' 
+                                                        ? 'Your I-20 document is available for download. You will need this document to proceed with your Change of Status (I-539) application.'
+                                                        : 'Sua via prévia (limitada) do I-20 está disponível para verificação. Efetue o pagamento da taxa para liberar o documento original.'}
                                                 </p>
-                                                <div className="bg-slate-50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-slate-900 truncate">
-                                                            {applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document'}
+                                                <div className="bg-slate-50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full overflow-hidden">
+                                                    <div className="flex-1 min-w-0 w-full sm:w-auto">
+                                                        <p className="font-medium text-slate-900 truncate whitespace-nowrap block max-w-full" title={applicationDetails.i20_document_url !== 'blocked' ? (applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document') : (applicationDetails.i20_document_preview_url?.split('/').pop() || 'I-20_Preview.svg')}>
+                                                            {applicationDetails.i20_document_url !== 'blocked'
+                                                                ? (applicationDetails.i20_document_url?.split('/').pop() || 'I-20 Document')
+                                                                : (applicationDetails.i20_document_preview_url?.split('/').pop() || 'I-20_Preview.svg')}
                                                         </p>
                                                         {applicationDetails.i20_document_sent_at && (
-                                                            <p className="text-sm text-slate-500">
+                                                            <p className="text-sm text-slate-500 mt-0.5">
                                                                 Sent on {new Date(applicationDetails.i20_document_sent_at).toLocaleDateString('pt-BR')}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleViewDocument(applicationDetails.i20_document_url)}
-                                                            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-blue-700 transition-all"
+                                                    <div className="flex flex-wrap gap-2 w-full sm:w-auto shrink-0 mt-1 sm:mt-0">
+                                                         <button
+                                                            onClick={async () => {
+                                                                const isBlocked = applicationDetails.i20_document_url === 'blocked';
+                                                                if (isBlocked) {
+                                                                    // Mostrar PDF real embaçado via Edge Function + Decrypt no client
+                                                                    setBlurredPreviewLoading(true);
+                                                                    try {
+                                                                        const { data, error } = await supabase.functions.invoke('get-i20-preview', {
+                                                                            body: { applicationId: applicationDetails.id },
+                                                                        });
+                                                                        
+                                                                        if (error || !data?.scrambledData) throw error || new Error('Sem dados embaralhados');
+                                                                        
+                                                                        // Descriptografar e gerar Imagem Blob
+                                                                        const imageBlob = await generateDecryptedPDFImage(data.scrambledData, "matriculausa-secure-i20-key");
+                                                                        const objectUrl = URL.createObjectURL(imageBlob);
+                                                                        
+                                                                        setBlurredPreviewUrl(objectUrl);
+                                                                    } catch (err) {
+                                                                        console.error('[I20Preview] Error:', err);
+                                                                        alert('Não foi possível carregar o preview. Tente novamente.');
+                                                                    } finally {
+                                                                        setBlurredPreviewLoading(false);
+                                                                    }
+                                                                    return;
+                                                                }
+                                                                const urlToView = applicationDetails.i20_document_url;
+                                                                if (!urlToView) return;
+                                                                handleViewDocument(urlToView);
+                                                            }}
+                                                            className={`px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${blurredPreviewLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                                                            disabled={blurredPreviewLoading}
                                                         >
-                                                            View
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDownloadDocument(
-                                                                applicationDetails.i20_document_url,
-                                                                applicationDetails.i20_document_url?.split('/').pop() || 'i20.pdf'
+                                                            {blurredPreviewLoading ? (
+                                                                <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />Carregando...</>
+                                                            ) : (
+                                                                applicationDetails.i20_document_url !== 'blocked' ? t('common:labels.view') : t('registration:i20Preview.title')
                                                             )}
-                                                            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
-                                                        >
-                                                            Download
                                                         </button>
+                                                        {applicationDetails.i20_document_url !== 'blocked' && (
+                                                            <button
+                                                                onClick={() => handleDownloadDocument(
+                                                                    applicationDetails.i20_document_url,
+                                                                    applicationDetails.i20_document_url?.split('/').pop() || 'i20.pdf'
+                                                                )}
+                                                                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
+                                                            >
+                                                                {t('common:labels.download')}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -854,7 +937,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
                                                     </svg>
                                                 </div>
-                                                <p className="font-bold text-slate-700 uppercase tracking-tight">Pending</p>
+                                                <p className="font-bold text-slate-700 uppercase tracking-tight">{t('common:status.waiting_acceptance')}</p>
                                                 <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">
                                                     Your I-20 document will be available here once it has been issued by the university.
                                                 </p>
@@ -897,6 +980,75 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             </div>
 
             {previewUrl && <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />}
+
+            {blurredPreviewUrl && createPortal(
+                <div
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center transition-opacity z-[9999999]"
+                    onClick={() => setBlurredPreviewUrl(null)}
+                >
+                    <div
+                        className="relative bg-white rounded-xl shadow-2xl w-[98vw] md:w-[90vw] max-w-[700px] h-[85vh] flex flex-col overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header estilo DocumentViewerModal para manter o padrão */}
+                        <div className="flex flex-col border-b border-gray-200 bg-gray-50 shrink-0">
+                            <div className="flex items-center justify-between p-4">
+                                <h3 className="text-lg font-semibold text-gray-800 truncate">
+                                    {t('registration:i20Preview.title')}
+                                </h3>
+                                <button
+                                    onClick={() => setBlurredPreviewUrl(null)}
+                                    className="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2"
+                                    title="Fechar"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Corpo do Modal - Conteúdo Embaçado */}
+                        <div className="flex-1 bg-gray-100 flex items-center justify-center relative overflow-hidden">
+                            <img
+                                src={blurredPreviewUrl}
+                                alt="I-20 Preview"
+                                className="w-full h-full object-cover filter brightness-95 scale-105"
+                                style={{ pointerEvents: 'none', userSelect: 'none' }}
+                            />
+                            
+                            {/* Overlay de bloqueio */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <div style={{
+                                background: 'white',
+                                borderRadius: 24,
+                                padding: '40px 48px',
+                                textAlign: 'center',
+                                maxWidth: 420,
+                                boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+                            }}>
+                                <div style={{ fontSize: 64, marginBottom: 16 }}>🔒</div>
+                                <h3 style={{ fontWeight: 900, fontSize: 22, color: '#1e293b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    {t('registration:i20Preview.title')}
+                                </h3>
+                                <p style={{ color: '#64748b', fontSize: 15, marginBottom: 28, lineHeight: 1.6 }}>
+                                    {t('registration:i20Preview.description')}
+                                </p>
+                                <button
+                                    onClick={() => { setBlurredPreviewUrl(null); setActiveTab('ds160'); }}
+                                    style={{ background: '#1e40af', color: 'white', border: 'none', borderRadius: 12, padding: '14px 32px', fontWeight: 700, fontSize: 15, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1, width: '100%' }}
+                                >
+                                    {t('registration:i20Preview.payButton')}
+                                </button>
+                            </div>
+                        </div>
+                        {/* Fecha Corpo do Modal */}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

@@ -59,14 +59,16 @@ const FeaturedScholarshipsManagement: React.FC = () => {
 
       if (error) throw error;
 
-      // Process data to include university information
-      const processedData = (data || []).map(scholarship => ({
-        ...scholarship,
-        university_name: scholarship.universities?.name,
-        university_location: scholarship.universities?.location,
-        university_logo_url: scholarship.universities?.logo_url,
-        featured_order: scholarship.featured_order // Use the actual value from database
-      }));
+      // Process data to include university information and filter out Migma scholarships
+      const processedData = (data || [])
+        .filter(s => !s.title?.includes('(Migma)'))
+        .map(scholarship => ({
+          ...scholarship,
+          university_name: scholarship.universities?.name,
+          university_location: scholarship.universities?.location,
+          university_logo_url: scholarship.universities?.logo_url,
+          featured_order: scholarship.featured_order // Use the actual value from database
+        }));
 
       setScholarships(processedData);
     } catch (error) {
