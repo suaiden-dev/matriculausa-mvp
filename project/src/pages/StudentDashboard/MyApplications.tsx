@@ -82,7 +82,7 @@ const MyApplications: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   // Document Requests uploads grouped by applicationId
-  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]>>({});
+  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string; is_admin_upload?: boolean }[]>>({});
   // const [pendingUploads] = useState<Record<string, Record<string, File | null>>>({});
   // const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   // const navigate = useNavigate();
@@ -191,7 +191,7 @@ const MyApplications: React.FC = () => {
         if (requestIds.length) {
           const { data: uploads } = await supabase
             .from('document_request_uploads')
-            .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by')
+            .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by,is_admin_upload')
             .in('document_request_id', requestIds)
             .eq('uploaded_by', user.id);
 
@@ -211,7 +211,7 @@ const MyApplications: React.FC = () => {
             }
           });
 
-          const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]> = {};
+          const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string; is_admin_upload?: boolean }[]> = {};
           (uploads || []).forEach((u: any) => {
             const meta = reqMeta[u.document_request_id];
             if (!meta) return;
@@ -221,8 +221,8 @@ const MyApplications: React.FC = () => {
                 title: meta.title,
                 status: (u.status || '').toLowerCase(),
                 review_notes: u.review_notes || undefined,
-                rejection_reason: u.rejection_reason || undefined
-              });
+                rejection_reason: u.rejection_reason || undefined,
+                is_admin_upload: u.is_admin_upload              });
             });
           });
 
@@ -1426,7 +1426,7 @@ const MyApplications: React.FC = () => {
                                                            <Clock className="h-3 w-3 text-amber-600" />
                                                          )}
                                                        </div>
-                                                       <span className="font-medium text-slate-900 text-xs">
+                                                       <span className="font-medium text-slate-900 text-xs flex items-center gap-1.5">
                                                          <TruncatedText
                                                            text={req.title}
                                                            maxLength={35}
@@ -1434,6 +1434,11 @@ const MyApplications: React.FC = () => {
                                                            showTooltip={true}
                                                            tooltipPosition="top"
                                                          />
+                                                         {req.is_admin_upload && (
+                                                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                                             Admin
+                                                           </span>
+                                                         )}
                                                        </span>
                                                      </div>
                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${

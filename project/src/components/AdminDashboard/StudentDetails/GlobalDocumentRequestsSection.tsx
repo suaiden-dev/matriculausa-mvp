@@ -120,9 +120,9 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
           ) : (
             <div className="space-y-4">
               {globalRequests.map((request) => {
-                const studentUpload = (request.document_request_uploads || []).find(
-                  (u: any) => u.uploaded_by === studentUserId
-                );
+                const studentUpload = (request.document_request_uploads || [])
+                  .filter((u: any) => u.uploaded_by === studentUserId)
+                  .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
                 const isExpanded = expandedRequests[request.id] !== false; // expanded by default
                 const applicableTypes: string[] = request.applicable_student_types || ['all'];
 
@@ -225,7 +225,16 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                   <FileText className="h-6 w-6 text-green-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900 break-words">Student response file</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-slate-900 break-words">
+                                      {studentUpload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file'}
+                                    </p>
+                                    {studentUpload.is_admin_upload && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                        Admin
+                                      </span>
+                                    )}
+                                  </div>
                                   {studentUpload.uploaded_at && (
                                     <p className="text-sm text-slate-500">
                                       Submitted on {new Date(studentUpload.uploaded_at).toLocaleDateString()}

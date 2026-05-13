@@ -919,6 +919,7 @@ const AdminStudentDetails: React.FC = () => {
           (() => {
             // ✅ MELHORIA: Incluir university_id do perfil do estudante além dos das aplicações
             const universityIds = (student?.all_applications || [])
+              .filter((app: any) => app.status !== 'rejected' && app.status !== 'cancelled')
               .map((app: any) => app.scholarships?.university_id || app.university_id)
               .filter(Boolean);
             
@@ -928,16 +929,20 @@ const AdminStudentDetails: React.FC = () => {
             
             const uniqueUniversityIds = [...new Set(universityIds)];
 
-            if (uniqueUniversityIds.length === 0) {
-              return Promise.resolve({ data: [], error: null });
-            }
-
-            return supabase
+            let globalQuery = supabase
               .from('document_requests')
               .select(fieldsWithUploads)
-              .eq('is_global', true)
-              .in('university_id', uniqueUniversityIds)
-              .order('created_at', { ascending: false });
+              .eq('is_global', true);
+
+            if (uniqueUniversityIds.length > 0) {
+              // Buscar requests globais das universidades envolvidas OU truly global (null)
+              globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+            } else {
+              // Buscar apenas truly global
+              globalQuery = globalQuery.is('university_id', null);
+            }
+
+            return globalQuery.order('created_at', { ascending: false });
           })()
         ]);
 
@@ -956,10 +961,39 @@ const AdminStudentDetails: React.FC = () => {
           ...globalWithFilteredUploads
         ];
 
-        // Remover duplicatas
-        const uniqueRequests = Array.from(
-          new Map(allRequests.map(req => [req.id, req])).values()
-        );
+        // ✅ DESDUPLICAÇÃO AVANÇADA: Unificar por TÍTULO (removendo espaços extras e normalizando)
+        // Isso resolve o problema de duplicação quando o mesmo documento é pedido globalmente 
+        // em múltiplas universidades ou quando há solicitações específicas com nomes idênticos.
+        const requestByTitle = new Map();
+
+        allRequests.forEach((req: any) => {
+          // Normalização agressiva: remove múltiplos espaços, trim e lowercase
+          const normalizedTitle = (req.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          const existing = requestByTitle.get(normalizedTitle);
+
+          if (!existing) {
+            requestByTitle.set(normalizedTitle, req);
+          } else {
+            // Critérios de prioridade para decidir qual instância manter:
+            const hasUpload = req.document_request_uploads && req.document_request_uploads.length > 0;
+            const existingHasUpload = existing.document_request_uploads && existing.document_request_uploads.length > 0;
+
+            // 1. Priorizar o que tem upload do aluno
+            if (hasUpload && !existingHasUpload) {
+              requestByTitle.set(normalizedTitle, req);
+            } 
+            // 2. Se ambos têm ou ambos não têm, priorizar o mais recente (pela data de criação do request)
+            else if (hasUpload === existingHasUpload) {
+              const currentAt = new Date(req.created_at || 0).getTime();
+              const existingAt = new Date(existing.created_at || 0).getTime();
+              if (currentAt > existingAt) {
+                requestByTitle.set(normalizedTitle, req);
+              }
+            }
+          }
+        });
+
+        const uniqueRequests = Array.from(requestByTitle.values());
 
         // ✅ FILTRAGEM: Filtrar solicitações globais baseadas no tipo de processo do estudante
         // Se a solicitação tem applicable_student_types, o tipo do estudante deve estar na lista
