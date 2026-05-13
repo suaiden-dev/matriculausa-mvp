@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface DropStudentModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ const DropStudentModal: React.FC<DropStudentModalProps> = ({
       onClose();
     } catch (error: any) {
       console.error('Error dropping student:', error);
-      alert('Error dropping student: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      toast.error('Error dropping student: ' + (error?.message || 'Unknown error occurred. Please try again.'));
     } finally {
       setIsProcessing(false);
     }

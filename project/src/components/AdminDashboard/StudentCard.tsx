@@ -8,6 +8,7 @@ import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSev
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DropStudentModal from './DropStudentModal';
+import RestoreStudentModal from './RestoreStudentModal';
 
 
 interface StudentCardProps {
@@ -32,19 +33,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     userProfile?.is_restricted_admin === false;
 
   const [showDropModal, setShowDropModal] = React.useState(false);
+  const [showRestoreModal, setShowRestoreModal] = React.useState(false);
 
-  const handleToggleDrop = async (e: React.MouseEvent) => {
+  const handleToggleDrop = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Se estiver marcando como dropped, abrir o modal
+    // Se estiver marcando como dropped, abrir o modal de drop
     if (!student.is_dropped) {
       setShowDropModal(true);
       return;
     }
     
-    // Se estiver restaurando, fazer direto (com confirmação simples)
-    if (!window.confirm('Restaurar este aluno para o pipeline ativo?')) return;
-    
+    // Se estiver restaurando, abrir o modal de restauração
+    if (student.is_dropped) {
+      setShowRestoreModal(true);
+      return;
+    }
+  };
+
+  const handleConfirmRestore = async () => {
     try {
       await dropStudentMutation.mutateAsync({ 
         studentId: student.student_id, 
@@ -499,6 +506,14 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         isOpen={showDropModal}
         onClose={() => setShowDropModal(false)}
         onConfirm={handleConfirmDrop}
+        studentName={student.student_name}
+      />
+
+      {/* Modal de confirmação de Restore */}
+      <RestoreStudentModal
+        isOpen={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        onConfirm={handleConfirmRestore}
         studentName={student.student_name}
       />
     </div>

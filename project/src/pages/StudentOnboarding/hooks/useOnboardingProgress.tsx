@@ -274,24 +274,44 @@ export const useOnboardingProgress = () => {
 
       if (currentCheckId !== lastCheckId.current) return chosenStep;
 
-      currentStepRef.current = chosenStep;
-      setState({
-        currentStep: chosenStep,
-        selectionFeePaid,
-        identityVerified,
-        selectionSurveyPassed,
-        scholarshipsSelected,
-        processTypeSelected,
-        documentsUploaded,
-        documentsApproved,
-        applicationFeePaid,
-        scholarshipFeePaid,
-        placementFeePaid,
-        reinstatementFeePaid,
-        universityDocumentsUploaded: false,
-        onboardingCompleted,
-        isNewFlowUser,
-      });
+      // ✅ PROTEÇÃO: Só atualiza se houver mudança real para evitar loops de render
+      if (chosenStep !== currentStepRef.current) {
+        currentStepRef.current = chosenStep;
+        setState(prev => {
+          if (prev.currentStep === chosenStep && 
+              prev.selectionFeePaid === selectionFeePaid &&
+              prev.identityVerified === identityVerified &&
+              prev.selectionSurveyPassed === selectionSurveyPassed &&
+              prev.scholarshipsSelected === scholarshipsSelected &&
+              prev.processTypeSelected === processTypeSelected &&
+              prev.documentsUploaded === documentsUploaded &&
+              prev.applicationFeePaid === applicationFeePaid &&
+              prev.scholarshipFeePaid === scholarshipFeePaid &&
+              prev.placementFeePaid === placementFeePaid &&
+              prev.reinstatementFeePaid === reinstatementFeePaid &&
+              prev.onboardingCompleted === onboardingCompleted) {
+            return prev;
+          }
+          return {
+            ...prev,
+            currentStep: chosenStep,
+            selectionFeePaid,
+            identityVerified,
+            selectionSurveyPassed,
+            scholarshipsSelected,
+            processTypeSelected,
+            documentsUploaded,
+            documentsApproved,
+            applicationFeePaid,
+            scholarshipFeePaid,
+            placementFeePaid,
+            reinstatementFeePaid,
+            universityDocumentsUploaded: false,
+            onboardingCompleted,
+            isNewFlowUser,
+          };
+        });
+      }
 
       // Sincronizar banco de dados apenas se a decisão divergir da persistência atual
       if (chosenStep !== savedStep) {

@@ -19,6 +19,7 @@ import {
   Store
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 
@@ -465,7 +466,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                               }
                               
                               console.log('✅ [UserManagement] Promoção realizada com sucesso!');
-                              alert('User promoted to Affiliate Admin successfully!');
+                              toast.success('User promoted to Affiliate Admin successfully!');
                             } else {
                               console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                               const { error } = await supabase
@@ -477,14 +478,14 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                 throw error;
                               }
                               console.log('✅ [UserManagement] Role atualizado com sucesso!');
-                              alert(`Role updated to ${newRole} successfully!`);
+                              toast.success(`Role updated to ${newRole} successfully!`);
                             }
                             
                             console.log('🔄 [UserManagement] Chamando onRefresh...');
                             if (onRefresh) onRefresh();
                           } catch (error: any) {
                             console.error('Error updating role:', error);
-                            alert('Failed to update role: ' + error.message);
+                            toast.error('Failed to update role: ' + error.message);
                           }
                         }}
                         className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
@@ -580,7 +581,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                     }
                                     
                                     console.log('✅ [UserManagement] Promoção realizada com sucesso!');
-                                    alert('User promoted to Affiliate Admin successfully!');
+                                    toast.success('User promoted to Affiliate Admin successfully!');
                                   } else {
                                     console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                                     const { error } = await supabase
@@ -592,14 +593,14 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                       throw error;
                                     }
                                     console.log('✅ [UserManagement] Role atualizado com sucesso!');
-                                    alert(`Role updated to ${newRole} successfully!`);
+                                    toast.success(`Role updated to ${newRole} successfully!`);
                                   }
                                   
                                   console.log('🔄 [UserManagement] Chamando onRefresh...');
                                   if (onRefresh) onRefresh();
                                 } catch (error: any) {
                                   console.error('Error updating role:', error);
-                                  alert('Failed to update role: ' + error.message);
+                                  toast.error('Failed to update role: ' + error.message);
                                 }
                               }}
                               className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
@@ -897,7 +898,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                 }
                                 
                                 console.log('✅ [UserManagement] Promoção realizada com sucesso!');
-                                alert('User promoted to Affiliate Admin successfully!');
+                                toast.success('User promoted to Affiliate Admin successfully!');
                               } else {
                                 console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                                 const { error } = await supabase
@@ -909,7 +910,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                   throw error;
                                 }
                                 console.log('✅ [UserManagement] Role atualizado com sucesso!');
-                                alert(`Role updated to ${newRole} successfully!`);
+                                toast.success(`Role updated to ${newRole} successfully!`);
                               }
                               
                               console.log('🔄 [UserManagement] Chamando onRefresh...');
@@ -917,7 +918,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                               if (onRefresh) onRefresh();
                             } catch (error: any) {
                               console.error('Error updating role:', error);
-                              alert('Failed to update role: ' + error.message);
+                              toast.error('Failed to update role: ' + error.message);
                             }
                           }}
                           className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
