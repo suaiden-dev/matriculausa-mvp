@@ -13,6 +13,8 @@ import StudentDetails from './StudentDetails';
 import PaymentManagement from './PaymentManagement';
 import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests';
 import AISolutions from './AISolutions';
+import SchoolApplicationTrackingView from './ApplicationTracking/ApplicationTrackingView';
+import StudentMessages from './StudentMessages';
 
 
 
@@ -47,7 +49,9 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="scholarship/new" element={<NewScholarship />} />
             <Route path="profile" element={<ProfileManagement />} />
             <Route path="students" element={<StudentManagement />} />
+            <Route path="application-tracking" element={<SchoolApplicationTrackingView />} />
             <Route path="selection-process" element={<SelectionProcess />} />
+            <Route path="messages" element={<StudentMessages />} />
             <Route path="student/:applicationId" element={<StudentDetails />} />
             <Route path="analytics" element={<PaymentManagement />} />
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />

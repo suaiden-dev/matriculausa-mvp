@@ -148,8 +148,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         .from('admin_student_conversations')
         .select('*');
 
-      if (userProfile.role === 'affiliate_admin') {
-        // Affiliate admins only see their own conversations
+      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'school') {
+        // Affiliate admins and schools only see their own conversations
         query = query.eq('admin_id', user.id).eq('student_id', targetRecipientId);
       } else if (userProfile.role === 'admin') {
         // Regular admins look for any existing conversation with this student
@@ -171,7 +171,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       }
 
       // Create new conversation
-      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') 
+      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'school') 
         ? { admin_id: user.id, student_id: targetRecipientId }
         : { admin_id: targetRecipientId, student_id: user.id };
 
@@ -553,20 +553,19 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const markAdminMessagesAsRead = async (conversationId: string) => {
     if (!user || !userProfile) return;
     
-    // Only allow admins and affiliate_admins to mark messages as read
-    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin') {
+    // Only allow admins, affiliate_admins and schools to mark messages as read
+    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin' && userProfile.role !== 'school') {
       return;
     }
 
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o admin é o destinatário
         .is('read_at', null)
-        .eq('is_system_message', false) // ✅ Excluir mensagens do sistema
-        .select('id, sender_id, recipient_id, read_at');
+        .eq('is_system_message', false); // ✅ Excluir mensagens do sistema
 
       if (error) {
         console.error('Failed to mark admin messages as read:', error);
@@ -605,13 +604,12 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     }
 
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
         .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o aluno é o destinatário
-        .is('read_at', null)
-        .select('id, sender_id, recipient_id, read_at');
+        .is('read_at', null);
 
       if (error) {
         console.error('Failed to mark all messages as read:', error);
@@ -751,8 +749,8 @@ export const useAdminStudentConversations = () => {
         .order('last_message_at', { ascending: false });
 
       // Filter based on user role
-      if (userProfile.role === 'affiliate_admin') {
-        // Affiliate admins only see their own conversations
+      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'school') {
+        // Affiliate admins and Schools only see their own conversations
         query = query.eq('admin_id', user.id);
       } else if (userProfile.role === 'student') {
         // Students only see their own conversations

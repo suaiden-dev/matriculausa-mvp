@@ -15,6 +15,7 @@ import {
   X,
   LogOut,
   User,
+  LayoutGrid,
   ChevronDown,
   Shield,
   Brain,
@@ -133,6 +134,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';
     if (path.includes('/selection-process')) return 'selection-process';
+    if (path.includes('/application-tracking')) return 'application-tracking';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
     // COMENTADO: Stripe Connect - Funcionalidade removida temporariamente
     // if (path.includes('/stripe-connect')) return 'stripe-connect';
@@ -146,6 +148,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/whatsapp')) return 'whatsapp';
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
+    if (path.includes('/messages')) return 'messages';
     if (path.includes('/student')) return 'students';
     return 'overview';
   };
@@ -199,6 +202,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
     { id: 'selection-process', label: 'Selection Process', icon: UserCheck, path: '/school/dashboard/selection-process', badge: null },
+    { id: 'application-tracking', label: 'Application Tracking', icon: LayoutGrid, path: '/school/dashboard/application-tracking', badge: null },
+    { id: 'messages', label: 'Student Messages', icon: MessageSquare, path: '/school/dashboard/messages', badge: null },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     {
@@ -581,7 +586,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
 
         {/* Main Content Area */}
         <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full overflow-y-hidden">
-          <div className="max-w-7xl mx-auto">
+          <div className={location.pathname.includes('/application-tracking') ? 'w-full' : 'max-w-7xl mx-auto'}>
             {/* Welcome Message for Incomplete Profiles */}
             {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
               <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">

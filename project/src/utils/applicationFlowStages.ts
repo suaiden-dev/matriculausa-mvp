@@ -88,7 +88,7 @@ export interface StudentRecord {
   docs_total_approved?: number;
   docs_total_rejected?: number;
   docs_total_under_review?: number;
-  
+
   // Basic docs aggregation fields (passport, diploma, funds_proof)
   basic_docs_total_required?: number;
   basic_docs_total_uploaded?: number;
@@ -362,9 +362,9 @@ export function getStepStatus(
       return student.acceptance_letter_url ? 'completed' : 'pending';
 
     case 'send_acceptance_letter':
-      // Só aparece quando admin já fez upload da carta
-      if (!student.acceptance_letter_url) return 'skipped';
-      return student.acceptance_letter_status === 'sent' ? 'completed' : 'pending';
+      // Show as completed if sent or URL exists (depending on school preference)
+      if (student.acceptance_letter_status === 'sent') return 'completed';
+      return student.acceptance_letter_url ? 'in_progress' : 'pending';
 
     case 'student_sends_letter':
       if (student.student_process_type !== 'transfer') return 'skipped';

@@ -27,14 +27,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
   const { user, userProfile } = useAuth();
 
   // Determine recipient based on current user role
-  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
     ? conversation.student_profile
     : conversation.admin_profile;
 
   const recipientName = recipient?.full_name || 'Unknown User';
 
   // Get global unread count for this student (if it's a student conversation)
-  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
     ? getGlobalUnreadCount(conversation.student_id)
     : 0;
 
@@ -98,7 +98,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
             {/* Mostrar checks se a última mensagem foi enviada por um admin (no dashboard de admin) 
                 ou se foi enviada pelo próprio usuário logado */}
             {user && conversation.last_message && (
-              ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && conversation.last_message_sender_id !== conversation.student_id) ||
+              ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && conversation.last_message_sender_id !== conversation.student_id) ||
               (conversation.last_message_sender_id === user.id)
             ) && (
                 <MessageReadStatus
@@ -170,6 +170,12 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
     if (!shouldFilter) return false; // Em desenvolvimento, não excluir
+
+    // Se o próprio usuário logado for um usuário de teste, permitir ver outros usuários de teste
+    if (userProfile?.email?.toLowerCase().endsWith('@uorak.com')) {
+      return false;
+    }
+
     return email.toLowerCase().includes('@uorak.com');
   };
 
@@ -220,8 +226,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     if (!shouldFilter) return conversations;
 
     return conversations.filter(conversation => {
-      // Para admin/affiliate_admin, filtrar por email do estudante
-      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
+      // Para admin/affiliate_admin/school, filtrar por email do estudante
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school') {
         const studentEmail = studentEmails[conversation.student_id] || '';
         return !shouldExcludeEmail(studentEmail);
       }
@@ -232,7 +238,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
 
   // Filter conversations based on search term
   const filteredConversations = filteredConversationsByEmail.filter(conversation => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
       ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || '';
@@ -249,16 +255,16 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   }, [refetchConversations]);
 
   const handleConversationClick = async (conversation: any) => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
       ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || 'Unknown User';
-    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
       ? conversation.student_id
       : conversation.admin_id;
 
-    // ✅ NOVO: Se for admin/affiliate_admin, marcar mensagens como lidas quando visualiza
-    if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && user) {
+    // ✅ NOVO: Se for admin/affiliate_admin/school, marcar mensagens como lidas quando visualiza
+    if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && user) {
       try {
         // Marcar mensagens não lidas como lidas quando admin visualiza a conversa
         await supabase
@@ -369,10 +375,10 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
             <MessageSquare className="w-5 h-5 mr-2" />
-            {userProfile?.role === 'affiliate_admin' ? 'Student Conversations' : 'Support Chat'}
+            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Support Chat'}
           </h2>
           <div className="flex items-center space-x-2">
-            {userProfile?.role === 'affiliate_admin' && (
+            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && (
               <button
                 onClick={() => setShowStudentSelector(true)}
                 className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md flex items-center transition-colors"
@@ -398,7 +404,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         <div className="relative">
           <input
             type="text"
-            placeholder={userProfile?.role === 'affiliate_admin' ? 'Search students...' : 'Search conversations...'}
+            placeholder={(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Search students...' : 'Search conversations...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -441,8 +447,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         )}
       </div>
 
-      {/* Footer CTA - Start new conversation (admin/affiliate_admin) */}
-      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') && (
+      {/* Footer CTA - Start new conversation (admin/affiliate_admin/school) */}
+      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school') && (
         <div className="border-t border-slate-200 p-3 mt-auto sticky bottom-0 bg-white">
           <button
             onClick={() => setShowStudentSelector(true)}

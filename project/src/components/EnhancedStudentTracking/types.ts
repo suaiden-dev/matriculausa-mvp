@@ -32,6 +32,17 @@ export interface StudentInfo {
   scholarship_fee_amount?: number;
   i20_control_fee_amount?: number;
   acceptance_letter_sent_at?: string | null;
+  is_placement_fee_paid?: boolean;
+  placement_fee_flow?: boolean;
+  placement_fee_amount?: number;
+  placement_fee_pending_balance?: number;
+  placement_fee_installment_enabled?: boolean;
+  placement_fee_installment_number?: number;
+  placement_fee_due_date?: string | null;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
   scholarship?: {
     application_fee_amount: number;
     scholarship_fee_amount: number;
