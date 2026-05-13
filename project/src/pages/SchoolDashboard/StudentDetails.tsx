@@ -1710,7 +1710,7 @@ const StudentDetails: React.FC = () => {
       const updateData = {
         acceptance_letter_url: publicUrl,
         acceptance_letter_preview_url: previewUrl,
-        acceptance_letter_status: 'sent',
+        acceptance_letter_status: 'approved',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       };
@@ -1736,7 +1736,7 @@ const StudentDetails: React.FC = () => {
         ...prev,
         acceptance_letter_url: publicUrl,
         acceptance_letter_preview_url: previewUrl,
-        acceptance_letter_status: 'sent',
+        acceptance_letter_status: 'approved',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       } as any) : prev);
@@ -2078,7 +2078,7 @@ const StudentDetails: React.FC = () => {
     <div className="min-h-screen overflow-y-auto">   
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
               <button
@@ -2119,7 +2119,7 @@ const StudentDetails: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b border-slate-300 rounded-b-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 overflow-x-auto" role="tablist">
             {TABS.map(tab => (
               <button
@@ -2145,7 +2145,7 @@ const StudentDetails: React.FC = () => {
       </div>
             
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Conteúdo das abas */}
         {activeTab === 'details' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
@@ -2788,11 +2788,11 @@ const StudentDetails: React.FC = () => {
                                 
                                 <div className="flex items-center space-x-3 ml-4">
                                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    (doc.status === 'approved' || doc.status === 'sent') ? 'bg-green-100 text-green-800' :
                                     doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                     'bg-yellow-100 text-yellow-800'
                                   }`}>
-                                    {doc.status === 'approved' ? 'Approved' :
+                                    {(doc.status === 'approved' || doc.status === 'sent') ? 'Approved' :
                                      doc.status === 'rejected' ? 'Rejected' :
                                      'Under Review'}
                                   </span>

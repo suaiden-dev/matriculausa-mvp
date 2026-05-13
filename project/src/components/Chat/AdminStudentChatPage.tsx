@@ -48,9 +48,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     }
   }, [defaultConversationId, selectedConversationId]);
 
-  // ✅ CORREÇÃO: Para alunos, atualizar selectedConversationId quando o hook criar uma conversação automaticamente
+  // ✅ CORREÇÃO: Para alunos, escolas e afiliados, atualizar selectedConversationId quando o hook criar uma conversação automaticamente
   useEffect(() => {
-    if (userProfile?.role === 'student' && chat.conversationId && !selectedConversationId) {
+    const isRestrictedRole = userProfile?.role === 'student' || userProfile?.role === 'school' || userProfile?.role === 'affiliate_admin';
+    if (isRestrictedRole && chat.conversationId && !selectedConversationId) {
       setSelectedConversationId(chat.conversationId);
     }
   }, [userProfile?.role, chat.conversationId, selectedConversationId]);
@@ -118,7 +119,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
         const { data } = await supabase
           .from('user_profiles')
           .select('user_id, full_name, email, role')
-          .in('role', ['admin', 'affiliate_admin']);
+          .in('role', ['admin', 'affiliate_admin', 'school']);
         const map: Record<string, string> = {};
         (data || []).forEach((u: any) => {
           map[u.user_id] = u.full_name || u.email || u.user_id;
@@ -163,7 +164,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school') {
       return selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.recipientLabel.student', { defaultValue: 'Student' });
     } else {
-      return t('studentDashboard.applicationChatPage.studentChat.recipientLabel.support', { defaultValue: 'Administration' });
+      return selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.recipientLabel.support', { defaultValue: 'Administration' });
     }
   };
 
@@ -209,7 +210,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
+                  <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime', { defaultValue: 'Tempo de resposta: 1-2 horas úteis' })}</p>
               </div>
             </div>
@@ -334,7 +335,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title')}</h3>
+                <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Support Team' })}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime')}</p>
               </div>
             </div>

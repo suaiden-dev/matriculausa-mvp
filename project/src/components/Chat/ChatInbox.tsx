@@ -84,10 +84,19 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between mb-1 min-w-0">
-          <h3 className={`text-sm font-medium text-slate-900 truncate pr-2 ${hasEffectiveUnread ? 'font-semibold' : ''}`}>
-            {recipientName}
-          </h3>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className={`font-semibold text-slate-900 truncate ${hasEffectiveUnread ? 'text-blue-600' : ''}`}>
+              {recipientName}
+            </h3>
+            {userProfile?.role === 'student' && recipient?.role && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
+                recipient.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {recipient.role === 'admin' ? 'Support' : 'University'}
+              </span>
+            )}
+          </div>
           <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
             {formatTime(conversation.last_message_at)}
           </span>
@@ -137,6 +146,13 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const [showStudentSelector, setShowStudentSelector] = useState(false);
   const [studentEmails, setStudentEmails] = useState<{ [key: string]: string }>({});
 
+  // Auto-select the first conversation if there's only one and nothing is selected (especially for students)
+  useEffect(() => {
+    if (!selectedConversationId && conversations.length === 1 && !loading && !isInitialLoad) {
+      handleConversationClick(conversations[0]);
+    }
+  }, [conversations, selectedConversationId, loading, isInitialLoad]);
+
   // Função para verificar se deve filtrar (produção, staging ou local para testes)
   const shouldFilter = useMemo(() => {
     const hostname = window.location.hostname;
@@ -171,8 +187,13 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     if (!email) return false;
     if (!shouldFilter) return false; // Em desenvolvimento, não excluir
 
-    // Se o próprio usuário logado for um usuário de teste, permitir ver outros usuários de teste
-    if (userProfile?.email?.toLowerCase().endsWith('@uorak.com')) {
+    // Se o próprio usuário logado for um usuário de teste, ou se for Admin/School, permitir ver outros usuários de teste
+    if (
+      userProfile?.email?.toLowerCase().endsWith('@uorak.com') ||
+      userProfile?.role === 'admin' ||
+      userProfile?.role === 'school' ||
+      userProfile?.role === 'affiliate_admin'
+    ) {
       return false;
     }
 
@@ -301,9 +322,9 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         .select('id, admin_id')
         .eq('student_id', studentId);
 
-      // For affiliate admins, only look for their own conversations
+      // For affiliate admins and schools, only look for their own conversations
       // For regular admins, look for any existing conversation with this student
-      if (userProfile?.role === 'affiliate_admin') {
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') {
         query = query.eq('admin_id', user?.id);
       }
 
@@ -378,16 +399,6 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
             {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Support Chat'}
           </h2>
           <div className="flex items-center space-x-2">
-            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && (
-              <button
-                onClick={() => setShowStudentSelector(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md flex items-center transition-colors"
-                title="Start new conversation"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                New Chat
-              </button>
-            )}
             <button
               onClick={() => refetchConversations(false)}
               className="text-slate-500 hover:text-slate-700 p-1 rounded"

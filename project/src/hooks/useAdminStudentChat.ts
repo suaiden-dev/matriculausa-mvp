@@ -743,8 +743,8 @@ export const useAdminStudentConversations = () => {
         .from('admin_student_conversations')
         .select(`
           *,
-          admin_profile:admin_id(full_name, avatar_url),
-          student_profile:student_id(full_name, avatar_url)
+          admin_profile:admin_id(full_name, avatar_url, role),
+          student_profile:student_id(full_name, avatar_url, role)
         `)
         .order('last_message_at', { ascending: false });
 

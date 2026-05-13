@@ -4,14 +4,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { UniversityProvider } from '../../context/UniversityContext';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
 import Overview from './Overview';
-import ScholarshipManagement from './ScholarshipManagement';
 import NewScholarship from './NewScholarship';
 import ProfileManagement from './ProfileManagement';
 import StudentManagement from './StudentManagement';
 import SelectionProcess from './SelectionProcess';
 import StudentDetails from './StudentDetails';
 import PaymentManagement from './PaymentManagement';
-import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests';
+import ScholarshipsWrapper from './ScholarshipsWrapper';
 import AISolutions from './AISolutions';
 import SchoolApplicationTrackingView from './ApplicationTracking/ApplicationTrackingView';
 import StudentMessages from './StudentMessages';
@@ -44,7 +43,7 @@ export const SchoolDashboard: React.FC = () => {
         <SchoolDashboardLayout user={user}>
           <Routes>
             <Route index element={<Overview />} />
-            <Route path="scholarships" element={<ScholarshipManagement />} />
+            <Route path="scholarships/*" element={<ScholarshipsWrapper />} />
             <Route path="scholarship/new" element={<NewScholarship />} />
             <Route path="scholarship/new" element={<NewScholarship />} />
             <Route path="profile" element={<ProfileManagement />} />
@@ -54,7 +53,6 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="messages" element={<StudentMessages />} />
             <Route path="student/:applicationId" element={<StudentDetails />} />
             <Route path="analytics" element={<PaymentManagement />} />
-            <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
             {/* FASE 1 DESATIVAÇÃO: rotas de email IA comentadas */}
             {/* <Route path="inbox" element={<InboxRouter />} /> */}
             {/* <Route path="email" element={<EmailManagement />} /> */}

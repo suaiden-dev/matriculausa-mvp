@@ -1,6 +1,9 @@
+import { useSearchParams } from 'react-router-dom';
 import AdminStudentChatPage from '../../components/Chat/AdminStudentChatPage';
 
 const StudentMessages: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const studentId = searchParams.get('studentId') || undefined;
 
   return (
     <div className="space-y-6">
@@ -15,6 +18,7 @@ const StudentMessages: React.FC = () => {
         <AdminStudentChatPage 
           className="h-[calc(100vh-250px)]"
           showInbox={true}
+          defaultRecipientId={studentId}
         />
       </div>
     </div>
