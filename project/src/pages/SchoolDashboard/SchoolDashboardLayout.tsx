@@ -166,6 +166,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
   };
 
   const openNotification = async (n: any) => {
+    console.log('[NOTIF_CLICK_DEBUG] Notificação clicada:', n);
     try {
       if (n && !n.read_at) {
         await markAsRead(n.id);
@@ -173,6 +174,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     } catch {}
     setShowNotif(false);
     const target = n?.link || '/school/dashboard/students';
+    console.log('[NOTIF_CLICK_DEBUG] Redirecionando para:', target);
     navigate(target);
   };
 

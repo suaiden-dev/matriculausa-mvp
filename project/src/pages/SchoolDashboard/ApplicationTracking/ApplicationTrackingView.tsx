@@ -29,7 +29,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
 
   // Map Context Applications to StudentRecord format
   const studentRecords: StudentRecord[] = useMemo(() => {
-    return applications.map((app: any) => {
+    const mappedRecords = applications.map((app: any) => {
       const student = app.user_profiles || {};
       const scholarship = app.scholarships || {};
       const status = app.status; // scholarship_applications status
@@ -60,12 +60,12 @@ const SchoolApplicationTrackingView: React.FC = () => {
         applied_at: app.created_at,
         is_application_fee_paid: app.is_application_fee_paid || student.is_application_fee_paid || false,
         is_placement_fee_paid: student.is_placement_fee_paid === true || app.is_placement_fee_paid === true || false,
-        placement_fee_flow: student.placement_fee_flow === true || app.placement_fee_flow === true || scholarship.placement_fee_flow === true,
+        placement_fee_flow: student.placement_fee_flow === true || app.is_placement_fee_paid === true || scholarship.placement_fee_flow === true,
         is_scholarship_fee_paid: app.is_scholarship_fee_paid || student.is_scholarship_fee_paid || false,
         acceptance_letter_status: app.acceptance_letter_status || null,
         acceptance_letter_url: app.acceptance_letter_url || null,
         payment_status: null,
-        student_process_type: student.student_process_type || 'initial',
+        student_process_type: app.student_process_type || student.student_process_type || 'initial',
         transfer_form_status: student.transfer_form_status || null,
         scholarship_title: scholarship.title || 'Unknown',
         course_name: null,
@@ -85,12 +85,12 @@ const SchoolApplicationTrackingView: React.FC = () => {
         placement_fee_installment_number: student.placement_fee_installment_number || 0,
         placement_fee_installment_enabled: student.placement_fee_installment_enabled || false,
 
-        // Doc aggregation
-        docs_total_required: universityDocs.length,
-        docs_total_uploaded: docsUploaded,
-        docs_total_approved: docsApproved,
-        docs_total_rejected: docsRejected,
-        docs_total_under_review: docsUnderReview,
+        // Doc aggregation - Combine Basic Docs + University Specific Docs
+        docs_total_required: universityDocs.length + (app.university_document_stats?.required || 0),
+        docs_total_uploaded: docsUploaded + (app.university_document_stats?.uploaded || 0),
+        docs_total_approved: docsApproved + (app.university_document_stats?.approved || 0),
+        docs_total_rejected: docsRejected + (app.university_document_stats?.rejected || 0),
+        docs_total_under_review: docsUnderReview + (app.university_document_stats?.under_review || 0),
 
         has_sent_docs_to_university: app.has_sent_docs_to_university || false,
         sevis_transfer_completed: student.sevis_transfer_completed || false,
@@ -99,6 +99,15 @@ const SchoolApplicationTrackingView: React.FC = () => {
         source: student.source || app.source || null,
       } as StudentRecord;
     });
+
+    console.log('[KANBAN_DEBUG] Student Records:', mappedRecords.map((r: any) => ({
+      name: r.student_name,
+      total: r.docs_total_required,
+      approved: r.docs_total_approved,
+      status: r.application_status
+    })));
+
+    return mappedRecords;
   }, [applications, university]);
 
   // Apply filters

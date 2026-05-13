@@ -319,7 +319,8 @@ const StudentDetails: React.FC = () => {
     setError(null);
 
     try {
-      const { data, error } = await supabase
+      // 1. Tenta buscar pelo ID da aplicação (comportamento padrão)
+      let { data, error } = await supabase
         .from('scholarship_applications')
         .select(`
           *,
@@ -327,10 +328,34 @@ const StudentDetails: React.FC = () => {
           scholarships(*, universities(*))
         `)
         .eq('id', applicationId)
-        .single();
+        .maybeSingle();
+
+      // 2. Fallback: Se não encontrou, talvez o ID passado seja um student_id (ex: vindo do Chat)
+      if (!data && !error) {
+        console.log('Aplicação não encontrada pelo ID. Tentando buscar pelo student_id...');
+        const altResponse = await supabase
+          .from('scholarship_applications')
+          .select(`
+            *,
+            user_profiles!student_id(*),
+            scholarships(*, universities(*))
+          `)
+          .eq('student_id', applicationId)
+          // Ordena pela mais recente caso haja múltiplas
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        data = altResponse.data;
+        error = altResponse.error;
+      }
 
       if (error) {
         throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Application not found');
       }
       
       if (data) {
@@ -1752,7 +1777,7 @@ const StudentDetails: React.FC = () => {
         .from('user_profiles')
         .update({
           documents_status: 'approved',
-          status: 'enrolled'
+          status: 'active'
         })
         .eq('user_id', application.user_profiles.user_id);
 

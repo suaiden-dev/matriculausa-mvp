@@ -145,6 +145,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentSelector, setShowStudentSelector] = useState(false);
   const [studentEmails, setStudentEmails] = useState<{ [key: string]: string }>({});
+  const [activeTab, setActiveTab] = useState<'support' | 'universities'>('support');
 
   // Auto-select the first conversation if there's only one and nothing is selected (especially for students)
   useEffect(() => {
@@ -152,6 +153,24 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
       handleConversationClick(conversations[0]);
     }
   }, [conversations, selectedConversationId, loading, isInitialLoad]);
+
+  // Auto-switch tab if selectedConversationId changes to a conversation in a different tab
+  useEffect(() => {
+    if (selectedConversationId && conversations.length > 0) {
+      const selectedConv = conversations.find(c => c.id === selectedConversationId);
+      if (selectedConv && selectedConv.admin_profile?.role) {
+        const adminRole = selectedConv.admin_profile.role;
+        const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+        const isUniversity = adminRole === 'school';
+        
+        if (isSupport && activeTab !== 'support') {
+          setActiveTab('support');
+        } else if (isUniversity && activeTab !== 'universities') {
+          setActiveTab('universities');
+        }
+      }
+    }
+  }, [selectedConversationId, conversations]);
 
   // Função para verificar se deve filtrar (produção, staging ou local para testes)
   const shouldFilter = useMemo(() => {
@@ -257,14 +276,42 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     });
   }, [conversations, studentEmails, isDevelopment, userProfile?.role]);
 
-  // Filter conversations based on search term
-  const filteredConversations = filteredConversationsByEmail.filter(conversation => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
-      ? conversation.student_profile
-      : conversation.admin_profile;
-    const recipientName = recipient?.full_name || '';
-    return recipientName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  // Filter conversations based on active tab and search term
+  const filteredConversations = useMemo(() => {
+    return filteredConversationsByEmail.filter(conversation => {
+      const adminRole = conversation.admin_profile?.role;
+      
+      // Filter by tab (only for admin role)
+      if (userProfile?.role === 'admin') {
+        const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+        const isUniversity = adminRole === 'school';
+        
+        if (activeTab === 'support' && !isSupport) return false;
+        if (activeTab === 'universities' && !isUniversity) return false;
+      }
+
+      const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+        ? conversation.student_profile
+        : conversation.admin_profile;
+      const recipientName = recipient?.full_name || '';
+      return recipientName.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [filteredConversationsByEmail, activeTab, searchTerm, userProfile?.role]);
+
+  // Calculate unread counts for each tab
+  const tabUnreadCounts = useMemo(() => {
+    const counts = { support: 0, universities: 0 };
+    filteredConversationsByEmail.forEach(conversation => {
+      const adminRole = conversation.admin_profile?.role;
+      const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+      const isUniversity = adminRole === 'school';
+      
+      const unreadCount = conversation.unread_count || 0;
+      if (isSupport) counts.support += unreadCount;
+      if (isUniversity) counts.universities += unreadCount;
+    });
+    return counts;
+  }, [filteredConversationsByEmail]);
 
   // Auto-refresh conversations every 30 seconds
   useEffect(() => {
@@ -393,15 +440,15 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     <div className={`bg-white rounded-lg shadow-sm h-full flex flex-col ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-slate-200">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
-            <MessageSquare className="w-5 h-5 mr-2" />
-            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Support Chat'}
+            <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
+            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Messages'}
           </h2>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => refetchConversations(false)}
-              className="text-slate-500 hover:text-slate-700 p-1 rounded"
+              className="text-slate-500 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-full transition-colors"
               title="Refresh conversations"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,6 +457,42 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Tabs - Only for admin */}
+        {(userProfile?.role === 'admin') && (
+          <div className="flex p-1 bg-slate-100 rounded-lg mb-4">
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'support' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Support
+              {tabUnreadCounts.support > 0 && (
+                <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {tabUnreadCounts.support}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('universities')}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'universities' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Universities
+              {tabUnreadCounts.universities > 0 && (
+                <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {tabUnreadCounts.universities}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative">

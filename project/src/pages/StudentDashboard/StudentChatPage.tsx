@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatPage from '../../components/Chat/AdminStudentChatPage';
 
 const StudentChatPage: React.FC = () => {
-  const { userProfile } = useAuth();
+  useAuth();
   
   // For students, we need to determine which admin they should chat with
   // This could be based on their assigned admin, or a default support admin

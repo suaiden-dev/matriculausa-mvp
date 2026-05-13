@@ -133,13 +133,6 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
 
   const handleStudentClick = (student: StudentRecord) => {
     // Navigate to student detail page on the university dashboard
-    // using the existing selection process page or a new detail page if available.
-    // For now, we link to the SelectionProcess detail (which we might adapt later if needed)
-    navigate(`/school/dashboard/selection-process`);
-    // Ideally it would be: navigate(`/school/dashboard/student/${student.application_id}`);
-    // I am setting it to the existing routing which handles selection-process details or enrolled details
-    
-    // We will use the common student view path:
     if (student.status === 'enrolled') {
       navigate(`/school/dashboard/student/${student.application_id}`);
     } else {

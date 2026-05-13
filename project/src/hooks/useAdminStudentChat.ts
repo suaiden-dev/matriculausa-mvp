@@ -30,10 +30,12 @@ interface Conversation {
   admin_profile?: {
     full_name: string;
     avatar_url?: string;
+    role?: string;
   };
   student_profile?: {
     full_name: string;
     avatar_url?: string;
+    role?: string;
   };
   unread_count?: number;
   last_message?: string;
