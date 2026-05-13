@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
-  Calendar, 
-  Clock, 
-  Building,
-  GraduationCap
+  Calendar
 } from 'lucide-react';
 import { StudentRecord } from '../../../components/AdminDashboard/StudentApplicationsView';
 import { getStepStatus, APPLICATION_FLOW_STAGES } from '../../../utils/applicationFlowStages';
