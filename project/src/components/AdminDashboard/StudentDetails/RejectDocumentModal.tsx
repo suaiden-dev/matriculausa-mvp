@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface RejectDocumentModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ const RejectDocumentModal: React.FC<RejectDocumentModalProps> = ({
       onClose();
     } catch (error: any) {
       console.error('Error rejecting document:', error);
-      alert('Error rejecting document: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      toast.error('Error rejecting document: ' + (error?.message || 'Unknown error occurred. Please try again.'));
       // Não fechar o modal em caso de erro, para que o usuário possa tentar novamente
     } finally {
       setIsProcessing(false);

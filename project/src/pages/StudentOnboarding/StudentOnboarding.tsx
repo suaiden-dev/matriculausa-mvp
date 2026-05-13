@@ -214,25 +214,24 @@ const StudentOnboarding: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [goToStep, isVerifyingPayment, showPaymentAnimation]); // Removemos searchParams para evitar loop reativo
 
-  // 2. Sincronizar Estado -> URL (A única fonte de verdade durante a navegação interna)
   useEffect(() => {
     if (isVerifyingPayment || showPaymentAnimation || isInitialMount.current || loading) return;
 
     const currentStepUrl = searchParams.get('step');
 
-    // 🎯 PROTEÇÃO: Se o estado interno recuou mas a URL é identity_verification (um passo especial),
-    // não forçamos a volta para a URL a menos que o estado esteja MUITO inconsistente.
-    // Isso evita o loop de redirecionamento em erros 406.
+    // ✅ Sincronização Estado -> URL
     if (state.currentStep && state.currentStep !== currentStepUrl) {
       if (currentStepUrl === 'identity_verification' && state.currentStep === 'selection_fee') {
         console.warn('[Onboarding] 🚧 Bloqueando redirecionamento circular de identity_verification -> selection_fee');
         return;
       }
 
-      console.log(`[Onboarding] 🔄 Sincronizando URL com Estado: ${state.currentStep}`);
       const newParams = new URLSearchParams(searchParams);
-      newParams.set('step', state.currentStep);
-      navigate(`?${newParams.toString()}`, { replace: true });
+      if (newParams.get('step') !== state.currentStep) {
+        console.log(`[Onboarding] 🔄 Sincronizando URL: ${currentStepUrl} -> ${state.currentStep}`);
+        newParams.set('step', state.currentStep);
+        navigate(`?${newParams.toString()}`, { replace: true });
+      }
     }
   }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation, loading]);
 
@@ -522,7 +521,7 @@ const StudentOnboarding: React.FC = () => {
         verifyStripeSession();
       }
     }
-  }, [searchParams, handleNext, isNewFlowUser, goToStep]);
+  }, [searchParams, isNewFlowUser, goToStep]); // Removido handleNext das dependências pois ele muda a cada render de state.currentStep
 
   useEffect(() => {
     if (!authLoading && user && user.role !== 'student') {

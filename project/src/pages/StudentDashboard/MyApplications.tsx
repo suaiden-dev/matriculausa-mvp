@@ -9,7 +9,10 @@ import {
   DollarSign,
   Building,
   ArrowRight,
-  GraduationCap
+  GraduationCap,
+  Download,
+  Eye,
+  Inbox
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -79,7 +82,7 @@ const MyApplications: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   // Document Requests uploads grouped by applicationId
-  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]>>({});
+  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string; is_admin_upload?: boolean }[]>>({});
   // const [pendingUploads] = useState<Record<string, Record<string, File | null>>>({});
   // const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   // const navigate = useNavigate();
@@ -188,7 +191,7 @@ const MyApplications: React.FC = () => {
         if (requestIds.length) {
           const { data: uploads } = await supabase
             .from('document_request_uploads')
-            .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by')
+            .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by,is_admin_upload')
             .in('document_request_id', requestIds)
             .eq('uploaded_by', user.id);
 
@@ -208,7 +211,7 @@ const MyApplications: React.FC = () => {
             }
           });
 
-          const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]> = {};
+          const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string; is_admin_upload?: boolean }[]> = {};
           (uploads || []).forEach((u: any) => {
             const meta = reqMeta[u.document_request_id];
             if (!meta) return;
@@ -218,8 +221,8 @@ const MyApplications: React.FC = () => {
                 title: meta.title,
                 status: (u.status || '').toLowerCase(),
                 review_notes: u.review_notes || undefined,
-                rejection_reason: u.rejection_reason || undefined
-              });
+                rejection_reason: u.rejection_reason || undefined,
+                is_admin_upload: u.is_admin_upload              });
             });
           });
 
@@ -1423,7 +1426,7 @@ const MyApplications: React.FC = () => {
                                                            <Clock className="h-3 w-3 text-amber-600" />
                                                          )}
                                                        </div>
-                                                       <span className="font-medium text-slate-900 text-xs">
+                                                       <span className="font-medium text-slate-900 text-xs flex items-center gap-1.5">
                                                          <TruncatedText
                                                            text={req.title}
                                                            maxLength={35}
@@ -1431,6 +1434,11 @@ const MyApplications: React.FC = () => {
                                                            showTooltip={true}
                                                            tooltipPosition="top"
                                                          />
+                                                         {req.is_admin_upload && (
+                                                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                                             Admin
+                                                           </span>
+                                                         )}
                                                        </span>
                                                      </div>
                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
@@ -1461,6 +1469,64 @@ const MyApplications: React.FC = () => {
                                            </div>
                                          </div>
                                        )}
+
+                                       {/* Admin Uploaded Documents (Attachments) */}
+                                       {(() => {
+                                         const adminDocs = (application as any).documents && Array.isArray((application as any).documents)
+                                           ? (application as any).documents.filter((d: any) => d.source === 'admin')
+                                           : [];
+                                         
+                                         if (adminDocs.length === 0) return null;
+
+                                         return (
+                                           <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 p-4 shadow-sm">
+                                             <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                               <Inbox className="h-4 w-4 mr-2 text-blue-600" />
+                                               Documentos Recebidos
+                                             </h5>
+                                             <div className="grid gap-2">
+                                               {adminDocs.map((doc: any, idx: number) => (
+                                                 <div key={`admin-doc-${idx}`} className="flex items-center justify-between p-3 bg-white border border-blue-100 rounded-xl hover:shadow-md transition-all group">
+                                                   <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                       <FileText className="h-4 w-4" />
+                                                     </div>
+                                                     <div className="min-w-0 flex-1">
+                                                       <p className="text-xs font-bold text-slate-900 truncate">
+                                                         {doc.title || 'Documento Adicional'}
+                                                       </p>
+                                                       {doc.uploaded_at && (
+                                                         <p className="text-[10px] text-slate-500">
+                                                           Recebido em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                                                         </p>
+                                                       )}
+                                                     </div>
+                                                   </div>
+                                                   <div className="flex items-center space-x-1 ml-2">
+                                                     <button
+                                                       onClick={() => window.open(doc.url, '_blank')}
+                                                       className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                       title="Visualizar"
+                                                     >
+                                                       <Eye className="h-4 w-4" />
+                                                     </button>
+                                                     <a
+                                                       href={doc.url}
+                                                       download
+                                                       target="_blank"
+                                                       rel="noopener noreferrer"
+                                                       className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                       title="Baixar"
+                                                     >
+                                                       <Download className="h-4 w-4" />
+                                                     </a>
+                                                   </div>
+                                                 </div>
+                                               ))}
+                                             </div>
+                                           </div>
+                                         );
+                                       })()}
                                      </div>
                                    </div>
                                  </div>

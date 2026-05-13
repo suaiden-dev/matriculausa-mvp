@@ -16,6 +16,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { PromotionalCoupon } from '../../types/coupon';
 import { toast } from 'react-hot-toast';
+import { useConfirmation } from '../../contexts/AdminConfirmationContext';
 
 interface CouponUsage {
   id: string;
@@ -34,6 +35,7 @@ interface CouponUsage {
 }
 
 const CouponManagement: React.FC = () => {
+  const { confirm } = useConfirmation();
   const [activeTab, setActiveTab] = useState<'coupons' | 'usage'>('coupons');
   const [coupons, setCoupons] = useState<PromotionalCoupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,7 +200,15 @@ const CouponManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this coupon?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Coupon',
+      message: 'Are you sure you want to delete this coupon? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

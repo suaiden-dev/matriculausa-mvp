@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 
 interface CosI20SectionProps {
@@ -123,7 +124,7 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
       setI20File(null);
       onRefresh?.();
     } catch (err: any) {
-      alert('Failed to upload I-20: ' + err.message);
+      toast.error('Failed to upload I-20: ' + err.message);
     } finally {
       setUploading(false);
     }
