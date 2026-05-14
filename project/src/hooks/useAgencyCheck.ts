@@ -8,7 +8,7 @@ const TARGET_AFFILIATE_EMAIL = 'info@thefutureofenglish.com';
  * Hook para verificar se o seller_referral_code do usuário atual
  * pertence ao affiliate admin com email específico
  */
-export const useAffiliateAdminCheck = (): {
+export const useAgencyCheck = (): {
   isTheFutureOfEnglishAffiliate: boolean;
   affiliateAdminEmail: string | null;
   loading: boolean;
@@ -37,7 +37,7 @@ export const useAffiliateAdminCheck = (): {
         });
 
         if (queryError) {
-          console.error('❌ [useAffiliateAdminCheck] Erro ao buscar email via RPC:', queryError);
+          console.error('❌ [useAgencyCheck] Erro ao buscar email via RPC:', queryError);
           setLoading(false);
           return;
         }
@@ -46,7 +46,7 @@ export const useAffiliateAdminCheck = (): {
           setAffiliateEmail(result[0].email);
         }
       } catch (error) {
-        console.error('❌ [useAffiliateAdminCheck] Erro ao verificar affiliate admin:', error);
+        console.error('❌ [useAgencyCheck] Erro ao verificar affiliate admin:', error);
       } finally {
         setLoading(false);
       }

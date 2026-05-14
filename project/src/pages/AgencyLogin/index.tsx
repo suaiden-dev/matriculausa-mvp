@@ -401,9 +401,9 @@ const FormSection: React.FC = () => {
   useEffect(() => {
     if (user && user.role === 'affiliate_admin') {
       if (!user.onboarding_completed || !user.is_active) {
-        routerNavigate('/affiliate-admin/onboarding', { replace: true });
+        routerNavigate('/agency/onboarding', { replace: true });
       } else {
-        routerNavigate('/affiliate-admin/dashboard', { replace: true });
+        routerNavigate('/agency/dashboard', { replace: true });
       }
     }
   }, [user, routerNavigate]);

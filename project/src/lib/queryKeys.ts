@@ -83,30 +83,30 @@ export const queryKeys = {
     },
   },
   // Affiliate Admin Dashboard
-  affiliateAdmin: {
-    all: ['affiliate-admin'] as const,
-    adminData: (userId?: string) => ['affiliate-admin', 'admin-data', userId] as const,
-    sellers: (affiliateAdminId?: string) => ['affiliate-admin', 'sellers', affiliateAdminId] as const,
-    studentProfiles: (userId?: string) => ['affiliate-admin', 'student-profiles', userId] as const,
-    feeOverrides: (userIds: string[]) => ['affiliate-admin', 'fee-overrides', ...userIds] as const,
-    realPaidAmounts: (userIds: string[]) => ['affiliate-admin', 'real-paid-amounts', ...userIds] as const,
-    paymentMethods: (profileIds: string[]) => ['affiliate-admin', 'payment-methods', ...profileIds] as const,
-    revenueCalculation: (userId?: string, profileCount?: number) => ['affiliate-admin', 'revenue-calculation', userId, profileCount] as const,
+  agency: {
+    all: ['agency'] as const,
+    adminData: (userId?: string) => ['agency', 'admin-data', userId] as const,
+    sellers: (affiliateAdminId?: string) => ['agency', 'sellers', affiliateAdminId] as const,
+    studentProfiles: (userId?: string) => ['agency', 'student-profiles', userId] as const,
+    feeOverrides: (userIds: string[]) => ['agency', 'fee-overrides', ...userIds] as const,
+    realPaidAmounts: (userIds: string[]) => ['agency', 'real-paid-amounts', ...userIds] as const,
+    paymentMethods: (profileIds: string[]) => ['agency', 'payment-methods', ...profileIds] as const,
+    revenueCalculation: (userId?: string, profileCount?: number) => ['agency', 'revenue-calculation', userId, profileCount] as const,
     // Enhanced Student Tracking específicos
-    studentOverrides: (userIds: string[]) => ['affiliate-admin', 'student-overrides', ...userIds] as const,
-    studentDependents: (profileIds: string[]) => ['affiliate-admin', 'student-dependents', ...profileIds] as const,
-    blackCouponUsers: () => ['affiliate-admin', 'black-coupon-users'] as const,
+    studentOverrides: (userIds: string[]) => ['agency', 'student-overrides', ...userIds] as const,
+    studentDependents: (profileIds: string[]) => ['agency', 'student-dependents', ...profileIds] as const,
+    blackCouponUsers: () => ['agency', 'black-coupon-users'] as const,
     // Student Details Cache
-    studentDetails: (studentId?: string, profileId?: string) => ['affiliate-admin', 'student-details', studentId, profileId] as const,
-    studentApplications: (profileId?: string) => ['affiliate-admin', 'student-applications', profileId] as const,
-    studentDocuments: (profileId?: string) => ['affiliate-admin', 'student-documents', profileId] as const,
-    studentFeeHistory: (studentUserId?: string) => ['affiliate-admin', 'student-fee-history', studentUserId] as const,
+    studentDetails: (studentId?: string, profileId?: string) => ['agency', 'student-details', studentId, profileId] as const,
+    studentApplications: (profileId?: string) => ['agency', 'student-applications', profileId] as const,
+    studentDocuments: (profileId?: string) => ['agency', 'student-documents', profileId] as const,
+    studentFeeHistory: (studentUserId?: string) => ['agency', 'student-fee-history', studentUserId] as const,
     // Financial Overview Cache
     financialOverview: {
-      all: (userId?: string) => ['affiliate-admin', 'financial-overview', userId] as const,
-      stats: (userId?: string) => ['affiliate-admin', 'financial-overview', 'stats', userId] as const,
-      analytics: (userId?: string) => ['affiliate-admin', 'financial-overview', 'analytics', userId] as const,
-      paymentRequests: (userId?: string) => ['affiliate-admin', 'financial-overview', 'payment-requests', userId] as const,
+      all: (userId?: string) => ['agency', 'financial-overview', userId] as const,
+      stats: (userId?: string) => ['agency', 'financial-overview', 'stats', userId] as const,
+      analytics: (userId?: string) => ['agency', 'financial-overview', 'analytics', userId] as const,
+      paymentRequests: (userId?: string) => ['agency', 'financial-overview', 'payment-requests', userId] as const,
     },
   },
 } as const;
@@ -169,21 +169,21 @@ export const invalidateStudentDashboardRewards = (queryClient: any) => {
  * Helpers para invalidação de queries do Affiliate Admin Dashboard
  */
 export const invalidateAffiliateAdminAll = (queryClient: any) => {
-  queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.all });
+  queryClient.invalidateQueries({ queryKey: queryKeys.agency.all });
 };
 
 export const invalidateAffiliateAdminSellers = (queryClient: any) => {
-  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'sellers'] });
+  queryClient.invalidateQueries({ queryKey: ['agency', 'sellers'] });
 };
 
 export const invalidateAffiliateAdminStudentProfiles = (queryClient: any) => {
-  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'student-profiles'] });
+  queryClient.invalidateQueries({ queryKey: ['agency', 'student-profiles'] });
 };
 
 export const invalidateAffiliateAdminRevenueCalculation = (queryClient: any) => {
-  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'revenue-calculation'] });
+  queryClient.invalidateQueries({ queryKey: ['agency', 'revenue-calculation'] });
 };
 
 export const invalidateAffiliateAdminFinancialOverview = (queryClient: any) => {
-  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'financial-overview'] });
+  queryClient.invalidateQueries({ queryKey: ['agency', 'financial-overview'] });
 };

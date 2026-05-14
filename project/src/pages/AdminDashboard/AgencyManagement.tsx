@@ -1286,9 +1286,9 @@ const AffiliateManagement: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Affiliate Management</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Agency Management</h1>
             <p className="text-slate-600 mt-2">
-              Manage and monitor all affiliate partners and their performance
+              Manage and monitor all B2B agency partners and their performance
             </p>
           </div>
           <button
@@ -1306,7 +1306,7 @@ const AffiliateManagement: React.FC = () => {
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Affiliates</p>
+              <p className="text-sm font-medium text-slate-600">Total Agencies</p>
               <p className="text-2xl font-bold text-slate-900">{totalStats.totalAffiliates}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
@@ -1482,7 +1482,7 @@ const AffiliateManagement: React.FC = () => {
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search affiliates by name, email, phone, or country..."
+                placeholder="Search agencies by name, email, phone, or country..."
                 value={filters.search}
                 onChange={(e) => updateFilters({ search: e.target.value })}
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
@@ -1562,7 +1562,7 @@ const AffiliateManagement: React.FC = () => {
 
         {/* Filter Results Count */}
         <div className="mt-4 text-sm text-slate-600">
-          Showing {filteredAndSortedAffiliates.length} of {adjustedAffiliates.length} affiliates
+          Showing {filteredAndSortedAffiliates.length} of {adjustedAffiliates.length} agencies
         </div>
       </div>
 
@@ -1571,7 +1571,7 @@ const AffiliateManagement: React.FC = () => {
         {filteredAndSortedAffiliates.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No affiliates found</h3>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No agencies found</h3>
             <p className="text-slate-600">
               {filters.search || filters.status !== 'all'
                 ? 'Try adjusting your filters to see more results.'

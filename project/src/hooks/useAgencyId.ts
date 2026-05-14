@@ -8,7 +8,7 @@ export interface AffiliateAdminInfo {
   is_active: boolean;
 }
 
-export const useAffiliateAdminId = (): {
+export const useAgencyId = (): {
   affiliateAdminId: string | null;
   affiliateAdminInfo: AffiliateAdminInfo | null;
   loading: boolean;
@@ -59,7 +59,7 @@ export const useAffiliateAdminId = (): {
       setError(null);
 
     } catch (err) {
-      console.error('❌ [useAffiliateAdminId] Erro inesperado:', err);
+      console.error('❌ [useAgencyId] Erro inesperado:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);

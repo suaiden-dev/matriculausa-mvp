@@ -17,7 +17,7 @@ interface AffiliateAdminNotificationsConfig {
   onNotificationReceived?: (notification: AffiliateAdminNotification) => void;
 }
 
-export const useAffiliateAdminNotifications = ({ 
+export const useAgencyNotifications = ({ 
   affiliateAdminId,
   onNotificationReceived 
 }: AffiliateAdminNotificationsConfig) => {
@@ -228,7 +228,7 @@ export const useAffiliateAdminNotifications = ({
           affiliate_admin_id: affiliateAdminId,
           title: 'I-20 Control Fee Deadline Expired',
           message: `Student ${studentName} referred by ${sellerName} has exceeded the I-20 Control Fee deadline. Immediate action required.`,
-          link: `/affiliate-admin/student-tracking?student=${studentId}`,
+          link: `/agency/dashboard/students?student=${studentId}`,
           notification_type: 'i20_deadline_expired',
           metadata: {
             student_id: studentId,

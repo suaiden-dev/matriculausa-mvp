@@ -112,7 +112,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         '/student/dashboard',
         '/school/dashboard',
         '/admin/dashboard',
-        '/affiliate-admin/dashboard',
+        '/agency/dashboard',
         '/seller/dashboard',
         '/affiliate/dashboard'
       ];
@@ -167,7 +167,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
 
         if (user.role === 'admin' || user.role === 'post_sales') { navigate('/admin/dashboard', { replace: true }); return; }
-        if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate_admin') { navigate('/agency/dashboard', { replace: true }); return; }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
 
@@ -196,16 +196,16 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
 
       // PROTEÇÃO DE ROTAS POR ROLE
-      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
         navigate('/school/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
         if (hasPendingOrRejectedSelectionPayment) { navigate('/student/onboarding?step=selection_fee', { replace: true }); return; }
         navigate('/student/dashboard', { replace: true }); return;
       }
 
-      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
+      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/agency') || currentPath.startsWith('/seller/'))) {
         navigate('/admin/dashboard', { replace: true }); return;
       }
 
@@ -215,31 +215,31 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           currentPath.startsWith('/admin/') ||
           currentPath.startsWith('/seller/');
 
-        const isProtectedAffiliatePath = currentPath.startsWith('/affiliate-admin/dashboard') ||
-          currentPath.startsWith('/affiliate-admin/onboarding') ||
-          currentPath.startsWith('/affiliate-admin/pending-approval');
+        const isProtectedAffiliatePath = currentPath.startsWith('/agency/dashboard') ||
+          currentPath.startsWith('/agency/onboarding') ||
+          currentPath.startsWith('/agency/pending-approval');
 
         if (tryingToAccessOtherDashboard || isProtectedAffiliatePath) {
-          if (!user.onboarding_completed && currentPath !== '/affiliate-admin/onboarding') {
-            navigate('/affiliate-admin/onboarding', { replace: true });
+          if (!user.onboarding_completed && currentPath !== '/agency/onboarding') {
+            navigate('/agency/onboarding', { replace: true });
             return;
           }
-          if (user.onboarding_completed && !user.is_active && currentPath !== '/affiliate-admin/pending-approval') {
-            navigate('/affiliate-admin/pending-approval', { replace: true });
+          if (user.onboarding_completed && !user.is_active && currentPath !== '/agency/pending-approval') {
+            navigate('/agency/pending-approval', { replace: true });
             return;
           }
-          if (user.onboarding_completed && user.is_active && (tryingToAccessOtherDashboard || currentPath === '/affiliate-admin/onboarding' || currentPath === '/affiliate-admin/pending-approval')) {
-            navigate('/affiliate-admin/dashboard', { replace: true });
+          if (user.onboarding_completed && user.is_active && (tryingToAccessOtherDashboard || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
+            navigate('/agency/dashboard', { replace: true });
             return;
           }
         }
       }
 
-      if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
+      if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/agency/'))) {
         navigate('/seller/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/') || currentPath.startsWith('/seller/'))) {
+      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/agency/') || currentPath.startsWith('/seller/'))) {
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
@@ -276,7 +276,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
 
         if (user.role === 'affiliate' || user.role === 'affiliate_admin') {
-          const path = user.role === 'affiliate_admin' ? '/affiliate-admin/dashboard' : '/affiliate/dashboard';
+          const path = user.role === 'affiliate_admin' ? '/agency/dashboard' : '/affiliate/dashboard';
           navigate(path, { replace: true });
           return;
         }

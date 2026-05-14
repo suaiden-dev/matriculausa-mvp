@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAffiliateAdminId } from '../../hooks/useAffiliateAdminId';
+import { useAgencyId } from '../../hooks/useAgencyId';
 
 interface UtmAttribution {
   id: string;
@@ -25,7 +25,7 @@ interface UtmAttribution {
 }
 
 const UtmTracking: React.FC = () => {
-  const { affiliateAdminId, loading: adminLoading } = useAffiliateAdminId();
+  const { affiliateAdminId, loading: adminLoading } = useAgencyId();
   const [attributions, setAttributions] = useState<UtmAttribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

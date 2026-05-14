@@ -17,11 +17,11 @@ import { useFeeConfig } from '../../hooks/useFeeConfig';
 import {
   useAdjustedStudentsCalculation,
   useBlackCouponUsersQuery,
-  useAffiliateAdminDataQuery,
-  useAffiliateSellersQuery,
-  useAffiliateStudentProfilesQuery,
+  useAgencyDataQuery,
+  useAgencySellersQuery,
+  useAgencyStudentProfilesQuery,
   useCachedStudentDetails
-} from '../../hooks/useAffiliateAdminQueries';
+} from '../../hooks/useAgencyQueries';
 import RefreshButton from '../../components/RefreshButton';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
@@ -43,9 +43,9 @@ function EnhancedStudentTracking(props) {
   const queryClient = useQueryClient();
 
   // ✅ React Query hooks para dados com cache
-  const { data: adminData } = useAffiliateAdminDataQuery(effectiveUserId);
-  const { data: sellers = [], isLoading: loadingSellers } = useAffiliateSellersQuery(adminData?.affiliateAdminId);
-  const { data: students = [], isLoading: loadingStudents } = useAffiliateStudentProfilesQuery(effectiveUserId);
+  const { data: adminData } = useAgencyDataQuery(effectiveUserId);
+  const { data: sellers = [], isLoading: loadingSellers } = useAgencySellersQuery(adminData?.affiliateAdminId);
+  const { data: students = [], isLoading: loadingStudents } = useAgencyStudentProfilesQuery(effectiveUserId);
 
   // Loading combinado
   const loading = loadingSellers || loadingStudents;
@@ -130,13 +130,13 @@ function EnhancedStudentTracking(props) {
     try {
       // Invalidar todas as queries relacionadas para forçar refetch
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.adminData(effectiveUserId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.sellers(adminData?.affiliateAdminId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.studentProfiles(effectiveUserId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.feeOverrides }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.realPaidAmounts }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.studentDependents }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.blackCouponUsers })
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.adminData(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.sellers(adminData?.affiliateAdminId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.studentProfiles(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.feeOverrides }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.realPaidAmounts }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.studentDependents }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.blackCouponUsers })
       ]);
     } finally {
       // Delay para mostrar feedback visual

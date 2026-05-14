@@ -8,13 +8,13 @@ import { getDisplayAmounts } from '../utils/paymentConverter';
  * Hook para buscar dados do affiliate admin com cache
  * Cache: 3 minutos
  */
-export function useAffiliateAdminDataQuery(userId?: string) {
+export function useAgencyDataQuery(userId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.adminData(userId),
+    queryKey: queryKeys.agency.adminData(userId),
     queryFn: async () => {
       if (!userId) return null;
 
-      console.log('[useAffiliateAdminDataQuery] Fetching admin data for userId:', userId);
+      console.log('[useAgencyDataQuery] Fetching admin data for userId:', userId);
       
       // 1. Descobrir affiliate_admin_id
       const { data: aaList, error: aaErr } = await supabase
@@ -44,13 +44,13 @@ export function useAffiliateAdminDataQuery(userId?: string) {
  * Hook para buscar sellers vinculados ao affiliate admin
  * Cache: 2 minutos
  */
-export function useAffiliateSellersQuery(affiliateAdminId?: string) {
+export function useAgencySellersQuery(affiliateAdminId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.sellers(affiliateAdminId),
+    queryKey: queryKeys.agency.sellers(affiliateAdminId),
     queryFn: async () => {
       if (!affiliateAdminId) return [];
 
-      console.log('[useAffiliateSellersQuery] Fetching sellers for admin:', affiliateAdminId);
+      console.log('[useAgencySellersQuery] Fetching sellers for admin:', affiliateAdminId);
       
       const { data: sellers, error } = await supabase
         .from('sellers')
@@ -73,13 +73,13 @@ export function useAffiliateSellersQuery(affiliateAdminId?: string) {
  * Hook para buscar perfis de estudantes com fees usando RPC
  * Cache: 2 minutos
  */
-export function useAffiliateStudentProfilesQuery(userId?: string) {
+export function useAgencyStudentProfilesQuery(userId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentProfiles(userId),
+    queryKey: queryKeys.agency.studentProfiles(userId),
     queryFn: async () => {
       if (!userId) return [];
 
-      console.log('[useAffiliateStudentProfilesQuery] Fetching profiles for userId:', userId);
+      console.log('[useAgencyStudentProfilesQuery] Fetching profiles for userId:', userId);
       
       const { data: profiles, error } = await supabase
         .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: userId });
@@ -110,7 +110,7 @@ export function useAffiliateStudentProfilesQuery(userId?: string) {
  */
 export function useUserFeeOverridesQuery(userIds: string[]) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.feeOverrides(userIds.sort()),
+    queryKey: queryKeys.agency.feeOverrides(userIds.sort()),
     queryFn: async () => {
       if (!userIds.length) return {};
 
@@ -155,7 +155,7 @@ export function useUserFeeOverridesQuery(userIds: string[]) {
  */
 export function useRealPaidAmountsQuery(userIds: string[]) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.realPaidAmounts(userIds.sort()),
+    queryKey: queryKeys.agency.realPaidAmounts(userIds.sort()),
     queryFn: async () => {
       if (!userIds.length) return {};
 
@@ -194,7 +194,7 @@ export function useRealPaidAmountsQuery(userIds: string[]) {
  */
 export function useStudentPaymentMethodsQuery(profileIds: string[]) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.paymentMethods(profileIds.sort()),
+    queryKey: queryKeys.agency.paymentMethods(profileIds.sort()),
     queryFn: async () => {
       if (!profileIds.length) return {};
 
@@ -253,7 +253,7 @@ export function useStudentPaymentMethodsQuery(profileIds: string[]) {
  */
 export function useStudentFeeOverridesQuery(userIds: string[]) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentOverrides(userIds.sort()),
+    queryKey: queryKeys.agency.studentOverrides(userIds.sort()),
     queryFn: async () => {
       if (!userIds.length) return {};
 
@@ -299,7 +299,7 @@ export function useStudentFeeOverridesQuery(userIds: string[]) {
  */
 export function useStudentDependentsQuery(profileIds: string[]) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentDependents(profileIds.sort()),
+    queryKey: queryKeys.agency.studentDependents(profileIds.sort()),
     queryFn: async () => {
       if (!profileIds.length) return {};
 
@@ -333,7 +333,7 @@ export function useStudentDependentsQuery(profileIds: string[]) {
  */
 export function useBlackCouponUsersQuery() {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.blackCouponUsers(),
+    queryKey: queryKeys.agency.blackCouponUsers(),
     queryFn: async () => {
       console.log('[useBlackCouponUsersQuery] Fetching BLACK coupon users');
       
@@ -443,9 +443,9 @@ export function useAdjustedStudentsCalculation(
  * Hook composto para calcular revenue ajustada do affiliate admin
  * Combina múltiplas queries e calcula valores finais
  */
-export function useAffiliateRevenueCalculationQuery(userId?: string) {
+export function useAgencyRevenueCalculationQuery(userId?: string) {
   // Queries básicas
-  const { data: profiles } = useAffiliateStudentProfilesQuery(userId);
+  const { data: profiles } = useAgencyStudentProfilesQuery(userId);
   
   // Derivar dados para próximas queries
   const uniqueUserIds = Array.from(new Set((profiles || []).map((p: any) => p.user_id).filter(Boolean))) as string[];
@@ -455,7 +455,7 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
   const { data: realPaidAmountsMap = {} } = useRealPaidAmountsQuery(uniqueUserIds);
 
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.revenueCalculation(userId, profiles?.length || 0),
+    queryKey: queryKeys.agency.revenueCalculation(userId, profiles?.length || 0),
     queryFn: async () => {
       if (!profiles || !overridesMap) {
         return {
@@ -466,7 +466,7 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
         };
       }
 
-      console.log('[useAffiliateRevenueCalculationQuery] Calculating revenue for:', profiles.length, 'profiles');
+      console.log('[useAgencyRevenueCalculationQuery] Calculating revenue for:', profiles.length, 'profiles');
 
       // Filtrar apenas estudantes que pagaram Selection Process Fee
       const paidProfiles = profiles.filter((p: any) => p.has_paid_selection_process_fee);
@@ -537,7 +537,7 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
  */
 export function useStudentDetailsQuery(studentId?: string, profileId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentDetails(studentId, profileId),
+    queryKey: queryKeys.agency.studentDetails(studentId, profileId),
     queryFn: async () => {
       if (!studentId) return null;
 
@@ -577,7 +577,7 @@ export function useStudentDetailsQuery(studentId?: string, profileId?: string) {
  */
 export function useStudentApplicationsQuery(profileId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentApplications(profileId),
+    queryKey: queryKeys.agency.studentApplications(profileId),
     queryFn: async () => {
       if (!profileId) return [];
 
@@ -615,7 +615,7 @@ export function useStudentApplicationsQuery(profileId?: string) {
  */
 export function useStudentDocumentsQuery(profileId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentDocuments(profileId),
+    queryKey: queryKeys.agency.studentDocuments(profileId),
     queryFn: async () => {
       if (!profileId) return [];
 
@@ -658,7 +658,7 @@ export function useStudentDocumentsQuery(profileId?: string) {
  */
 export function useStudentFeeHistoryQuery(studentUserId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.studentFeeHistory(studentUserId),
+    queryKey: queryKeys.agency.studentFeeHistory(studentUserId),
     queryFn: async () => {
       if (!studentUserId) return [];
 
@@ -773,7 +773,7 @@ export function useCachedStudentDetails(studentId?: string, profileId?: string) 
  */
 export function useFinancialStatsQuery(userId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.financialOverview.stats(userId),
+    queryKey: queryKeys.agency.financialOverview.stats(userId),
     queryFn: async () => {
       if (!userId) return null;
 
@@ -1103,13 +1103,13 @@ export function useFinancialStatsQuery(userId?: string) {
  * Hook para buscar payment requests do affiliate com cache
  * Cache: 2 minutos (dados que mudam com mais frequência)
  */
-export function useAffiliatePaymentRequestsQuery(userId?: string) {
+export function useAgencyPaymentRequestsQuery(userId?: string) {
   return useQuery({
-    queryKey: queryKeys.affiliateAdmin.financialOverview.paymentRequests(userId),
+    queryKey: queryKeys.agency.financialOverview.paymentRequests(userId),
     queryFn: async () => {
       if (!userId) return [];
 
-      console.log('[useAffiliatePaymentRequestsQuery] Fetching payment requests for userId:', userId);
+      console.log('[useAgencyPaymentRequestsQuery] Fetching payment requests for userId:', userId);
 
       // Importar serviço apenas quando necessário (atenção ao case no nome do arquivo)
       const { AffiliatePaymentRequestService } = await import('../services/AffiliatePaymentRequestService');

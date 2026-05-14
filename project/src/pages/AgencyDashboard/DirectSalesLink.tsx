@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Check, Link as LinkIcon, Package } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAffiliateAdminId } from '../../hooks/useAffiliateAdminId';
+import { useAgencyId } from '../../hooks/useAgencyId';
 
 /**
  * Component for Direct Sales link generation
@@ -16,7 +16,7 @@ const DirectSalesLink: React.FC = () => {
     name: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const { affiliateAdminId, affiliateAdminInfo } = useAffiliateAdminId();
+  const { affiliateAdminId, affiliateAdminInfo } = useAgencyId();
   const isSimplified = affiliateAdminInfo?.system_type === 'simplified';
 
   useEffect(() => {

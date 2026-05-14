@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAffiliateAdminNotifications } from './useAffiliateAdminNotifications';
+import { useAgencyNotifications } from './useAgencyNotifications';
 
 interface I20DeadlineMonitorConfig {
   affiliateAdminId: string;
@@ -11,7 +11,7 @@ export const useI20DeadlineMonitor = ({
   affiliateAdminId, 
   checkInterval = 5 * 60 * 1000 // 5 minutos por padrão
 }: I20DeadlineMonitorConfig) => {
-  const { createI20DeadlineExpiredNotification } = useAffiliateAdminNotifications({
+  const { createI20DeadlineExpiredNotification } = useAgencyNotifications({
     affiliateAdminId
   });
   

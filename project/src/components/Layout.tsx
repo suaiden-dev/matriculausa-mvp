@@ -16,7 +16,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const hideHeader = location.pathname.startsWith('/school') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
-                     location.pathname.startsWith('/affiliate-admin') ||
+                     location.pathname.startsWith('/agency') ||
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant' ||
                      location.pathname.startsWith('/pre-qualification') ||
@@ -24,7 +24,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/vsl-transfer' ||
                      location.pathname === '/vsl-cos' ||
                      location.pathname === '/selection-process' ||
-                     location.pathname === '/affiliate-admin/onboarding';
+                     location.pathname === '/agency/onboarding';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');

@@ -19,17 +19,17 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import AffiliateAdminNotifications from '../../components/AffiliateAdminNotifications';
+import AgencyNotifications from '../../components/AgencyNotifications';
 import { useI20DeadlineMonitor } from '../../hooks/useI20DeadlineMonitor';
 import { useSystemType } from '../../hooks/useSystemType';
 
-interface AffiliateAdminDashboardLayoutProps {
+interface AgencyDashboardLayoutProps {
   user: any;
   children: React.ReactNode;
   onRefresh?: () => void;
 }
 
-const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps> = ({
+const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
   user,
   children,
   onRefresh
@@ -70,14 +70,14 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   // Sidebar items based on system type
   const getSidebarItems = () => {
     const baseItems = [
-      { id: 'overview', label: 'Overview', icon: BarChart3, path: '/affiliate-admin/dashboard', badge: null },
-      { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
-      { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/affiliate-admin/dashboard/payments', badge: null },
-      { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
-      { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
-      { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
-      { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/affiliate-admin/dashboard/utm-tracking', badge: null },
-      { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
+      { id: 'overview', label: 'Overview', icon: BarChart3, path: '/agency/dashboard', badge: null },
+      { id: 'users', label: 'Seller Management', icon: Users, path: '/agency/dashboard/users', badge: null },
+      { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/agency/dashboard/payments', badge: null },
+      { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/agency/dashboard/students', badge: null },
+      { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/agency/dashboard/my-students', badge: null },
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/agency/dashboard/analytics', badge: null },
+      { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/agency/dashboard/utm-tracking', badge: null },
+      { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/agency/dashboard/profile', badge: null }
     ];
 
     // For simplified system, we might want to hide or modify certain items
@@ -233,7 +233,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
 
             <div className="flex items-center space-x-4">
               {/* Notifications */}
-              <AffiliateAdminNotifications 
+              <AgencyNotifications 
                 affiliateAdminId={user?.id || ''}
                 onNotificationClick={(notification) => {
                   if (notification.link) {
@@ -266,7 +266,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                     </div>
                     
                     <Link
-                      to="/affiliate-admin/dashboard/profile"
+                      to="/agency/dashboard/profile"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                       onClick={() => {
                         setUserMenuOpen(false);
@@ -278,7 +278,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                     </Link>
                     
                     <Link
-                      to="/affiliate-admin/analytics"
+                      to="/agency/analytics"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                       onClick={() => {
                         setUserMenuOpen(false);
@@ -317,4 +317,4 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   );
 };
 
-export default AffiliateAdminDashboardLayout;
+export default AgencyDashboardLayout;

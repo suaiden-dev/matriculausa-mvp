@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/reactQuery';
@@ -31,7 +31,7 @@ import CookieBanner from './components/CookieBanner';
 // ✅ OTIMIZAÇÃO: Lazy loading de Dashboards e páginas pesadas para reduzir bundle inicial
 const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard/index'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard/index'));
-const AffiliateAdminDashboard = React.lazy(() => import('./pages/AffiliateAdminDashboard/index'));
+const AgencyDashboard = React.lazy(() => import('./pages/AgencyDashboard/index'));
 const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard/index'));
 const SchoolDashboard = React.lazy(() => import('./pages/SchoolDashboard/index').then(m => ({ default: m.SchoolDashboard })));
 const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
@@ -71,8 +71,8 @@ const WebinárioRegistrationLanding = React.lazy(() => import('./pages/Webinario
 const VslTransferLanding = React.lazy(() => import('./pages/VslTransferLanding'));
 const VslCosLanding = React.lazy(() => import('./pages/VslCosLanding'));
 const AgencyLogin = React.lazy(() => import('./pages/AgencyLogin'));
-const AffiliateAdminOnboarding = React.lazy(() => import('./pages/AffiliateAdminOnboarding'));
-const AffiliateAdminPendingApproval = React.lazy(() => import('./pages/AffiliateAdminPendingApproval'));
+const AgencyOnboarding = React.lazy(() => import('./pages/AgencyOnboarding'));
+const AgencyPendingApproval = React.lazy(() => import('./pages/AgencyPendingApproval'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -167,10 +167,14 @@ const AppContent = () => {
           {/* Agency Login */}
           <Route path="/agencias" element={<AgencyLogin />} />
           {/* Agency Onboarding */}
-          <Route path="/affiliate-admin/onboarding" element={<AffiliateAdminOnboarding />} />
-          <Route path="/affiliate-admin/pending-approval" element={<AffiliateAdminPendingApproval />} />
-          {/* Affiliate Admin Dashboard */}
-          <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
+          <Route path="/agency/onboarding" element={<AgencyOnboarding />} />
+          <Route path="/agency/pending-approval" element={<AgencyPendingApproval />} />
+          {/* Agency Dashboard */}
+          <Route path="/agency/dashboard/*" element={<AgencyDashboard />} />
+          {/* Redirects for old /affiliate-admin/* URLs (backward compat) */}
+          <Route path="/affiliate-admin/onboarding" element={<Navigate to="/agency/onboarding" replace />} />
+          <Route path="/affiliate-admin/pending-approval" element={<Navigate to="/agency/pending-approval" replace />} />
+          <Route path="/affiliate-admin/dashboard/*" element={<Navigate to="/agency/dashboard" replace />} />
           {/* Seller Dashboard */}
           <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
           {/* Seller Student Details */}

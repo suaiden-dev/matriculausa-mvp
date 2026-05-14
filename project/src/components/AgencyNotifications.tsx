@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, Check, Trash2 } from 'lucide-react';
-import { useAffiliateAdminNotifications } from '../hooks/useAffiliateAdminNotifications';
+import { useAgencyNotifications } from '../hooks/useAgencyNotifications';
 
 interface AffiliateAdminNotificationsProps {
   affiliateAdminId: string;
@@ -21,7 +21,7 @@ const AffiliateAdminNotifications: React.FC<AffiliateAdminNotificationsProps> = 
     markAllAsRead,
     clearAll,
     requestNotificationPermission
-  } = useAffiliateAdminNotifications({
+  } = useAgencyNotifications({
     affiliateAdminId,
     onNotificationReceived: (notification) => {
       console.log('🔔 Nova notificação recebida para agência:', notification);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
+import AgencyDashboardLayout from './AgencyDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
 import PaymentManagement from './PaymentManagement';
@@ -12,7 +12,7 @@ import ProfileSettings from './ProfileSettings';
 import MyStudents from './MyStudents';
 import UtmTracking from './UtmTracking';
 
-interface AffiliateAdminStats {
+interface AgencyStats {
   totalStudents: number;
   totalRevenue: number;
   totalSellers: number;
@@ -50,7 +50,7 @@ interface Seller {
   referral_code: string;
 }
 
-const AffiliateAdminDashboard: React.FC = () => {
+const AgencyDashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +62,7 @@ const AffiliateAdminDashboard: React.FC = () => {
   const userId = useMemo(() => user?.id, [user?.id]);
   const userRole = useMemo(() => user?.role, [user?.role]);
 
-  const [stats, setStats] = useState<AffiliateAdminStats>({
+  const [stats, setStats] = useState<AgencyStats>({
     totalStudents: 0,
     totalRevenue: 0,
     totalSellers: 0,
@@ -72,7 +72,7 @@ const AffiliateAdminDashboard: React.FC = () => {
     rejectedSellers: 0
   });
 
-  const loadAffiliateAdminData = useCallback(async (forceRefresh = false) => {
+  const loadAgencyData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -211,13 +211,13 @@ const AffiliateAdminDashboard: React.FC = () => {
         .maybeSingle()
         .then(({ data }) => {
           if (data && !data.onboarding_completed) {
-            navigate('/affiliate-admin/onboarding');
+            navigate('/agency/onboarding');
           } else {
-            loadAffiliateAdminData();
+            loadAgencyData();
           }
         });
     }
-  }, [userId, userRole, loadAffiliateAdminData]);
+  }, [userId, userRole, loadAgencyData]);
 
 
 
@@ -238,7 +238,7 @@ const AffiliateAdminDashboard: React.FC = () => {
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => loadAffiliateAdminData(true)}
+            onClick={() => loadAgencyData(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Tentar Novamente
@@ -249,7 +249,7 @@ const AffiliateAdminDashboard: React.FC = () => {
   }
 
   return (
-    <AffiliateAdminDashboardLayout user={user} onRefresh={() => loadAffiliateAdminData(true)}>
+    <AgencyDashboardLayout user={user} onRefresh={() => loadAgencyData(true)}>
       <Routes>
         <Route 
           index 
@@ -258,7 +258,7 @@ const AffiliateAdminDashboard: React.FC = () => {
               stats={stats}
               sellers={sellers}
               students={students}
-              onRefresh={() => loadAffiliateAdminData(true)}
+              onRefresh={() => loadAgencyData(true)}
               userId={userId}
             />
           } 
@@ -299,8 +299,8 @@ const AffiliateAdminDashboard: React.FC = () => {
           } 
         />
       </Routes>
-    </AffiliateAdminDashboardLayout>
+    </AgencyDashboardLayout>
   );
 };
 
-export default AffiliateAdminDashboard;
+export default AgencyDashboard;

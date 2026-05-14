@@ -12,7 +12,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFinancialStatsQuery } from '../../hooks/useAffiliateAdminQueries';
+import { useFinancialStatsQuery } from '../../hooks/useAgencyQueries';
 import { invalidateAffiliateAdminFinancialOverview } from '../../lib/queryKeys';
 
 

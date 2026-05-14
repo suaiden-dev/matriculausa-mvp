@@ -3,7 +3,7 @@ import { useAuth } from './useAuth';
 import { useFeeConfig } from './useFeeConfig';
 import { useSystemType } from './useSystemType';
 import { useSimplifiedFees } from './useSimplifiedFees';
-import { useAffiliateAdminCheck } from './useAffiliateAdminCheck';
+import { useAgencyCheck } from './useAgencyCheck';
 
 export interface DynamicFeeValues {
   selectionProcessFee: string | undefined;
@@ -22,7 +22,7 @@ export const useDynamicFees = (): DynamicFeeValues => {
   const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
   const { systemType, loading: systemTypeLoading } = useSystemType();
   const { fee350, fee550, fee900, loading: simplifiedFeesLoading } = useSimplifiedFees();
-  const { isTheFutureOfEnglishAffiliate, affiliateAdminEmail, loading: affiliateCheckLoading } = useAffiliateAdminCheck();
+  const { isTheFutureOfEnglishAffiliate, affiliateAdminEmail, loading: affiliateCheckLoading } = useAgencyCheck();
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {

@@ -11,7 +11,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import DirectSalesLink from './DirectSalesLink';
-import { useAffiliateRevenueCalculationQuery } from '../../hooks/useAffiliateAdminQueries';
+import { useAgencyRevenueCalculationQuery } from '../../hooks/useAgencyQueries';
 import { invalidateAffiliateAdminAll } from '../../lib/queryKeys';
 
 const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => {
@@ -23,7 +23,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
     data: revenueData, 
     isPending: isLoadingRevenue,
     error: revenueError 
-  } = useAffiliateRevenueCalculationQuery(userId);
+  } = useAgencyRevenueCalculationQuery(userId);
 
   // Default values for stats
   const safeStats = {
@@ -134,7 +134,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
       description: 'Generate registration links',
       icon: UserPlus,
       color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      link: '/affiliate-admin/dashboard/users?tab=registration',
+      link: '/agency/dashboard/users?tab=registration',
       count: null
     },
     {
@@ -142,7 +142,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
       description: 'View and manage sellers',
       icon: Users,
       color: 'bg-gradient-to-r from-green-500 to-green-600',
-      link: '/affiliate-admin/dashboard/users',
+      link: '/agency/dashboard/users',
       count: null
     },
     {
@@ -150,7 +150,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
       description: 'Track performance and metrics',
       icon: TrendingUp,
       color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      link: '/affiliate-admin/dashboard/analytics',
+      link: '/agency/dashboard/analytics',
       count: null
     }
   ];
@@ -299,7 +299,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
                 </p>
               </div>
               <div 
-                onClick={() => navigate('/affiliate-admin/dashboard/analytics')}
+                onClick={() => navigate('/agency/dashboard/analytics')}
                 className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto"
               >
                 View All

@@ -74,7 +74,7 @@ const Header: React.FC = () => {
       case 'school': return '/school/dashboard';
       case 'admin':
       case 'post_sales': return '/admin/dashboard';
-      case 'affiliate_admin': return '/affiliate-admin/dashboard';
+      case 'affiliate_admin': return '/agency/dashboard';
       case 'seller': return '/seller/dashboard';
       case 'affiliate': return '/affiliate/dashboard';
       default: return '/';

@@ -21,7 +21,7 @@ const TRANSLATED_PAGES = [
   '/student/dashboard',
   '/school/dashboard',
   '/admin/dashboard',
-  '/affiliate-admin/dashboard'
+  '/agency/dashboard'
 ];
 
 export const usePageTranslationStatus = () => {

@@ -147,9 +147,9 @@ const AffiliateAdminOnboarding: React.FC = () => {
         setAffiliateId(data.id);
         if (data.onboarding_completed) {
           if (data.is_active) {
-            navigate('/affiliate-admin/dashboard');
+            navigate('/agency/dashboard');
           } else {
-            navigate('/affiliate-admin/pending-approval');
+            navigate('/agency/pending-approval');
           }
           return;
         }
@@ -261,7 +261,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
       if (error) throw error;
       localStorage.removeItem('affiliate-onboarding-form');
       await refetchUserProfile();
-      navigate('/affiliate-admin/pending-approval');
+      navigate('/agency/pending-approval');
     } catch (e: any) {
       setErrors({ company_name: e.message || 'Erro ao salvar. Tente novamente.' });
     } finally {
