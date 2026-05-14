@@ -56,10 +56,11 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
   savingDependents,
 }) => {
   const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
+    if (!type) return 'not_specified';
     if (type === 'transfer') {
       return visaTransferActive === false ? 'transfer_reinstatement' : 'transfer_active';
     }
-    return type || 'initial';
+    return type;
   };
 
   const getLabel = (value: string) => {
@@ -69,7 +70,8 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
       transfer_reinstatement: 'Transfer – Needs Reinstatement',
       change_of_status: 'Change of Status',
       resident: 'Resident',
-      enrolled: 'Enrolled'
+      enrolled: 'Enrolled',
+      not_specified: 'Not specified'
     };
     return labels[value] || value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   };
@@ -262,7 +264,7 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                   <div className="flex items-center gap-2">
                     <select
                       key={`process-type-select-${editingProcessType}`}
-                      value={editingProcessType || 'initial'}
+                      value={editingProcessType || ''}
                       onChange={(e) => {
                         console.log('🔍 [StudentInformationCard] Process Type selecionado:', e.target.value);
                         onProcessTypeChange(e.target.value);
@@ -270,6 +272,7 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                       className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={savingProcessType}
                     >
+                      <option value="" disabled>Select process type</option>
                       <option value="initial">Initial – F-1 Visa</option>
                       <option value="transfer_active">Transfer – Active F-1</option>
                       <option value="transfer_reinstatement">Transfer – Needs Reinstatement</option>

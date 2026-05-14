@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Gift, 
-  Copy, 
-  CheckCircle, 
-  TrendingUp, 
+import {
+  Gift,
+  Copy,
+  CheckCircle,
+  TrendingUp,
   DollarSign,
   Users,
   Clock,
@@ -13,7 +13,10 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Link2
+  Link2,
+  Edit2,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,13 +25,15 @@ import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
-import { 
+import {
   useAffiliateCodeQuery,
   useMatriculacoinCreditsQuery,
   useAffiliateReferralsQuery,
   useMatriculacoinTransactionsQuery,
-  useParticipatingUniversitiesQuery
+  useParticipatingUniversitiesQuery,
+  useUpdateAffiliateCode
 } from '../../hooks/useStudentDashboardQueries';
+import AffiliateRedemptionSection from '../AffiliateDashboard/AffiliateRedemptionSection';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
 import NotificationService from '../../services/NotificationService';
@@ -47,7 +52,7 @@ const MatriculaRewards: React.FC = () => {
       <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
     </svg>
   );
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
   // React Query hooks com cache
@@ -58,6 +63,8 @@ const MatriculaRewards: React.FC = () => {
   const { data: participatingUniversities = [], isPending: universitiesLoading } = useParticipatingUniversitiesQuery();
   
   
+  const updateAffiliateCode = useUpdateAffiliateCode();
+
   const [copied, setCopied] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
   const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
@@ -67,6 +74,12 @@ const MatriculaRewards: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [referralsPage, setReferralsPage] = useState(1);
   const referralsPerPage = 5;
+
+  // Edit code state
+  const [editingCode, setEditingCode] = useState(false);
+  const [editCodeValue, setEditCodeValue] = useState('');
+  const [editCodeError, setEditCodeError] = useState('');
+  const [editCodeSuccess, setEditCodeSuccess] = useState(false);
   
   // Computed values
   const loading = affiliateCodeLoading || creditsLoading || referralsLoading || transactionsLoading;
@@ -121,6 +134,57 @@ const MatriculaRewards: React.FC = () => {
       setTimeout(() => setCopiedLink(false), 2000);
     } catch (error) {
       console.error('Erro ao copiar link:', error);
+    }
+  };
+
+  const openEditCode = () => {
+    setEditCodeValue(affiliateCode?.code || '');
+    setEditCodeError('');
+    setEditCodeSuccess(false);
+    setEditingCode(true);
+  };
+
+  const closeEditCode = () => {
+    setEditingCode(false);
+    setEditCodeError('');
+    setEditCodeSuccess(false);
+  };
+
+  const handleCodeInput = (value: string) => {
+    const upper = value.toUpperCase().replace(/[^A-Z0-9_]/g, '');
+    setEditCodeValue(upper);
+    setEditCodeError('');
+  };
+
+  const handleSaveCode = async () => {
+    const code = editCodeValue.trim();
+    if (code.length < 3 || code.length > 20) {
+      setEditCodeError(t('matriculaRewards.editCode.errorLength'));
+      return;
+    }
+    if (!/^[A-Z0-9_]+$/.test(code)) {
+      setEditCodeError(t('matriculaRewards.editCode.errorChars'));
+      return;
+    }
+    if (!user?.id) return;
+
+    try {
+      await updateAffiliateCode.mutateAsync({ userId: user.id, newCode: code });
+      setEditCodeSuccess(true);
+      setTimeout(() => {
+        closeEditCode();
+      }, 1500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg === 'taken') {
+        setEditCodeError(t('matriculaRewards.editCode.errorTaken'));
+      } else if (msg === 'length') {
+        setEditCodeError(t('matriculaRewards.editCode.errorLength'));
+      } else if (msg === 'invalid_chars') {
+        setEditCodeError(t('matriculaRewards.editCode.errorChars'));
+      } else {
+        setEditCodeError(t('matriculaRewards.editCode.errorGeneric'));
+      }
     }
   };
 
@@ -257,7 +321,7 @@ const MatriculaRewards: React.FC = () => {
         notification_target: "student",
         next_step: !referral.selection_process_paid_at ? "Selection Process Fee" :
                    !referral.application_fee_paid_at ? "Application Fee" :
-                   !referral.scholarship_fee_paid_at ? "Scholarship Fee" : "I-20 Control Fee"
+                   !referral.scholarship_fee_paid_at ? "Placement Fee" : "Control Fee"
       };
 
       setNotificationStatus(prev => ({ ...prev, [referral.id]: 'loading' }));
@@ -294,6 +358,7 @@ const MatriculaRewards: React.FC = () => {
       <div className="mt-4 w-full">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('matriculaRewards.referralProgress')}</span>
+          {/* Notify button disabled
           {!referral.i20_paid_at && (
             <button
               onClick={() => handleNotifyStudent(referral)}
@@ -301,8 +366,8 @@ const MatriculaRewards: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md transition-all duration-300 min-w-[100px] justify-center ${
                 cooldownRemaining[referral.id]
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : notificationStatus[referral.id] === 'success' 
-                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm' 
+                  : notificationStatus[referral.id] === 'success'
+                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm'
                     : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:shadow-sm'
               }`}
             >
@@ -315,7 +380,7 @@ const MatriculaRewards: React.FC = () => {
               ) : (
                 <Bell className="h-3 w-3" />
               )}
-              
+
               {cooldownRemaining[referral.id] ? (
                 <span>
                   {Math.floor(cooldownRemaining[referral.id] / 60)}:{(cooldownRemaining[referral.id] % 60).toString().padStart(2, '0')}
@@ -327,6 +392,7 @@ const MatriculaRewards: React.FC = () => {
               )}
             </button>
           )}
+          */}
         </div>
         <div className="relative flex justify-between">
           <div className="absolute top-4 left-0 w-full h-0.5 bg-slate-200 -z-10" />
@@ -439,35 +505,95 @@ const MatriculaRewards: React.FC = () => {
               {affiliateCode && (
                 <div className="mt-6 w-full space-y-3">
                   <div className="bg-white rounded-xl border-2 border-blue-200 p-3 sm:p-4 shadow-md transition-all hover:shadow-lg">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
-                          <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
+                    {!editingCode ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
+                            <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono">
+                                {affiliateCode.code}
+                              </p>
+                              <button
+                                onClick={openEditCode}
+                                className="text-slate-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                                title={t('matriculaRewards.editCode.button')}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
-                          <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono">
-                            {affiliateCode.code}
-                          </p>
-                        </div>
+                        <button
+                          onClick={() => copyToClipboard(affiliateCode.code)}
+                          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
+                        >
+                          {copied ? (
+                            <>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>{t('common.copied')}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>{t('common.copy')}</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => copyToClipboard(affiliateCode.code)}
-                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
-                      >
-                        {copied ? (
-                          <>
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            <span>{t('common.copied')}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            <span>{t('common.copy')}</span>
-                          </>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
+                            <Edit2 className="h-4 w-4" />
+                          </div>
+                          <p className="text-sm font-medium text-slate-700">{t('matriculaRewards.editCode.title')}</p>
+                          <button onClick={closeEditCode} className="ml-auto text-slate-400 hover:text-slate-600">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Warning */}
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                          <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-700">{t('matriculaRewards.editCode.warning')}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editCodeValue}
+                            onChange={e => handleCodeInput(e.target.value)}
+                            maxLength={20}
+                            placeholder={t('matriculaRewards.editCode.placeholder')}
+                            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onKeyDown={e => e.key === 'Enter' && handleSaveCode()}
+                          />
+                          <button
+                            onClick={handleSaveCode}
+                            disabled={updateAffiliateCode.isPending || editCodeSuccess}
+                            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-3 py-2 rounded-lg font-medium text-sm transition-all"
+                          >
+                            {editCodeSuccess ? (
+                              <><CheckCircle className="h-3.5 w-3.5" /><span>{t('matriculaRewards.editCode.saved')}</span></>
+                            ) : updateAffiliateCode.isPending ? (
+                              <span>{t('matriculaRewards.editCode.saving')}</span>
+                            ) : (
+                              <span>{t('matriculaRewards.editCode.save')}</span>
+                            )}
+                          </button>
+                        </div>
+
+                        <p className="text-[10px] text-slate-400">{t('matriculaRewards.editCode.hint')}</p>
+
+                        {editCodeError && (
+                          <p className="text-xs text-red-600">{editCodeError}</p>
                         )}
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Referral Link - Expanded */}
@@ -533,70 +659,34 @@ const MatriculaRewards: React.FC = () => {
           </div>
         </Card>
 
-        {/* Quick Share Section */}
-        {affiliateCode && (
-          <Card className="p-6">
-            <div className="text-center mb-4">
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">
-                {t('matriculaRewards.shareWithFriends')}
-              </h2>
-              <p className="text-slate-600 text-sm">
-                {t('matriculaRewards.shareDescription')}
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <WhatsAppIcon width={16} height={16} className="text-white" />
-                <span className="text-sm font-medium">WhatsApp</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <FacebookLogo />
-                <span className="text-sm font-medium">Facebook</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <TwitterLogo />
-                <span className="text-sm font-medium">Twitter</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <Mail className="h-4 w-4" />
-                <span className="text-sm font-medium">Email</span>
-              </button>
+
+        {/* CTA Store / Redemption */}
+        {userProfile?.role === 'affiliate' ? (
+          <AffiliateRedemptionSection
+            coinBalance={credits?.balance || 0}
+            onRequestSubmitted={() => invalidateStudentDashboardRewards(queryClient)}
+          />
+        ) : (
+          <Card className="relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90" />
+            <div className="relative z-10 p-6 md:p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="text-center md:text-left">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-2">{t('matriculaRewards.spendYourCoins')}</h3>
+                  <p className="text-blue-100 text-lg">{t('matriculaRewards.visitStoreDescription')}</p>
+                </div>
+                <Link
+                  to="/student/dashboard/rewards/store"
+                  className="inline-flex items-center gap-3 rounded-xl bg-white/20 backdrop-blur-sm px-6 py-4 ring-2 ring-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Gift className="h-6 w-6"/>
+                  <span className="font-semibold text-lg">{t('matriculaRewards.visitRewardsStore')}</span>
+                  <ArrowUpRight className="h-5 w-5"/>
+                </Link>
+              </div>
             </div>
           </Card>
         )}
-
-        {/* CTA Store */}
-        <Card className="relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90" />
-          <div className="relative z-10 p-6 md:p-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="text-center md:text-left">
-                <h3 className="text-2xl md:text-3xl font-bold mb-2">{t('matriculaRewards.spendYourCoins')}</h3>
-                <p className="text-blue-100 text-lg">{t('matriculaRewards.visitStoreDescription')}</p>
-              </div>
-              <Link 
-                to="/student/dashboard/rewards/store" 
-                className="inline-flex items-center gap-3 rounded-xl bg-white/20 backdrop-blur-sm px-6 py-4 ring-2 ring-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <Gift className="h-6 w-6"/>
-                <span className="font-semibold text-lg">{t('matriculaRewards.visitRewardsStore')}</span>
-                <ArrowUpRight className="h-5 w-5"/>
-              </Link>
-            </div>
-          </div>
-        </Card>
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -626,7 +716,7 @@ const MatriculaRewards: React.FC = () => {
                           {referral.i20_paid_at ? (
                             <>
                               <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                              <span className="hidden xs:inline">{t('matriculaRewards.completed')}</span> (+180)
+                              <span className="hidden xs:inline">{t('matriculaRewards.completed')}</span> (+100)
                             </>
                           ) : (
                             <>
@@ -712,27 +802,22 @@ const MatriculaRewards: React.FC = () => {
         {/* How it works */}
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.howItWorks')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">1</div>
               <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step1Title')}</h3>
               <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step1Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">2</div>
-              <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step2Title')}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step2Description')}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 p-5">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">3</div>
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">2</div>
               <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step3Title')}</h3>
               <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step3Description')}</p>
             </div>
           </div>
         </Card>
 
-        {/* Participating Universities */}
-        <Card className="p-6">
+        {/* Participating Universities — only for students, not affiliates */}
+        {userProfile?.role !== 'affiliate' && <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.participatingUniversities')}</h2>
           <p className="text-slate-600 mb-6">
             {t('matriculaRewards.universitiesDescription')}
@@ -879,7 +964,7 @@ const MatriculaRewards: React.FC = () => {
               </div>
             </div>
           )}
-        </Card>
+        </Card>}
       </div>
 
       {/* Coin styling */}

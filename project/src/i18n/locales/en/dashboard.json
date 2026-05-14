@@ -790,6 +790,18 @@
         "downloadFailed": "Failed to download file.",
         "paymentSessionError": "Error creating payment session.",
         "paymentRedirectError": "Error redirecting to payment."
+      },
+      "placementFee": {
+        "installmentPlan": "Placement Fee — Installment Plan",
+        "firstInstallment": "1st Installment",
+        "secondInstallment": "2nd Installment",
+        "paid": "Paid",
+        "pending": "pending",
+        "due": "Due",
+        "unlockMessage": "Document downloads (Acceptance Letter & I-20) will be released after the 2nd installment is approved.",
+        "downloadPendingTitle": "Document Download Pending — 2nd Installment Required",
+        "downloadPendingDescription": "Your document is ready, but the download will be released after the 2nd installment of the Placement Fee ({{amount}}) is paid and approved.",
+        "dueDate": "Due date: {{date}}"
       }
     },
     "myApplicationStep": {
@@ -1164,6 +1176,17 @@
         "transferFormReceived": "Transfer Form Received",
         "transferFormReadyMessage": "Your transfer form is ready for download. Download it, fill it out, and send it back to the university.",
         "sentOn": "Sent on",
+        "transferProofToSchool": {
+          "title": "Did you already send the form to your current school?",
+          "description": "Click \"Yes, I already sent it\" to register that you forwarded the form.",
+          "confirmButton": "Yes, I already sent it",
+          "confirmed": "Great! Now upload the proof.",
+          "confirmedDescription": "Upload the proof (screenshot of the email sent, receipt, etc.).",
+          "uploadButton": "Upload Proof",
+          "submitted": "Proof submitted",
+          "submittedAt": "Submitted on",
+          "viewProof": "View proof"
+        },
         "studentUploads": "Student uploads:",
         "yourUploads": "Your uploads:",
         "uploading": "Uploading...",
@@ -1316,6 +1339,20 @@
       "totalEarnings": "Total Earnings",
       "yourReferralCode": "Your Referral Code",
       "yourCode": "Your Code",
+      "editCode": {
+        "button": "Edit code",
+        "title": "Customize referral code",
+        "warning": "Links shared with your current code will stop working after the change.",
+        "placeholder": "E.g.: YOURNAME",
+        "hint": "3–20 characters. Letters, numbers and _ (underscore). Saved in uppercase.",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved!",
+        "errorLength": "Code must be between 3 and 20 characters.",
+        "errorChars": "Only letters, numbers and underscore (_) allowed.",
+        "errorTaken": "This code is already taken. Choose another.",
+        "errorGeneric": "Error saving. Please try again."
+      },
       "yourLink": "Your Link",
       "copyLink": "Copy Link",
       "linkCopied": "Link Copied",
@@ -1340,13 +1377,13 @@
       "step2Title": "They pay the selection process fee",
       "step2Description": "When they use your code and pay the selection process fee, you earn coins",
       "step3Title": "Redeem your rewards",
-      "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
+      "step3Description": "When your referred completes the full process and pays all fees, you earn 100 coins.",
       "notificationSent": "Notification sent successfully!",
       "stages": {
         "selection": "Selection Process",
         "application": "Application Fee",
-        "scholarship": "Scholarship Fee",
-        "i20": "I-20 Control"
+        "scholarship": "Placement Fee",
+        "i20": "Control Fee"
       },
       "referralProgress": "Referral Progress",
       "notifyFriend": "Notify Friend",
@@ -1470,7 +1507,7 @@
           },
           "accumulateCoins": {
             "title": "Earn Rewards",
-            "description": "180 coins per referral that completes the Placement Fee payment"
+            "description": "100 coins per referral that completes the Placement Fee payment"
           },
           "payLess": {
             "title": "Save Money",
@@ -1528,7 +1565,7 @@
           "step2": {
             "title": "Friends Sign Up",
             "description": "When your friends register using your code, you both earn Matricula Coins",
-            "details": "180 coins after Placement Fee is paid"
+            "details": "100 coins after Placement Fee is paid"
           },
           "step3": {
             "title": "Redeem Fee Discount",
@@ -1551,7 +1588,7 @@
           "cta": "Start Saving Now",
           "minValue": "1 friend",
           "maxValue": "50+ friends",
-          "coinsPerFriend": "180 coins",
+          "coinsPerFriend": "100 coins",
           "perFriend": "per friend",
           "coinValue": "1 coin =",
           "usdValue": "$1 USD"
@@ -1582,7 +1619,7 @@
             },
             "referFriends": {
               "title": "Refer Friends and Multiply Your Earnings",
-              "description": "180 coins for each friend who pays the Placement Fee using your code"
+              "description": "100 coins for each friend who pays the Placement Fee using your code"
             }
           }
         }

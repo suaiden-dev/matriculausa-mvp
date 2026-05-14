@@ -8,9 +8,10 @@ type TabsProps = {
   setActiveTab: (tab: AdminTabs) => void;
   onRefresh?: () => void | Promise<void>;
   isRefreshing?: boolean;
+  isPostSales?: boolean;
 };
 
-const TabsBase: React.FC<TabsProps> = ({ activeTab, setActiveTab, onRefresh, isRefreshing = false }) => {
+const TabsBase: React.FC<TabsProps> = ({ activeTab, setActiveTab, onRefresh, isRefreshing = false, isPostSales = false }) => {
   return (
     <div className="border-b border-gray-200">
       <div className="flex items-center justify-between">
@@ -25,26 +26,30 @@ const TabsBase: React.FC<TabsProps> = ({ activeTab, setActiveTab, onRefresh, isR
           >
             Student Payments
           </button>
-          <button
-            onClick={() => setActiveTab('university-requests')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'university-requests'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            University Payment Requests
-          </button>
-          <button
-            onClick={() => setActiveTab('affiliate-requests')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'affiliate-requests'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Affiliate Payment Requests
-          </button>
+          {!isPostSales && (
+            <button
+              onClick={() => setActiveTab('university-requests')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'university-requests'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              University Payment Requests
+            </button>
+          )}
+          {!isPostSales && (
+            <button
+              onClick={() => setActiveTab('affiliate-requests')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'affiliate-requests'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Affiliate Payment Requests
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('zelle-payments')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${

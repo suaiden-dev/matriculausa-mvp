@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Info
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 
@@ -236,9 +237,10 @@ const FeeManagement: React.FC = () => {
       }));
 
       cancelEditing();
+      toast.success('Taxas personalizadas salvas com sucesso');
     } catch (error) {
       console.error('Error saving fee overrides:', error);
-      alert('Erro ao salvar as taxas personalizadas');
+      toast.error('Erro ao salvar as taxas personalizadas');
     } finally {
       setSaving(false);
     }
@@ -281,9 +283,10 @@ const FeeManagement: React.FC = () => {
       if (studentBeingReset && editingStudent === studentBeingReset.id) {
         cancelEditing();
       }
+      toast.success('Taxas resetadas com sucesso');
     } catch (error) {
       console.error('Error resetting fees:', error);
-      alert('Erro ao resetar as taxas');
+      toast.error('Erro ao resetar as taxas');
     } finally {
       setSaving(false);
     }

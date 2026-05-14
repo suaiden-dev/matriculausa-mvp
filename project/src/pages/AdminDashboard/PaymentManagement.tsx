@@ -83,8 +83,8 @@ const FEE_TYPES = [
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
   { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
   { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-800' },
-  { value: 'ds160_package', label: 'DS-160 Package', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'i539_cos_package', label: 'I-539 COS Package', color: 'bg-rose-100 text-rose-800' },
+  { value: 'ds160_package', label: 'Control Fee', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'i539_cos_package', label: 'Control Fee', color: 'bg-rose-100 text-rose-800' },
   { value: 'reinstatement_fee', label: 'Reinstatement Fee', color: 'bg-amber-100 text-amber-800' },
 ];
 
@@ -96,7 +96,8 @@ const STATUS_OPTIONS = [
 ];
 
 const PaymentManagement = (): React.JSX.Element => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const isPostSales = user?.role === 'post_sales' || userProfile?.role === 'post_sales';
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -111,7 +112,7 @@ const PaymentManagement = (): React.JSX.Element => {
   });
 
   // Estado centralizado (incremental: filtros/paginação/abas)
-  const adminState = useAdminPaymentsState();
+  const adminState = useAdminPaymentsState('payments');
   const { filters, setFilters, currentPage, setCurrentPage, pageSize, setPageSize, activeTab, setActiveTab } = adminState;
   // Inicialização padrão de filtros (apenas na primeira montagem)
   useEffect(() => {
@@ -144,14 +145,16 @@ const PaymentManagement = (): React.JSX.Element => {
     const tab = searchParams.get('tab');
     if (tab === 'zelle') {
       setActiveTab('zelle-payments');
-    } else if (tab === 'university-requests') {
+    } else if (tab === 'university-requests' && !isPostSales) {
       setActiveTab('university-requests');
-    } else if (tab === 'affiliate-requests') {
+    } else if (tab === 'affiliate-requests' && !isPostSales) {
       setActiveTab('affiliate-requests');
+    } else if (tab === 'payments') {
+      setActiveTab('payments');
     } else {
       setActiveTab('payments');
     }
-  }, [searchParams]);
+  }, [searchParams, isPostSales]);
   const [affiliateActionLoading, setAffiliateActionLoading] = useState(false);
   const [selectedAffiliateRequest, setSelectedAffiliateRequest] = useState<any>(null);
   const [showAffiliateDetails, setShowAffiliateDetails] = useState(false);
@@ -887,18 +890,20 @@ const PaymentManagement = (): React.JSX.Element => {
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <CreditCard className="text-blue-600" size={32} />
-            Payment Management
-          </h1>
-          <p className="text-gray-600 mt-1">Monitor and manage all payments across the platform</p>
+      {!isPostSales && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <CreditCard className="text-blue-600" size={32} />
+              Payment Management
+            </h1>
+            <p className="text-gray-600 mt-1">Monitor and manage all payments across the platform</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
-      <Tabs activeTab={activeTab as any} setActiveTab={(t: any) => setActiveTab(t)} onRefresh={forceRefreshAll} isRefreshing={isRefreshing} />
+      <Tabs activeTab={activeTab as any} setActiveTab={(t: any) => setActiveTab(t)} onRefresh={forceRefreshAll} isRefreshing={isRefreshing} isPostSales={isPostSales} />
 
       {/* Student Payments Tab Content */}
       {activeTab === 'payments' && (
@@ -941,11 +946,12 @@ const PaymentManagement = (): React.JSX.Element => {
           onGoTo={goToPage}
           pageNumbers={getPageNumbers()}
           onItemsPerPageChange={handleItemsPerPageChange}
+          isPostSales={isPostSales}
         />
       )}
 
       {/* University Payment Requests Tab Content */}
-      {activeTab === 'university-requests' && (
+      {activeTab === 'university-requests' && !isPostSales && (
         <UniversityRequests
           universityRequests={universityRequests}
           loadingUniversityRequests={loadingUniversityRequests}
@@ -963,7 +969,7 @@ const PaymentManagement = (): React.JSX.Element => {
       )}
 
       {/* Affiliate Payment Requests Tab */}
-      {activeTab === 'affiliate-requests' && (
+      {activeTab === 'affiliate-requests' && !isPostSales && (
         <AffiliateRequests
           affiliateRequests={affiliateRequests}
           loadingAffiliateRequests={loadingAffiliateRequests}

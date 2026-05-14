@@ -378,6 +378,17 @@
         "transferFormReceived": "Formulario de Transferencia Recibido",
         "transferFormReadyMessage": "Tu formulario de transferencia está listo para descargar. Descárgalo, complétalo y envíalo de vuelta a la universidad.",
         "sentOn": "Enviado el",
+        "transferProofToSchool": {
+          "title": "¿Ya enviaste el formulario a tu escuela actual?",
+          "description": "Haz clic en \"Sí, ya lo envié\" para registrar que reenviaste el formulario.",
+          "confirmButton": "Sí, ya lo envié",
+          "confirmed": "¡Genial! Ahora sube el comprobante.",
+          "confirmedDescription": "Sube el comprobante (captura del email enviado, recibo, etc.).",
+          "uploadButton": "Subir Comprobante",
+          "submitted": "Comprobante registrado",
+          "submittedAt": "Enviado el",
+          "viewProof": "Ver comprobante"
+        },
         "studentUploads": "Archivos del estudiante:",
         "yourUploads": "Tus archivos:",
         "uploading": "Subiendo...",
@@ -1087,6 +1098,20 @@
     "totalEarnings": "Total Ganado",
     "yourReferralCode": "Tu Código de Recomendación",
     "yourCode": "Tu Código",
+    "editCode": {
+      "button": "Editar código",
+      "title": "Personalizar código de referido",
+      "warning": "Los enlaces compartidos con tu código actual dejarán de funcionar tras el cambio.",
+      "placeholder": "Ej: TUNOMBRE",
+      "hint": "3–20 caracteres. Letras, números y _ (guión bajo). Se guarda en mayúsculas.",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "saved": "¡Guardado!",
+      "errorLength": "El código debe tener entre 3 y 20 caracteres.",
+      "errorChars": "Solo letras, números y guión bajo (_).",
+      "errorTaken": "Este código ya está en uso. Elige otro.",
+      "errorGeneric": "Error al guardar. Inténtalo de nuevo."
+    },
     "yourLink": "Tu Enlace",
     "copyLink": "Copiar Enlace",
     "linkCopied": "Enlace Copiado",
@@ -1111,7 +1136,7 @@
     "step2Title": "They pay the selection process fee",
     "step2Description": "When they use your code and pay the selection process fee, you earn coins",
     "step3Title": "Redeem your rewards",
-    "step3Description": "Use your coins to get tuition discounts at participating universities",
+    "step3Description": "Cuando tu referido complete todo el proceso y pague todas las tasas, ganas 100 coins.",
     "participatingUniversities": "Participating Universities",
     "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
     "loadingUniversities": "Loading universities...",
@@ -1123,6 +1148,18 @@
     "previous": "Previous",
     "next": "Next",
     "showingResults": "Showing {{start}} to {{end}} of {{total}} universities",
+    "stages": {
+      "selection": "Proceso Selectivo",
+      "application": "Cuota de Inscripción",
+      "scholarship": "Placement Fee",
+      "i20": "Control Fee"
+    },
+    "referralProgress": "Progreso de Referido",
+    "notifyFriend": "Notificar Amigo",
+    "notificationSent": "¡Notificación enviada!",
+    "inProgress": "En Progreso",
+    "completed": "Completado",
+    "invitedOn": "Invitado el {{date}}",
     "referralNumber": "Referral #{{id}}",
     "earned": "Earned",
     "spent": "Spent",
@@ -1228,7 +1265,7 @@
         },
         "accumulateCoins": {
           "title": "Gana Recompensas",
-          "description": "180 coins por referido exitoso - eso es $180 de descuento en tu matrícula"
+          "description": "100 coins por referido exitoso - eso es $100 de descuento en tu matrícula"
         },
         "payLess": {
           "title": "Ahorra Dinero",
@@ -1286,7 +1323,7 @@
         "step2": {
           "title": "Tus Amigos se Registran",
           "description": "Cuando tus amigos se registran usando tu código, ambos ganan Matricula Coins",
-          "details": "180 coins después de pagar la Cuota de Colocación (Placement Fee)"
+          "details": "100 coins después de pagar la Cuota de Colocación (Placement Fee)"
         },
         "step3": {
           "title": "Canjea Descuento en Cuotas",
@@ -1309,7 +1346,7 @@
         "cta": "Empieza a Ahorrar Ahora",
         "minValue": "1 amigo",
         "maxValue": "50+ amigos",
-        "coinsPerFriend": "180 coins",
+        "coinsPerFriend": "100 coins",
         "perFriend": "por amigo",
         "coinValue": "1 coin =",
         "usdValue": "$1 USD"
@@ -1340,7 +1377,7 @@
           },
           "referFriends": {
             "title": "Refiere Amigos y Multiplica tus Ganancias",
-            "description": "180 coins por cada amigo que se registre usando tu código y pague la Placement Fee"
+            "description": "100 coins por cada amigo que se registre usando tu código y pague la Placement Fee"
           }
         }
       }

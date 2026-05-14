@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
                 nome_aluno: p.nome_aluno,
                 email_universidade: p.email_universidade,
                 o_que_enviar: p.o_que_enviar,
+                tipos_documentos: tipos_documentos,
               };
               const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.36.3' }, body: JSON.stringify(n8nPayload)
@@ -314,6 +315,7 @@ Deno.serve(async (req) => {
       nome_aluno: nomeAluno,
       email_universidade: emailUniversidade,
       o_que_enviar: n8nMensagem,
+      tipos_documentos: tipos_documentos,
     };
     console.log('[Edge] Payload para n8n:', payload);
 

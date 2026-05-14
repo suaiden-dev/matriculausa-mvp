@@ -12,6 +12,7 @@ import {
   Eye,
   Clock
 } from 'lucide-react';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
@@ -107,7 +108,9 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
   const [inlineCpf, setInlineCpf] = useState('');
   const [savingCpf, setSavingCpf] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
+  const [selectedParcelowAppId, setSelectedParcelowAppId] = useState<string | null>(null);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any | null>(null);
@@ -219,8 +222,11 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
   };
 
   const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow', skipCpfCheck = false) => {
+    // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
+    const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
+
     // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem
-    if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck) {
+    if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck && !hasPayerInfo) {
       setPendingParcelowApp(application);
       setShowInlineCpf(application.id);
       setZelleActiveApp(null);
@@ -267,6 +273,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
             fee_type: 'scholarship_fee',
             exchange_rate: exchangeRate.toString()
           },
+          ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
           // Campos extras que podem ser necessários
           payment_type: 'scholarship_fee',
           fee_type: 'scholarship_fee',
@@ -401,10 +408,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                   <div className="flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex items-center space-x-6">
-                        {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
+                        {app.scholarships?.universities?.logo_url || app.scholarships?.image_url ? (
                           <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 relative group/image">
                             <img
-                              src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''}
+                              src={app.scholarships.universities?.logo_url || app.scholarships.image_url || ''}
                               alt=""
                               className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500"
                               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -422,7 +429,6 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                             </h3>
                           </div>
                           <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                            <Building className="w-3 h-3" />
                             {app.scholarships?.universities?.name || 'University'}
                           </p>
                         </div>
@@ -536,11 +542,22 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                             )}
 
                             {/* Parcelow Option */}
-                            <div className="flex flex-col">
+                            <div className="flex flex-col gap-4">
                               <button
-                                onClick={() => processCheckout(app, 'parcelow')}
+                                onClick={() => {
+                                  if (selectedParcelowAppId === app.id) {
+                                    setSelectedParcelowAppId(null);
+                                  } else {
+                                    setSelectedParcelowAppId(app.id);
+                                    setZelleActiveApp(null);
+                                  }
+                                }}
                                 disabled={!!isProcessingCheckout}
-                                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
+                                className={`group/btn relative bg-white border p-5 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between ${
+                                  selectedParcelowAppId === app.id 
+                                    ? 'rounded-t-[2rem] border-blue-500 bg-blue-50/30 border-b-0' 
+                                    : 'rounded-[2rem] border-gray-200 hover:scale-[1.01] active:scale-95'
+                                }`}
                               >
                                 <div className="flex items-center gap-5">
                                   <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2">
@@ -564,43 +581,19 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, curren
                                 )}
                               </button>
 
-                              {/* Campo inline de CPF para Parcelow */}
-                              {showInlineCpf === app.id && (
-                                <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                                    <div className="flex-initial sm:w-[300px]">
-                                      <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                        <Shield className="w-3 h-3" />
-                                        {t('paymentStep.parcelowCpfTitle')}
-                                      </p>
-                                      <div className="relative">
-                                        <input
-                                          type="text"
-                                          value={inlineCpf}
-                                          onChange={(e) => {
-                                            setInlineCpf(formatCpf(e.target.value));
-                                            setCpfError(null);
-                                          }}
-                                          placeholder={t('paymentStep.parcelowCpfPlaceholder')}
-                                          maxLength={14}
-                                          className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                                        />
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={saveCpfAndCheckout}
-                                      disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                      className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
-                                    >
-                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('paymentStep.goToPayment')}
-                                    </button>
-                                  </div>
-                                  {cpfError && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
-                                      <AlertCircle className="w-4 h-4" />
-                                      {cpfError}
-                                    </p>
-                                  )}
+                              {selectedParcelowAppId === app.id && (
+                                <div className="border border-blue-500 border-t-0 rounded-b-[2rem] bg-white shadow-sm p-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                  {/* Formulário de Dados do Titular com Botão Integrado */}
+                                  <PayerAlternativeForm 
+                                    onPayerInfoChange={setPayerInfo} 
+                                    initialCpf={userProfile?.cpf_document || ''}
+                                    onPayButtonClick={() => processCheckout(app, 'parcelow')}
+                                    isProcessing={!!isProcessingCheckout}
+                                  />
+
+                                  <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                                    Você será redirecionado para o ambiente seguro da Parcelow
+                                  </p>
                                 </div>
                               )}
                             </div>

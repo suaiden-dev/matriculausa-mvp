@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
@@ -101,6 +102,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     const [promotionalCoupon, setPromotionalCoupon] = useState('');
     const [couponValidation, setCouponValidation] = useState<any>(null);
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+    const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const couponInputRef = useRef<HTMLInputElement>(null);
 
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
@@ -239,6 +241,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         method: 'stripe' | 'pix' | 'parcelow',
         couponFinalAmount?: number
     ) => {
+        // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
+        const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
         try {
             setIsProcessingCheckout(`${application.id}_${method}`);
             const { data: sessionData } = await supabase.auth.getSession();
@@ -288,6 +292,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         final_amount: finalAmount.toString(),
                         promotional_coupon: appliedCoupon
                     },
+                    ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
                     payment_type: 'placement_fee',
                     fee_type: 'placement_fee',
                 })
@@ -344,6 +349,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
     const handleParcelowClick = (app: ApplicationWithScholarship) => {
+        // Verificar se há informações de titular de Cartão de Outra Pessoa
+        if (payerInfo) {
+            processCheckout(app, 'parcelow');
+            return;
+        }
+
         if (!(userProfile as any)?.cpf_document) {
             setShowInlineCpf(app.id);
             return;
@@ -446,10 +457,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                     <div className="flex flex-col gap-8">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="flex flex-col md:flex-row md:items-center gap-6">
-                                                {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
+                                                {app.scholarships?.universities?.logo_url || app.scholarships?.image_url ? (
                                                     <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500 mx-auto md:mx-0">
                                                         <img
-                                                            src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''}
+                                                            src={app.scholarships.universities?.logo_url || app.scholarships.image_url || ''}
                                                             alt=""
                                                             className="w-full h-full object-contain p-2"
                                                             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -465,7 +476,6 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                         {app.scholarships?.title || 'Scholarship'}
                                                     </h3>
                                                     <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
-                                                        <Building className="w-3 h-3" />
                                                         {app.scholarships?.universities?.name || 'University'}
                                                     </p>
                                                     {annualValue > 0 && (
@@ -741,7 +751,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                             <button
                                                                 onClick={() => handleParcelowClick(app)}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf === app.id ? 'rounded-t-[2rem] border-b-0' : 'rounded-[2rem]'}`}
+                                                                className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf === app.id ? 'rounded-t-[2rem] border-b-0 shadow-none ring-1 ring-blue-600/20 bg-blue-50/5' : 'rounded-[2rem]'}`}
                                                             >
                                                                 <div className="flex items-center justify-between w-full">
                                                                     <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
@@ -768,48 +778,19 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                 )}
                                                             </button>
 
+                                                            {/* Formulário de Dados do Titular com Botão Integrado */}
                                                             {showInlineCpf === app.id && (
-                                                                <div className="p-6 bg-slate-50 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                                    <div className="flex items-center justify-between mb-4">
-                                                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{t('placementFeeStep.cpfRequiredTitle')}</h4>
-                                                                        <button onClick={() => setShowInlineCpf(null)} title="Fechar">
-                                                                            <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="space-y-4">
-                                                                        <div className="relative">
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder={t('placementFeeStep.cpfPlaceholder')}
-                                                                                value={inlineCpf}
-                                                                                onChange={(e) => {
-                                                                                    // Máscara básica de CPF
-                                                                                    const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                                                                                    setInlineCpf(val);
-                                                                                    if (cpfError) setCpfError(null);
-                                                                                }}
-                                                                                className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
-                                                                            />
-                                                                            {savingCpf && (
-                                                                                <div className="absolute right-3 top-3">
-                                                                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        {cpfError && (
-                                                                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                                                                                <AlertCircle className="w-3 h-3" />
-                                                                                {cpfError}
-                                                                            </p>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() => saveCpfAndCheckout(app)}
-                                                                            disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                                                            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
-                                                                        >
-                                                                            {t('placementFeeStep.goToPayment')}
-                                                                        </button>
-                                                                    </div>
+                                                                <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm p-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                                    <PayerAlternativeForm 
+                                                                        onPayerInfoChange={setPayerInfo} 
+                                                                        initialCpf={userProfile?.cpf_document || ''}
+                                                                        onPayButtonClick={() => processCheckout(app, 'parcelow')}
+                                                                        isProcessing={isProcessingCheckout === `${app.id}_parcelow`}
+                                                                    />
+                                                                    
+                                                                    <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                                                                        Você será redirecionado para o ambiente seguro da Parcelow
+                                                                    </p>
                                                                 </div>
                                                             )}
                                                         </div>

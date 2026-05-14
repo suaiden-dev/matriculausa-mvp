@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText, Download } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useConfirmation } from '../../contexts/AdminConfirmationContext';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor';
 
@@ -125,6 +126,7 @@ interface TermsManagementProps {
 }
 
 const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' }) => {
+  const { confirm } = useConfirmation();
   const [terms, setTerms] = useState<Term[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -377,7 +379,15 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
 
   // Excluir termo
   const handleDeleteTerm = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este termo?')) return;
+    const confirmed = await confirm({
+      title: 'Excluir Termo',
+      message: 'Tem certeza que deseja excluir este termo? Esta ação não pode ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

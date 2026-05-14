@@ -34,6 +34,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     handleCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
     saveCpfAndCheckout, formatCpf, setError,
+    payerInfo, setPayerInfo,
   } = state;
 
   const paymentMethods = [
@@ -266,6 +267,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     onCpfChange={setInlineCpf}
                     onCpfErrorClear={() => setCpfError(null)}
                     formatCpf={formatCpf}
+                    payerInfo={payerInfo}
+                    onPayerInfoChange={setPayerInfo}
                     t={t}
                   />
                 );

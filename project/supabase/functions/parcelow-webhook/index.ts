@@ -44,7 +44,7 @@ async function getAllAdmins(
     const { data: adminProfiles, error: profileError } = await supabase
       .from("user_profiles")
       .select("user_id, email, full_name, phone")
-      .eq("role", "admin");
+      .in("role", ["admin", "post_sales"]);
 
     if (profileError) {
       console.error(
@@ -1713,7 +1713,7 @@ Deno.serve(async (req: Request) => {
                   fee_type: "I20 Control Fee",
                   reward_type: "MatriculaCoins",
                   o_que_enviar:
-                    `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`,
+                    `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`,
                 };
 
                 await fetch(

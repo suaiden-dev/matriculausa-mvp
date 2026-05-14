@@ -32,6 +32,7 @@ import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useFormTracking } from '../hooks/useFormTracking';
 import { useLeadCapture } from '../hooks/useLeadCapture';
+import PayerAlternativeForm, { PayerInfo } from '../components/PayerAlternativeForm';
 
 // Mostrar o contador de urgência sempre que um cupom for aplicado
 
@@ -271,6 +272,7 @@ const QuickRegistration: React.FC = () => {
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
 
   // Persistir método selecionado e estado do modal Zelle
   useEffect(() => {
@@ -393,9 +395,9 @@ const QuickRegistration: React.FC = () => {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref)
-    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 50) > 0) {
-      const discount = validationResult.discountAmount || 50;
+    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref e afiliados sem desconto)
+    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 0) > 0) {
+      const discount = validationResult.discountAmount || 0;
       return Math.max(baseFee - discount, 0);
     }
 
@@ -515,11 +517,25 @@ const QuickRegistration: React.FC = () => {
         }
       }
 
-      // Se for apenas pré-registro, validamos localmente para a UI
+      // Determinar desconto: TFOE=$300, senão verificar role do referenciador
+      let discountAmount = 0;
+      if (targetCode === 'TFOE') {
+        discountAmount = 300;
+      } else if (affiliateCodeData?.user_id) {
+        // Verificar role do referenciador: alunos (role='student') dão $50, afiliados profissionais dão $0
+        const { data: referrerProfile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', affiliateCodeData.user_id)
+          .maybeSingle();
+        if (referrerProfile?.role === 'student') discountAmount = 50;
+      }
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
-        discountAmount: 50,
+        message: discountAmount > 0
+          ? (t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`)
+          : (t('preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!'),
+        discountAmount,
         codeType
       });
       setIsCouponValid(true);
@@ -618,6 +634,11 @@ const QuickRegistration: React.FC = () => {
     }
   }, [currentFee, exchangeRate]);
 
+  // Load active terms from database on mount
+  useEffect(() => {
+    loadActiveTerms();
+  }, []);
+
   // Load active terms from database
   const loadActiveTerms = async () => {
     try {
@@ -688,18 +709,37 @@ const QuickRegistration: React.FC = () => {
     }
 
     if (isRegistered) {
+      console.log("[QuickRegistration] 👤 Usuário já registrado, processando pagamento...");
       setLoading(true);
       setError(null);
       try {
         if (selectedMethod === 'parcelow') {
-          if (!formData.cpf || formData.cpf.length < 14) {
+          const hasValidPayerCpf = payerInfo && payerInfo.cpf && payerInfo.cpf.replace(/\D/g, '').length === 11;
+          const hasValidStudentCpf = formData.cpf && formData.cpf.replace(/\D/g, '').length === 11;
+          const hasProfileCpf = userProfile?.cpf_document && userProfile.cpf_document.replace(/\D/g, '').length === 11;
+
+          if (!hasValidPayerCpf && !hasValidStudentCpf && !hasProfileCpf) {
+            console.warn("[QuickRegistration] ⚠️ CPF ausente para Parcelow (usuário registrado)");
             setFieldErrors({ cpf: t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.' });
             setLoading(false);
             return;
           }
-          // Update profile if CPF is missing
-          if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
+          
+          // Update profile if student CPF is provided but missing/different in profile
+          if (hasValidStudentCpf && (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf)) {
+            console.log("[QuickRegistration] 🔄 Atualizando CPF no perfil do estudante...");
             await updateUserProfile({ cpf_document: formData.cpf });
+          }
+        }
+
+        // Gravar aceitação de termos para usuário já registrado
+        const targetUserId = userProfile?.user_id || supabaseUser?.id;
+        if (activeTerm && targetUserId) {
+          try {
+            console.log("[QuickRegistration] 📝 Gravando aceitação de termos para usuário registrado...");
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms', targetUserId);
+          } catch (termErr) {
+            console.error('Failed to record terms for registered user:', termErr);
           }
         }
 
@@ -712,6 +752,7 @@ const QuickRegistration: React.FC = () => {
           throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
         }
       } catch (err: any) {
+        console.error('[QuickRegistration] ❌ Erro no fluxo de usuário registrado:', err);
         setError(err.message || 'Error occurred');
         setLoading(false);
       }
@@ -737,7 +778,7 @@ const QuickRegistration: React.FC = () => {
       newFieldErrors.termsAccepted = t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos';
     }
 
-    if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
+    if (selectedMethod === 'parcelow' && !payerInfo && (!formData.cpf || formData.cpf.length < 14)) {
       newFieldErrors.cpf = t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.';
     }
 
@@ -833,6 +874,7 @@ const QuickRegistration: React.FC = () => {
   };
 
   const handlePaymentCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
+    console.log(`[QuickRegistration] 💳 handlePaymentCheckout iniciado para: ${method}`);
     const startProgress = loadingProgress || 0;
     setLoadingStep("Validando seus dados...");
     const authInterval = simulateProgress(startProgress, Math.max(startProgress + 20, 60), 3000);
@@ -864,6 +906,8 @@ const QuickRegistration: React.FC = () => {
         console.error('❌ [QuickRegistration] Falha crítica: Sessão não encontrada após 5 tentativas');
         throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
       }
+
+      console.log("[QuickRegistration] 🔗 Sessão verificada, preparando chamada à Edge Function...");
 
       clearInterval(authInterval);
       setLoadingProgress(60);
@@ -897,6 +941,14 @@ const QuickRegistration: React.FC = () => {
         payment_method: method
       };
 
+      console.log(`[QuickRegistration] 🔗 Chamando API: ${apiUrl}`);
+      console.log(`[QuickRegistration] 📤 Payload (exceto cartões):`, { 
+        method, 
+        amount: currentFee, 
+        hasPayerInfo: !!payerInfo,
+        metadata: paymentMetadata 
+      });
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -913,6 +965,7 @@ const QuickRegistration: React.FC = () => {
           payment_type: 'selection_process',
           fee_type: 'selection_process',
           metadata: paymentMetadata,
+          ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
           // Campos no root para compatibilidade
           user_id: sessionUser.id,
           email: sessionUser.email,
@@ -920,7 +973,9 @@ const QuickRegistration: React.FC = () => {
         })
       });
 
+      console.log(`[QuickRegistration] 📥 Resposta recebida: ${response.status} ${response.statusText}`);
       const data = await response.json();
+      console.log(`[QuickRegistration] 📦 Resultado:`, data);
 
       const paymentUrl = data.session_url || data.url || data.checkout_url;
 
@@ -1595,33 +1650,15 @@ const QuickRegistration: React.FC = () => {
                             </div>
                           </button>
 
-                          {/* Inline CPF Field - Only for Parcelow when selected */}
                           {method.id === 'parcelow' && isSelected && (
-                            <div className="mt-2 ml-4 mr-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
-                                <label className="block text-[10px] font-black text-blue-900/60 uppercase tracking-widest mb-2 leading-tight">
-                                  {t('rapidRegistration.payment.cpf.label')}
-                                </label>
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    name="cpf"
-                                    required
-                                    disabled={loading}
-                                    value={formData.cpf}
-                                    onChange={(e) => {
-                                      const formatted = formatCPF(e.target.value);
-                                      setFormData((prev: any) => ({ ...prev, cpf: formatted }));
-                                    }}
-                                    placeholder={t('rapidRegistration.payment.cpf.placeholder')}
-                                    className={`block w-full px-4 py-3 border ${fieldErrors.cpf ? 'border-red-500 ring-2 ring-red-500/10' : 'border-blue-200/50'} rounded-xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.cpf ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-blue-500 focus:border-blue-500'} text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                  />
-                                </div>
-                                {fieldErrors.cpf && (
-                                  <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                                    {fieldErrors.cpf}
-                                  </p>
-                                )}
+                            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              {/* Formulário de Cartão de Outra Pessoa / CPF do Próprio Aluno */}
+                              <div className="px-4">
+                                <PayerAlternativeForm 
+                                  onPayerInfoChange={setPayerInfo} 
+                                  initialCpf={formData.cpf}
+                                  isProcessing={loading}
+                                />
                               </div>
                             </div>
                           )}
@@ -1703,7 +1740,7 @@ const QuickRegistration: React.FC = () => {
                           </span>
                         </div>
 
-                        {isCouponValid && timeLeft > 0 && (
+                        {isCouponValid && timeLeft > 0 && (validationResult?.discountAmount ?? 0) > 0 && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
                               <Ticket className="w-2.5 h-2.5 mr-1" />
@@ -1762,8 +1799,14 @@ const QuickRegistration: React.FC = () => {
                 <button
                   type="submit"
                   form="registration-form"
-                  disabled={loading || (!formData.termsAccepted && !isRegistered) || (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14))}
-                  className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (formData.cpf && formData.cpf.length >= 14)) ? 'bg-[#05294E]' : 'bg-slate-400'
+                  disabled={
+                    loading || 
+                    (!formData.termsAccepted && !isRegistered) || 
+                    (selectedMethod === 'parcelow' && (
+                      (payerInfo ? (!payerInfo.cpf || payerInfo.cpf.replace(/\D/g, '').length < 11) : (!formData.cpf || formData.cpf.replace(/\D/g, '').length < 11))
+                    ))
+                  }
+                  className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (payerInfo ? (payerInfo.cpf && payerInfo.cpf.replace(/\D/g, '').length === 11) : (formData.cpf && formData.cpf.replace(/\D/g, '').length === 11))) ? 'bg-[#05294E]' : 'bg-slate-400'
                     }`}
                 >
                   {getButtonText()}

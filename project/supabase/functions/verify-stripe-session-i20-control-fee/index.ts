@@ -81,7 +81,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
     const { data: adminProfiles, error: profileError } = await supabase
       .from('user_profiles')
       .select('user_id, email, full_name, phone')
-      .eq('role', 'admin');
+      .in('role', ['admin', 'post_sales']);
 
     if (profileError) {
       console.error('[getAllAdmins] Erro ao buscar admins de user_profiles:', profileError);
@@ -724,7 +724,7 @@ Deno.serve(async (req)=>{
       
       // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
       // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
-      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 1. Credita 100 MatriculaCoins quando has_paid_i20_control_fee muda para true
       // 2. Atualiza o status do referral para 'i20_paid'
       // Aqui apenas enviamos a notificação de recompensa para o padrinho
       try {
@@ -788,7 +788,7 @@ Deno.serve(async (req)=>{
                 payment_method: paymentMethodForUserProfile,
                 fee_type: "I20 Control Fee",
                 reward_type: "MatriculaCoins",
-                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`
               };
 
               console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);

@@ -68,7 +68,7 @@ export async function approveZelleFlow(params: {
       .select();
 
     // Record payment (individual table)
-    const approvedAt = payment.admin_approved_at || payment.created_at;
+    const approvedAt = payment.admin_approved_at || new Date().toISOString();
     await recordIndividualFeePayment(
       supabase,
       {
@@ -1321,7 +1321,7 @@ export async function approvePartialZelleFlow(params: {
     userId: payment.user_id,
     feeType: "placement" as any,
     amount: payment.amount,
-    paymentDate: payment.admin_approved_at || payment.created_at,
+    paymentDate: payment.admin_approved_at || new Date().toISOString(),
     paymentMethod: "zelle",
     zellePaymentId: payment.id,
   });
@@ -1416,7 +1416,7 @@ export async function approveSecondInstallmentFlow(params: {
     userId: payment.user_id,
     feeType: "placement" as any,
     amount: payment.amount,
-    paymentDate: payment.admin_approved_at || payment.created_at,
+    paymentDate: payment.admin_approved_at || new Date().toISOString(),
     paymentMethod: "zelle",
     zellePaymentId: payment.id,
   });

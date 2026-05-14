@@ -30,7 +30,7 @@ const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
     );
   }
 
-  if (termAcceptances.length === 0) return null;
+  const hasAcceptances = termAcceptances.length > 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -39,36 +39,50 @@ const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
         Accepted Terms
       </h3>
       <div className="space-y-3">
-        {termAcceptances.map((acceptance) => (
-          <div key={acceptance.id} className="border border-slate-200 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">
-                  {acceptance.term_title || 'Term'}
-                </p>
-                <p className="text-xs text-slate-500">
-                  Accepted {new Date(acceptance.accepted_at).toLocaleDateString()}
-                </p>
+        {hasAcceptances ? (
+          termAcceptances.map((acceptance) => (
+            <div key={acceptance.id} className="border border-slate-200 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">
+                    {acceptance.term_title || 'Term'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Accepted {new Date(acceptance.accepted_at).toLocaleDateString()}
+                  </p>
+                  {acceptance.identity_photo_status === 'approved' && (
+                    <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+                      <svg className="w-2.5 h-2.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Verified Identity Attached
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      await onDownloadPDF(acceptance);
+                    } catch (error) {
+                      console.error('Error downloading PDF:', error);
+                    }
+                  }}
+                  className="ml-3 p-2 text-slate-600 hover:text-[#05294E] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                  title="Download PDF"
+                  type="button"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    await onDownloadPDF(acceptance);
-                  } catch (error) {
-                    console.error('Error downloading PDF:', error);
-                  }
-                }}
-                className="ml-3 p-2 text-slate-600 hover:text-[#05294E] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                title="Download PDF"
-                type="button"
-              >
-                <Download className="w-4 h-4" />
-              </button>
             </div>
+          ))
+        ) : (
+          <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <p className="text-sm text-slate-500">No terms accepted yet</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import SelectionSurveyView from '../../components/AdminDashboard/SelectionSurveyView';
+import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
+import PaymentStatusCard from '../../components/AdminDashboard/StudentDetails/PaymentStatusCard';
 import { useAuth } from '../../hooks/useAuth';
-import { FileText, UserCircle, CheckCircle2 } from 'lucide-react';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { FileText, UserCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
 interface ApplicationDetails extends Application {
-  user_profiles: UserProfile;
+  user_profiles: UserProfile & { selection_survey_passed?: boolean };
   scholarships: Scholarship;
 }
 
@@ -35,17 +40,102 @@ const TABS = [
   { id: 'details', label: 'Details', icon: UserCircle },
   // { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'survey', label: 'Selection Survey', icon: FileText },
   // { id: 'review', label: 'Review', icon: FileText }, // Removida a aba Review
 ];
 
 const StudentDetails: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
+  const navigate = useNavigate();
   const [application, setApplication] = useState<ApplicationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents' | 'survey'>('details');
+
+  // Financial Monitoring Logic
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType: configSystemType } = useFeeConfig(application?.user_profiles?.user_id);
+  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
+  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
+  
+  // Adapt student data for PaymentStatusCard
+  const studentRecord = React.useMemo(() => {
+    if (!application) return null;
+    const profile = application.user_profiles;
+    return {
+      student_id: profile.id,
+      user_id: profile.user_id,
+      student_name: profile.full_name || '',
+      student_email: profile.email || '',
+      phone: profile.phone,
+      country: profile.country,
+      field_of_interest: profile.field_of_interest,
+      academic_level: profile.academic_level,
+      gpa: profile.gpa,
+      english_proficiency: profile.english_proficiency,
+      status: profile.status,
+      avatar_url: profile.avatar_url,
+      dependents: profile.dependents || 0,
+      student_created_at: profile.created_at || '',
+      has_paid_selection_process_fee: profile.has_paid_selection_process_fee,
+      has_paid_i20_control_fee: profile.has_paid_i20_control_fee,
+      is_application_fee_paid: application.is_application_fee_paid || profile.is_application_fee_paid,
+      is_scholarship_fee_paid: application.is_scholarship_fee_paid || profile.is_scholarship_fee_paid,
+      acceptance_letter_status: application.acceptance_letter_status || null,
+      student_process_type: application.student_process_type || profile.student_process_type || null,
+      seller_referral_code: profile.seller_referral_code || null,
+      application_id: application.id,
+      scholarship_id: application.scholarship_id,
+      application_status: application.status,
+      applied_at: application.applied_at,
+      scholarship_name: application.scholarships?.title || null,
+      university_name: application.scholarships?.university_name || null,
+      scholarship_fee_amount: application.scholarships?.scholarship_fee_amount || 0,
+      application_fee_amount: application.scholarships?.application_fee_amount || 0,
+      all_applications: [application],
+      total_applications: 1,
+      is_locked: true,
+      system_type: profile.system_type || configSystemType,
+      has_paid_ds160_package: (profile as any).has_paid_ds160_package || false,
+      has_paid_i539_cos_package: (profile as any).has_paid_i539_cos_package || false,
+      placement_fee_flow: (profile as any).placement_fee_flow || false,
+      is_placement_fee_paid: (profile as any).is_placement_fee_paid || false,
+      placement_fee_pending_balance: (profile as any).placement_fee_pending_balance || 0,
+    } as any;
+  }, [application, configSystemType]);
+
+  // Load real paid amounts
+  useEffect(() => {
+    if (!application?.user_profiles?.user_id) return;
+
+    const loadRealPaidAmounts = async () => {
+      setLoadingPaidAmounts({
+        selection_process: true,
+        scholarship: true,
+        i20_control: true,
+        application: true,
+        placement: true,
+      });
+      try {
+        const feeTypes: any[] = ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package'];
+        const amounts = await getRealPaidAmounts(application.user_profiles.user_id, feeTypes as any);
+        setRealPaidAmounts(amounts);
+      } catch (error) {
+        console.error('Error loading real paid amounts:', error);
+      } finally {
+        setLoadingPaidAmounts({
+          selection_process: false,
+          scholarship: false,
+          i20_control: false,
+          application: false,
+          placement: false,
+        });
+      }
+    };
+
+    loadRealPaidAmounts();
+  }, [application?.user_profiles?.user_id]);
 
   // Documentos básicos do aluno (passport, diploma, funds_proof) para a aba Documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
@@ -87,6 +177,99 @@ const StudentDetails: React.FC = () => {
     attachment: null as File | null
   });
   const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
+
+  // Application Progress State
+  const [isProgressExpanded, setIsProgressExpanded] = useState(false);
+  const [approvingApplication, setApprovingApplication] = useState(false);
+
+  const allSteps = [
+    { key: 'apply', label: 'Application' },
+    { key: 'review', label: 'Admissions Review' },
+    { key: 'application_fee', label: 'Application Fee' },
+    { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'scholarship_fee', label: 'Scholarship Fee' },
+    { key: 'i20_fee', label: 'I-20 Control Fee' },
+    { key: 'acceptance_letter', label: 'Acceptance Letter' },
+    { key: 'transfer_form', label: 'Transfer Form' },
+    { key: 'enrollment', label: 'Enrolled' }
+  ];
+
+  const steps = React.useMemo(() => {
+    return allSteps.filter(step => {
+      if (!application) return false;
+      const processType = application.student_process_type || application.user_profiles?.student_process_type;
+      const isTransferInactive = processType === 'transfer' && (application.user_profiles as any)?.visa_transfer_active === false;
+      
+      if (step.key === 'transfer_form') return processType === 'transfer';
+      if (step.key === 'ds160_package') return processType === 'initial';
+      if (step.key === 'i539_cos_package') return processType === 'change_of_status';
+      
+      if (step.key === 'reinstatement_fee') return isTransferInactive;
+      if (isTransferInactive && ['scholarship_fee', 'i20_fee'].includes(step.key)) return false;
+
+      const placementFeeFlow = (application.user_profiles as any)?.placement_fee_flow;
+      if (placementFeeFlow) {
+        return !['scholarship_fee', 'i20_fee'].includes(step.key);
+      } else {
+        return step.key !== 'placement_fee';
+      }
+    });
+  }, [application]);
+
+  const getStepStatus = React.useCallback((step: { key: string; label: string }) => {
+    if (!application) return 'pending';
+    const profile: any = application.user_profiles;
+
+    switch (step.key) {
+      case 'selection_fee':
+        return profile?.has_paid_selection_process_fee ? 'completed' : 'pending';
+      case 'apply':
+        return 'completed';
+      case 'review':
+        if (application.status === 'enrolled' || application.status === 'approved') return 'completed';
+        if (application.status === 'rejected') return 'rejected';
+        if (application.status === 'under_review') return 'in_progress';
+        return 'pending';
+      case 'application_fee':
+        return application.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return profile?.is_placement_fee_paid ? 'completed' : 'pending';
+      case 'reinstatement_fee':
+        return profile?.has_paid_reinstatement_package ? 'completed' : 'pending';
+      case 'ds160_package':
+        return profile?.has_paid_ds160_package ? 'completed' : 'pending';
+      case 'i539_cos_package':
+        return profile?.has_paid_i539_cos_package ? 'completed' : 'pending';
+      case 'scholarship_fee':
+        return application.is_scholarship_fee_paid || profile?.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'i20_fee':
+        return profile?.has_paid_i20_control_fee ? 'completed' : 'pending';
+      case 'acceptance_letter':
+        if (application.acceptance_letter_status === 'approved' || application.acceptance_letter_status === 'sent') return 'completed';
+        return 'pending';
+      case 'transfer_form':
+        const processType = application.student_process_type || profile?.student_process_type;
+        if (processType !== 'transfer') return 'skipped';
+        const tfStatus = (application as any).transfer_form_status;
+        return tfStatus === 'approved' || tfStatus === 'sent' ? 'completed' : 'pending';
+      case 'enrollment':
+        return application.status === 'enrolled' ? 'completed' : 'pending';
+      default:
+        return 'pending';
+    }
+  }, [application]);
+
+  const getCurrentStep = React.useCallback(() => {
+    if (!application) return null;
+
+    for (let i = 0; i < steps.length; i++) {
+      const status = getStepStatus(steps[i]);
+      if (status === 'in_progress' || status === 'pending') {
+        return { step: steps[i], index: i, status };
+      }
+    }
+    return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
+  }, [application, steps, getStepStatus]);
 
   useEffect(() => {
     if (applicationId) {
@@ -136,7 +319,8 @@ const StudentDetails: React.FC = () => {
     setError(null);
 
     try {
-      const { data, error } = await supabase
+      // 1. Tenta buscar pelo ID da aplicação (comportamento padrão)
+      let { data, error } = await supabase
         .from('scholarship_applications')
         .select(`
           *,
@@ -144,10 +328,34 @@ const StudentDetails: React.FC = () => {
           scholarships(*, universities(*))
         `)
         .eq('id', applicationId)
-        .single();
+        .maybeSingle();
+
+      // 2. Fallback: Se não encontrou, talvez o ID passado seja um student_id (ex: vindo do Chat)
+      if (!data && !error) {
+        console.log('Aplicação não encontrada pelo ID. Tentando buscar pelo student_id...');
+        const altResponse = await supabase
+          .from('scholarship_applications')
+          .select(`
+            *,
+            user_profiles!student_id(*),
+            scholarships(*, universities(*))
+          `)
+          .eq('student_id', applicationId)
+          // Ordena pela mais recente caso haja múltiplas
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        data = altResponse.data;
+        error = altResponse.error;
+      }
 
       if (error) {
         throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Application not found');
       }
       
       if (data) {
@@ -1067,6 +1275,80 @@ const StudentDetails: React.FC = () => {
 
 
 
+
+
+  const handleApproveApplication = async () => {
+    if (!application) return;
+
+    // Verificar se todos os documentos básicos estão aprovados
+    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    const allApproved = requiredTypes.every(type => {
+      const doc = studentDocs.find((d: any) => d.type === type);
+      return doc && doc.status === 'approved';
+    });
+
+    if (!allApproved) {
+      if (!confirm('Not all required documents (Passport, Diploma, Funds Proof) are approved. Do you want to approve the application anyway?')) {
+        return;
+      }
+    }
+
+    try {
+      setApprovingApplication(true);
+      
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ 
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', application.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      setApplication(prev => prev ? ({ 
+        ...prev, 
+        status: 'approved' 
+      } as any) : prev);
+
+      // Notificação via webhook
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', application.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Application Approved",
+            email_aluno: userData.email,
+            nome_aluno: application.user_profiles.full_name || 'Student',
+            email_universidade: user?.email,
+            o_que_enviar: `Congratulations! Your application for <strong>${application.scholarships?.title}</strong> has been approved by the university. You can now proceed with the next steps in your dashboard.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (webhookErr) {
+        console.error('Error sending approval webhook:', webhookErr);
+      }
+
+      alert('Application approved successfully!');
+    } catch (err: any) {
+      console.error('Error approving application:', err);
+      alert(`Failed to approve application: ${err.message}`);
+    } finally {
+      setApprovingApplication(false);
+    }
+  };
+
   const rejectStudent = async () => {
     try {
       // Atualiza perfil do aluno para estado rejeitado
@@ -1408,8 +1690,10 @@ const StudentDetails: React.FC = () => {
     try {
       // Sanitizar o nome do arquivo e gerar chave segura
       const sanitizedFileName = sanitizeFileName(acceptanceLetterFile.name);
-      const fileName = `acceptance_letters/${Date.now()}_${sanitizedFileName}`;
+      const timestamp = Date.now();
+      const fileName = `acceptance_letters/${timestamp}_${sanitizedFileName}`;
       
+      // Upload do arquivo original
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(fileName, acceptanceLetterFile);
@@ -1418,15 +1702,40 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to upload file: ' + uploadError.message);
       }
 
-      // Obter a URL pública do arquivo
+      // Obter a URL pública do arquivo original
       const { data: { publicUrl } } = supabase.storage
         .from('document-attachments')
         .getPublicUrl(uploadData.path);
 
-      // Atualizar a aplicação com a URL da carta de aceite
+      // Gerar preview via Edge Function no backend (seguro e confiável)
+      let previewUrl: string | null = null;
+      if (acceptanceLetterFile.type === 'application/pdf') {
+        console.log('[StudentDetails] Requesting backend preview generation...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+
+        const res = await supabase.functions.invoke('generate-document-preview', {
+          body: {
+            storagePath: uploadData.path,
+            applicationId: application.id,
+            documentType: 'acceptance_letter',
+          },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (res.error) {
+          console.error('[StudentDetails] Preview generation failed:', res.error);
+        } else {
+          previewUrl = res.data?.previewUrl ?? null;
+          console.log('[StudentDetails] Preview generated:', previewUrl);
+        }
+      }
+
+      // Atualizar a aplicação com a URL da carta de aceite e o preview
       const updateData = {
         acceptance_letter_url: publicUrl,
-        acceptance_letter_status: 'sent',
+        acceptance_letter_preview_url: previewUrl,
+        acceptance_letter_status: 'approved',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       };
@@ -1451,7 +1760,8 @@ const StudentDetails: React.FC = () => {
       setApplication(prev => prev ? ({
         ...prev,
         acceptance_letter_url: publicUrl,
-        acceptance_letter_status: 'sent',
+        acceptance_letter_preview_url: previewUrl,
+        acceptance_letter_status: 'approved',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       } as any) : prev);
@@ -1467,7 +1777,7 @@ const StudentDetails: React.FC = () => {
         .from('user_profiles')
         .update({
           documents_status: 'approved',
-          status: 'enrolled'
+          status: 'active'
         })
         .eq('user_id', application.user_profiles.user_id);
 
@@ -1793,14 +2103,21 @@ const StudentDetails: React.FC = () => {
     <div className="min-h-screen overflow-y-auto">   
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center text-slate-500 hover:text-slate-700 mb-4 transition-colors group"
+              >
+                <ArrowLeft className="w-5 h-5 mr-1 transition-transform group-hover:-translate-x-1" />
+                <span className="text-sm font-medium">Back to students</span>
+              </button>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Student Application
+                Admitted Enrollment
               </h1>
               <p className="mt-1 text-sm text-slate-600">
-                Review and manage {application?.user_profiles?.full_name || 'Student'}'s application details
+                Review and manage {application?.user_profiles?.full_name || 'Student'}'s admitted enrollment details
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -1808,6 +2125,11 @@ const StudentDetails: React.FC = () => {
                 <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
                   <CheckCircle2 className="w-4 h-4 mr-1.5" />
                   Enrolled
+                </div>
+              ) : application.status === 'approved' ? (
+                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  Application Approved
                 </div>
               ) : (
                 <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
@@ -1822,7 +2144,7 @@ const StudentDetails: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b border-slate-300 rounded-b-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 overflow-x-auto" role="tablist">
             {TABS.map(tab => (
               <button
@@ -1848,7 +2170,7 @@ const StudentDetails: React.FC = () => {
       </div>
             
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Conteúdo das abas */}
         {activeTab === 'details' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
@@ -2071,7 +2393,7 @@ const StudentDetails: React.FC = () => {
                     <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Student Documents
+                    Document Review & Approval
                   </h2>
                   <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
                 </div>
@@ -2167,6 +2489,35 @@ const StudentDetails: React.FC = () => {
                       );
                     })}
                   </div>
+
+                  {/* Application Decision Section - Integrated into bottom right */}
+                  {(application.status !== 'enrolled' && application.status !== 'approved' && application.acceptance_letter_status !== 'approved') && (
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-4">
+                      <button
+                        onClick={() => setShowRejectStudentModal(true)}
+                        className="px-6 py-2.5 text-red-600 hover:bg-red-50 text-sm font-bold rounded-xl transition-all"
+                      >
+                        Reject Application
+                      </button>
+                      <button
+                        onClick={handleApproveApplication}
+                        disabled={approvingApplication}
+                        className="px-8 py-2.5 bg-[#05294E] hover:bg-[#041f38] text-white text-sm font-bold rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {approvingApplication ? (
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                            Approving...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Approve Application
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2175,75 +2526,48 @@ const StudentDetails: React.FC = () => {
 
             {/* Sidebar */}
             <div className="xl:col-span-4 space-y-4">
-              {/* Quick Stats Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#041f38] px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Application Summary</h3>
-                </div>
-                <div className="p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Submitted</span>
-                    <span className="text-sm text-slate-900">
-                      {new Date((application as any).created_at || Date.now()).toLocaleDateString()}
-                    </span>
-                  </div>
+              <ApplicationProgressCard
+                currentStep={getCurrentStep()}
+                allSteps={steps}
+                isExpanded={isProgressExpanded}
+                onToggleExpand={() => setIsProgressExpanded(!isProgressExpanded)}
+                getStepStatus={getStepStatus}
+              />
+              
+              {studentRecord && (
+                <PaymentStatusCard
+                  student={studentRecord}
+                  realPaidAmounts={realPaidAmounts}
+                  loadingPaidAmounts={loadingPaidAmounts}
+                  editingFees={null}
+                  editingPaymentMethod={null}
+                  newPaymentMethod=""
+                  savingPaymentMethod={false}
+                  savingFees={false}
+                  isPlatformAdmin={false}
+                  dependents={studentRecord.dependents || 0}
+                  hasOverride={hasOverride}
+                  userSystemType={studentRecord.system_type}
+                  hasMatriculaRewardsDiscount={false}
+                  onStartEditFees={() => {}}
+                  onSaveEditFees={async () => {}}
+                  onCancelEditFees={() => {}}
+                  onResetFees={async () => {}}
+                  onEditFeesChange={() => {}}
+                  onMarkAsPaid={() => {}}
+                  onEditPaymentMethod={() => {}}
+                  onUpdatePaymentMethod={async () => {}}
+                  onCancelPaymentMethod={() => {}}
+                  onPaymentMethodChange={() => {}}
+                  formatFeeAmount={formatFeeAmount}
+                  getFeeAmount={getFeeAmount}
+                  hideSelectionFee={true}
+                />
+              )}
+              
+              {/* Sidebar Content is now focused on Progress and Payments */}
 
 
-                </div>
-              </div>
-
-              {/* Recent Activity Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-slate-600 to-slate-700 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900">Application submitted</p>
-                        <p className="text-xs text-slate-500">{new Date((application as any).created_at || Date.now()).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    {(application as any).updated_at !== (application as any).created_at && (
-                      <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full mt-2 flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-900">Last updated</p>
-                          <p className="text-xs text-slate-500">{new Date((application as any).updated_at || Date.now()).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {[
-                      { label: 'Documents', tab: 'documents', icon: FileText }
-                    ].map((action) => (
-                      <button
-                        key={action.tab}
-                        onClick={() => setActiveTab(action.tab as any)}
-                        className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <action.icon className="w-5 h-5 text-slate-600" />
-                          <span className="text-sm font-medium text-slate-900">{action.label}</span>
-                        </div>
-                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
       )}
@@ -2271,6 +2595,24 @@ const StudentDetails: React.FC = () => {
           </div>
         </div>
       )} */}
+      
+      {activeTab === 'survey' && (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <FileText className="w-6 h-6 mr-3" />
+              Selection Survey
+            </h2>
+          </div>
+          <div className="p-6">
+            <SelectionSurveyView
+              userId={application?.user_profiles?.user_id || ''}
+              surveyPassed={application?.user_profiles?.selection_survey_passed}
+            />
+          </div>
+        </div>
+      )}
+
         {activeTab === 'documents' && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
@@ -2471,11 +2813,11 @@ const StudentDetails: React.FC = () => {
                                 
                                 <div className="flex items-center space-x-3 ml-4">
                                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    (doc.status === 'approved' || doc.status === 'sent') ? 'bg-green-100 text-green-800' :
                                     doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                     'bg-yellow-100 text-yellow-800'
                                   }`}>
-                                    {doc.status === 'approved' ? 'Approved' :
+                                    {(doc.status === 'approved' || doc.status === 'sent') ? 'Approved' :
                                      doc.status === 'rejected' ? 'Rejected' :
                                      'Under Review'}
                                   </span>
@@ -3087,6 +3429,55 @@ const StudentDetails: React.FC = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
               >
                 Reject Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para rejeitar aplicação */}
+      {showRejectStudentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl transform transition-all">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900">Reject Application</h3>
+                <p className="text-slate-500">Provide a reason for this decision</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-4 font-medium">
+              This message will be sent to the student to help them understand why their application was not accepted.
+            </p>
+            
+            <textarea
+              value={rejectStudentReason}
+              onChange={(e) => setRejectStudentReason(e.target.value)}
+              className="w-full h-40 p-4 border-2 border-slate-200 rounded-2xl text-slate-700 resize-none focus:outline-none focus:border-[#05294E] transition-colors bg-slate-50"
+              placeholder="Ex: Missing specific prerequisite, incomplete information, etc..."
+            />
+            
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setShowRejectStudentModal(false);
+                  setRejectStudentReason('');
+                }}
+                className="px-6 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={rejectStudent}
+                disabled={!rejectStudentReason.trim() || approvingApplication}
+                className="px-8 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-lg shadow-red-200 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                Confirm Rejection
               </button>
             </div>
           </div>

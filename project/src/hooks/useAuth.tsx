@@ -8,7 +8,7 @@ interface User {
   avatar_url: string | null;
   email: string;
   name?: string;
-  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
@@ -42,7 +42,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   is_placement_fee_paid?: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -91,8 +91,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
-  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
+  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales') => void;
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -116,7 +116,7 @@ interface AuthProviderProps {
 
 interface SignUpOptions {
   referralCode?: string;
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   utm?: StoredUtmAttribution | null;
 }
 
@@ -146,7 +146,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const buildUser = async (sessionUser: any, currentProfile: UserProfile | null): Promise<User> => {
       // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> verificar se é vendedor -> perfil.is_admin -> fallback por email
       let role = currentProfile?.role as User['role'] | undefined;
-      if (!role) role = sessionUser?.user_metadata?.role as User['role'] | undefined;
+      const metaRoleRaw = sessionUser?.user_metadata?.role as string | undefined;
+      // Se user_metadata.role é uma role não-default (ex: affiliate), tem prioridade
+      // sobre user_profiles.role = 'student' que pode ser apenas o valor default do trigger
+      if (metaRoleRaw && metaRoleRaw !== 'student' && (!role || role === 'student')) {
+        role = metaRoleRaw as User['role'];
+      }
+      if (!role) role = metaRoleRaw as User['role'] | undefined;
 
       // Se ainda não tem role, verificar se é uma universidade
       if (!role) {
@@ -595,7 +601,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                           referred_id: session.user.id,
                           affiliate_code: pendingAffiliateCode,
                           status: 'pending',
-                          credits_earned: 180 // 180 Matricula Coins
+                          credits_earned: 100 // 100 Matricula Coins
                         });
 
                       if (referralError) {

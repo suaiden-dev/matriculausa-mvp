@@ -149,80 +149,12 @@ Deno.serve(async (req) => {
       }, 400);
     }
 
-    // Criar cupom no Stripe
-    let couponId: string | null = null;
-    const discountAmount = 50; // $50 de desconto fixo
+    // Desconto removido: código de afiliado apenas rastreia indicação, sem desconto de preço
+    const discountAmount = 0;
 
-    console.log('[process-registration-coupon] 🎯 CRIANDO CUPOM NO STRIPE');
-    console.log('[process-registration-coupon] Discount Amount:', discountAmount);
-    console.log('[process-registration-coupon] Stripe Secret Key:', stripeSecret.substring(0, 20) + '...');
-
-    try {
-      console.log('[process-registration-coupon] 📝 Criando cupom no Stripe...');
-      console.log('[process-registration-coupon] Configuração do cupom:', {
-        amount_off: discountAmount * 100,
-        currency: 'usd',
-        duration: 'once',
-        name: `Matricula Rewards - ${affiliate_code}`,
-        metadata: {
-          affiliate_code: affiliate_code,
-          user_id: targetUserId,
-          referrer_id: affiliateData.user_id
-        }
-      });
-      
-      const newCoupon = await stripe.coupons.create({
-        amount_off: discountAmount * 100, // Stripe usa centavos
-        currency: 'usd',
-        duration: 'once',
-        name: `Matricula Rewards - ${affiliate_code}`,
-        metadata: {
-          affiliate_code: affiliate_code,
-          user_id: targetUserId,
-          referrer_id: affiliateData.user_id
-        }
-      });
-      
-      console.log('[process-registration-coupon] ✅ Cupom criado com sucesso!');
-      console.log('[process-registration-coupon] Cupom ID:', newCoupon.id);
-      console.log('[process-registration-coupon] Amount Off:', newCoupon.amount_off);
-      console.log('[process-registration-coupon] Status:', newCoupon.valid);
-      console.log('[process-registration-coupon] Cupom completo:', newCoupon);
-      couponId = newCoupon.id;
-      
-    } catch (stripeError: any) {
-      console.log('[process-registration-coupon] ⚠️ Erro ao criar cupom:', stripeError.code);
-      console.log('[process-registration-coupon] Mensagem de erro:', stripeError.message);
-      console.log('[process-registration-coupon] Erro completo:', stripeError);
-      return corsResponse({
-        success: false,
-        error: 'Erro ao criar cupom no Stripe',
-        details: {
-          code: stripeError.code,
-          message: stripeError.message
-        }
-      }, 500);
-    }
-
-    // Verificar se o cupom foi criado corretamente
-    try {
-      console.log('[process-registration-coupon] 🔍 Verificando se cupom foi criado...');
-      const createdCoupon = await stripe.coupons.retrieve(couponId!);
-      console.log('[process-registration-coupon] ✅ Cupom verificado com sucesso!');
-      console.log('[process-registration-coupon] ID:', createdCoupon.id);
-      console.log('[process-registration-coupon] Amount Off:', createdCoupon.amount_off);
-      console.log('[process-registration-coupon] Valid:', createdCoupon.valid);
-    } catch (verifyError) {
-      console.error('[process-registration-coupon] ❌ Erro ao verificar cupom:', verifyError);
-      return corsResponse({ 
-        success: false, 
-        error: 'Erro ao verificar cupom criado' 
-      }, 500);
-    }
-
-    // Registrar uso do código de referência
+    // Registrar uso do código de referência (sem cupom Stripe)
     console.log('[process-registration-coupon] 📝 Registrando uso do código de referência...');
-    
+
     const { error: insertError } = await supabase
       .from('used_referral_codes')
       .insert({
@@ -230,7 +162,7 @@ Deno.serve(async (req) => {
         affiliate_code: affiliate_code,
         referrer_id: affiliateData.user_id,
         discount_amount: discountAmount,
-        stripe_coupon_id: couponId!,
+        stripe_coupon_id: null,
         status: 'applied',
         applied_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 ano
@@ -280,9 +212,9 @@ Deno.serve(async (req) => {
 
     return corsResponse({
       success: true,
-      message: 'Cupom de desconto criado com sucesso',
+      message: 'Código de indicação registrado com sucesso',
       data: {
-        coupon_id: couponId,
+        coupon_id: null,
         discount_amount: discountAmount,
         affiliate_code: affiliate_code,
         referrer_id: affiliateData.user_id

@@ -193,9 +193,13 @@ const MatriculaRewardsLanding: React.FC = () => {
 
   const handleGetStarted = () => {
     if (user) {
-      navigate('/student/dashboard/rewards');
+      if (user.role === 'affiliate') {
+        navigate('/affiliate/dashboard');
+      } else {
+        navigate('/student/dashboard/rewards');
+      }
     } else {
-      navigate('/register');
+      navigate('/affiliate/register');
     }
   };
 
@@ -224,7 +228,7 @@ const MatriculaRewardsLanding: React.FC = () => {
   };
 
   const calculateSavings = (friends: number) => {
-    const coins = friends * 180; // 180 coins por indicação bem-sucedida
+    const coins = friends * 100; // 100 coins por indicação bem-sucedida
     const dollars = coins; // 1 coin = $1
     return { coins, dollars };
   };
@@ -365,7 +369,7 @@ const MatriculaRewardsLanding: React.FC = () => {
             )}
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               <button
                 onClick={handleGetStarted}
                 className="group bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-3xl"
@@ -381,6 +385,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                 {t('matriculaRewardsLanding.hero.cta.learnMore')}
               </button>
             </div>
+
 
           </div>
         </div>

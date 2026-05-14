@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crown, Shield, Lock, Mail, User, Eye, EyeOff, CheckCircle, AlertCircle, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 const AdminRegistration: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionamento imediato se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const role = user.role || 'student';
+      const dashboardPath =
+        role === 'affiliate' ? '/affiliate/dashboard' :
+        role === 'seller' ? '/seller/dashboard' :
+        role === 'admin' ? '/admin/dashboard' :
+        '/student/dashboard';
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,7 +33,8 @@ const AdminRegistration: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const navigate = useNavigate();
+
+  if (!authLoading && user) return null;
 
   // Chave secreta para validar o registro de admin (você pode mudar isso)
   const ADMIN_SECRET_KEY = 'MATRICULA_USA_ADMIN_2024';

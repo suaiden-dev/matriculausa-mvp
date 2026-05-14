@@ -48,7 +48,7 @@ async function getAllAdmins(
     const { data: adminProfiles, error: profileError } = await supabase
       .from("user_profiles")
       .select("user_id, email, full_name, phone")
-      .eq("role", "admin");
+      .in("role", ["admin", "post_sales"]);
 
     if (profileError) {
       console.error(
@@ -1424,7 +1424,7 @@ Deno.serve(async (req: Request) => {
                 payment_method: "Stripe",
                 fee_type: "Selection Process Fee",
                 o_que_enviar:
-                  `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`,
+                  `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 100 MatriculaCoins when they complete the I20 payment!`,
               };
 
               console.log(

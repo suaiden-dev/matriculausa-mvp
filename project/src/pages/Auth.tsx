@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -57,7 +57,22 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const referralCodeProcessedRef = useRef(false);
 
 
-  const { login, register } = useAuth();
+  const { user, loading: authLoading, login, register } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionamento imediato se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const role = user.role || 'student';
+      const dashboardPath =
+        role === 'affiliate' ? '/affiliate/dashboard' :
+          role === 'seller' ? '/seller/dashboard' :
+            role === 'admin' || role === 'post_sales' ? '/admin/dashboard' :
+              '/student/dashboard';
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
   const { captureLead, markAsConverted } = useLeadCapture();
 
@@ -409,10 +424,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
 
-        // Validate allowed password characters: letters, numbers and @#$!
-        const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
-        if (!allowedPasswordRegex.test(formData.password)) {
+        // Rejeitar caracteres de controle (permite qualquer imprimível, incluindo senhas Apple/Safari)
+        if (/[\x00-\x1F\x7F]/.test(formData.password)) {
           setError(t('authPage.messages.invalidPasswordChars'));
+          setLoading(false);
+          return;
+        }
+
+        // Limite de 20 caracteres para novas senhas
+        if (formData.password.length > 20) {
+          setError('Password must be at most 20 characters.');
           setLoading(false);
           return;
         }
@@ -599,6 +620,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setActiveTab(tab);
   };
 
+  if (!authLoading && user) return null;
 
   if (mode === 'login') {
     return (
@@ -741,8 +763,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <button
               onClick={() => handleTabChange('student')}
               className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${activeTab === 'student'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-[#05294E] shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -751,8 +773,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <button
               onClick={() => handleTabChange('university')}
               className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${activeTab === 'university'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-[#05294E] shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <Building className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -853,8 +875,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         }}
                         maxLength={20}
                         className={`phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${error === t('authPage.messages.invalidPhone')
-                            ? 'border-red-500 ring-2 ring-red-500/10'
-                            : 'border-slate-300'
+                          ? 'border-red-500 ring-2 ring-red-500/10'
+                          : 'border-slate-300'
                           }`}
                         placeholder={t('authPage.register.enterPhone')}
                       />
@@ -882,9 +904,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                          : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                           }`}
+                        maxLength={20}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -919,9 +942,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.passwordsNotMatch')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                          : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                           }`}
+                        maxLength={20}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
@@ -959,8 +983,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleReferralCodeChange}
                         readOnly={isReferralCodeLocked}
                         className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${isReferralCodeLocked
-                            ? 'bg-gray-50 cursor-not-allowed border-slate-300'
-                            : ''
+                          ? 'bg-gray-50 cursor-not-allowed border-slate-300'
+                          : ''
                           } ${referralCodeValid === true
                             ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
                             : referralCodeValid === false
@@ -1025,8 +1049,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             setFormData(prev => ({ ...prev, dependents: val }));
                           }}
                           className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${error === t('authPage.messages.invalidDependents')
-                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                              : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                             }`}
                           onBlur={() => trackFieldFilled('dependents')}
                         >
@@ -1151,8 +1175,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         maxLength={20}
                         onBlur={() => handleFieldBlur('phone')}
                         className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${error === t('authPage.messages.invalidPhone')
-                            ? 'border-red-500 ring-2 ring-red-500/10'
-                            : 'border-slate-300'
+                          ? 'border-red-500 ring-2 ring-red-500/10'
+                          : 'border-slate-300'
                           }`}
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
@@ -1180,8 +1204,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                          : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
                           }`}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
@@ -1217,8 +1241,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${error === t('authPage.messages.passwordsNotMatch')
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                          : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
                           }`}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
@@ -1293,8 +1317,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               type="submit"
               disabled={loading || !termsAccepted}
               className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'student'
-                  ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]'
-                  : 'bg-[#D0151C] hover:bg-[#B01218] focus:ring-[#D0151C]'
+                ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]'
+                : 'bg-[#D0151C] hover:bg-[#B01218] focus:ring-[#D0151C]'
                 }`}
             >
               {loading ? (

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Phone, CheckCircle, UserCheck, Shield, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Header from '../components/Header';
@@ -11,8 +12,22 @@ interface SellerRegistrationProps {}
 
 const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
   const { t: _t } = useTranslation();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Redirecionamento imediato se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const role = user.role || 'student';
+      const dashboardPath =
+        role === 'affiliate' ? '/affiliate/dashboard' :
+        role === 'seller' ? '/seller/dashboard' :
+        role === 'admin' ? '/admin/dashboard' :
+        '/student/dashboard';
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -22,6 +37,8 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     phone: '',
     registration_code: ''
   });
+
+  if (!authLoading && user) return null;
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -101,8 +118,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       setError('Passwords do not match');
       return;
     }
-    if (!/^[A-Za-z0-9@#$!]+$/.test(formData.password)) {
-      setError('Password must contain only letters, numbers and the characters @#$!');
+    if (/[\x00-\x1F\x7F]/.test(formData.password)) {
+      setError('Password contains invalid characters.');
+      return;
+    }
+    if (formData.password.length > 20) {
+      setError('Password must be at most 20 characters.');
       return;
     }
     if (!formData.phone || formData.phone.length < 8) {

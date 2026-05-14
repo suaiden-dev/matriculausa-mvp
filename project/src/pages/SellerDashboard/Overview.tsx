@@ -43,25 +43,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
-  // Debug específico para investigar discrepância de receita
-  useEffect(() => {
-    const target = students.find((s: any) => s?.email === 'irving1745@uorak.com');
-    if (target) {
-      const packageFees = studentPackageFees[target.id];
-      const deps = studentDependents[target.id] || 0;
-      console.log('[OVERVIEW][DEBUG] Irving student data:', {
-        id: target.id,
-        email: target.email,
-        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
-        is_application_fee_paid: target.is_application_fee_paid,
-        dependents: deps,
-        packageFees
-      });
-      console.log('[OVERVIEW][DEBUG] Irving calculated total:', calculateStudentAdjustedPaid(target));
-    }
-  }, [students, studentPackageFees, studentDependents]);
 
   // Carregar taxas do pacote (RPC), dependentes do perfil e overrides em lote para reduzir latência e flicker
   useEffect(() => {

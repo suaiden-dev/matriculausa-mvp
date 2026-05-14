@@ -11,6 +11,7 @@ import { useStudentLogs } from '../../../../hooks/useStudentLogs';
 import { supabase } from '../../../../lib/supabase';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../../../../utils/stripeFeeCalculator';
 import { Term, PaymentMethod, ValidationResult, PromotionalCouponValidation } from './types';
+import { PayerInfo } from '../../../../components/PayerAlternativeForm';
 
 export const useSelectionFeeStep = (onNext: () => void) => {
   const { t } = useTranslation();
@@ -33,6 +34,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [zellePaymentSubmitted, setZellePaymentSubmitted] = useState(false);
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const hasProcessedApproval = useRef(false);
+  const hasProcessedSuccessRedirect = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Terms
@@ -60,6 +62,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [inlineCpf, setInlineCpf] = useState('');
   const [savingCpf, setSavingCpf] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
 
   // Promotional coupon
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
@@ -96,7 +99,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   useEffect(() => {
     // 🎯 Se chegamos com payment=success na URL, forçamos o refetch e avançamos para o próximo passo.
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
+    if (params.get('payment') === 'success' && !hasProcessedSuccessRedirect.current) {
+      hasProcessedSuccessRedirect.current = true;
       console.log('🎯 [SelectionFeeStep] Redirecionamento de sucesso detectado. Verificando pagamento...');
       refetchPaymentStatus();
       refetchUserProfile().then((profile: UserProfile | null) => {
@@ -142,8 +146,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
       setShowCodeStep(true);
       setValidationResult({
         isValid: true,
-        message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
-        discountAmount: activeDiscount.discount_amount || 50,
+        message: t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!',
+        discountAmount: activeDiscount.discount_amount || 0,
       });
     }
   }, [activeDiscount?.has_discount, activeDiscount?.affiliate_code, activeDiscount?.discount_amount, t]);
@@ -183,7 +187,11 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      const discountAmt = result?.discount_amount ?? 0;
+      const msg = discountAmt > 0
+        ? (t('payment:preCheckoutModal.validCode') || `Valid code! $${discountAmt} discount applied`)
+        : (t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!');
+      setValidationResult({ isValid: true, message: msg, discountAmount: discountAmt });
       setCodeApplied(true);
     } catch (e) {
       setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
@@ -223,7 +231,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
           setCodeApplied(true);
           setHasReferralCode(true);
           setShowCodeStep(true);
-          setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code!', discountAmount: usedCode.discount_amount || 50 });
+          setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!', discountAmount: usedCode.discount_amount || 0 });
         }
       } catch (e) {
         console.error('Erro ao buscar código usado:', e);
@@ -423,7 +431,11 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      const discountAmt = result?.discount_amount ?? 0;
+      const msg = discountAmt > 0
+        ? (t('payment:preCheckoutModal.validCode') || `Valid code! $${discountAmt} discount applied`)
+        : (t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!');
+      setValidationResult({ isValid: true, message: msg, discountAmount: discountAmt });
       setCodeApplied(true);
     } catch (e) {
       setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
@@ -435,8 +447,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
 
   const computedBasePrice = (() => {
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) return promotionalCouponValidation.finalAmount;
-    if (activeDiscount?.has_discount) { const discount = activeDiscount.discount_amount || 50; return Math.max(selectionFeeAmount - discount, 0); }
-    if (validationResult?.isValid && codeApplied) return Math.max(selectionFeeAmount - 50, 0);
+    if (activeDiscount?.has_discount) { const discount = activeDiscount.discount_amount || 0; return Math.max(selectionFeeAmount - discount, 0); }
+    if (validationResult?.isValid && codeApplied && (validationResult.discountAmount ?? 0) > 0) return Math.max(selectionFeeAmount - (validationResult.discountAmount || 0), 0);
     return selectionFeeAmount;
   })();
 
@@ -598,6 +610,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         ...(discountCodeToSend && { discount_code: discountCodeToSend }),
         promotional_coupon: (window as any).__checkout_promotional_coupon || null,
         ...(Object.keys(metadata).length > 0 && { metadata }),
+        ...(paymentMethod === 'parcelow' && payerInfo && { payer_info: payerInfo }),
       };
 
       console.log('🚀 [useSelectionFeeStep] Iniciando Checkout:', { apiUrl, paymentMethod, requestBody });
@@ -632,6 +645,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     showCpfModal, setShowCpfModal, codeApplied, setCodeApplied,
     showInlineCpf, setShowInlineCpf, inlineCpf, setInlineCpf,
     savingCpf, cpfError, setCpfError,
+    payerInfo, setPayerInfo,
     promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon,
     promotionalCouponValidation, setPromotionalCouponValidation,
     // Computed

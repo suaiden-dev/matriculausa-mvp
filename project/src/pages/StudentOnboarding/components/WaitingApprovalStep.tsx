@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   CheckCircle,
   Loader2,
@@ -24,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../../hooks/useDynamicFees';
 import { I20ControlFeeModal } from '../../../components/I20ControlFeeModal';
+import { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
@@ -69,6 +71,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
   const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchParams] = useSearchParams();
 
   // I-20 Payment states
   const [showI20Modal, setShowI20Modal] = useState(false);
@@ -78,6 +81,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
   const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
 
   // Derived state
@@ -142,6 +146,14 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
     return () => clearInterval(interval);
   }, [fetchApplication]);
 
+  // Sincronizar perfil após sucesso de pagamento (ex: Parcelow/Stripe)
+  useEffect(() => {
+    if (searchParams.get('payment') === 'success') {
+      console.log('[WaitingApprovalStep] Sucesso de pagamento detectado, atualizando perfil...');
+      refetchUserProfile?.();
+    }
+  }, [searchParams, refetchUserProfile]);
+
   // Refresh handler
   const handleRefresh = async () => {
     if (refreshing) return;
@@ -157,8 +169,9 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
     setShowI20Modal(true);
   };
 
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number, payerInfoParam?: PayerInfo | null) => {
     setSelectedPaymentMethod(method);
+    if (payerInfoParam) setPayerInfo(payerInfoParam);
     if (method === 'pix' && exchangeRateParam) {
       setExchangeRate(exchangeRateParam);
     } else {
@@ -272,19 +285,19 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
             },
             promotional_coupon: promotionalCoupon,
             scholarships_ids: application?.scholarships?.id ? [application.scholarships.id] : [],
+            ...(payerInfo && { payer_info: payerInfo }),
           }),
         });
 
         if (!res.ok) {
           const errorData = await res.json();
-          if (errorData.error === 'document_number_required') {
-            setProfileErrorType('cpf_missing');
-            setShowProfileRequiredModal(true);
-            setI20Loading(false);
-            return;
-          }
-          if (errorData.error === 'User profile not found') {
-            setProfileErrorType('profile_incomplete');
+          if (errorData.error === 'document_number_required' || errorData.error === 'User profile not found') {
+            // Se tivermos informações de titular de terceiros, não deveríamos cair aqui,
+            // mas por segurança vamos verificar
+            if (payerInfo) {
+              throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+            }
+            setProfileErrorType(errorData.error === 'document_number_required' ? 'cpf_missing' : 'profile_incomplete');
             setShowProfileRequiredModal(true);
             setI20Loading(false);
             return;

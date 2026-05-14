@@ -33,29 +33,23 @@ export const useAffiliateAdminId = (): {
     setError(null);
 
     try {
-      console.log('🔍 [useAffiliateAdminId] Buscando affiliate_admin para user:', user.id);
-      
       const { data, error: fetchError } = await supabase
         .from('affiliate_admins')
         .select('id, system_type, is_active')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
-        if (fetchError.code === 'PGRST116') {
-          // No rows found - user is not an affiliate admin
-          console.log('⚠️ [useAffiliateAdminId] Usuário não é affiliate admin:', user.id);
-          setAffiliateAdminId(null);
-          setAffiliateAdminInfo(null);
-          setError('User is not an affiliate admin');
-        } else {
-          console.error('❌ [useAffiliateAdminId] Erro ao buscar affiliate_admin:', fetchError);
-          setError(fetchError.message);
-        }
+        setError(fetchError.message);
         return;
       }
 
-      console.log('✅ [useAffiliateAdminId] Affiliate admin encontrado:', data);
+      if (!data) {
+        setAffiliateAdminId(null);
+        setAffiliateAdminInfo(null);
+        setError('User is not an affiliate admin');
+        return;
+      }
       setAffiliateAdminId(data.id);
       setAffiliateAdminInfo({
         id: data.id,

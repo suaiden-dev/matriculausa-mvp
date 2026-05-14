@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import { queryKeys } from '../../lib/queryKeys';
 
 interface DocumentsViewProps {
   studentDocuments: any[];
@@ -43,6 +45,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   deletingStates = {},
   showGlobalRequests = true,
 }) => {
+  const queryClient = useQueryClient();
   // ✅ OTIMIZAÇÃO: Removidos console.logs desnecessários
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
@@ -181,9 +184,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       
       let filteredGlobalRequests: any[] = [];
       
-      // Buscar requests globais se tivermos university_id e showGlobalRequests estiver ativo
-      if (universityId && showGlobalRequests) {
-        const { data: globalRequests, error: globalError } = await supabase
+      // Buscar requests globais se showGlobalRequests estiver ativo
+      if (showGlobalRequests) {
+        let globalQuery = supabase
           .from('document_requests')
           .select(`
             *,
@@ -193,9 +196,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               reviewed_at
             )
           `)
-          .eq('is_global', true)
-          .eq('university_id', universityId)
-          .order('created_at', { ascending: false });
+          .eq('is_global', true);
+
+        // Se tivermos um universityId, buscamos os globais daquela universidade OU os truly globais (null)
+        // Se não tivermos, buscamos apenas os truly globais
+        if (universityId) {
+          globalQuery = globalQuery.or(`university_id.eq.${universityId},university_id.is.null`);
+        } else {
+          globalQuery = globalQuery.is('university_id', null);
+        }
+
+        const { data: globalRequests, error: globalError } = await globalQuery.order('created_at', { ascending: false });
 
         if (globalError) throw globalError;
         
@@ -665,7 +676,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         request.document_request_uploads.map((upload: any) => {
                           const { filename, fullUrl } = getDocumentInfo(upload);
                           return (
-                            <div key={upload.id} className="mb-4 last:mb-0 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0">
+                            <div key={upload.id} data-upload-id={upload.id} className="mb-4 last:mb-0 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0">
                               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                 <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
                                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -674,7 +685,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     </svg>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                      {upload.is_admin_upload && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-sm text-slate-500">
                                       Submitted on {formatDate(upload.uploaded_at)}
                                     </p>
@@ -958,6 +976,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+
                             // Log: acceptance letter substituída/enviada novamente
                             await logAcceptanceAction(
                               'acceptance_letter_replaced',
@@ -1125,6 +1145,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -1160,7 +1182,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
-                      <button
+                      {/* Mark as Sent (no file) button hidden — prevents admins from marking sent without an attached file */}
+                      {/* <button
                         onClick={async () => {
                           try {
                             // Resolver applicationId como acima
@@ -1186,7 +1209,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                   if (upById?.id) profileId = upById.id;
                                 }
                               }
-                              
+
                               if (profileId) {
                                 const { data: apps } = await supabase
                                   .from('scholarship_applications')
@@ -1223,6 +1246,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_sent_at: new Date().toISOString(),
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
+                            queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
                             setMarkSentSuccess('Acceptance letter marked as sent.');
                           } catch (err) {
                             console.error('Error marking acceptance letter as sent:', err);
@@ -1231,7 +1255,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-medium"
                       >
                         Mark as Sent (no file)
-                      </button>
+                      </button> */}
                     </div>
                     {markSentSuccess && (
                       <div className="mt-3 mx-auto max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3">

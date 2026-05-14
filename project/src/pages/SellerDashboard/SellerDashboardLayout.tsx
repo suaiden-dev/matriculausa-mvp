@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Users, 
   GraduationCap,
   BarChart3,
   Settings,
@@ -9,7 +8,6 @@ import {
   X,
   LogOut,
   Shield,
-  Crown,
   User,
   Search,
   ChevronDown,
@@ -20,6 +18,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import SellerNotifications from '../../components/SellerNotifications';
 import { useSellerI20DeadlineMonitor } from '../../hooks/useSellerI20DeadlineMonitor';
+import { useSellerNotifications } from '../../hooks/useSellerNotifications';
 import { useSystemType } from '../../hooks/useSystemType';
 
 interface SellerDashboardLayoutProps {
@@ -32,7 +31,7 @@ interface SellerDashboardLayoutProps {
 
 const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   user,
-  sellerProfile,
+  sellerProfile: _sellerProfile,
   children,
   onNavigate,
   currentView
@@ -44,10 +43,16 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Monitorar deadlines do I-20 para sellers
+  // Instância única do hook de notificações — compartilhada com o monitor de I-20
+  const { createI20DeadlineExpiredNotification } = useSellerNotifications({
+    sellerId: user?.id || ''
+  });
+
+  // Monitorar deadlines do I-20 reutilizando o hook de notificações já instanciado
   useSellerI20DeadlineMonitor({
     sellerId: user?.id || '',
-    checkInterval: 5 * 60 * 1000 // Verificar a cada 5 minutos
+    checkInterval: 5 * 60 * 1000,
+    createI20DeadlineExpiredNotification
   });
 
   const getActiveTab = () => {

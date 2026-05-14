@@ -2,17 +2,21 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { useResumableUpload } from '../hooks/useResumableUpload';
 import DocumentViewerModal from './DocumentViewerModal';
-import { 
-  FileText, 
-  CheckCircle2, 
-  Download, 
-  AlertCircle, 
-  Clock, 
+import DocumentHistoryAccordion from './DocumentHistoryAccordion';
+import {
+  FileText,
+  CheckCircle2,
+  CheckCircle,
+  Download,
+  AlertCircle,
+  Clock,
   Paperclip,
   Upload,
   ChevronDown,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 
 interface DocumentRequest {
@@ -55,6 +59,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 }) => {
   const { t } = useTranslation('dashboard');
 
+  const { progress: uploadProgress, uploading: tusUploading, startUpload } = useResumableUpload();
+
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
   const [selectedFiles, setSelectedFiles] = useState<{ [requestId: string]: File | null }>({});
@@ -66,6 +72,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [selectedTransferFormFile, setSelectedTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofUploadError, setProofUploadError] = useState<string | null>(null);
+  const proofFileInputRef = React.useRef<HTMLInputElement>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
@@ -76,6 +85,42 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [viewingRejectionReason, setViewingRejectionReason] = useState<string | null>(null);
 
   // Função para sanitizar nome do arquivo
+  const handleProofUpload = async (file: File) => {
+    setUploadingProof(true);
+    setProofUploadError(null);
+    try {
+      const sanitized = sanitizeFileName(file.name);
+      const storagePath = `transfer-proof-to-school/${currentUserId}/${Date.now()}_${sanitized}`;
+      const { error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, file, { upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: publicData } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(storagePath);
+      const { error: dbError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_proof_to_school_url: publicData.publicUrl,
+          transfer_proof_to_school_at: new Date().toISOString(),
+          transfer_proof_to_school_status: 'submitted',
+        })
+        .eq('id', applicationId);
+      if (dbError) throw dbError;
+      const { data: refreshed } = await supabase
+        .from('scholarship_applications')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at, transfer_proof_to_school_url, transfer_proof_to_school_at, transfer_proof_to_school_status')
+        .eq('id', applicationId)
+        .maybeSingle();
+      if (refreshed) setTransferForm(refreshed);
+    } catch (err: any) {
+      setProofUploadError(err.message || 'Erro ao enviar comprovante');
+    } finally {
+      setUploadingProof(false);
+      if (proofFileInputRef.current) proofFileInputRef.current.value = '';
+    }
+  };
+
   const sanitizeFileName = (fileName: string): string => {
     return fileName
       .normalize('NFD') // Remove acentos
@@ -136,7 +181,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     const fetchTransferForm = async () => {
       const { data, error } = await supabase
         .from('scholarship_applications')
-        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at, transfer_proof_to_school_url, transfer_proof_to_school_at, transfer_proof_to_school_status')
         .eq('id', applicationId)
         .maybeSingle();
 
@@ -309,11 +354,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
   const handleFileSelect = (requestId: string, file: File | null) => {
-    if (file && file.type !== 'application/pdf') {
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
       alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
       return;
     }
-    setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: file }));
+    handleSendUpload(requestId, file);
   };
 
   // ✅ Função auxiliar para notificar admins (movida para fora do handleSendUpload para melhor escopo)
@@ -359,7 +405,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('user_id, email, full_name, phone')
-          .eq('role', 'admin');
+          .in('role', ['admin', 'post_sales']);
 
         console.log('[NOTIFICAÇÃO ADMIN] 📊 Resultado da busca de admins:', {
           adminProfiles,
@@ -547,11 +593,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   };
 
-  const handleSendUpload = async (requestId: string) => {
+  const handleSendUpload = async (requestId: string, fileOverride?: File) => {
     if (uploading[requestId]) return;
-    
+
     console.log('[UPLOAD] 🚀 Iniciando upload de documento', { requestId });
-    const file = selectedFiles[requestId];
+    const file = fileOverride ?? selectedFiles[requestId];
     if (!file) {
       console.log('[UPLOAD] ⚠️ Nenhum arquivo selecionado');
       return;
@@ -564,15 +610,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const sanitizedName = sanitizeFileName(file.name);
       // Use user ID folder to ensure RLS access
       const filePath = `${currentUserId}/${Date.now()}_${sanitizedName}`;
-      const { data, error } = await supabase.storage.from('document-attachments').upload(filePath, file);
-      if (error) {
-        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + error.message);
-        // console.error('[UPLOAD] Erro detalhado:', error, { file, requestId, user: currentUserId });
-        alert(t('studentDashboard.documentRequests.messages.errorUploading') + ' ' + error.message + '\n' + JSON.stringify(error, null, 2));
+      let file_url: string;
+      try {
+        file_url = await startUpload(requestId, file, filePath);
+      } catch (err: any) {
+        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + err.message);
         setUploading(prev => ({ ...prev, [requestId]: false }));
         return;
       }
-      const file_url = data?.path;
 
       // Verificar se é um reenvio (já existe upload rejeitado para este request)
       const { data: existingUploads } = await supabase
@@ -584,12 +629,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const hasRejectedUpload = existingUploads?.some(upload => upload.status === 'rejected');
       const isResubmission = hasRejectedUpload;
 
-      await supabase.from('document_request_uploads').insert({
+      const { data: insertedUpload } = await supabase.from('document_request_uploads').insert({
         document_request_id: requestId,
         uploaded_by: currentUserId,
         file_url,
         status: 'under_review',
-      });
+      }).select('id').single();
 
       // Notificar universidade - diferenciando entre novo upload e reenvio
       try {
@@ -1113,14 +1158,29 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         console.error('Erro ao notificar universidade:', e);
       }
 
+      // Atualização otimista — sem re-fetch das 4 queries
+      const newUpload = {
+        id: insertedUpload?.id ?? crypto.randomUUID(),
+        document_request_id: requestId,
+        uploaded_by: currentUserId!,
+        file_url: file_url!,
+        uploaded_at: new Date().toISOString(),
+        status: 'under_review',
+        reviewed_by: null,
+        reviewed_at: null,
+        rejection_reason: null,
+        review_notes: null,
+      };
+      setUploads(prev => ({
+        ...prev,
+        [requestId]: [...(prev[requestId] || []), newUpload],
+      }));
       setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));
 
       // Chamar callback de logging se fornecido
       if (onDocumentUploaded) {
         await onDocumentUploaded(requestId, file.name, isResubmission || false);
       }
-      
-      await fetchRequests();
     } finally {
       setUploading(prev => ({ ...prev, [requestId]: false }));
     }
@@ -1279,35 +1339,27 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const normalizeStatus = (status: string) => (status || '').toLowerCase().replace(/\s+/g, '_');
 
   // Funções para Transfer Form
-  const handleStudentUploadTransferForm = async () => {
+  const handleStudentUploadTransferForm = async (fileOverride?: File) => {
     if (uploadingTransferForm) return;
-    if (!selectedTransferFormFile || !applicationId) return;
+    const file = fileOverride ?? selectedTransferFormFile;
+    if (!file || !applicationId) return;
 
     setUploadingTransferForm(true);
-    
+
     try {
       if (!currentUserId) throw new Error('User ID not found');
       // Upload do arquivo
-      const sanitizedName = sanitizeFileName(selectedTransferFormFile.name);
+      const sanitizedName = sanitizeFileName(file.name);
       // Use user ID in path for RLS compatibility
       const filePath = `${currentUserId}/transfer-forms-filled/${Date.now()}_${sanitizedName}`;
-      const { data, error } = await supabase.storage
-        .from('document-attachments')
-        .upload(filePath, selectedTransferFormFile);
-
-      if (error) throw error;
+      const uploadedPath = await startUpload('transfer-form', file, filePath);
+      const data = { path: uploadedPath };
 
       // Verificar se há upload rejeitado (para determinar se é reenvio)
       const hasRejectedUpload = transferFormUploads.some(upload => upload.status === 'rejected');
       const isResubmission = hasRejectedUpload;
 
-      // Deletar upload anterior se existir
-      if (transferFormUploads.length > 0) {
-        await supabase
-          .from('transfer_form_uploads')
-          .delete()
-          .eq('application_id', applicationId);
-      }
+      // Manter histórico de envios anteriores (sempre fazer INSERT)
 
       // Criar novo registro
       const { error: insertError } = await supabase
@@ -1320,6 +1372,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         });
 
       if (insertError) throw insertError;
+
+      // Atualizar transfer_form_status para 'returned' na aplicação
+      await supabase
+        .from('scholarship_applications')
+        .update({ transfer_form_status: 'returned' })
+        .eq('id', applicationId);
 
       // Atualizar estado local
       setTransferFormUploads([{
@@ -1420,7 +1478,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         // Não falhar o processo se a notificação falhar
       }
       if (onDocumentUploaded) {
-        await onDocumentUploaded('transfer_form', selectedTransferFormFile.name, isResubmission);
+        await onDocumentUploaded('transfer_form', file.name, isResubmission);
       }
       
     } catch (error: any) {
@@ -1614,7 +1672,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     <FileText className="w-5 h-5 md:w-7 md:h-7 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-sm md:text-lg leading-tight">{req.title}</h4>
+                    <h4 className="font-bold text-slate-900 truncate whitespace-nowrap text-sm md:text-lg leading-tight">{req.title}</h4>
                     <p className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{t('studentDashboard.documentRequests.forms.templateOfficial')}</p>
                   </div>
                 </div>
@@ -1636,26 +1694,134 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
             {/* 3. Transfer Form (Apenas se for ALUNO TRANSFER e houver URL) */}
             {studentType === 'transfer' && transferForm?.transfer_form_url && (
-              <div className="bg-blue-50 p-6 rounded-3xl border border-blue-200 flex items-center justify-between group hover:border-blue-400 transition-all shadow-sm">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <FileText className="w-8 h-8 text-blue-600" />
+              <div className="bg-blue-50 rounded-3xl border border-blue-200 overflow-hidden shadow-sm">
+                {/* Linha de download */}
+                <div className="p-6 flex items-center justify-between group hover:bg-blue-100/50 transition-all">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-900 truncate whitespace-nowrap text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Formulário de Transferência</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-xl leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
-                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest mt-1">Formulário de Transferência</p>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const signedUrl = acceptanceLetterSignedUrls['transfer_form_url'] || transferForm.transfer_form_url;
+                      if (signedUrl) setPreviewUrl(signedUrl);
+                    }}
+                    className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2 flex-shrink-0"
+                  >
+                    <Download className="w-5 h-5" />
+                    {t('common:labels.download')}
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    const signedUrl = acceptanceLetterSignedUrls['transfer_form_url'] || transferForm.transfer_form_url;
-                    if (signedUrl) setPreviewUrl(signedUrl);
-                  }}
-                  className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  {t('common:labels.download')}
-                </button>
+
+                {/* Divider */}
+                <div className="border-t border-blue-200 mx-6" />
+
+                {/* Seção de comprovante */}
+                <div className="p-6">
+                  {transferForm.transfer_proof_to_school_url ? (
+                    /* ESTADO 3: Comprovante enviado */
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm leading-tight">
+                            {t('studentDashboard.documentRequests.forms.transferProofToSchool.submitted')}
+                          </p>
+                          {transferForm.transfer_proof_to_school_at && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {t('studentDashboard.documentRequests.forms.transferProofToSchool.submittedAt')}{' '}
+                              {new Date(transferForm.transfer_proof_to_school_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <a
+                        href={transferForm.transfer_proof_to_school_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-semibold flex-shrink-0"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.viewProof')}
+                      </a>
+                    </div>
+                  ) : transferForm.transfer_proof_to_school_status === 'confirmed' ? (
+                    /* ESTADO 2: Confirmou que enviou, aguardando upload do comprovante */
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-900">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmed')}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmedDescription')}
+                      </p>
+                      {proofUploadError && (
+                        <p className="text-xs text-red-600">{proofUploadError}</p>
+                      )}
+                      <input
+                        ref={proofFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleProofUpload(file);
+                        }}
+                        disabled={uploadingProof}
+                      />
+                      <button
+                        onClick={() => proofFileInputRef.current?.click()}
+                        disabled={uploadingProof}
+                        className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-white border-2 border-blue-300 rounded-2xl text-blue-700 hover:bg-blue-50 transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {uploadingProof
+                          ? t('studentDashboard.documentRequests.forms.uploading')
+                          : t('studentDashboard.documentRequests.forms.transferProofToSchool.uploadButton')}
+                      </button>
+                    </div>
+                  ) : (
+                    /* ESTADO 1: Pergunta se já enviou */
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm leading-tight">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.title')}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          {t('studentDashboard.documentRequests.forms.transferProofToSchool.description')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const { error } = await supabase
+                            .from('scholarship_applications')
+                            .update({ transfer_proof_to_school_status: 'confirmed' })
+                            .eq('id', applicationId);
+                          if (!error) {
+                            setTransferForm((prev: any) => ({ ...prev, transfer_proof_to_school_status: 'confirmed' }));
+                          }
+                        }}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {t('studentDashboard.documentRequests.forms.transferProofToSchool.confirmButton')}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1686,7 +1852,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-blue-600" />
                    </div>
                    <div className="min-w-0 flex-1 overflow-hidden">
-                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
                       <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{t('studentDashboard.documentRequests.forms.transferFormUploadDescriptionStudent')}</p>
                    </div>
                 </div>
@@ -1727,26 +1893,40 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                    })()}
 
                    {!isSchool && (
-                      <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
+                      <div className="flex flex-col gap-1.5 sm:ml-auto w-full sm:w-auto">
+                         <label className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95 ${uploadingTransferForm ? 'opacity-50 cursor-wait' : ''}`}>
                             <Paperclip className="w-4 h-4 shrink-0" />
-                            {selectedTransferFormFile ? (
+                            {tusUploading['transfer-form'] ? (
+                              <span>{uploadProgress['transfer-form'] ?? 0}%</span>
+                            ) : uploadingTransferForm ? (
+                              <span>Sending...</span>
+                            ) : selectedTransferFormFile ? (
                               <span className="truncate max-w-[80px]">{selectedTransferFormFile.name}</span>
                             ) : t('studentDashboard.documentRequests.forms.attachPdf')}
                             <input
                               type="file"
                               className="sr-only"
                               accept=".pdf"
-                              onChange={e => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                              disabled={uploadingTransferForm}
+                              onChange={e => {
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                if (f.type !== 'application/pdf') {
+                                  alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
+                                  return;
+                                }
+                                handleStudentUploadTransferForm(f);
+                              }}
                             />
                          </label>
-                         <button
-                           disabled={!selectedTransferFormFile || uploadingTransferForm}
-                           onClick={() => handleStudentUploadTransferForm()}
-                           className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-500/10 active:scale-95"
-                         >
-                            {uploadingTransferForm ? t('studentDashboard.documentRequests.forms.sendingButton') : t('studentDashboard.documentRequests.forms.sendButton')}
-                         </button>
+                         {tusUploading['transfer-form'] && (
+                           <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                             <div
+                               className="h-full bg-emerald-500 transition-all duration-300"
+                               style={{ width: `${uploadProgress['transfer-form'] ?? 0}%` }}
+                             />
+                           </div>
+                         )}
                       </div>
                    )}
                 </div>
@@ -1798,9 +1978,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                })()}
             </div>
           )}
+               {/* Histórico de Envios (Transfer Form) */}
+               {transferFormUploads.length > 1 && (
+                 <div className="mt-6 pt-6 border-t border-slate-100">
+                    <DocumentHistoryAccordion
+                      uploads={transferFormUploads}
+                      skipFirst={true}
+                      documentLabel={t('studentDashboard.documentRequests.forms.transferForm')}
+                      onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
+                    />
+                 </div>
+               )}
 
           {requests.map(req => {
-            const latestUpload = uploads[req.id]?.slice().sort((a, b) =>
+            const allUploads = uploads[req.id] || [];
+            const latestUpload = allUploads.slice().sort((a, b) =>
               new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
             )[0];
             const status = latestUpload ? normalizeStatus(latestUpload.status) : null;
@@ -1816,7 +2008,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                         <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
                      </div>
                      <div className="min-w-0 flex-1 overflow-hidden">
-                        <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate" title={req.title}>{req.title}</h4>
+                        <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
                         <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
                      </div>
                   </div>
@@ -1851,26 +2043,30 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
                      {/* Ação de Upload - Oculta se já estiver aprovado */}
                      {!isSchool && !isApproved && (
-                        <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
-                           <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
+                        <div className="flex flex-col gap-1.5 sm:ml-auto w-full sm:w-auto">
+                           <label className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95 ${uploading[req.id] ? 'border-emerald-300 text-emerald-600 cursor-wait opacity-70' : 'border-slate-200 hover:border-emerald-600 hover:text-emerald-600 cursor-pointer'}`}>
                               <Paperclip className="w-4 h-4 shrink-0" />
-                              {selectedFiles[req.id] ? (
-                                <span className="truncate max-w-[80px]">{selectedFiles[req.id]?.name}</span>
+                              {tusUploading[req.id] ? (
+                                <span className="truncate max-w-[80px]">{uploadProgress[req.id] ?? 0}%</span>
+                              ) : uploading[req.id] ? (
+                                <span className="truncate max-w-[80px]">{t('studentDashboard.documentRequests.forms.sendingButton')}</span>
                               ) : t('studentDashboard.documentRequests.forms.attachPdf')}
                               <input
                                  type="file"
                                  className="sr-only"
                                  accept=".pdf"
+                                 disabled={uploading[req.id]}
                                  onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                               />
                            </label>
-                           <button
-                             disabled={!selectedFiles[req.id] || uploading[req.id]}
-                             onClick={() => handleSendUpload(req.id)}
-                             className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
-                           >
-                              {uploading[req.id] ? t('studentDashboard.documentRequests.forms.sendingButton') : t('studentDashboard.documentRequests.forms.sendButton')}
-                           </button>
+                           {tusUploading[req.id] && (
+                             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                               <div
+                                 className="h-full bg-emerald-500 transition-all duration-300"
+                                 style={{ width: `${uploadProgress[req.id] ?? 0}%` }}
+                               />
+                             </div>
+                           )}
                         </div>
                      )}
                   </div>
@@ -1914,6 +2110,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       </button>
                    </div>
                  )}
+
+              {/* Histórico de envios anteriores */}
+              {allUploads.length > 1 && (
+                <div className="px-0 pb-2">
+                  <DocumentHistoryAccordion
+                    uploads={allUploads}
+                    skipFirst
+                    documentLabel={req.title}
+                    onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
+                  />
+                </div>
+              )}
               </div>
             );
           })}
@@ -1926,6 +2134,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 <h4 className="text-xl font-bold text-slate-400 uppercase tracking-tight">{t('studentDashboard.documentRequests.uploadSection.noRequests')}</h4>
              </div>
           )}
+
         </div>
       </section>
 

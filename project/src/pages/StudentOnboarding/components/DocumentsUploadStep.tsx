@@ -342,13 +342,30 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           }
 
           if (applicationId) {
-            // Anexar documentos à aplicação
-            const appDocs = [
-              { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-              { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-              { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
-            ];
-            await supabase.from('scholarship_applications').update({ documents: appDocs }).eq('id', applicationId);
+            // Anexar documentos à aplicação (preservando histórico)
+            const { data: existingAppData } = await supabase
+              .from('scholarship_applications')
+              .select('documents')
+              .eq('id', applicationId)
+              .single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const newEntries = [
+              { type: 'passport', url: passportUrl },
+              { type: 'diploma', url: diplomaUrl },
+              { type: 'funds_proof', url: fundsUrl },
+            ].filter(d => d.url);
+            const now = new Date().toISOString();
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
+            await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', applicationId);
           }
         }
       } else if (userProfile?.id && scholarshipIds.length === 0) {
@@ -362,16 +379,33 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           .neq('status', 'rejected');
           
         if (existingApps && existingApps.length > 0) {
-          const appDocs = [
-            { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-            { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-            { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
-          ];
-          
+          const now = new Date().toISOString();
+          const newEntries = [
+            { type: 'passport', url: passportUrl },
+            { type: 'diploma', url: diplomaUrl },
+            { type: 'funds_proof', url: fundsUrl },
+          ].filter(d => d.url);
+
           for (const app of existingApps) {
+            const { data: existingAppData } = await supabase
+              .from('scholarship_applications')
+              .select('documents')
+              .eq('id', app.id)
+              .single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
             await supabase
               .from('scholarship_applications')
-              .update({ documents: appDocs })
+              .update({ documents: mergedDocs })
               .eq('id', app.id);
           }
         }
@@ -466,18 +500,17 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       const normalized = parseApplicationDocuments(currentDocs);
       const idx = normalized.findIndex(d => d.type === type);
       
-      const newDoc = { 
-        type, 
-        url: publicUrl, 
-        status: 'under_review', 
-        uploaded_at: new Date().toISOString() 
-      };
-      
+      const now = new Date().toISOString();
+
       let newDocs: any[];
       if (idx >= 0) {
-        newDocs = currentDocs.map((d: any) => d.type === type ? { ...d, ...newDoc } : d);
+        newDocs = currentDocs.map((d: any) => {
+          if (d.type !== type) return d;
+          const { history: prevHistory = [], rejected_at: _ra, rejection_reason: _rr, ...oldDoc } = d;
+          return { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+        });
       } else {
-        newDocs = [...currentDocs, newDoc];
+        newDocs = [...currentDocs, { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [] }];
       }
       
       const { error: updateError } = await supabase
@@ -734,10 +767,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               <div className="sm:hidden flex items-center justify-between mb-4 w-full">
                                 {/* Left Side: University Logo */}
                                 <div className="relative group/image flex-shrink-0">
-                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                  {scholarship?.universities?.logo_url || scholarship?.image_url ? (
                                     <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm">
                                       <img 
-                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        src={scholarship?.universities?.logo_url || scholarship?.image_url} 
                                         alt="" 
                                         className="w-full h-full object-contain p-1.5"
                                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -782,10 +815,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               {/* Desktop Content Block - Hidden on Mobile */}
                               <div className="hidden sm:flex gap-4 items-center mb-4">
                                 <div className="relative group/image flex-shrink-0">
-                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                  {scholarship?.universities?.logo_url || scholarship?.image_url ? (
                                     <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center overflow-hidden border border-gray-100/50 shadow-sm relative">
                                       <img 
-                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        src={scholarship?.universities?.logo_url || scholarship?.image_url} 
                                         alt="" 
                                         className="w-full h-full object-contain transform scale-100 p-2 group-hover/image:scale-110 transition-transform duration-500"
                                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}

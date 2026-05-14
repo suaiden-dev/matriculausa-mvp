@@ -19,6 +19,7 @@ export interface FiltersBarProps {
 	currentPage: number;
 	totalPages: number;
   backendTotalCount?: number | null;
+  isPostSales?: boolean;
 }
 
 function FiltersBarBase(props: FiltersBarProps) {
@@ -40,6 +41,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 		currentPage,
 		totalPages,
     backendTotalCount,
+    isPostSales,
 	} = props;
 
 	const searchTimeoutRef = React.useRef<number | null>(null);
@@ -177,13 +179,15 @@ function FiltersBarBase(props: FiltersBarProps) {
 					>
 						{showFilters ? 'Hide Filters' : 'Show Filters'}
 					</button>
-					<button
-						onClick={handleExport}
-						className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
-					>
-						<Download size={16} />
-						Export CSV
-					</button>
+					{!isPostSales && (
+						<button
+							onClick={handleExport}
+							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
+						>
+							<Download size={16} />
+							Export CSV
+						</button>
+					)}
 					<div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
 						<button
 							onClick={() => handleViewModeChange('grid')}

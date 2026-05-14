@@ -12,6 +12,7 @@ import {
     Loader2,
     Building
 } from 'lucide-react';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
@@ -98,6 +99,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
     const [inlineCpf, setInlineCpf] = useState('');
     const [savingCpf, setSavingCpf] = useState(false);
     const [cpfError, setCpfError] = useState<string | null>(null);
+    const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
     const [loadingApp, setLoadingApp] = useState(true);
 
@@ -266,6 +268,9 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
             const token = sessionData.session?.access_token;
             if (!token) throw new Error('User not authenticated');
 
+            // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
+            const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
+
             let apiUrl = `${SUPABASE_URL}/functions/v1/stripe-checkout-reinstatement-fee`;
             if (method === 'parcelow') {
                 apiUrl = `${SUPABASE_URL}/functions/v1/parcelow-checkout-reinstatement-fee`;
@@ -291,6 +296,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                         final_amount: effectiveAmount.toString(),
                         promotional_coupon: appliedCoupon,
                     },
+                    ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
                     payment_type: 'reinstatement_package',
                     fee_type: 'reinstatement_package',
                 })
@@ -346,6 +352,12 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
     };
 
     const handleParcelowClick = () => {
+        // Verificar se há informações de titular de Cartão de Outra Pessoa
+        if (payerInfo) {
+            processCheckout('parcelow');
+            return;
+        }
+
         if (!(userProfile as any)?.cpf_document) {
             setShowInlineCpf(true);
             return;
@@ -413,9 +425,9 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                         <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500 mx-auto md:mx-0">
                                             {loadingApp ? (
                                                 <Loader2 className="w-12 h-12 text-slate-300 animate-spin" />
-                                            ) : application?.scholarships?.image_url || application?.scholarships?.universities?.logo_url ? (
+                                            ) : application?.scholarships?.universities?.logo_url || application?.scholarships?.image_url ? (
                                                 <img
-                                                    src={application.scholarships.image_url || application.scholarships.universities?.logo_url || ''}
+                                                    src={application.scholarships.universities?.logo_url || application.scholarships.image_url || ''}
                                                     alt=""
                                                     className="w-full h-full object-contain p-2"
                                                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
@@ -433,7 +445,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                                         {application.scholarships.title}
                                                     </h3>
                                                     <div className="flex items-center justify-center md:justify-start gap-1.5 mt-0.5 text-gray-500">
-                                                        <Building className="w-3.5 h-3.5" />
                                                         <span className="text-xs font-bold uppercase tracking-wide">
                                                             {application.scholarships.universities?.name}
                                                         </span>
@@ -723,7 +734,12 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                                     )}
                                                 </button>
 
-                                                {showInlineCpf && (
+                                                {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
+                                                <div className="mt-4">
+                                                    <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                                                </div>
+
+                                                {showInlineCpf && !payerInfo && (
                                                     <div className="p-6 bg-slate-50 border border-gray-200 border-t-0 rounded-b-[2rem] animate-in fade-in slide-in-from-top-2 duration-300">
                                                         <div className="flex items-center justify-between mb-4">
                                                             <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{t('payment:paymentStep.cpfRequiredTitle')}</h4>

@@ -17,6 +17,7 @@ import {
   Target,
   Download,
   Mail,
+  Lock
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../../../utils/currency';
@@ -70,8 +71,8 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
   const universityLocation = canViewSensitive ? scholarship.universities?.location : null;
 
   const logoUrl =
-    scholarship.image_url ||
     scholarship.universities?.logo_url ||
+    scholarship.image_url ||
     scholarship.universities?.image_url;
 
   const annualValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
@@ -94,16 +95,34 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
         <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-5 md:gap-8 text-center md:text-left">
           {/* Logo */}
           <div className="w-20 h-20 md:w-28 md:h-28 bg-white rounded-2xl md:rounded-3xl shadow-2xl flex items-center justify-center shrink-0 overflow-hidden p-2">
-            {logoUrl && canViewSensitive && !imgError ? (
-              <img
-                src={logoUrl}
-                alt={scholarship.title}
-                onError={() => setImgError(true)}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <Building className="w-10 h-10 md:w-14 md:h-14 text-slate-300" />
-            )}
+            <div className="relative w-full h-full flex items-center justify-center">
+              {logoUrl && !imgError ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img
+                    src={logoUrl}
+                    alt={scholarship.title}
+                    onError={() => setImgError(true)}
+                    className={`w-full h-full object-contain transition-all duration-500 ${!canViewSensitive ? 'blur-[6px] opacity-40' : ''}`}
+                  />
+                  {!canViewSensitive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white/60 backdrop-blur-[2px] p-2 rounded-full shadow-lg border border-white/50">
+                        <Lock className="w-5 h-5 md:w-6 md:h-6 text-slate-600" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <Building className={`w-10 h-10 md:w-14 md:h-14 text-slate-300 ${!canViewSensitive ? 'blur-[2px]' : ''}`} />
+                  {!canViewSensitive && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Lock className="w-6 h-6 text-slate-400/60" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Textos */}
@@ -116,7 +135,6 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
             </h3>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-white/50 font-bold text-[10px]">
               <div className="flex items-center gap-1.5">
-                <Building className="w-3.5 h-3.5" />
                 <span className={!canViewSensitive ? 'blur-[4px]' : ''}>{universityName}</span>
               </div>
               {universityLocation && (
@@ -432,7 +450,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
                         className="inline-flex items-center gap-2 px-4 py-2.5 border-2 border-emerald-200 text-emerald-700 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-100 transition-all"
                       >
                         <Award className="w-3.5 h-3.5" />
-                        {t('common:labels.view', 'Visualizar')}
+                        {t('common:labels.view')}
                       </button>
                     )}
                     {acceptanceLetter?.onDownload && (
@@ -441,7 +459,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        {t('common:labels.download', 'Download')}
+                        {t('common:labels.download')}
                       </button>
                     )}
                   </div>

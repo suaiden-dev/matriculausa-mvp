@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { queryKeys } from '../../../lib/queryKeys';
 
-interface StudentRecord {
+export interface StudentRecord {
   student_id: string;
   user_id: string;
   student_name: string;
@@ -10,19 +10,24 @@ interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  has_paid_i539_cos_package?: boolean;
+  has_paid_ds160_package?: boolean;
   seller_referral_code: string | null;
   application_id: string | null;
   scholarship_id: string | null;
+  university_id: string | null;
   status: string | null;
   application_status: string | null;
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
   acceptance_letter_status: string | null;
+  acceptance_letter_url: string | null;
   payment_status: string | null;
   student_process_type: string | null;
   transfer_form_status: string | null;
   scholarship_title: string | null;
+  course_name?: string | null;
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -36,13 +41,36 @@ interface StudentRecord {
   visa_transfer_active?: boolean;
   is_archived: boolean;
   is_dropped: boolean;
-  assigned_to_admin_id: string | null;
-  assigned_to_admin_name: string | null;
   placement_fee_pending_balance: number;
+  placement_fee_amount?: number | null;
+  fee_override_placement_fee?: number | null;
+  fee_override_i20_fee?: number | null;
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
   source?: string;
+  has_uploaded_photo?: boolean;
+  has_submitted_form?: boolean;
+  documents_uploaded?: boolean;
+  selected_scholarship_id?: string | null;
+  // New stage fields
+  has_sent_docs_to_university?: boolean;
+  sevis_transfer_completed?: boolean;
+  visa_approved?: boolean;
+  // Doc aggregation (populated by useStudentDocsQuery)
+  docs_total_required?: number;
+  docs_total_uploaded?: number;
+  docs_total_approved?: number;
+  docs_total_rejected?: number;
+  docs_total_under_review?: number;
+  basic_docs_total_required?: number;
+  basic_docs_total_uploaded?: number;
+  basic_docs_total_approved?: number;
+  basic_docs_total_rejected?: number;
+  basic_docs_total_under_review?: number;
+  basic_docs_approved_names?: string[];
+  basic_docs_rejected_names?: string[];
+  basic_docs_under_review_names?: string[];
 }
 
 /**
@@ -64,6 +92,8 @@ export function useStudentsQuery() {
           updated_at,
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
+          has_paid_i539_cos_package,
+          has_paid_ds160_package,
           placement_fee_flow,
           is_placement_fee_paid,
           role,
@@ -72,13 +102,17 @@ export function useStudentsQuery() {
           visa_transfer_active,
           is_archived,
           is_dropped,
-          assigned_to_admin_id,
-          assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
           placement_fee_pending_balance,
           placement_fee_due_date,
           placement_fee_installment_number,
           placement_fee_installment_enabled,
           source,
+          identity_photo_path,
+          selection_survey_passed,
+          documents_uploaded,
+          field_of_interest,
+          selected_scholarship_id,
+          student_process_type,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -87,15 +121,23 @@ export function useStudentsQuery() {
               is_application_fee_paid,
               is_scholarship_fee_paid,
               acceptance_letter_status,
+              acceptance_letter_url,
               payment_status,
               reviewed_at,
               reviewed_by,
               student_process_type,
               transfer_form_status,
+              has_sent_docs_to_university,
+              sevis_transfer_completed,
+              visa_approved,
               documents,
               updated_at,
               scholarships (
+                id,
                 title,
+                field_of_study,
+                university_id,
+                placement_fee_amount,
                 universities (
                   name
                 )
@@ -109,24 +151,42 @@ export function useStudentsQuery() {
         throw error;
       }
 
+      // Batch fetch fee overrides for all students
+      const userIds = data?.map((s: any) => s.user_id).filter(Boolean) || [];
+      let feeOverridesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: overridesData } = await supabase
+          .from('user_fee_overrides')
+          .select('user_id, placement_fee, i20_control_fee, selection_process_fee')
+          .in('user_id', userIds);
+        if (overridesData) {
+          overridesData.forEach((o: any) => { feeOverridesMap[o.user_id] = o; });
+        }
+      }
+
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
-        let scholarshipInfo = null;
+        let scholarshipInfo = { title: null, university: null, course: null };
         let applicationStatus = null;
         
         let lockedApplication = null;
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
-          lockedApplication = student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
-                             student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             student.scholarship_applications.find((app: any) => app.status === 'approved');
+          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved, etc
+          lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+                             student.scholarship_applications.find((app: any) => app.is_application_fee_paid && app.acceptance_letter_url) ||
+                             student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
+                             student.scholarship_applications.find((app: any) => app.status === 'approved') ||
+                             student.scholarship_applications.find((app: any) => app.status === 'under_review') ||
+                             student.scholarship_applications.find((app: any) => app.status !== 'rejected') ||
+                             student.scholarship_applications[0];
           
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship
           if (lockedApplication) {
             scholarshipInfo = {
               title: lockedApplication.scholarships?.title || 'N/A',
-              university: lockedApplication.scholarships?.universities?.name || 'N/A'
+              university: lockedApplication.scholarships?.universities?.name || 'N/A',
+              course: lockedApplication.scholarships?.field_of_study || student.field_of_interest || null
             };
             applicationStatus = lockedApplication.status;
           }
@@ -156,6 +216,49 @@ export function useStudentsQuery() {
 
         const mostRecentActivity = getMostRecentActivity();
 
+        // Calculate basic documents statistics (passport, diploma, funds_proof)
+        let basicDocsRequired = 3; // Basic docs are always 3 (passport, diploma, funds_proof)
+        let basicDocsUploaded = 0;
+        let basicDocsApproved = 0;
+        let basicDocsRejected = 0;
+        let basicDocsUnderReview = 0;
+        const basicApprovedNames: string[] = [];
+        const basicRejectedNames: string[] = [];
+        const basicUnderReviewNames: string[] = [];
+
+        const typeLabels: Record<string, string> = {
+          'passport': 'Passport',
+          'diploma': 'Diploma',
+          'funds_proof': 'Proof of Funds'
+        };
+
+        if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
+          const requiredBasicTypes = ['passport', 'diploma', 'funds_proof'];
+          const latestStatusMap = new Map<string, string>();
+          
+          lockedApplication.documents.forEach((doc: any) => {
+            const type = doc.type?.toLowerCase();
+            if (type && requiredBasicTypes.includes(type)) {
+              latestStatusMap.set(type, (doc.status || 'pending').toLowerCase());
+            }
+          });
+          
+          basicDocsUploaded = latestStatusMap.size;
+          latestStatusMap.forEach((status, type) => {
+            const label = typeLabels[type] || type;
+            if (status === 'approved') {
+              basicDocsApproved++;
+              basicApprovedNames.push(label);
+            } else if (status === 'rejected') {
+              basicDocsRejected++;
+              basicRejectedNames.push(label);
+            } else if (status === 'under_review') {
+              basicDocsUnderReview++;
+              basicUnderReviewNames.push(label);
+            }
+          });
+        }
+
         return {
           student_id: student.id,
           user_id: student.user_id,
@@ -164,6 +267,8 @@ export function useStudentsQuery() {
           student_created_at: student.created_at,
           has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+          has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
+          has_paid_ds160_package: student.has_paid_ds160_package || false,
           placement_fee_flow: student.placement_fee_flow || false,
           is_placement_fee_paid: student.is_placement_fee_paid || false,
           seller_referral_code: student.seller_referral_code || null,
@@ -176,11 +281,17 @@ export function useStudentsQuery() {
           is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
+          acceptance_letter_url: lockedApplication?.acceptance_letter_url || null,
           payment_status: lockedApplication?.payment_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || student.student_process_type || null,
           transfer_form_status: lockedApplication?.transfer_form_status || null,
+          has_sent_docs_to_university: lockedApplication?.has_sent_docs_to_university || false,
+          sevis_transfer_completed: lockedApplication?.sevis_transfer_completed || false,
+          visa_approved: lockedApplication?.visa_approved || false,
           scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
+          course_name: scholarshipInfo ? scholarshipInfo.course : student.field_of_interest || null,
           university_name: scholarshipInfo ? scholarshipInfo.university : null,
+          university_id: lockedApplication?.scholarships?.university_id || null,
           reviewed_at: lockedApplication?.reviewed_at || null,
           reviewed_by: lockedApplication?.reviewed_by || null,
           is_locked: !!lockedApplication,
@@ -193,13 +304,26 @@ export function useStudentsQuery() {
           visa_transfer_active: student.visa_transfer_active ?? true, // Default to true if not set
           is_archived: student.is_archived || false,
           is_dropped: student.is_dropped || false,
-          assigned_to_admin_id: student.assigned_to_admin_id || null,
-          assigned_to_admin_name: (student.assigned_admin as any)?.full_name || null,
           placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
+          placement_fee_amount: lockedApplication?.scholarships?.placement_fee_amount ?? null,
+          fee_override_placement_fee: feeOverridesMap[student.user_id]?.placement_fee ?? null,
+          fee_override_i20_fee: feeOverridesMap[student.user_id]?.i20_control_fee ?? null,
           placement_fee_due_date: student.placement_fee_due_date || null,
           placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
           placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
           source: student.source,
+          has_uploaded_photo: !!student.identity_photo_path,
+          has_submitted_form: student.selection_survey_passed === true,
+          documents_uploaded: student.documents_uploaded || false,
+          selected_scholarship_id: student.selected_scholarship_id || null,
+          basic_docs_total_required: basicDocsRequired,
+          basic_docs_total_uploaded: basicDocsUploaded,
+          basic_docs_total_approved: basicDocsApproved,
+          basic_docs_total_rejected: basicDocsRejected,
+          basic_docs_total_under_review: basicDocsUnderReview,
+          basic_docs_approved_names: basicApprovedNames,
+          basic_docs_rejected_names: basicRejectedNames,
+          basic_docs_under_review_names: basicUnderReviewNames,
         };
       }) || [];
 
@@ -296,22 +420,10 @@ export function useFilterDataQuery() {
         .eq('is_approved', true)
         .order('name', { ascending: true });
 
-      // Carregar admins internos (Raíssa, Romeu, Luiz etc.)
-      const { data: internalAdminsData } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email')
-        .eq('role', 'admin')
-        .order('full_name', { ascending: true });
-
       return {
         affiliates: affiliates || [],
         scholarships: scholarshipsData || [],
         universities: universitiesData || [],
-        internalAdmins: (internalAdminsData || []).map((a: any) => ({
-          id: a.id,
-          name: a.full_name || a.email,
-          email: a.email,
-        })),
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - dados de filtro mudam ocasionalmente
@@ -328,37 +440,272 @@ export function useDropStudentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ studentId, isDropped }: { studentId: string; isDropped: boolean }) => {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_dropped: isDropped })
-        .eq('id', studentId);
+    mutationFn: async ({ studentId, isDropped, reason, adminId, adminName }: { studentId: string; isDropped: boolean; reason?: string; adminId?: string; adminName?: string }) => {
+      // Se estiver marcando como dropped e houver uma razão, salvar nas admin_notes
+      if (isDropped && reason) {
+        // Buscar notas atuais primeiro para não sobrescrever
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('admin_notes')
+          .eq('id', studentId);
 
-      if (error) throw error;
+        const profile = profileData && profileData.length > 0 ? profileData[0] : null;
+
+        let currentNotes: any[] = [];
+        if (profile?.admin_notes) {
+          if (Array.isArray(profile.admin_notes)) {
+            currentNotes = profile.admin_notes;
+          } else {
+            try {
+              currentNotes = JSON.parse(profile.admin_notes);
+              if (!Array.isArray(currentNotes)) currentNotes = [];
+            } catch (e) {
+              console.error('Error parsing admin notes:', e);
+              currentNotes = [];
+            }
+          }
+        }
+
+        const newNote = {
+          id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+          content: `[DROPPED] ${reason.trim()}`,
+          created_by: adminId || 'unknown',
+          created_by_name: adminName || 'Admin',
+          created_at: new Date().toISOString()
+        };
+
+        const updatedNotes = [newNote, ...currentNotes];
+
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_dropped: isDropped,
+            admin_notes: JSON.stringify(updatedNotes),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', studentId);
+
+        if (error) throw error;
+      } else {
+        // Toggle normal (restaurar ou toggle sem razão)
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_dropped: isDropped,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', studentId);
+
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(variables.studentId) });
     },
   });
 }
 
 /**
- * Mutation para atribuir (ou remover) um admin responsável de um aluno
+ * Mutation para marcar que docs foram enviados para a universidade (Stage 3)
  */
-export function useAssignAdminMutation() {
+export function useMarkSentDocsToUniversityMutation() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ studentId, adminId }: { studentId: string; adminId: string | null }) => {
+    mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('user_profiles')
-        .update({ assigned_to_admin_id: adminId })
-        .eq('id', studentId);
-
+        .from('scholarship_applications')
+        .update({ has_sent_docs_to_university: true })
+        .eq('id', applicationId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
+
+/**
+ * Mutation para marcar SEVIS transfer como concluído (Stage 7)
+ */
+export function useMarkSevisCompletedMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (applicationId: string) => {
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ sevis_transfer_completed: true })
+        .eq('id', applicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+  });
+}
+
+/**
+ * Mutation para marcar visto como aprovado (Stage 8)
+ */
+export function useMarkVisaApprovedMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (applicationId: string) => {
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ visa_approved: true })
+        .eq('id', applicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+  });
+}
+
+/**
+ * Mutations para aprovar/rejeitar transfer form devolvido pelo aluno
+ */
+export function useApproveTransferFormMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (applicationId: string) => {
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ transfer_form_status: 'approved' })
+        .eq('id', applicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+  });
+}
+
+export function useRejectTransferFormMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (applicationId: string) => {
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ transfer_form_status: 'sent' })
+        .eq('id', applicationId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+  });
+}
+
+export interface DocStats {
+  docs_total_required: number;
+  docs_total_uploaded: number;
+  docs_total_approved: number;
+  docs_total_rejected: number;
+  docs_total_under_review: number;
+  docs_approved_names?: string[];
+  docs_rejected_names?: string[];
+  docs_under_review_names?: string[];
+}
+
+/**
+ * Query que agrega stats de documentos por aluno.
+ * uploaded_by = user_profiles.user_id (auth UUID)
+ */
+export function useStudentDocsStats(students: StudentRecord[]) {
+  return useQuery({
+    queryKey: ['student-docs-stats'],
+    queryFn: async (): Promise<Map<string, DocStats>> => {
+      const appIds = students.map(s => s.application_id).filter(Boolean) as string[];
+
+      const [{ data: globalDocs, error: drError }, { data: appDocs, error: appDrError }, { data: uploads, error: upError }] = await Promise.all([
+        supabase
+          .from('document_requests')
+          .select('id, title, university_id, applicable_student_types, scholarship_application_id')
+          .eq('is_global', true)
+          .eq('status', 'open'),
+        appIds.length > 0
+          ? supabase
+              .from('document_requests')
+              .select('id, title, university_id, applicable_student_types, scholarship_application_id')
+              .in('scholarship_application_id', appIds)
+              .eq('status', 'open')
+          : Promise.resolve({ data: [] as any[], error: null }),
+        supabase
+          .from('document_request_uploads')
+          .select('document_request_id, uploaded_by, status, uploaded_at'),
+      ]);
+
+      if (drError) throw drError;
+      if (appDrError) throw appDrError;
+      if (upError) throw upError;
+
+      // Merge global + app-specific docs, deduplicating by id
+      const allDocsMap = new Map<string, any>();
+      for (const d of [...(globalDocs || []), ...(appDocs || [])]) {
+        allDocsMap.set(d.id, d);
+      }
+
+      // Latest upload per (doc_request_id, uploaded_by)
+      const latestUpload = new Map<string, string>();
+      const sorted = [...(uploads || [])].sort(
+        (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+      );
+      for (const u of sorted) {
+        const key = `${u.document_request_id}:${u.uploaded_by}`;
+        if (!latestUpload.has(key)) latestUpload.set(key, u.status);
+      }
+
+      const result = new Map<string, DocStats>();
+
+      for (const student of students) {
+        if (!student.user_id) continue;
+
+        const processType = student.student_process_type;
+        const requiredDocs = Array.from(allDocsMap.values()).filter(dr => {
+          // App-specific doc linked to this student's application
+          if (dr.scholarship_application_id) {
+            return dr.scholarship_application_id === student.application_id;
+          }
+          // Global doc for this student's university and process type
+          if (dr.university_id && dr.university_id !== student.university_id) return false;
+          const types: string[] = dr.applicable_student_types || [];
+          return types.includes('all') || (processType ? types.includes(processType) : false);
+        });
+
+        let uploaded = 0, approved = 0, rejected = 0, underReview = 0;
+        const approvedNames: string[] = [];
+        const rejectedNames: string[] = [];
+        const underReviewNames: string[] = [];
+
+        for (const dr of requiredDocs) {
+          const status = latestUpload.get(`${dr.id}:${student.user_id}`);
+          if (status) {
+            uploaded++;
+            if (status === 'approved') {
+              approved++;
+              approvedNames.push(dr.title);
+            } else if (status === 'rejected') {
+              rejected++;
+              rejectedNames.push(dr.title);
+            } else if (status === 'under_review') {
+              underReview++;
+              underReviewNames.push(dr.title);
+            }
+          }
+        }
+
+        result.set(student.student_id, {
+          docs_total_required: requiredDocs.length,
+          docs_total_uploaded: uploaded,
+          docs_total_approved: approved,
+          docs_total_rejected: rejected,
+          docs_total_under_review: underReview,
+          docs_approved_names: approvedNames,
+          docs_rejected_names: rejectedNames,
+          docs_under_review_names: underReviewNames,
+        });
+      }
+
+      return result;
+    },
+    enabled: students.length > 0,
+    staleTime: 15 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30 * 1000,
+  });
+}
+
+

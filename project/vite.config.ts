@@ -70,6 +70,9 @@ export default defineConfig({
     reportCompressedSize: false
   },
   optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    },
     include: [
       'react',
       'react-dom',

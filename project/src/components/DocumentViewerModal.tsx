@@ -6,9 +6,26 @@ interface DocumentViewerModalProps {
   documentUrl: string;
   onClose: () => void;
   fileName?: string;
+  // Admin approve/reject
+  uploadId?: string;
+  uploadStatus?: string;
+  onApprove?: (uploadId: string) => Promise<void>;
+  onReject?: (uploadId: string, reason: string) => Promise<void>;
+  isApproving?: boolean;
+  isRejecting?: boolean;
 }
 
-const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, onClose, fileName }) => {
+const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
+  documentUrl,
+  onClose,
+  fileName,
+  uploadId,
+  uploadStatus,
+  onApprove,
+  onReject,
+  isApproving,
+  isRejecting,
+}) => {
   console.log('🔍 [MODAL] DocumentViewerModal rendered with URL:', documentUrl);
   console.log('🔍 [MODAL] documentUrl prop:', documentUrl);
   console.log('🔍 [MODAL] onClose prop:', onClose);
@@ -19,6 +36,23 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const [error, setError] = React.useState<string | null>(null);
   const [documentType, setDocumentType] = React.useState<'pdf' | 'image' | 'unknown'>('unknown');
   const [displayTitle, setDisplayTitle] = React.useState<string>(fileName || 'Document');
+  const [showRejectInput, setShowRejectInput] = React.useState(false);
+  const [rejectReason, setRejectReason] = React.useState('');
+
+  const canApproveReject = !!uploadId && !!onApprove && !!onReject &&
+    (uploadStatus === 'under_review' || uploadStatus === 'pending');
+
+  const handleApproveClick = async () => {
+    if (!uploadId || !onApprove) return;
+    await onApprove(uploadId);
+    onClose();
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!uploadId || !onReject || !rejectReason.trim()) return;
+    await onReject(uploadId, rejectReason.trim());
+    onClose();
+  };
 
   // Detectar tipo de documento baseado na URL ou nome do arquivo
   const detectDocumentType = (url: string, name?: string): 'pdf' | 'image' | 'unknown' => {
@@ -112,8 +146,14 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
             }
           }
         } else if (documentUrl.includes('/storage/v1/object/sign/')) {
+          // URL já é signed — usar diretamente sem revalidar
+          // Extrair extensão da parte antes do token (ex: _preview.jpg?token=...)
+          const urlBeforeQuery = documentUrl.split('?')[0];
+          const detectedType = detectDocumentType(urlBeforeQuery, fileName);
+          console.log(`✅ [MODAL] Signed URL detectada. Tipo: ${detectedType}, URL: ${urlBeforeQuery}`);
           setActualUrl(documentUrl);
-          setDocumentType(detectDocumentType(documentUrl, fileName));
+          setDocumentType(detectedType);
+          setDisplayTitle(fileName || getFriendlyName(urlBeforeQuery));
           setLoading(false);
           return;
         }
@@ -390,34 +430,90 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header com título e botões */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-800 truncate">
-            {displayTitle}
-          </h3>
-          <div className="flex gap-2">
-            {!error && !loading && (
+        <div className="flex flex-col border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between p-4">
+            <h3 className="text-lg font-semibold text-gray-800 truncate">
+              {displayTitle}
+            </h3>
+            <div className="flex gap-2 items-center">
+              {!error && !loading && (
+                <button
+                  onClick={handleDownload}
+                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                  title="Download"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download
+                </button>
+              )}
+
+              {/* Admin approve/reject buttons */}
+              {canApproveReject && (
+                <>
+                  <button
+                    onClick={handleApproveClick}
+                    disabled={isApproving}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {isApproving ? 'Approving...' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => setShowRejectInput(v => !v)}
+                    disabled={isRejecting}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reject
+                  </button>
+                </>
+              )}
+
               <button
-                onClick={handleDownload}
-                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
-                title="Download"
+                onClick={onClose}
+                className="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2"
+                title="Fechar"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                Download
+                Fechar
               </button>
-            )}
-            <button
-              onClick={onClose}
-              className="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2"
-              title="Fechar"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Fechar
-            </button>
+            </div>
           </div>
+
+          {/* Inline reject reason */}
+          {showRejectInput && canApproveReject && (
+            <div className="px-4 pb-4 flex items-end gap-2">
+              <textarea
+                className="flex-1 text-sm border border-red-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+                rows={2}
+                placeholder="Reason for rejection..."
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                autoFocus
+              />
+              <button
+                onClick={handleRejectConfirm}
+                disabled={isRejecting || !rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isRejecting ? 'Rejecting...' : 'Confirm Reject'}
+              </button>
+              <button
+                onClick={() => { setShowRejectInput(false); setRejectReason(''); }}
+                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Conteúdo principal */}

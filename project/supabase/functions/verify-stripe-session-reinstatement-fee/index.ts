@@ -26,7 +26,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false) {
     'rayssathefuture@gmail.com', 'gui.reis@live.com', 'admin@matriculausa.com'
   ];
   try {
-    const { data: adminProfiles } = await supabase.from('user_profiles').select('user_id, email, full_name, phone').eq('role', 'admin');
+    const { data: adminProfiles } = await supabase.from('user_profiles').select('user_id, email, full_name, phone').in('role', ['admin', 'post_sales']);
     let admins = adminProfiles ? adminProfiles.filter(a => a.email) : [];
     if (isDevelopment) admins = admins.filter(a => !devBlockedEmails.includes(a.email));
     return admins.length > 0 ? admins : [{ user_id: '', email: 'admin@matriculausa.com', full_name: 'Admin MatriculaUSA', phone: '' }];

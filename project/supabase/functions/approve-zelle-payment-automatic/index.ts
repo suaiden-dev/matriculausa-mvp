@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
                   referred_student_email: referredUserProfile?.email || "",
                   payment_method: "Zelle",
                   fee_type: "Selection Process Fee",
-                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
+                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 100 MatriculaCoins when they complete the I20 payment!`
                 };
 
                 console.log('📤 [approve-zelle-payment-automatic] Payload de progresso:', progressPayload);
@@ -460,7 +460,7 @@ Deno.serve(async (req: Request) => {
 
       // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
       // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
-      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 1. Credita 100 MatriculaCoins quando has_paid_i20_control_fee muda para true
       // 2. Atualiza o status do referral para 'i20_paid'
       // Aqui apenas enviamos a notificação de recompensa para o padrinho
       try {
@@ -506,7 +506,7 @@ Deno.serve(async (req: Request) => {
                 payment_method: "Zelle",
                 fee_type: "I20 Control Fee",
                 reward_type: "MatriculaCoins",
-                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 100 MatriculaCoins have been added to your account!`
               };
 
               console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);

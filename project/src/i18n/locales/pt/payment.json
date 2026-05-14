@@ -360,6 +360,8 @@
     "parcelowCpfPlaceholder": "Digite seu CPF (000.000.000-00)",
     "parcelowCpfInvalid": "CPF inválido. Digite os 11 dígitos.",
     "parcelowCpfError": "Erro ao salvar CPF. Tente novamente.",
+    "parcelowAddressNoticeTitle": "Atenção ao Endereço",
+    "parcelowAddressNoticeContent": "Para segurança da transação, o endereço de cobrança (Billing Address) deve ser o do titular do cartão e precisará ser preenchido diretamente na próxima tela (Checkout da Parcelow).",
     "cpfRequiredTitle": "Informe seu CPF para Parcelow",
     "cpfPlaceholder": "000.000.000-00",
     "payWith": "Pagar com {{method}}",
