@@ -23,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface ScholarshipManagementProps {
   scholarships: any[];
@@ -130,7 +131,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
       setStatusConfirmationModal(null);
     } catch (error: any) {
       console.error('Error updating scholarship status:', error);
-      alert(`Erro ao atualizar status: ${error.message}`);
+      toast.error(`Erro ao atualizar status: ${error.message}`);
     } finally {
       setUpdatingStatus(false);
     }

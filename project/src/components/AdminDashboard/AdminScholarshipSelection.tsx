@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import ScholarshipDetailModal from '../ScholarshipDetailModal';
 import { ScholarshipBulkUploadModal } from './ScholarshipBulkUploadModal';
 import { is3800ScholarshipBlocked } from '../../utils/scholarshipDeadlineValidation';
+import { toast } from 'react-hot-toast';
 
 interface AdminScholarshipSelectionProps {
   studentProfileId: string; // user_profiles.id
@@ -607,7 +608,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                         <button
                           onClick={() => {
                             if (isBlocked && !inCart) {
-                              alert('Não é possível adicionar uma bolsa bloqueada/esgotada para o aluno.');
+                              toast.error('Não é possível adicionar uma bolsa bloqueada/esgotada para o aluno.');
                               return;
                             }
                             toggleCart(s.id);

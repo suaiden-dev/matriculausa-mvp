@@ -7,29 +7,22 @@ import {
   getStepStatus,
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
-import { StudentRecord } from './StudentApplicationsView';
-import { useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+import { StudentRecord, useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+
 import { queryKeys } from '../../lib/queryKeys';
 import { UserX, UserPlus, RefreshCw } from 'lucide-react';
 
-interface InternalAdmin {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
   getUnreadCount: (studentId: string) => number;
   getGlobalUnreadCount: (studentId: string) => number;
-  internalAdmins?: InternalAdmin[];
 }
 
 const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({
   students,
   getUnreadCount,
   getGlobalUnreadCount,
-  internalAdmins = [],
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -196,12 +189,12 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Registered',
                 icon: UserPlus,
                 description: 'Students registered but haven\'t paid the Selection Process Fee yet',
+                team: 'Closer',
                 actor: 'student',
               } as any}
               students={registeredStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
-              internalAdmins={internalAdmins}
             />
           </div>
 
@@ -219,7 +212,6 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   students={studentsInStage}
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
-                  internalAdmins={internalAdmins}
                   showSelectionTags={stage.key === 'selection_fee'}
                 />
               </div>
@@ -235,12 +227,12 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Dropped',
                 icon: UserX,
                 description: 'Students who dropped out of the process',
+                team: 'Admin',
                 actor: 'admin',
               } as any}
               students={droppedStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
-              internalAdmins={internalAdmins}
               isDropped
             />
           </div>

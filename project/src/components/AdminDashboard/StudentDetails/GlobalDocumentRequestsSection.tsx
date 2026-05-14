@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
+import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
 
 interface GlobalDocumentRequestsSectionProps {
   globalRequests: any[];
@@ -8,6 +10,9 @@ interface GlobalDocumentRequestsSectionProps {
   onApproveDocument?: (uploadId: string) => void;
   onRejectDocument?: (uploadId: string, reason: string) => void;
   onDeleteDocumentRequest?: (requestId: string) => void;
+  onUploadGlobalAttachment?: (title: string, file: File) => Promise<void>;
+  onUploadDocument?: (requestId: string, file: File) => void;
+  uploadingStates?: { [key: string]: boolean };
   approvingStates?: { [key: string]: boolean };
   rejectingStates?: { [key: string]: boolean };
   deletingStates?: { [key: string]: boolean };
@@ -34,6 +39,9 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
   onApproveDocument,
   onRejectDocument,
   onDeleteDocumentRequest,
+  onUploadGlobalAttachment,
+  onUploadDocument,
+  uploadingStates = {},
   approvingStates = {},
   rejectingStates = {},
   deletingStates = {},
@@ -41,6 +49,8 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
 }) => {
   const [rejectModalUploadId, setRejectModalUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (id: string) => {
@@ -52,6 +62,13 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
       onRejectDocument(rejectModalUploadId, rejectReason.trim());
       setRejectModalUploadId(null);
       setRejectReason('');
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteRequestId && onDeleteDocumentRequest) {
+      onDeleteDocumentRequest(deleteRequestId);
+      setDeleteRequestId(null);
     }
   };
 
@@ -72,7 +89,16 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 </p>
               </div>
             </div>
-            <div className="ml-auto flex items-center">
+            <div className="ml-auto flex items-center gap-3">
+              {isAdmin && onUploadGlobalAttachment && (
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl border border-white/30 transition-all font-semibold text-sm shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Attachment</span>
+                </button>
+              )}
               <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30">
                 {globalRequests.length}
               </span>
@@ -95,9 +121,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
           ) : (
             <div className="space-y-4">
               {globalRequests.map((request) => {
-                const studentUpload = (request.document_request_uploads || []).find(
-                  (u: any) => u.uploaded_by === studentUserId
-                );
+                const allStudentUploads = (request.document_request_uploads || [])
+                  .filter((u: any) => u.uploaded_by === studentUserId)
+                  .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+                const studentUpload = allStudentUploads[0];
                 const isExpanded = expandedRequests[request.id] !== false; // expanded by default
                 const applicableTypes: string[] = request.applicable_student_types || ['all'];
 
@@ -122,7 +149,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                       {/* Admin delete */}
                       {isAdmin && onDeleteDocumentRequest && (
                         <button
-                          onClick={() => onDeleteDocumentRequest(request.id)}
+                          onClick={() => setDeleteRequestId(request.id)}
                           disabled={deletingStates[request.id]}
                           className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                           title="Delete request"
@@ -193,6 +220,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                             <p className="text-slate-500 text-sm">No response submitted yet</p>
                           </div>
                         ) : (
+                          <>
                           <div className="bg-white border border-slate-200 rounded-2xl p-4" data-upload-id={studentUpload.id}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                               <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
@@ -200,7 +228,16 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                   <FileText className="h-6 w-6 text-green-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900 break-words">Student response file</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-slate-900 break-words">
+                                      {studentUpload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file'}
+                                    </p>
+                                    {studentUpload.is_admin_upload && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                        Admin
+                                      </span>
+                                    )}
+                                  </div>
                                   {studentUpload.uploaded_at && (
                                     <p className="text-sm text-slate-500">
                                       Submitted on {new Date(studentUpload.uploaded_at).toLocaleDateString()}
@@ -259,14 +296,57 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                             </div>
 
                             {/* Review notes */}
-                            {studentUpload.review_notes && (
+                            {studentUpload.rejection_reason && (
                               <div className="w-full mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-xs font-semibold text-red-800 uppercase mb-1">Rejection Reason</p>
-                                <p className="text-sm text-red-900">{studentUpload.review_notes}</p>
+                                <p className="text-sm text-red-900">{studentUpload.rejection_reason}</p>
                               </div>
                             )}
                           </div>
+
+                          {/* Histórico de versões anteriores */}
+                          {allStudentUploads.length > 1 && (
+                            <DocumentHistoryAccordion uploads={allStudentUploads} skipFirst documentLabel={request.title} onViewDocument={onViewDocument} />
+                          )}
+                          </>
                         )}
+                      </div>
+                    )}
+
+                    {/* Admin Upload Section (matches individual requests) */}
+                    {isAdmin && onUploadDocument && (
+                      <div className="mt-6 pt-6 border-t border-slate-100">
+                        <h5 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
+                          <Plus className="w-4 h-4 mr-2 text-blue-600" />
+                          Admin Upload:
+                        </h5>
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                          <div className="flex flex-col sm:flex-row items-start gap-3">
+                            <div className="flex-1">
+                              <p className="text-sm text-slate-600 mb-3">
+                                Upload a document on behalf of the student for this global request.
+                              </p>
+                              <label className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] hover:bg-[#041f38] text-white rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer">
+                                <Plus className="w-4 h-4" />
+                                <span>
+                                  {uploadingStates[request.id] ? 'Uploading...' : 'Upload Document'}
+                                </span>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  disabled={uploadingStates[request.id]}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      onUploadDocument(request.id, file);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -277,37 +357,123 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
         </div>
       </div>
 
-      {/* Reject Modal */}
+      {/* Rejection Modal - Modernized */}
       {rejectModalUploadId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Reject Document</h3>
-            <p className="text-sm text-gray-500 mb-4">Please provide a reason for rejecting this document.</p>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none mb-4"
-            />
-            <div className="flex justify-end gap-3">
-              <button
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3 text-white">
+                <XCircle className="w-5 h-5" />
+                <h3 className="text-lg font-bold">Reject Document</h3>
+              </div>
+              <button 
                 onClick={() => { setRejectModalUploadId(null); setRejectReason(''); }}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="text-white/70 hover:text-white transition-colors p-1"
               >
-                Cancel
+                <X className="w-5 h-5" />
               </button>
-              <button
-                onClick={handleConfirmReject}
-                disabled={!rejectReason.trim()}
-                className="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
-              >
-                Confirm Reject
-              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-start space-x-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">
+                    Please provide a clear justification for rejecting this document. 
+                    This will be sent to the student to help them correct the submission.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Justification</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Ex: Image is too blurry, please upload a clear photo of your passport."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:bg-white outline-none transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  onClick={() => { setRejectModalUploadId(null); setRejectReason(''); }}
+                  className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmReject}
+                  disabled={!rejectReason.trim()}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Confirm Reject
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal - Modernized */}
+      {deleteRequestId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3 text-white">
+                <Trash2 className="w-5 h-5" />
+                <h3 className="text-lg font-bold">Delete Request</h3>
+              </div>
+              <button 
+                onClick={() => setDeleteRequestId(null)}
+                className="text-white/70 hover:text-white transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-start space-x-4">
+                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">
+                    Are you sure you want to delete this document request? 
+                    This action <span className="font-bold text-red-600">cannot be undone</span> and will also remove any student submissions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  onClick={() => setDeleteRequestId(null)}
+                  className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Upload Modal */}
+      <AdminUploadAttachmentModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onUpload={onUploadGlobalAttachment || (async () => {})}
+        applicationTitle="Global Documents"
+      />
     </>
   );
 };

@@ -52,6 +52,7 @@ export interface ApplicationFlowStage {
   requiresTransfer?: boolean;
   requiresProcessType?: string;
   actor: 'student' | 'admin' | 'both';
+  team?: string;
 }
 
 export interface StudentRecord {
@@ -104,7 +105,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Sel. Fee Paid',
     icon: CreditCard,
     description: 'Student has paid the Selection Process Fee',
-    actor: 'student'
+    actor: 'student',
+    team: 'Closer'
   },
   {
     key: 'apply',
@@ -112,7 +114,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Choosing',
     icon: FileText,
     description: 'Student selected scholarships but has not yet uploaded the 3 main documents',
-    actor: 'student'
+    actor: 'student',
+    team: 'Closer'
   },
   {
     key: 'bdp_collection',
@@ -120,7 +123,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'BDP',
     icon: FileText,
     description: 'Pending: Bank Statement, Diploma & Passport upload',
-    actor: 'student'
+    actor: 'student',
+    team: 'Document Specialist'
   },
   {
     key: 'review',
@@ -128,7 +132,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Eligibility',
     icon: Eye,
     description: 'Awaiting admin approval of submitted documents and selected scholarship',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Academic Advisor / University'
   },
   {
     key: 'start_admission',
@@ -136,7 +141,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Start Admission',
     icon: BookOpen,
     description: 'Scholarship approved — student selects a scholarship to proceed with admission',
-    actor: 'student'
+    actor: 'student',
+    team: 'Academic Advisor / University'
   },
   {
     key: 'application_fee',
@@ -144,7 +150,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'App Fee',
     icon: DollarSign,
     description: 'Student selected a scholarship — pending Application Fee payment',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'placement_fee',
@@ -152,7 +159,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Placement Fee',
     icon: DollarSign,
     description: 'Application fee paid — pending Placement Fee payment',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'reinstatement_fee',
@@ -160,7 +168,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Reinstatement',
     icon: DollarSign,
     description: 'Placement fee paid — pending Reinstatement Fee payment (transfer with inactive visa only)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'scholarship_fee',
@@ -168,7 +177,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Scholarship Fee',
     icon: Award,
     description: 'Student has paid the Scholarship Fee',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'university_docs',
@@ -176,7 +186,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Univ. Docs',
     icon: Upload,
     description: 'Student must upload university documents (filled and translated)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Document Specialist / University'
   },
   {
     key: 'docs_approval',
@@ -184,7 +195,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Doc Approval',
     icon: ClipboardCheck,
     description: 'Admin reviews uploaded documents — approve or reject each one',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'send_docs_to_university',
@@ -192,7 +204,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Send Docs',
     icon: Send,
     description: 'Admin confirms documents were sent to the university',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'receive_acceptance_letter',
@@ -200,7 +213,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Recv. Letter',
     icon: Mail,
     description: 'Admin uploads acceptance letter received from university',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'send_acceptance_letter',
@@ -208,7 +222,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Send Letter',
     icon: Send,
     description: 'Admin sends acceptance letter to the student',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'i20_fee',
@@ -216,7 +231,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'I-20 Fee',
     icon: CreditCard,
     description: 'Student pays the I-20 Control Fee (Initial, COS, Transfer/Reinstatement)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'student_sends_letter',
@@ -225,7 +241,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     icon: FileText,
     description: 'Admin sends transfer form to student → student submits to current institution → student uploads completed form → admin approves.',
     requiresTransfer: true,
-    actor: 'both'
+    actor: 'both',
+    team: 'Admission / University'
   },
   {
     key: 'sevis_transfer',
@@ -234,7 +251,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     icon: RefreshCw,
     description: 'Admin confirms SEVIS transfer completed (happens outside the platform)',
     requiresTransfer: true,
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'visa_approval',
@@ -242,7 +260,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Visa',
     icon: Shield,
     description: 'Admin confirms visa approved. Student must send documentation to lawyer (Aplikei) outside the platform.',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'enrollment',
@@ -250,7 +269,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Admitted',
     icon: GraduationCap,
     description: 'Student has been enrolled in the program',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Support / Customer Service'
   }
 ];
 

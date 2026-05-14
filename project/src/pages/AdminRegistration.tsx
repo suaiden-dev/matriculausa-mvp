@@ -8,19 +8,16 @@ const AdminRegistration: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirecionamento se já estiver logado
+  // Redirecionamento imediato se já estiver logado
   useEffect(() => {
     if (!authLoading && user) {
-      const timer = setTimeout(() => {
-        const role = user.role || 'student';
-        const dashboardPath = 
-          role === 'affiliate' ? '/affiliate/dashboard' :
-          role === 'seller' ? '/seller/dashboard' :
-          role === 'admin' ? '/admin/dashboard' :
-          '/student/dashboard';
-        navigate(dashboardPath, { replace: true });
-      }, 3000);
-      return () => clearTimeout(timer);
+      const role = user.role || 'student';
+      const dashboardPath =
+        role === 'affiliate' ? '/affiliate/dashboard' :
+        role === 'seller' ? '/seller/dashboard' :
+        role === 'admin' ? '/admin/dashboard' :
+        '/student/dashboard';
+      navigate(dashboardPath, { replace: true });
     }
   }, [user, authLoading, navigate]);
 
@@ -37,35 +34,7 @@ const AdminRegistration: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  if (!authLoading && user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-3xl p-10 shadow-2xl text-center border border-white/20">
-          <div className="w-20 h-20 bg-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Crown className="h-10 w-10 text-purple-600" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-900 mb-2">Você já está logado!</h1>
-          <p className="text-slate-600 mb-8">
-            Você já possui uma conta de administrador ativa. Redirecionando para o seu dashboard em instantes...
-          </p>
-          <button
-            onClick={() => {
-              const role = user.role || 'student';
-              const dashboardPath = 
-                role === 'affiliate' ? '/affiliate/dashboard' :
-                role === 'seller' ? '/seller/dashboard' :
-                role === 'admin' ? '/admin/dashboard' :
-                '/student/dashboard';
-              navigate(dashboardPath);
-            }}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all shadow-xl"
-          >
-            Acessar Painel Admin Agora
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!authLoading && user) return null;
 
   // Chave secreta para validar o registro de admin (você pode mudar isso)
   const ADMIN_SECRET_KEY = 'MATRICULA_USA_ADMIN_2024';

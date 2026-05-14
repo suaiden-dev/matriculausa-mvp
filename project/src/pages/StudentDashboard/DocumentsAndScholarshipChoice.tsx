@@ -567,8 +567,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('user_id, email, full_name, phone')
-          .eq('role', 'admin');
-        
+          .in('role', ['admin', 'post_sales']);
+
         if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
           admins = adminProfiles
             .filter(admin => admin.email)
@@ -961,7 +961,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 const { data: admins } = await supabase
                   .from('user_profiles')
                   .select('user_id')
-                  .eq('role', 'admin');
+                  .in('role', ['admin', 'post_sales']);
 
                 if (admins && admins.length > 0) {
                   const studentName = userProfile?.full_name || user.email || 'Student';
@@ -994,20 +994,25 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           }
           
           if (applicationId) {
-            const finalDocs = [
+            const { data: existingAppData } = await supabase.from('scholarship_applications').select('documents').eq('id', applicationId).single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const newEntries = [
               { type: 'passport', url: docUrls['passport'] },
               { type: 'diploma', url: docUrls['diploma'] },
               { type: 'funds_proof', url: docUrls['funds_proof'] },
-            ].filter(d => d.url).map(d => ({ 
-              ...d, 
-              uploaded_at: new Date().toISOString(), 
-              status: 'under_review' 
-            }));
-            
-            await supabase
-              .from('scholarship_applications')
-              .update({ documents: finalDocs })
-              .eq('id', applicationId);
+            ].filter(d => d.url);
+            const now = new Date().toISOString();
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
+            await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', applicationId);
           }
         }
       } else if (profile?.id && scholarshipIds.length === 0) {
@@ -1019,21 +1024,26 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           .neq('status', 'rejected');
           
         if (existingApps && existingApps.length > 0) {
-          const finalDocs = [
+          const newEntries = [
             { type: 'passport', url: docUrls['passport'] },
             { type: 'diploma', url: docUrls['diploma'] },
             { type: 'funds_proof', url: docUrls['funds_proof'] },
-          ].filter(d => d.url).map(d => ({ 
-            ...d, 
-            uploaded_at: new Date().toISOString(), 
-            status: 'under_review' 
-          }));
-          
+          ].filter(d => d.url);
+          const now = new Date().toISOString();
           for (const app of existingApps) {
-            await supabase
-              .from('scholarship_applications')
-              .update({ documents: finalDocs })
-              .eq('id', app.id);
+            const { data: existingAppData } = await supabase.from('scholarship_applications').select('documents').eq('id', app.id).single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
+            await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', app.id);
           }
         }
       }

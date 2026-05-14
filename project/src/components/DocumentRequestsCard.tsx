@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useResumableUpload } from '../hooks/useResumableUpload';
 import DocumentViewerModal from './DocumentViewerModal';
+import DocumentHistoryAccordion from './DocumentHistoryAccordion';
 import {
   FileText,
   CheckCircle2,
@@ -404,7 +405,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('user_id, email, full_name, phone')
-          .eq('role', 'admin');
+          .in('role', ['admin', 'post_sales']);
 
         console.log('[NOTIFICAÇÃO ADMIN] 📊 Resultado da busca de admins:', {
           adminProfiles,
@@ -1358,13 +1359,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const hasRejectedUpload = transferFormUploads.some(upload => upload.status === 'rejected');
       const isResubmission = hasRejectedUpload;
 
-      // Deletar upload anterior se existir
-      if (transferFormUploads.length > 0) {
-        await supabase
-          .from('transfer_form_uploads')
-          .delete()
-          .eq('application_id', applicationId);
-      }
+      // Manter histórico de envios anteriores (sempre fazer INSERT)
 
       // Criar novo registro
       const { error: insertError } = await supabase
@@ -1983,9 +1978,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                })()}
             </div>
           )}
+               {/* Histórico de Envios (Transfer Form) */}
+               {transferFormUploads.length > 1 && (
+                 <div className="mt-6 pt-6 border-t border-slate-100">
+                    <DocumentHistoryAccordion
+                      uploads={transferFormUploads}
+                      skipFirst={true}
+                      documentLabel={t('studentDashboard.documentRequests.forms.transferForm')}
+                      onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
+                    />
+                 </div>
+               )}
 
           {requests.map(req => {
-            const latestUpload = uploads[req.id]?.slice().sort((a, b) =>
+            const allUploads = uploads[req.id] || [];
+            const latestUpload = allUploads.slice().sort((a, b) =>
               new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
             )[0];
             const status = latestUpload ? normalizeStatus(latestUpload.status) : null;
@@ -2103,6 +2110,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       </button>
                    </div>
                  )}
+
+              {/* Histórico de envios anteriores */}
+              {allUploads.length > 1 && (
+                <div className="px-0 pb-2">
+                  <DocumentHistoryAccordion
+                    uploads={allUploads}
+                    skipFirst
+                    documentLabel={req.title}
+                    onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
+                  />
+                </div>
+              )}
               </div>
             );
           })}

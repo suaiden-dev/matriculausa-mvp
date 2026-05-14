@@ -699,7 +699,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('email, full_name, phone')
-          .eq('role', 'admin');
+          .in('role', ['admin', 'post_sales']);
 
         if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
           admins = adminProfiles

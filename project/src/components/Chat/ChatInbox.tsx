@@ -27,14 +27,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
   const { user, userProfile } = useAuth();
 
   // Determine recipient based on current user role
-  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
     ? conversation.student_profile
     : conversation.admin_profile;
 
   const recipientName = recipient?.full_name || 'Unknown User';
 
   // Get global unread count for this student (if it's a student conversation)
-  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
     ? getGlobalUnreadCount(conversation.student_id)
     : 0;
 
@@ -107,7 +107,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
             {/* Mostrar checks se a última mensagem foi enviada por um admin (no dashboard de admin) 
                 ou se foi enviada pelo próprio usuário logado */}
             {user && conversation.last_message && (
-              ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && conversation.last_message_sender_id !== conversation.student_id) ||
+              ((userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && conversation.last_message_sender_id !== conversation.student_id) ||
               (conversation.last_message_sender_id === user.id)
             ) && (
                 <MessageReadStatus
@@ -266,8 +266,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     if (!shouldFilter) return conversations;
 
     return conversations.filter(conversation => {
-      // Para admin/affiliate_admin/school, filtrar por email do estudante
-      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school') {
+      // Para admin/affiliate_admin/post_sales/school, filtrar por email do estudante
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') {
         const studentEmail = studentEmails[conversation.student_id] || '';
         return !shouldExcludeEmail(studentEmail);
       }
@@ -290,7 +290,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         if (activeTab === 'universities' && !isUniversity) return false;
       }
 
-      const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+      const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school'  || userProfile?.role === 'post_sales')
         ? conversation.student_profile
         : conversation.admin_profile;
       const recipientName = recipient?.full_name || '';
@@ -323,16 +323,16 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   }, [refetchConversations]);
 
   const handleConversationClick = async (conversation: any) => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school' || userProfile?.role === 'post_sales')
       ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || 'Unknown User';
-    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school')
+    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
       ? conversation.student_id
       : conversation.admin_id;
 
-    // ✅ NOVO: Se for admin/affiliate_admin/school, marcar mensagens como lidas quando visualiza
-    if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && user) {
+    // ✅ NOVO: Se for admin/affiliate_admin/post_sales/school, marcar mensagens como lidas quando visualiza
+    if ((userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && user) {
       try {
         // Marcar mensagens não lidas como lidas quando admin visualiza a conversa
         await supabase
@@ -370,7 +370,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         .eq('student_id', studentId);
 
       // For affiliate admins and schools, only look for their own conversations
-      // For regular admins, look for any existing conversation with this student
+      // For regular admins and post_sales, look for any existing conversation with this student
       if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') {
         query = query.eq('admin_id', user?.id);
       }
@@ -541,8 +541,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         )}
       </div>
 
-      {/* Footer CTA - Start new conversation (admin/affiliate_admin/school) */}
-      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school') && (
+      {/* Footer CTA - Start new conversation (admin/affiliate_admin/post_sales/school) */}
+      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') && (
         <div className="border-t border-slate-200 p-3 mt-auto sticky bottom-0 bg-white">
           <button
             onClick={() => setShowStudentSelector(true)}

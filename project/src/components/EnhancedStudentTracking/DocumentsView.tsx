@@ -685,7 +685,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     </svg>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                      {upload.is_admin_upload && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-sm text-slate-500">
                                       Submitted on {formatDate(upload.uploaded_at)}
                                     </p>
@@ -1175,7 +1182,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
-                      <button
+                      {/* Mark as Sent (no file) button hidden — prevents admins from marking sent without an attached file */}
+                      {/* <button
                         onClick={async () => {
                           try {
                             // Resolver applicationId como acima
@@ -1201,7 +1209,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                   if (upById?.id) profileId = upById.id;
                                 }
                               }
-                              
+
                               if (profileId) {
                                 const { data: apps } = await supabase
                                   .from('scholarship_applications')
@@ -1247,7 +1255,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-medium"
                       >
                         Mark as Sent (no file)
-                      </button>
+                      </button> */}
                     </div>
                     {markSentSuccess && (
                       <div className="mt-3 mx-auto max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3">

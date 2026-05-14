@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from './useAuth';
-import { channelManager } from '../lib/supabaseChannelManager';
-import { useAdminStudentChatNotifications } from './useAdminStudentChatNotifications';
-import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
-import { ChatMessage } from '../components/ApplicationChat';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "./useAuth";
+import { channelManager } from "../lib/supabaseChannelManager";
+import { useAdminStudentChatNotifications } from "./useAdminStudentChatNotifications";
+import { useUnreadMessages } from "../contexts/UnreadMessagesContext";
+import { ChatMessage } from "../components/ApplicationChat";
 
 // Interface for the raw data from the DB
 interface AdminStudentApiMessage {
@@ -16,7 +16,11 @@ interface AdminStudentApiMessage {
   read_at?: string | null;
   edited_at?: string | null;
   is_deleted?: boolean;
-  attachments?: { file_url: string; file_name?: string; uploaded_at?: string }[];
+  attachments?: {
+    file_url: string;
+    file_name?: string;
+    uploaded_at?: string;
+  }[];
 }
 
 // Interface for conversation data
@@ -43,7 +47,14 @@ interface Conversation {
   last_message_read_at?: string | null;
 }
 
-export const useAdminStudentChat = (conversationId?: string, recipientId?: string, updateConversationUnreadCount?: (conversationId: string, newUnreadCount: number) => void) => {
+export const useAdminStudentChat = (
+  conversationId?: string,
+  recipientId?: string,
+  updateConversationUnreadCount?: (
+    conversationId: string,
+    newUnreadCount: number,
+  ) => void,
+) => {
   const { user, userProfile } = useAuth();
   const { markConversationAsRead } = useAdminStudentChatNotifications();
   const { resetUnreadCount } = useUnreadMessages();
@@ -51,11 +62,16 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(conversationId || null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(conversationId || null);
   const messagesChannelRef = useRef<any>(null);
 
   const formatMessage = useCallback(
-    (msg: AdminStudentApiMessage, status: 'sent' | 'pending' | 'error' = 'sent'): ChatMessage => {
+    (
+      msg: AdminStudentApiMessage,
+      status: "sent" | "pending" | "error" = "sent",
+    ): ChatMessage => {
       return {
         id: msg.id,
         senderId: msg.sender_id,
@@ -64,40 +80,40 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         sentAt: msg.created_at,
         isOwn: msg.sender_id === user?.id,
         attachments: msg.attachments,
-        status: msg.sender_id === user?.id ? status : 'sent',
+        status: msg.sender_id === user?.id ? status : "sent",
         readAt: msg.read_at,
         editedAt: msg.edited_at,
         isDeleted: msg.is_deleted || false,
       };
     },
-    [user]
+    [user],
   );
 
   // Function to find a default admin for students to chat with
   const findDefaultAdmin = useCallback(async () => {
-    if (!user || !userProfile || userProfile.role !== 'student') return null;
+    if (!user || !userProfile || userProfile.role !== "student") return null;
 
     try {
       // Look for regular admin first (this is for general student support)
       const { data: adminProfile, error } = await supabase
-        .from('user_profiles')
-        .select('user_id, full_name')
-        .eq('role', 'admin')
+        .from("user_profiles")
+        .select("user_id, full_name")
+        .eq("role", "admin")
         .limit(1)
         .single();
 
       if (error || !adminProfile) {
-        console.log('No regular admin found, looking for affiliate admin...');
+        console.log("No regular admin found, looking for affiliate admin...");
         // Fallback to affiliate admin
         const { data: fallbackAdmin, error: fallbackError } = await supabase
-          .from('user_profiles')
-          .select('user_id, full_name')
-          .eq('role', 'affiliate_admin')
+          .from("user_profiles")
+          .select("user_id, full_name")
+          .eq("role", "affiliate_admin")
           .limit(1)
           .single();
 
         if (fallbackError || !fallbackAdmin) {
-          console.error('No admin found for student to chat with');
+          console.error("No admin found for student to chat with");
           return null;
         }
         return fallbackAdmin.user_id;
@@ -105,7 +121,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
       return adminProfile.user_id;
     } catch (e) {
-      console.error('Error finding default admin:', e);
+      console.error("Error finding default admin:", e);
       return null;
     }
   }, [user, userProfile]);
@@ -117,13 +133,13 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     let targetRecipientId = recipientId;
 
     // If student, first try to reuse ANY existing conversation with any admin
-    if (userProfile.role === 'student') {
+    if (userProfile.role === "student") {
       try {
         const { data: existingByStudent } = await supabase
-          .from('admin_student_conversations')
-          .select('id')
-          .eq('student_id', user.id)
-          .order('created_at', { ascending: false })
+          .from("admin_student_conversations")
+          .select("id")
+          .eq("student_id", user.id)
+          .order("created_at", { ascending: false })
           .limit(1);
         if (existingByStudent && existingByStudent.length > 0) {
           return existingByStudent[0].id;
@@ -134,10 +150,10 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     }
 
     // If student and no recipientId provided, find a default admin to start a new conversation
-    if (userProfile.role === 'student' && !targetRecipientId) {
+    if (userProfile.role === "student" && !targetRecipientId) {
       targetRecipientId = await findDefaultAdmin();
       if (!targetRecipientId) {
-        setError('No admin available for chat. Please try again later.');
+        setError("No admin available for chat. Please try again later.");
         return null;
       }
     }
@@ -147,18 +163,28 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     try {
       // First, try to find existing conversation
       let query = supabase
-        .from('admin_student_conversations')
-        .select('*');
+        .from("admin_student_conversations")
+        .select("*");
 
-      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'school') {
+      if (
+        userProfile.role === "affiliate_admin" || userProfile.role === "school"
+      ) {
         // Affiliate admins and schools only see their own conversations
-        query = query.eq('admin_id', user.id).eq('student_id', targetRecipientId);
-      } else if (userProfile.role === 'admin') {
-        // Regular admins look for any existing conversation with this student
-        query = query.eq('student_id', targetRecipientId);
+        query = query.eq("admin_id", user.id).eq(
+          "student_id",
+          targetRecipientId,
+        );
+      } else if (
+        userProfile.role === "admin" || userProfile.role === "post_sales"
+      ) {
+        // Regular admins and post_sales look for any existing conversation with this student
+        query = query.eq("student_id", targetRecipientId);
       } else {
         // Students look for conversations with them
-        query = query.eq('student_id', user.id).eq('admin_id', targetRecipientId);
+        query = query.eq("student_id", user.id).eq(
+          "admin_id",
+          targetRecipientId,
+        );
       }
 
       const { data: existingConversations, error: fetchError } = await query;
@@ -173,12 +199,15 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       }
 
       // Create new conversation
-      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'school') 
-        ? { admin_id: user.id, student_id: targetRecipientId }
-        : { admin_id: targetRecipientId, student_id: user.id };
+      const conversationData =
+        (userProfile.role === "affiliate_admin" ||
+            userProfile.role === "admin" || userProfile.role === "post_sales" ||
+            userProfile.role === "school")
+          ? { admin_id: user.id, student_id: targetRecipientId }
+          : { admin_id: targetRecipientId, student_id: user.id };
 
       const { data: newConversation, error: createError } = await supabase
-        .from('admin_student_conversations')
+        .from("admin_student_conversations")
         .insert(conversationData)
         .select()
         .single();
@@ -187,8 +216,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
       return newConversation.id;
     } catch (e) {
-      console.error('Failed to ensure conversation:', e);
-      setError('Failed to create or find conversation.');
+      console.error("Failed to ensure conversation:", e);
+      setError("Failed to create or find conversation.");
       return null;
     }
   }, [user, userProfile, recipientId, findDefaultAdmin]);
@@ -201,23 +230,24 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     setError(null);
     try {
       const { data, error: fetchError } = await supabase
-        .from('admin_student_messages')
+        .from("admin_student_messages")
         .select(`
           *,
           admin_student_message_attachments(file_url, file_name, created_at)
         `)
-        .eq('conversation_id', targetConversationId)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: true });
+        .eq("conversation_id", targetConversationId)
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: true });
 
       if (fetchError) throw fetchError;
 
       const formattedMessages: ChatMessage[] = (data || []).map((msg: any) => {
-        const attachments = msg.admin_student_message_attachments?.map((att: any) => ({
-          file_url: att.file_url,
-          file_name: att.file_name,
-          uploaded_at: att.created_at,
-        })) || [];
+        const attachments =
+          msg.admin_student_message_attachments?.map((att: any) => ({
+            file_url: att.file_url,
+            file_name: att.file_name,
+            uploaded_at: att.created_at,
+          })) || [];
 
         const formatted = formatMessage({
           id: msg.id,
@@ -230,14 +260,14 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           is_deleted: msg.is_deleted,
           attachments,
         });
-        
+
         return formatted;
       });
 
       setMessages(formattedMessages);
     } catch (e: any) {
-      console.error('Failed to fetch messages:', e);
-      setError('Failed to fetch messages. Please try again.');
+      console.error("Failed to fetch messages:", e);
+      setError("Failed to fetch messages. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -253,7 +283,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         await fetchMessages(conversationId);
         // Marcar notificações da conversa como lidas
         await markConversationNotificationsAsRead(conversationId);
-      } else if (recipientId || userProfile.role === 'student') {
+      } else if (recipientId || userProfile.role === "student") {
         // For students, always try to create/find a conversation even without explicit recipientId
         const convId = await ensureConversation();
         if (convId) {
@@ -266,7 +296,14 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     };
 
     initializeChat();
-  }, [user, userProfile, conversationId, recipientId, ensureConversation, fetchMessages]);
+  }, [
+    user,
+    userProfile,
+    conversationId,
+    recipientId,
+    ensureConversation,
+    fetchMessages,
+  ]);
 
   // Função para marcar notificações da conversa como lidas
   const markConversationNotificationsAsRead = async (convId: string) => {
@@ -274,11 +311,11 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     try {
       await supabase
-        .rpc('mark_conversation_notifications_as_read', {
-          conversation_id_param: convId
+        .rpc("mark_conversation_notifications_as_read", {
+          conversation_id_param: convId,
         });
     } catch (e) {
-      console.error('Failed to mark conversation notifications as read:', e);
+      console.error("Failed to mark conversation notifications as read:", e);
     }
   };
 
@@ -290,30 +327,33 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     const channel = channelManager.subscribe(channelName)
       .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'admin_student_messages', 
-          filter: `conversation_id=eq.${currentConversationId}` 
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "admin_student_messages",
+          filter: `conversation_id=eq.${currentConversationId}`,
         },
         async (payload: any) => {
           // Fetch the complete message with attachments
           const { data: fullMessage } = await supabase
-            .from('admin_student_messages')
+            .from("admin_student_messages")
             .select(`
               *,
               admin_student_message_attachments(file_url, file_name, created_at)
             `)
-            .eq('id', payload.new.id)
+            .eq("id", payload.new.id)
             .single();
 
           if (fullMessage) {
-            const attachments = fullMessage.admin_student_message_attachments?.map((att: any) => ({
-              file_url: att.file_url,
-              file_name: att.file_name,
-              uploaded_at: att.created_at,
-            })) || [];
+            const attachments =
+              fullMessage.admin_student_message_attachments?.map((
+                att: any,
+              ) => ({
+                file_url: att.file_url,
+                file_name: att.file_name,
+                uploaded_at: att.created_at,
+              })) || [];
 
             const newMessage = formatMessage({
               id: fullMessage.id,
@@ -332,33 +372,36 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
               setMessages((prevMessages) => [...prevMessages, newMessage]);
             }
           }
-        }
+        },
       )
       .on(
-        'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'admin_student_messages', 
-          filter: `conversation_id=eq.${currentConversationId}` 
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "admin_student_messages",
+          filter: `conversation_id=eq.${currentConversationId}`,
         },
         async (payload: any) => {
           // Handle message updates (edit/delete/read status)
           const { data: updatedMessage } = await supabase
-            .from('admin_student_messages')
+            .from("admin_student_messages")
             .select(`
               *,
               admin_student_message_attachments(file_url, file_name, created_at)
             `)
-            .eq('id', payload.new.id)
+            .eq("id", payload.new.id)
             .single();
 
           if (updatedMessage) {
-            const attachments = updatedMessage.admin_student_message_attachments?.map((att: any) => ({
-              file_url: att.file_url,
-              file_name: att.file_name,
-              uploaded_at: att.created_at,
-            })) || [];
+            const attachments =
+              updatedMessage.admin_student_message_attachments?.map((
+                att: any,
+              ) => ({
+                file_url: att.file_url,
+                file_name: att.file_name,
+                uploaded_at: att.created_at,
+              })) || [];
 
             const formattedMessage = formatMessage({
               id: updatedMessage.id,
@@ -378,7 +421,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
               )
             );
           }
-        }
+        },
       );
 
     messagesChannelRef.current = channel;
@@ -391,28 +434,30 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
   const sendMessage = async (text: string, file?: File) => {
     if (!currentConversationId || !user || !userProfile) {
-      setError('Could not identify the conversation or user.');
+      setError("Could not identify the conversation or user.");
       return;
     }
 
     // Determine recipient ID from the conversation
     let targetRecipientId = recipientId;
-    
+
     if (!targetRecipientId) {
       // Get recipient from conversation data
       const { data: convData } = await supabase
-        .from('admin_student_conversations')
-        .select('admin_id, student_id')
-        .eq('id', currentConversationId)
+        .from("admin_student_conversations")
+        .select("admin_id, student_id")
+        .eq("id", currentConversationId)
         .single();
-        
+
       if (convData) {
-        targetRecipientId = user.id === convData.admin_id ? convData.student_id : convData.admin_id;
+        targetRecipientId = user.id === convData.admin_id
+          ? convData.student_id
+          : convData.admin_id;
       }
     }
 
     if (!targetRecipientId) {
-      setError('Could not identify the recipient.');
+      setError("Could not identify the recipient.");
       return;
     }
 
@@ -424,8 +469,10 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       message: text,
       sentAt: new Date().toISOString(),
       isOwn: true,
-      status: 'pending',
-      attachments: file ? [{ file_url: URL.createObjectURL(file), file_name: file.name }] : [],
+      status: "pending",
+      attachments: file
+        ? [{ file_url: URL.createObjectURL(file), file_name: file.name }]
+        : [],
     };
 
     setMessages((prevMessages) => [...prevMessages, optimisticMessage]);
@@ -437,27 +484,30 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
       // Handle file upload if present
       if (file) {
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
-        const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "bin";
+        const fileNameWithoutExt = file.name.substring(
+          0,
+          file.name.lastIndexOf("."),
+        );
         const sanitizedBaseName = fileNameWithoutExt
           .toLowerCase()
-          .replace(/[^a-z0-9-]/g, '-')
-          .replace(/\s+/g, '-')
-          .replace(/--+/g, '-');
+          .replace(/[^a-z0-9-]/g, "-")
+          .replace(/\s+/g, "-")
+          .replace(/--+/g, "-");
         const finalFileName = `${Date.now()}-${sanitizedBaseName}.${fileExt}`;
         const filePath = `chat/${currentConversationId}/${finalFileName}`;
 
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('message-attachments')
+          .from("message-attachments")
           .upload(filePath, file);
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error('Failed to upload attachment.');
+          console.error("Upload error:", uploadError);
+          throw new Error("Failed to upload attachment.");
         }
 
         const { data: urlData } = supabase.storage
-          .from('message-attachments')
+          .from("message-attachments")
           .getPublicUrl(uploadData.path);
 
         attachmentData = [{
@@ -470,7 +520,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
       // Insert message directly using Supabase client (RLS will handle permissions)
       const { data: sentMessage, error: messageError } = await supabase
-        .from('admin_student_messages')
+        .from("admin_student_messages")
         .insert({
           conversation_id: currentConversationId,
           sender_id: user.id,
@@ -484,17 +534,17 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
       // Insert attachments if any
       if (attachmentData.length > 0) {
-        const attachmentsToInsert = attachmentData.map(att => ({
+        const attachmentsToInsert = attachmentData.map((att) => ({
           message_id: sentMessage.id,
           ...att,
         }));
 
         const { error: attachmentError } = await supabase
-          .from('admin_student_message_attachments')
+          .from("admin_student_message_attachments")
           .insert(attachmentsToInsert);
 
         if (attachmentError) {
-          console.error('Attachment insert error:', attachmentError);
+          console.error("Attachment insert error:", attachmentError);
           // Continue anyway, message was sent
         }
       }
@@ -506,23 +556,22 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         message: sentMessage.message,
         created_at: sentMessage.created_at,
         read_at: sentMessage.read_at,
-        attachments: attachmentData.map(att => ({
+        attachments: attachmentData.map((att) => ({
           file_url: att.file_url,
           file_name: att.file_name,
           uploaded_at: new Date().toISOString(),
         })),
-      }, 'sent');
+      }, "sent");
 
       setMessages((prevMessages) =>
         prevMessages.map((msg) => (msg.id === tempId ? finalMessage : msg))
       );
-
     } catch (e: any) {
-      setError('Failed to send message.');
+      setError("Failed to send message.");
       console.error(e);
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
-          msg.id === tempId ? { ...optimisticMessage, status: 'error' } : msg
+          msg.id === tempId ? { ...optimisticMessage, status: "error" } : msg
         )
       );
     } finally {
@@ -535,48 +584,59 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
     // Admins não devem marcar mensagens como lidas quando visualizam conversas
-    if (userProfile?.role !== 'student') {
-      console.log('⚠️ [markAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+    if (userProfile?.role !== "student") {
+      // Allow post_sales to be treated as admin here (admins use markAdminMessagesAsRead)
+      if (userProfile?.role === "admin" || userProfile?.role === "post_sales") {
+        // We'll let them fall through to markAdminMessagesAsRead which is called from UI
+        return;
+      }
+      console.log(
+        "⚠️ [markAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:",
+        userProfile?.role,
+      );
       return;
     }
 
     try {
       await supabase
-        .from('admin_student_messages')
+        .from("admin_student_messages")
         .update({ read_at: new Date().toISOString() })
-        .eq('id', messageId)
-        .eq('recipient_id', user.id); // ✅ Garante que só marca mensagens onde o aluno é o destinatário
+        .eq("id", messageId)
+        .eq("recipient_id", user.id); // ✅ Garante que só marca mensagens onde o aluno é o destinatário
     } catch (e) {
-      console.error('Failed to mark message as read:', e);
+      console.error("Failed to mark message as read:", e);
     }
   };
 
   // Function for admins to mark messages as read when viewing conversation
   const markAdminMessagesAsRead = async (conversationId: string) => {
     if (!user || !userProfile) return;
-    
-    // Only allow admins, affiliate_admins and schools to mark messages as read
-    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin' && userProfile.role !== 'school') {
+
+    // Only allow admins, post_sales, affiliate_admins and schools to mark messages as read
+    if (
+      userProfile.role !== "admin" && userProfile.role !== "affiliate_admin" &&
+      userProfile.role !== "post_sales" && userProfile.role !== "school"
+    ) {
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('admin_student_messages')
+        .from("admin_student_messages")
         .update({ read_at: new Date().toISOString() })
-        .eq('conversation_id', conversationId)
-        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o admin é o destinatário
-        .is('read_at', null)
-        .eq('is_system_message', false); // ✅ Excluir mensagens do sistema
+        .eq("conversation_id", conversationId)
+        .eq("recipient_id", user.id) // ✅ Garante que só marca mensagens onde o admin é o destinatário
+        .is("read_at", null)
+        .eq("is_system_message", false); // ✅ Excluir mensagens do sistema
 
       if (error) {
-        console.error('Failed to mark admin messages as read:', error);
+        console.error("Failed to mark admin messages as read:", error);
         return;
       }
 
       // Update local state to reflect read status immediately
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
           msg.recipientId === user.id && !msg.readAt
             ? { ...msg, readAt: new Date().toISOString() }
             : msg
@@ -591,7 +651,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       // Mark conversation notifications as read
       markConversationAsRead(conversationId);
     } catch (e) {
-      console.error('Failed to mark admin messages as read:', e);
+      console.error("Failed to mark admin messages as read:", e);
     }
   };
 
@@ -600,27 +660,33 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
     // Admins não devem marcar mensagens como lidas quando visualizam conversas
-    if (userProfile?.role !== 'student') {
-      console.log('⚠️ [markAllAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+    if (userProfile?.role !== "student") {
+      if (userProfile?.role === "admin" || userProfile?.role === "post_sales") {
+        return;
+      }
+      console.log(
+        "⚠️ [markAllAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:",
+        userProfile?.role,
+      );
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('admin_student_messages')
+        .from("admin_student_messages")
         .update({ read_at: new Date().toISOString() })
-        .eq('conversation_id', currentConversationId)
-        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o aluno é o destinatário
-        .is('read_at', null);
+        .eq("conversation_id", currentConversationId)
+        .eq("recipient_id", user.id) // ✅ Garante que só marca mensagens onde o aluno é o destinatário
+        .is("read_at", null);
 
       if (error) {
-        console.error('Failed to mark all messages as read:', error);
+        console.error("Failed to mark all messages as read:", error);
         return;
       }
 
       // Update local state to reflect read status immediately
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
           msg.recipientId === user.id && !msg.readAt
             ? { ...msg, readAt: new Date().toISOString() }
             : msg
@@ -640,7 +706,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       // Reset global unread count immediately (this will make the blue dots disappear immediately)
       resetUnreadCount();
     } catch (e) {
-      console.error('Failed to mark all messages as read:', e);
+      console.error("Failed to mark all messages as read:", e);
     }
   };
 
@@ -650,13 +716,13 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     try {
       // Only allow editing own messages
       const { data: updatedMessage, error } = await supabase
-        .from('admin_student_messages')
-        .update({ 
+        .from("admin_student_messages")
+        .update({
           message: newText,
-          edited_at: new Date().toISOString()
+          edited_at: new Date().toISOString(),
         })
-        .eq('id', messageId)
-        .eq('sender_id', user.id)
+        .eq("id", messageId)
+        .eq("sender_id", user.id)
         .select()
         .single();
 
@@ -665,15 +731,14 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       // Update local state
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
-          msg.id === messageId 
+          msg.id === messageId
             ? { ...msg, message: newText, editedAt: updatedMessage.edited_at }
             : msg
         )
       );
-
     } catch (e: any) {
-      console.error('Failed to edit message:', e);
-      setError('Failed to edit message. Please try again.');
+      console.error("Failed to edit message:", e);
+      setError("Failed to edit message. Please try again.");
     }
   };
 
@@ -683,37 +748,36 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     try {
       // Soft delete - only allow deleting own messages
       const { error } = await supabase
-        .from('admin_student_messages')
-        .update({ 
+        .from("admin_student_messages")
+        .update({
           is_deleted: true,
-          message: '[Deleted]'
+          message: "[Deleted]",
         })
-        .eq('id', messageId)
-        .eq('sender_id', user.id);
+        .eq("id", messageId)
+        .eq("sender_id", user.id);
 
       if (error) throw error;
 
       // Update local state
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
-          msg.id === messageId 
-            ? { ...msg, message: '[Deleted]', isDeleted: true }
+          msg.id === messageId
+            ? { ...msg, message: "[Deleted]", isDeleted: true }
             : msg
         )
       );
-
     } catch (e: any) {
-      console.error('Failed to delete message:', e);
-      setError('Failed to delete message. Please try again.');
+      console.error("Failed to delete message:", e);
+      setError("Failed to delete message. Please try again.");
     }
   };
 
-  return { 
-    messages, 
-    loading, 
-    isSending, 
-    error, 
-    sendMessage, 
+  return {
+    messages,
+    loading,
+    isSending,
+    error,
+    sendMessage,
     editMessage,
     deleteMessage,
     refetchMessages: () => fetchMessages(currentConversationId || undefined),
@@ -742,61 +806,69 @@ export const useAdminStudentConversations = () => {
     setError(null);
     try {
       let query = supabase
-        .from('admin_student_conversations')
+        .from("admin_student_conversations")
         .select(`
           *,
           admin_profile:admin_id(full_name, avatar_url, role),
           student_profile:student_id(full_name, avatar_url, role)
         `)
-        .order('last_message_at', { ascending: false });
+        .order("last_message_at", { ascending: false });
 
       // Filter based on user role
-      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'school') {
+      if (
+        userProfile.role === "affiliate_admin" || userProfile.role === "school"
+      ) {
         // Affiliate admins and Schools only see their own conversations
-        query = query.eq('admin_id', user.id);
-      } else if (userProfile.role === 'student') {
+        query = query.eq("admin_id", user.id);
+      } else if (userProfile.role === "student") {
         // Students only see their own conversations
-        query = query.eq('student_id', user.id);
+        query = query.eq("student_id", user.id);
       }
-      // Regular admins (role === 'admin') see all conversations - no filter
+      // Regular admins (role === 'admin') and post_sales see all conversations - no filter
 
       const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
       // Get unread counts and last messages for each conversation in a more efficient way
-      const conversationIds = (data || []).map(conv => conv.id);
-      
+      const conversationIds = (data || []).map((conv) => conv.id);
+
       let allMessages: any[] = [];
-      
+
       // Only fetch messages if there are conversations
       if (conversationIds.length > 0) {
         const { data: messagesData } = await supabase
-          .from('admin_student_messages')
-          .select('conversation_id, message, created_at, recipient_id, id, read_at, sender_id')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: false });
-        
+          .from("admin_student_messages")
+          .select(
+            "conversation_id, message, created_at, recipient_id, id, read_at, sender_id",
+          )
+          .in("conversation_id", conversationIds)
+          .order("created_at", { ascending: false });
+
         allMessages = messagesData || [];
       }
 
       // Process the data to get last message and unread count for each conversation
       const enrichedConversations = (data || []).map((conv: any) => {
         // Get messages for this conversation
-        const conversationMessages = allMessages.filter(msg => msg.conversation_id === conv.id);
-        
+        const conversationMessages = allMessages.filter((msg) =>
+          msg.conversation_id === conv.id
+        );
+
         // Get last message
-        const lastMessage = conversationMessages.length > 0 ? conversationMessages[0] : null;
-        
+        const lastMessage = conversationMessages.length > 0
+          ? conversationMessages[0]
+          : null;
+
         // Count unread messages where current user is recipient
-        const unreadCount = conversationMessages.filter(msg => 
+        const unreadCount = conversationMessages.filter((msg) =>
           msg.recipient_id === user.id && !msg.read_at
         ).length;
 
         return {
           ...conv,
           unread_count: unreadCount || 0,
-          last_message: lastMessage?.message || '',
+          last_message: lastMessage?.message || "",
           last_message_sender_id: lastMessage?.sender_id,
           last_message_read_at: lastMessage?.read_at,
         };
@@ -805,8 +877,8 @@ export const useAdminStudentConversations = () => {
       setConversations(enrichedConversations);
       setIsInitialLoad(false);
     } catch (e: any) {
-      console.error('Failed to fetch conversations:', e);
-      setError('Failed to fetch conversations. Please try again.');
+      console.error("Failed to fetch conversations:", e);
+      setError("Failed to fetch conversations. Please try again.");
     } finally {
       if (showLoading) {
         setLoading(false);
@@ -823,31 +895,49 @@ export const useAdminStudentConversations = () => {
       // Set up real-time subscription for conversation updates
       const channel = channelManager.subscribe(channelName)
         .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'admin_student_conversations' },
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "admin_student_conversations",
+          },
           () => {
-            console.log('Conversation updated, refetching...');
+            console.log("Conversation updated, refetching...");
             fetchConversations(false); // Don't show loading for real-time updates
-          }
+          },
         )
         .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'admin_student_messages' },
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "admin_student_messages",
+          },
           (payload: any) => {
-            console.log('New message inserted, refetching conversations...', payload);
+            console.log(
+              "New message inserted, refetching conversations...",
+              payload,
+            );
             fetchConversations(false); // Don't show loading for real-time updates
-          }
+          },
         )
         .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'admin_student_messages' },
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "admin_student_messages",
+          },
           (payload: any) => {
-            console.log('Message updated (likely marked as read), refetching conversations...', payload);
+            console.log(
+              "Message updated (likely marked as read), refetching conversations...",
+              payload,
+            );
             // Add a small delay to ensure the database has been updated
             setTimeout(() => {
               fetchConversations(false); // Don't show loading for real-time updates
             }, 100);
-          }
+          },
         );
 
       conversationsChannelRef.current = channel;
@@ -860,22 +950,25 @@ export const useAdminStudentConversations = () => {
   }, [user, userProfile, fetchConversations]);
 
   // Function to update unread count for a specific conversation
-  const updateConversationUnreadCount = useCallback((conversationId: string, newUnreadCount: number) => {
-    setConversations(prevConversations => 
-      prevConversations.map(conv => 
-        conv.id === conversationId 
-          ? { ...conv, unread_count: newUnreadCount }
-          : conv
-      )
-    );
-  }, []);
+  const updateConversationUnreadCount = useCallback(
+    (conversationId: string, newUnreadCount: number) => {
+      setConversations((prevConversations) =>
+        prevConversations.map((conv) =>
+          conv.id === conversationId
+            ? { ...conv, unread_count: newUnreadCount }
+            : conv
+        )
+      );
+    },
+    [],
+  );
 
-  return { 
-    conversations, 
-    loading, 
-    error, 
+  return {
+    conversations,
+    loading,
+    error,
     isInitialLoad,
     refetchConversations: fetchConversations,
-    updateConversationUnreadCount
+    updateConversationUnreadCount,
   };
 };

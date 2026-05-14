@@ -120,7 +120,7 @@ export const useDocumentRequests = (
         
         if (applicationIds.length > 0) {
           // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
-          const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
+          const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url,document_request_uploads(*)';
           
           const [specificResult, globalResult] = await Promise.all([
             supabase
@@ -131,6 +131,7 @@ export const useDocumentRequests = (
             
             (() => {
               const universityIds = (student.all_applications || [])
+                .filter((app: any) => app.status !== 'rejected' && app.status !== 'cancelled')
                 .map((app: any) => app.scholarships?.university_id || app.university_id)
                 .filter(Boolean);
               const uniqueUniversityIds = [...new Set(universityIds)];
@@ -160,9 +161,32 @@ export const useDocumentRequests = (
           ];
 
           // Remover duplicatas
-          const uniqueRequests = Array.from(
-            new Map(allRequests.map(req => [req.id, req])).values()
-          );
+          // ✅ DESDUPLICAÇÃO AVANÇADA: Unificar por TÍTULO (removendo espaços extras e normalizando)
+          const requestByTitle = new Map();
+
+          allRequests.forEach((req: any) => {
+            const normalizedTitle = (req.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const existing = requestByTitle.get(normalizedTitle);
+
+            if (!existing) {
+              requestByTitle.set(normalizedTitle, req);
+            } else {
+              const hasUpload = req.document_request_uploads && req.document_request_uploads.length > 0;
+              const existingHasUpload = existing.document_request_uploads && existing.document_request_uploads.length > 0;
+
+              if (hasUpload && !existingHasUpload) {
+                requestByTitle.set(normalizedTitle, req);
+              } else if (hasUpload === existingHasUpload) {
+                const currentAt = new Date(req.created_at || 0).getTime();
+                const existingAt = new Date(existing.created_at || 0).getTime();
+                if (currentAt > existingAt) {
+                  requestByTitle.set(normalizedTitle, req);
+                }
+              }
+            }
+          });
+
+          const uniqueRequests = Array.from(requestByTitle.values());
 
           setDocumentRequests(uniqueRequests);
         }
