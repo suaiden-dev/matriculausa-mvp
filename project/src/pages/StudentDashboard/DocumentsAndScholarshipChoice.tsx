@@ -562,17 +562,18 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       ];
 
       // 1. Buscar todos os admins
-      let admins: Array<{ email: string; full_name: string; phone: string }> = [];
+      let admins: Array<{ user_id?: string; email: string; full_name: string; phone: string }> = [];
       try {
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
-          .select('email, full_name, phone')
+          .select('user_id, email, full_name, phone')
           .in('role', ['admin', 'post_sales']);
 
         if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
           admins = adminProfiles
             .filter(admin => admin.email)
             .map(admin => ({
+              user_id: admin.user_id,
               email: admin.email || '',
               full_name: admin.full_name || 'Admin MatriculaUSA',
               phone: admin.phone || ''
@@ -607,7 +608,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         .single();
 
       const scholarshipIds: string[] = [];
-      
+      const scholarshipToAppId: Record<string, string> = {};
+
       // Buscar bolsas do carrinho
       const { data: cartRows } = await supabase
         .from('user_cart')
@@ -626,8 +628,28 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         scholarshipIds.push(profile.selected_scholarship_id);
       }
 
+      // Fallback: aplicações existentes
+      if (profile?.id) {
+        const { data: existingApps } = await supabase
+          .from('scholarship_applications')
+          .select('id, scholarship_id')
+          .eq('student_id', profile.id)
+          .neq('status', 'rejected');
+        
+        if (existingApps) {
+          existingApps.forEach(app => {
+            if (app.scholarship_id) {
+              scholarshipToAppId[app.scholarship_id] = app.id;
+              if (!scholarshipIds.includes(app.scholarship_id)) {
+                scholarshipIds.push(app.scholarship_id);
+              }
+            }
+          });
+        }
+      }
+
       // Buscar universidades relacionadas às bolsas
-      const universities: Array<{ id: string; name: string; email: string }> = [];
+      const universities: Array<{ id: string; name: string; email: string; applicationId?: string }> = [];
       if (scholarshipIds.length > 0) {
         // Buscar bolsas com university_id
         const { data: scholarships } = await supabase
@@ -636,6 +658,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           .in('id', scholarshipIds);
         
         if (scholarships) {
+          // Mapear universidade -> application_id
+          const universityToAppId: Record<string, string> = {};
+          scholarships.forEach(s => {
+            if (s.university_id && scholarshipToAppId[s.id]) {
+              universityToAppId[s.university_id] = scholarshipToAppId[s.id];
+            }
+          });
+
           // Extrair IDs únicos de universidades
           const uniqueUniversityIds = Array.from(
             new Set(
@@ -660,7 +690,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   universities.push({
                     id: university.id,
                     name: university.name,
-                    email: email
+                    email: email,
+                    applicationId: universityToAppId[university.id]
                   });
                 }
               }
@@ -676,7 +707,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       if (errors.funds_proof) errorMessages.push(`Comprovação de fundos: ${errors.funds_proof}`);
       const errorSummary = errorMessages.length > 0 ? errorMessages.join('; ') : 'Documentos rejeitados pela análise automática';
 
-      // 4. Enviar notificações para admins
+      // 4. Enviar notificações para admins (Webhook + In-app)
+      const studentName = userProfile.full_name || user.email || 'Student';
+      const adminInAppNotifications: any[] = [];
+
       const adminNotificationPromises = admins.map(async (admin) => {
         const adminPayload = {
           tipo_notf: 'Documentos enviados para revisão manual - Admin',
@@ -687,8 +721,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           nome_aluno: userProfile.full_name || '',
           phone_aluno: userProfile.phone || '',
           o_que_enviar: `O aluno ${userProfile.full_name || user.email} enviou documentos que foram rejeitados pela análise automática e requerem revisão manual. Erros detectados: ${errorSummary}. Acesse o painel para revisar os documentos.`,
-          notification_type: 'admin'
+          notification_type: 'admin',
+          tipos_documentos: ['manual_review'],
         };
+
+        // Preparar notificação in-app
+        if (admin.user_id) {
+          adminInAppNotifications.push({
+            user_id: admin.user_id,
+            type: 'document_upload',
+            title: 'Manual Review Required',
+            message: `${studentName} uploaded documents that require manual review.`,
+            link: `/admin/dashboard/students/${profile?.id}`,
+            created_at: new Date().toISOString(),
+            is_read: false,
+            metadata: { errors }
+          });
+        }
 
         try {
           const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -714,7 +763,25 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         }
       });
 
-      // 5. Enviar notificações para universidades
+      // Enviar notificações in-app para admins via Edge Function
+      if (adminInAppNotifications.length > 0) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-admin-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token || ''}`
+            },
+            body: JSON.stringify({ notifications: adminInAppNotifications }),
+          });
+          console.log('✅ Notificações in-app enviadas para admins');
+        } catch (err) {
+          console.error('Erro ao enviar notificações in-app para admins:', err);
+        }
+      }
+
+      // 5. Enviar notificações para universidades (Webhook + In-app)
       const universityNotificationPromises = universities.map(async (university) => {
         const universityPayload = {
           tipo_notf: 'Documentos enviados para revisão manual - Universidade',
@@ -723,8 +790,42 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           email_universidade: university.email,
           nome_universidade: university.name,
           o_que_enviar: `O aluno ${userProfile.full_name || user.email} enviou documentos que foram rejeitados pela análise automática e requerem revisão manual. Erros detectados: ${errorSummary}. Acesse o painel da universidade para revisar os documentos.`,
-          notification_target: 'university'
+          notification_target: 'university',
+          tipos_documentos: ['manual_review'],
         };
+
+        // Criar notificação in-app para a universidade
+        try {
+          const notificationLink = university.applicationId 
+            ? `/school/dashboard/student/${university.applicationId}` 
+            : '/school/dashboard/selection-process';
+            
+          console.log(`[NOTIF_DEBUG] Criando notificação para universidade ${university.name}. AppID: ${university.applicationId || 'N/A'}. Link: ${notificationLink}`);
+
+          const { error: notifError } = await supabase
+            .from('university_notifications')
+            .insert({
+              university_id: university.id,
+              title: 'Manual Review Required',
+              message: `Student ${studentName} uploaded documents that require manual review.`,
+              type: 'document_upload',
+              link: notificationLink,
+              metadata: { 
+                student_id: profile?.id,
+                student_name: studentName,
+                student_email: userProfile.email || user.email || '',
+                errors: errors
+              }
+            });
+          
+          if (notifError) {
+            console.error(`❌ Erro ao criar notificação in-app para universidade ${university.name}:`, notifError);
+          } else {
+            console.log(`✅ Notificação in-app criada para universidade ${university.name} com link: ${notificationLink}`);
+          }
+        } catch (err) {
+          console.error(`❌ Erro ao criar notificação in-app para universidade ${university.name}:`, err);
+        }
 
         try {
           const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {

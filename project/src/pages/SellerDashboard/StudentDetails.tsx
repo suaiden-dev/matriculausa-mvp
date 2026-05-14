@@ -41,7 +41,7 @@ interface StudentInfo {
   fees_count: number; // Será convertido de bigint para number
   scholarship_title?: string;
   university_name?: string;
-  selected_scholarship_id?: string;
+  selected_scholarship_id?: string | null;
   documents_status?: string;
   is_application_fee_paid?: boolean;
   is_scholarship_fee_paid?: boolean;
@@ -61,6 +61,10 @@ interface StudentInfo {
   is_placement_fee_paid?: boolean;
   placement_fee_flow?: boolean;
   placement_fee_amount?: number;
+  placement_fee_pending_balance?: number;
+  placement_fee_installment_enabled?: boolean;
+  placement_fee_installment_number?: number;
+  placement_fee_due_date?: string | null;
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
   user_id?: string;
@@ -81,6 +85,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   // ✅ Usar o hook centralizado para buscar dados do estudante
   const {
+    studentDetails: hookStudentInfo,
     studentDocuments: hookStudentDocuments,
     documentRequests: hookDocumentRequests,
     scholarshipApplication: hookScholarshipApplication,
@@ -137,19 +142,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     loadRealAmounts();
   }, [studentId, studentInfo?.student_process_type, userSystemType]);
 
-
-  // Extra profile fields not available via the RPC
-  const [profilePaymentFields, setProfilePaymentFields] = useState<{
-    placement_fee_flow: boolean;
-    placement_fee_pending_balance: number;
-    placement_fee_installment_enabled: boolean;
-    is_placement_fee_paid: boolean;
-  }>({
-    placement_fee_flow: false,
-    placement_fee_pending_balance: 0,
-    placement_fee_installment_enabled: false,
-    is_placement_fee_paid: false,
-  });
 
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
@@ -218,26 +210,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       setDependents(0);
     }
   }, []);
-
-  // Fetch profile payment fields not returned by the get_student_detailed_info RPC
-  useEffect(() => {
-    if (!studentId) return;
-    supabase
-      .from('user_profiles')
-      .select('placement_fee_flow, placement_fee_pending_balance, placement_fee_installment_enabled, is_placement_fee_paid')
-      .eq('user_id', studentId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setProfilePaymentFields({
-            placement_fee_flow: !!(data as any).placement_fee_flow,
-            placement_fee_pending_balance: Number((data as any).placement_fee_pending_balance ?? 0),
-            placement_fee_installment_enabled: !!(data as any).placement_fee_installment_enabled,
-            is_placement_fee_paid: !!(data as any).is_placement_fee_paid,
-          });
-        }
-      });
-  }, [studentId]);
 
   // Debug: verificar estado inicial
   console.log('🔍 [STUDENT_DETAILS] Estado inicial - documentsLoaded:', documentsLoaded);
@@ -394,8 +366,18 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         console.warn('⚠️ [STUDENT_DETAILS] Could not load fee history:', feesError);
       }
 
-      // ✅ Atualizar studentInfo com dados da aplicação do hook
-      if (hookScholarshipApplication) {
+      // ✅ Atualizar studentInfo com dados consolidados do hook
+      if (hookStudentInfo) {
+        setStudentInfo(prev => prev ? {
+          ...prev,
+          ...hookStudentInfo,
+          // Manter campos específicos que a RPC do Seller traz e o hook talvez não
+          total_fees_paid: prev.total_fees_paid,
+          fees_count: prev.fees_count,
+          seller_name: prev.seller_name
+        } : null);
+      } else if (hookScholarshipApplication) {
+        // Fallback se o hook ainda não tiver o studentInfo consolidado
         setStudentInfo(prev => prev ? {
           ...prev,
           scholarship: {
@@ -1766,12 +1748,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       has_paid_i20_control_fee: studentInfo.has_paid_i20_control_fee || false,
                       is_application_fee_paid: studentInfo.is_application_fee_paid || false,
                       is_scholarship_fee_paid: studentInfo.is_scholarship_fee_paid || false,
+                      scholarship_fee_amount: (studentInfo as any).scholarship_fee_amount,
+                      application_fee_amount: (studentInfo as any).application_fee_amount,
                       student_process_type: studentInfo.student_process_type || null,
-                      is_placement_fee_paid: profilePaymentFields.is_placement_fee_paid,
-                      placement_fee_flow: profilePaymentFields.placement_fee_flow,
-                      placement_fee_amount: 0, // calculated from all_applications inside PaymentStatusCard
-                      placement_fee_pending_balance: profilePaymentFields.placement_fee_pending_balance,
-                      placement_fee_installment_enabled: profilePaymentFields.placement_fee_installment_enabled,
+                      is_placement_fee_paid: studentInfo.is_placement_fee_paid,
+                      placement_fee_flow: studentInfo.placement_fee_flow,
+                      placement_fee_amount: studentInfo.placement_fee_amount || 0,
+                      placement_fee_pending_balance: studentInfo.placement_fee_pending_balance,
+                      placement_fee_installment_enabled: studentInfo.placement_fee_installment_enabled,
                       has_paid_ds160_package: studentInfo.has_paid_ds160_package || false,
                       has_paid_i539_cos_package: studentInfo.has_paid_i539_cos_package || false,
                       has_paid_reinstatement_package: studentInfo.has_paid_reinstatement_package || false,
@@ -1781,7 +1765,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       scholarship_id: (scholarshipApplication as any)?.scholarship_id || null,
                       application_status: scholarshipApplication?.status || null,
                       applied_at: scholarshipApplication?.applied_at || null,
-                      total_applications: 0,
+                      total_applications: hookAllApplications?.length || 0,
                       student_created_at: studentInfo.registration_date,
                       is_locked: false,
                       all_applications: hookAllApplications || [],

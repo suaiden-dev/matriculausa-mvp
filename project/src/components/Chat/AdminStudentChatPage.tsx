@@ -48,9 +48,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     }
   }, [defaultConversationId, selectedConversationId]);
 
-  // ✅ CORREÇÃO: Para alunos, atualizar selectedConversationId quando o hook criar uma conversação automaticamente
+  // ✅ CORREÇÃO: Para alunos, escolas e afiliados, atualizar selectedConversationId quando o hook criar uma conversação automaticamente
   useEffect(() => {
-    if (userProfile?.role === 'student' && chat.conversationId && !selectedConversationId) {
+    const isRestrictedRole = userProfile?.role === 'student' || userProfile?.role === 'school' || userProfile?.role === 'affiliate_admin';
+    if (isRestrictedRole && chat.conversationId && !selectedConversationId) {
       setSelectedConversationId(chat.conversationId);
     }
   }, [userProfile?.role, chat.conversationId, selectedConversationId]);
@@ -70,7 +71,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Buscar informações do destinatário para o header (quando admin/affiliate_admin/post_sales)
   useEffect(() => {
     const fetchRecipientInfo = async () => {
-      if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'post_sales')) {
+      if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')) {
         setSelectedRecipientInfo(null);
         setSelectedRecipientProfileId(null);
         return;
@@ -118,7 +119,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
         const { data } = await supabase
           .from('user_profiles')
           .select('user_id, full_name, email, role')
-          .in('role', ['admin', 'affiliate_admin', 'post_sales']);
+          .in('role', ['admin', 'affiliate_admin', 'post_sales', 'school']);
         const map: Record<string, string> = {};
         (data || []).forEach((u: any) => {
           map[u.user_id] = u.full_name || u.email || u.user_id;
@@ -160,10 +161,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
 
   // Helper function to determine the correct label for the other party
   const getOtherPartyLabel = () => {
-    if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales') {
+    if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') {
       return selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.recipientLabel.student', { defaultValue: 'Student' });
     } else {
-      return t('studentDashboard.applicationChatPage.studentChat.recipientLabel.support', { defaultValue: 'Administration' });
+      return selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.recipientLabel.support', { defaultValue: 'Administration' });
     }
   };
 
@@ -181,7 +182,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       }
       
       // ✅ NOVO: Para admins, marcar mensagens como lidas quando visualizam
-      if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'post_sales') && chat.markAdminMessagesAsRead) {
+      if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') && chat.markAdminMessagesAsRead) {
         const timer = setTimeout(async () => {
           await chat.markAdminMessagesAsRead(conversationId);
         }, 1000);
@@ -209,7 +210,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
+                  <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime', { defaultValue: 'Tempo de resposta: 1-2 horas úteis' })}</p>
               </div>
             </div>
@@ -334,7 +335,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title')}</h3>
+                <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Support Team' })}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime')}</p>
               </div>
             </div>
@@ -412,7 +413,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-medium text-slate-900 truncate">{selectedRecipientName}</h3>
-                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') && (
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school') && (
                         <div className="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
                           {selectedRecipientInfo?.email && <span className="truncate">{selectedRecipientInfo.email}</span>}
                           {selectedRecipientInfo?.phone && <span className="truncate">{selectedRecipientInfo.phone}</span>}
@@ -420,9 +421,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                       )}
                     </div>
                   </div>
-                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') && selectedRecipientProfileId && (
+                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school') && selectedRecipientProfileId && (
                     <Link
-                      to={`/admin/dashboard/students/${selectedRecipientProfileId}`}
+                      to={userProfile.role === 'school' ? `/school/dashboard/student/${selectedRecipientProfileId}` : `/admin/dashboard/students/${selectedRecipientProfileId}`}
                       className="text-xs bg-[#05294E] text-white hover:bg-[#041f3f] px-3 py-1.5 rounded-md font-medium whitespace-nowrap"
                       title="Open student details"
                     >
@@ -454,13 +455,13 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
               <div className="text-center">
                 <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-900 mb-2">
-                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') 
+                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school') 
                     ? 'Select a student to chat with' 
                     : 'Start a conversation'
                   }
                 </h3>
                 <p className="text-slate-500">
-                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales')
+                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school')
                     ? 'Choose a conversation from the sidebar to begin messaging'
                     : 'Select a conversation or start a new one with support'
                   }
@@ -469,7 +470,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
                     <Users className="w-4 h-4 text-blue-600 mr-2" />
                     <span className="text-sm text-blue-700">
-                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales')
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school')
                         ? 'No student conversations yet'
                         : 'No conversations yet'
                       }

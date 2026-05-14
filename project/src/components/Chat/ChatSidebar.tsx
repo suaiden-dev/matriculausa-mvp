@@ -69,7 +69,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ className = '' }) => {
           <button
             onClick={toggleChat}
             className="bg-[#05294E] hover:bg-[#041f3f] text-white rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-105 relative"
-            title={userProfile.role === 'affiliate_admin' ? 'Student Chat' : 'Support Chat'}
+            title={(userProfile.role === 'affiliate_admin' || userProfile.role === 'school') ? 'Student Chat' : 'Support Chat'}
           >
             <MessageSquare className="w-6 h-6" />
             {unreadCount > 0 && (
@@ -96,7 +96,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ className = '' }) => {
             <div className="flex items-center text-white">
               <MessageSquare className="w-5 h-5 mr-2" />
               <span className="font-medium text-sm">
-                {userProfile.role === 'affiliate_admin' ? 'Student Chat' : 'Support Chat'}
+                {(userProfile.role === 'affiliate_admin' || userProfile.role === 'school') ? 'Student Chat' : 'Support Chat'}
               </span>
               {unreadCount > 0 && !isMinimized && (
                 <span className="ml-2 bg-white/20 text-white text-xs rounded-full px-2 py-1">

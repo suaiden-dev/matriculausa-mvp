@@ -28,7 +28,11 @@ import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
 
-const ScholarshipManagement: React.FC = () => {
+interface ScholarshipManagementProps {
+  isTabbed?: boolean;
+}
+
+const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed = false }) => {
   const {
     university,
     scholarships,
@@ -136,32 +140,34 @@ const ScholarshipManagement: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
               {/* Header: title + note + counter */}
-              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                    Manage Scholarships
-                  </h1>
-                  <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    Create and manage scholarship opportunities for international students
-                  </p>
-                  {scholarships.length > 0 && (
-                    <p className="mt-3 text-sm text-slate-500">
-                      {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
+              {!isTabbed && (
+                <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                      Manage Scholarships
+                    </h1>
+                    <p className="mt-2 text-sm sm:text-base text-slate-600">
+                      Create and manage scholarship opportunities for international students
                     </p>
-                  )}
-                </div>
+                    {scholarships.length > 0 && (
+                      <p className="mt-3 text-sm text-slate-500">
+                        {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
+                      </p>
+                    )}
+                  </div>
 
-                <div className="flex items-center space-x-3">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
-                    <Award className="w-5 h-5 mr-2" />
-                    {scholarships.length} Total
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
-                    <Zap className="w-5 h-5 mr-2" />
-                    {scholarships.filter(s => s.is_active).length} Active
+                  <div className="flex items-center space-x-3">
+                    <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                      <Award className="w-5 h-5 mr-2" />
+                      {scholarships.length} Total
+                    </div>
+                    <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                      <Zap className="w-5 h-5 mr-2" />
+                      {scholarships.filter(s => s.is_active).length} Active
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Separation and Filters row */}
               <div className="border-t border-slate-200 bg-white">

@@ -1,19 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Users, Clock, CheckCircle, FileText, Globe, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Users, Globe, Calendar, MessageSquare } from 'lucide-react';
 import type { Scholarship } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 const StudentManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { applications, university } = useUniversity();
   
   // States para filtros e pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
-  // Removido o activeTab pois agora só mostra "All Students" (exceto os em processo de seleção)
+  // Removido o activeTab e selectedStatus pois agora foca em "Enrolled Students"
 
   // Extrai bolsas únicas das aplicações
   const scholarships: Scholarship[] = Array.from(
@@ -36,57 +36,17 @@ const StudentManagement: React.FC = () => {
     return Array.from(countrySet).sort();
   }, [applications]);
 
-  // Filtra aplicações baseado no status de pagamento das taxas
+  // Filtra aplicações baseado no status 'enrolled'
   const filteredApplications = useMemo(() => {
-    // Debug: log de todas as aplicações
-    console.log('=== DEBUG: Todas as aplicações ===');
-    applications.forEach(app => {
-      const student = (app as any).user_profiles;
-      if (student?.full_name) {
-        console.log(`Student: ${student.full_name}`);
-        console.log(`  - Application Status: ${app.status}`);
-        console.log(`  - Documents Status: ${student.documents_status}`);
-        console.log(`  - Application Fee: ${(app as any).is_application_fee_paid}`);
-        console.log(`  - Scholarship Fee: ${(app as any).is_scholarship_fee_paid}`);
-        console.log(`  - Both Fees Paid: ${(app as any).is_application_fee_paid && (app as any).is_scholarship_fee_paid}`);
-      }
-    });
-    
-    // MOSTRAR APENAS ESTUDANTES QUE PAGARAM AMBAS AS TAXAS
-    let filtered = applications.filter(app => {
-      const hasPaidApplicationFee = (app as any).is_application_fee_paid;
-      const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
-      const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
-      
-      // Debug: log do filtro
-      const student = (app as any).user_profiles;
-      if (student?.full_name) {
-        console.log(`Filtering ${student.full_name}: ${bothFeesPaid ? 'INCLUDED (both fees paid)' : 'EXCLUDED (fees pending)'}`);
-      }
-      
-      return bothFeesPaid;
-    });
+    // MOSTRAR APENAS ESTUDANTES COM STATUS 'ENROLLED'
+    let filtered = applications.filter(app => app.status === 'enrolled');
     
     console.log(`Total applications: ${applications.length}`);
-    console.log(`Filtered applications (both fees paid): ${filtered.length}`);
+    console.log(`Filtered applications (enrolled): ${filtered.length}`);
     
     // Filtro por bolsa
     if (selectedScholarship) {
       filtered = filtered.filter(app => app.scholarship_id === selectedScholarship);
-    }
-
-    // Filtro por status de taxas
-    if (selectedStatus) {
-      filtered = filtered.filter(app => {
-        const hasPaidApplicationFee = (app as any).is_application_fee_paid;
-        const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
-        
-        if (selectedStatus === 'both_paid') return hasPaidApplicationFee && hasPaidScholarshipFee;
-        if (selectedStatus === 'application_paid') return hasPaidApplicationFee && !hasPaidScholarshipFee;
-        if (selectedStatus === 'scholarship_paid') return !hasPaidApplicationFee && hasPaidScholarshipFee;
-        if (selectedStatus === 'pending') return !hasPaidApplicationFee && !hasPaidScholarshipFee;
-        return true;
-      });
     }
 
     // Filtro por país
@@ -109,25 +69,7 @@ const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [applications, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
-
-  // Função para obter status e badge baseado no pagamento das taxas
-  const getStudentStatus = (app: any) => {
-    const student = app.user_profiles;
-    const hasPaidApplicationFee = student?.is_application_fee_paid;
-    const hasPaidScholarshipFee = app.is_scholarship_fee_paid;
-    const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
-    
-    if (bothFeesPaid) {
-      return { text: 'Fees Paid', class: 'bg-green-50 text-green-700 border border-green-200', icon: CheckCircle };
-    } else if (hasPaidApplicationFee && !hasPaidScholarshipFee) {
-      return { text: 'Application Fee Paid', class: 'bg-blue-50 text-blue-700 border border-blue-200', icon: Clock };
-    } else if (!hasPaidApplicationFee && hasPaidScholarshipFee) {
-      return { text: 'Scholarship Fee Paid', class: 'bg-orange-50 text-orange-700 border border-orange-200', icon: Clock };
-    } else {
-      return { text: 'Fees Pending', class: 'bg-yellow-50 text-yellow-700 border border-yellow-200', icon: FileText };
-    }
-  };
+  }, [applications, selectedScholarship, selectedCountry, searchTerm]);
 
   return (
     <ProfileCompletionGuard 
@@ -138,19 +80,20 @@ const StudentManagement: React.FC = () => {
       <div className="min-h-screen">
         {/* Header + Filters Section */}
         <div className="w-full">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div className="max-w-full mx-auto bg-slate-50">
-              {/* Header: title + note + counter */}
-              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          {/* Main Unified Container */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="max-w-full mx-auto">
+              {/* Header: title + note + counter - Light background for contrast */}
+              <div className="bg-slate-50 px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200">
                 <div className="flex-1">
                   <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                    Student Management
+                    Enrolled Students
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    Students who have completed both fee payments and are ready for enrollment.
+                    Students who have successfully completed the admission process and are now enrolled.
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
-                    These students have paid both the application fee and scholarship fee, and are now enrolled students.
+                    Manage your student roster and view their application details.
                   </p>
                 </div>
 
@@ -162,9 +105,8 @@ const StudentManagement: React.FC = () => {
                 </div>
               </div>
 
-              {/* Separation and Filters row */}
-              <div className="border-t border-slate-200 bg-white">
-                <div className="px-4 sm:px-6 lg:px-8 py-4">
+              {/* Filters row */}
+              <div className="bg-white px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Search Bar */}
                     <div className="lg:col-span-2">
@@ -194,21 +136,6 @@ const StudentManagement: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Status Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                      >
-                        <option value="">All Fee Status</option>
-                        <option value="both_paid">Both Fees Paid</option>
-                        <option value="application_paid">Application Fee Paid</option>
-                        <option value="scholarship_paid">Scholarship Fee Paid</option>
-                        <option value="pending">Fees Pending</option>
-                      </select>
-                    </div>
-
                     {/* Country Filter */}
                     <div>
                       <select
@@ -224,120 +151,109 @@ const StudentManagement: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Students Summary */}
-          {filteredApplications.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Student Management</h3>
-                    <p className="text-xs sm:text-sm text-slate-600">
-                      {filteredApplications.length} students have completed all requirements and are enrolled
-                    </p>
-                  </div>
+            {/* Main Content (Student Grid) - No border/bg needed as it's inside the unified container */}
+            <div className="overflow-x-auto">
+              {filteredApplications.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">No enrolled students found</h3>
+                  <p className="text-sm text-slate-500">Students will appear here once their application status is updated to 'Enrolled'.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 text-center sm:text-right">
-                  <div>
-                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{filteredApplications.length}</div>
-                    <div className="text-xs sm:text-sm text-slate-600">Students</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+              ) : (
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50 sticky top-0 z-10">
+                    <tr>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Student
+                      </th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Scholarship
+                      </th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Chat
+                      </th>
+                      <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Applied Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {filteredApplications.map((app) => {
+                      const student = (app as any).user_profiles;
 
-          {/* Main Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-            {/* Students Grid */}
-            <div className="p-6">
-              <div className="space-y-4">
-                {filteredApplications.length === 0 ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 sm:p-12 text-center">
-                    <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
-                    <p className="text-sm sm:text-base text-slate-600">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
-                  </div>
-                ) : (
-                  filteredApplications.map((app) => {
-                    const student = (app as any).user_profiles;
-                    const status = getStudentStatus(app);
-                    const StatusIcon = status.icon;
-
-                    return (
-                      <Link 
-                        to={`/school/dashboard/student/${app.id}`} 
-                        key={app.id} 
-                        className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
-                      >
-                        <div className="p-4 sm:p-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                              {student?.avatar_url ? (
-                                <img
-                                  src={student.avatar_url}
-                                  alt={student?.full_name || student?.name || 'Student Avatar'}
-                                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-white font-semibold text-base sm:text-lg">
-                                    {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
-                                  {student?.full_name || student?.name || 'Unknown Student'}
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600 mt-1">
-                                  {student?.country && (
-                                    <div className="flex items-center">
-                                      <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                                      <span className="truncate">{student.country}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {/* Scholarship Information */}
-                                {(app as any).scholarships && (
-                                  <div className="mt-2">
-                                    <span className="text-xs text-slate-600 break-words">
-                                      <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
+                      return (
+                        <tr 
+                          key={app.id}
+                          className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                          onClick={() => window.location.href = `/school/dashboard/student/${app.id}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10 relative">
+                                {student?.avatar_url ? (
+                                  <img
+                                    src={student.avatar_url}
+                                    alt={student?.full_name || 'Student'}
+                                    className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                                  />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#05294E] to-blue-600 flex items-center justify-center">
+                                    <span className="text-white font-medium text-sm">
+                                      {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
                                     </span>
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          
-                            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3">
-                              <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${status.class}`}>
-                                <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                                {status.text}
-                              </span>
-                              <div className="text-xs sm:text-sm text-slate-500 text-right">
-                                Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
+                              <div className="ml-4">
+                                <div className="text-sm font-semibold text-slate-900 group-hover:text-[#05294E] transition-colors">
+                                  {student?.full_name || student?.name || 'Unknown Student'}
+                                </div>
+                                <div className="text-xs text-slate-500 flex items-center mt-0.5">
+                                  {student?.country && (
+                                    <>
+                                      <Globe className="w-3 h-3 mr-1 text-slate-400" />
+                                      {student.country}
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-slate-900 font-medium max-w-md truncate">
+                              {(app as any).scholarships?.title || 'Unknown Scholarship'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/school/dashboard/messages?studentId=${student?.user_id || app.user_id}`);
+                              }}
+                              className="inline-flex items-center px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:text-[#05294E] hover:border-[#05294E] transition-all shadow-sm group/btn"
+                              title="Send message to student"
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2 text-slate-400 group-hover/btn:text-[#05294E] transition-colors" />
+                              Message
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-500">
+                            <div className="flex items-center justify-end">
+                              <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                              {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
       </div>
+    </div>
     </ProfileCompletionGuard>
   );
 };
