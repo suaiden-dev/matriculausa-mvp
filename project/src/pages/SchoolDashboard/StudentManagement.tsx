@@ -59,11 +59,14 @@ const StudentManagement: React.FC = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(app => {
         const student = (app as any).user_profiles;
+        const scholarship = (app as any).scholarships;
         return (
           student?.full_name?.toLowerCase().includes(term) ||
           student?.name?.toLowerCase().includes(term) ||
           student?.phone?.includes(term) ||
-          student?.country?.toLowerCase().includes(term)
+          student?.country?.toLowerCase().includes(term) ||
+          scholarship?.title?.toLowerCase().includes(term) ||
+          scholarship?.field_of_study?.toLowerCase().includes(term)
         );
       });
     }
@@ -167,6 +170,9 @@ const StudentManagement: React.FC = () => {
                         Student
                       </th>
                       <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Course
+                      </th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         Scholarship
                       </th>
                       <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -217,6 +223,11 @@ const StudentManagement: React.FC = () => {
                                   )}
                                 </div>
                               </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-slate-900 font-medium max-w-md truncate">
+                              {(app as any).scholarships?.field_of_study || 'N/A'}
                             </div>
                           </td>
                           <td className="px-6 py-4">

@@ -10,13 +10,10 @@ import {
   Edit,
   TrendingUp,
   Calendar,
-  Target,
   Zap,
   ArrowUpRight,
   Clock,
   AlertTriangle,
-  PlusCircle,
-  Home,
   Wallet
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
@@ -209,7 +206,8 @@ const Overview: React.FC = () => {
                         {app.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{app.scholarships?.title || '-'}</p>
+                    <p className="text-xs text-slate-500 truncate">{app.scholarships?.field_of_study || '-'}</p>
+                    <p className="text-xs text-slate-400 truncate italic">{app.scholarships?.title || '-'}</p>
                     <div className="flex justify-end">
                       <Link 
                         to={`/school/dashboard/student/${app.id}`} 
@@ -228,6 +226,7 @@ const Overview: React.FC = () => {
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="px-3 lg:px-4 py-2 text-left text-xs lg:text-sm font-medium text-slate-600">Student</th>
+                      <th className="px-3 lg:px-4 py-2 text-left text-xs lg:text-sm font-medium text-slate-600">Course</th>
                       <th className="px-3 lg:px-4 py-2 text-left text-xs lg:text-sm font-medium text-slate-600">Scholarship</th>
                       <th className="px-3 lg:px-4 py-2 text-left text-xs lg:text-sm font-medium text-slate-600">Status</th>
                       <th className="px-3 lg:px-4 py-2 text-left text-xs lg:text-sm font-medium text-slate-600">Details</th>
@@ -242,7 +241,12 @@ const Overview: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
-                          <div className="max-w-xs truncate">
+                          <div className="max-w-xs truncate font-medium">
+                            {app.scholarships?.field_of_study || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
+                          <div className="max-w-xs truncate text-slate-500">
                             {app.scholarships?.title || '-'}
                           </div>
                         </td>

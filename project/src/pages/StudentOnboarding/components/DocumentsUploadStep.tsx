@@ -317,13 +317,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
       if (scholarshipIds.length > 0) {
         for (const scholarshipId of scholarshipIds) {
-          // Verificar se já existe aplicação
+          // Verificar se já existe aplicação e obter dados da bolsa
           const { data: existingApp } = await supabase
             .from('scholarship_applications')
-            .select('id')
+            .select('id, scholarships(title, university_id)')
             .eq('student_id', userProfile?.id || '')
             .eq('scholarship_id', scholarshipId)
             .maybeSingle();
+
 
           let applicationId = existingApp?.id;
 
@@ -520,33 +521,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       
       if (updateError) throw updateError;
       
-      // Notificar universidade
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token && app.scholarships?.university_id) {
-          const notificationPayload = {
-            user_id: user.id,
-            application_id: applicationId,
-            document_type: type,
-            document_label: DOCUMENT_LABELS[type] || type,
-            university_id: app.scholarships.university_id,
-            scholarship_title: app.scholarships.title,
-            is_reupload: true
-          };
-          
-          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-reupload`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json', 
-              'Authorization': `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify(notificationPayload),
-          });
-        }
-      } catch (notifErr) {
-        console.error('Error notifying university:', notifErr);
-      }
-      
       // Atualizar lista local
       const { data: refreshedApps } = await supabase
         .from('scholarship_applications')
@@ -663,7 +637,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             .eq('id', userProfile.id);
           await refetchUserProfile();
         }
-        
+
         setShowConfirmModal(false);
         onNext();
       } catch (err) {
