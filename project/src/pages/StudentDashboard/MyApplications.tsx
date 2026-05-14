@@ -421,11 +421,16 @@ const MyApplications: React.FC = () => {
       const newDoc = { type, url: publicUrl, status: 'under_review', review_notes: undefined as any } as any;
       let newDocs: any[];
       if (idx >= 0) {
-        // preservar outros docs com estrutura o mais completa possível
-        newDocs = (currentDocs as any[]).map((d: any) => d.type === type ? { ...(d || {}), ...newDoc } : d);
+        // Preservar versão anterior no histórico antes de sobrescrever
+        newDocs = (currentDocs as any[]).map((d: any) => {
+          if (d.type !== type) return d;
+          const { history: prevHistory = [], ...oldDoc } = d;
+          const historyEntry = { ...oldDoc, saved_at: new Date().toISOString() };
+          return { ...newDoc, history: [...prevHistory, historyEntry] };
+        });
       } else {
         const base = Array.isArray(currentDocs) ? [...currentDocs] : [];
-        newDocs = [...base, newDoc];
+        newDocs = [...base, { ...newDoc, history: [] }];
       }
       await supabase.from('scholarship_applications').update({ documents: newDocs }).eq('id', applicationId);
 

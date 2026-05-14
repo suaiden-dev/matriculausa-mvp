@@ -507,7 +507,7 @@ const ScholarshipBrowser: React.FC = () => {
     const filtered = scholarships.filter(scholarship => {
       // Filtro de bolsas de teste (is_test)
       const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || userProfile?.email?.toLowerCase().endsWith('@uorak.com');
-      const isAdmin = user?.role === 'admin';
+      const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
       if (scholarship.is_test && !isUorakUser && !isAdmin) {
         return false;
       }
@@ -1283,7 +1283,7 @@ const ScholarshipBrowser: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredFeaturedScholarships.map((scholarship) => {
                 const layoutId = `featured-scholarship-${scholarship.id}`;
-                const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin';
+                const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin' || userProfile?.role === 'post_sales';
                 const scholarshipValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
                 const originalValue = Number(scholarship.original_annual_value || scholarship.amount || 0);
                 const savingsPercentage = originalValue > scholarshipValue && originalValue > 0
@@ -1559,7 +1559,7 @@ const ScholarshipBrowser: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {paginatedScholarships.map((scholarship) => {
           const layoutId = `scholarship-card-${scholarship.id}`;
-          const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin';
+          const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin' || userProfile?.role === 'post_sales';
           const scholarshipValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
           const originalValue = Number(scholarship.original_annual_value || scholarship.amount || 0);
           const savingsPercentage = originalValue > scholarshipValue && originalValue > 0

@@ -34,6 +34,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [zellePaymentSubmitted, setZellePaymentSubmitted] = useState(false);
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const hasProcessedApproval = useRef(false);
+  const hasProcessedSuccessRedirect = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Terms
@@ -98,7 +99,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   useEffect(() => {
     // 🎯 Se chegamos com payment=success na URL, forçamos o refetch e avançamos para o próximo passo.
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
+    if (params.get('payment') === 'success' && !hasProcessedSuccessRedirect.current) {
+      hasProcessedSuccessRedirect.current = true;
       console.log('🎯 [SelectionFeeStep] Redirecionamento de sucesso detectado. Verificando pagamento...');
       refetchPaymentStatus();
       refetchUserProfile().then((profile: UserProfile | null) => {

@@ -308,7 +308,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             };
             const processType = processTypeMap[currentAnswers[5]] ?? null;
             const visaTransferActive = currentAnswers[5] === 'transfer'
-                ? currentAnswers[5.1] === 'sim'
+                ? (currentAnswers[5.1] || '').toLowerCase() === 'sim'
                 : true;
 
             const { error: profileError } = await supabase
