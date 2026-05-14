@@ -1,5 +1,6 @@
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Users, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ReferralInfo } from './types';
 
 interface ReferralInfoCardProps {
@@ -17,6 +18,7 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
   referralInfo,
   loading,
 }) => {
+  const navigate = useNavigate();
   if (!referralCode) {
     return null;
   }
@@ -45,13 +47,12 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  referralInfo.type === 'seller' ? 'bg-green-500' :
-                  referralInfo.type === 'affiliate' ? 'bg-blue-500' :
-                  'bg-blue-500'
+                  referralInfo.type === 'seller' ? 'bg-green-500' : 'bg-blue-500'
                 }`}></div>
                 <span className="text-sm font-medium text-slate-700">
                   {referralInfo.type === 'seller' ? 'Seller' :
                    referralInfo.type === 'affiliate' ? 'Affiliate' :
+                   referralInfo.type === 'affiliate_program' ? 'Affiliate Program' :
                    (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
                 </span>
               </div>
@@ -64,6 +65,15 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
                     <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
                     <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
                   </div>
+                )}
+                {referralInfo.type === 'affiliate_program' && referralInfo.affiliateId && (
+                  <button
+                    onClick={() => navigate(`/admin/dashboard/referral-affiliates/${referralInfo.affiliateId}`)}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#05294E] hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Affiliate Profile
+                  </button>
                 )}
               </div>
             </div>

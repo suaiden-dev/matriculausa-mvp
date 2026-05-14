@@ -66,12 +66,13 @@ export interface StudentRecord {
 }
 
 export interface ReferralInfo {
-  type: "seller" | "student" | "affiliate";
+  type: "seller" | "student" | "affiliate" | "affiliate_program";
   name: string;
   email: string;
   affiliateName?: string;
   affiliateEmail?: string;
   isRewards?: boolean;
+  affiliateId?: string; // affiliate_codes.id — used to link to AffiliateDetails page
 }
 
 export interface AdminNote {
