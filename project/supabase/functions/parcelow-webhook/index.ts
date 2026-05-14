@@ -44,7 +44,7 @@ async function getAllAdmins(
     const { data: adminProfiles, error: profileError } = await supabase
       .from("user_profiles")
       .select("user_id, email, full_name, phone")
-      .eq("role", "admin");
+      .in("role", ["admin", "post_sales"]);
 
     if (profileError) {
       console.error(

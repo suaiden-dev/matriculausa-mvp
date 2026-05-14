@@ -50,7 +50,7 @@ const MatriculaRewardsModeration: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && (user.role === 'admin' || user.role === 'post_sales')) {
       loadModerationData();
     }
   }, [user]);
@@ -131,7 +131,7 @@ const MatriculaRewardsModeration: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'post_sales')) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">

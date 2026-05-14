@@ -42,6 +42,9 @@ export interface StudentRecord {
   is_archived: boolean;
   is_dropped: boolean;
   placement_fee_pending_balance: number;
+  placement_fee_amount?: number | null;
+  fee_override_placement_fee?: number | null;
+  fee_override_i20_fee?: number | null;
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
@@ -60,6 +63,14 @@ export interface StudentRecord {
   docs_total_approved?: number;
   docs_total_rejected?: number;
   docs_total_under_review?: number;
+  basic_docs_total_required?: number;
+  basic_docs_total_uploaded?: number;
+  basic_docs_total_approved?: number;
+  basic_docs_total_rejected?: number;
+  basic_docs_total_under_review?: number;
+  basic_docs_approved_names?: string[];
+  basic_docs_rejected_names?: string[];
+  basic_docs_under_review_names?: string[];
 }
 
 /**
@@ -126,6 +137,7 @@ export function useStudentsQuery() {
                 title,
                 field_of_study,
                 university_id,
+                placement_fee_amount,
                 universities (
                   name
                 )
@@ -137,6 +149,19 @@ export function useStudentsQuery() {
 
       if (error) {
         throw error;
+      }
+
+      // Batch fetch fee overrides for all students
+      const userIds = data?.map((s: any) => s.user_id).filter(Boolean) || [];
+      let feeOverridesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: overridesData } = await supabase
+          .from('user_fee_overrides')
+          .select('user_id, placement_fee, i20_control_fee, selection_process_fee')
+          .in('user_id', userIds);
+        if (overridesData) {
+          overridesData.forEach((o: any) => { feeOverridesMap[o.user_id] = o; });
+        }
       }
 
       const formattedData = data?.map((student: any) => {
@@ -197,23 +222,40 @@ export function useStudentsQuery() {
         let basicDocsApproved = 0;
         let basicDocsRejected = 0;
         let basicDocsUnderReview = 0;
+        const basicApprovedNames: string[] = [];
+        const basicRejectedNames: string[] = [];
+        const basicUnderReviewNames: string[] = [];
+
+        const typeLabels: Record<string, string> = {
+          'passport': 'Passport',
+          'diploma': 'Diploma',
+          'funds_proof': 'Proof of Funds'
+        };
 
         if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
           const requiredBasicTypes = ['passport', 'diploma', 'funds_proof'];
           const latestStatusMap = new Map<string, string>();
           
           lockedApplication.documents.forEach((doc: any) => {
-            if (doc.type && requiredBasicTypes.includes(doc.type.toLowerCase())) {
-              // Simplistic deduction: Since they are in the array, they are uploaded
-              latestStatusMap.set(doc.type.toLowerCase(), (doc.status || 'pending').toLowerCase());
+            const type = doc.type?.toLowerCase();
+            if (type && requiredBasicTypes.includes(type)) {
+              latestStatusMap.set(type, (doc.status || 'pending').toLowerCase());
             }
           });
           
           basicDocsUploaded = latestStatusMap.size;
-          latestStatusMap.forEach(status => {
-            if (status === 'approved') basicDocsApproved++;
-            else if (status === 'rejected') basicDocsRejected++;
-            else if (status === 'under_review') basicDocsUnderReview++;
+          latestStatusMap.forEach((status, type) => {
+            const label = typeLabels[type] || type;
+            if (status === 'approved') {
+              basicDocsApproved++;
+              basicApprovedNames.push(label);
+            } else if (status === 'rejected') {
+              basicDocsRejected++;
+              basicRejectedNames.push(label);
+            } else if (status === 'under_review') {
+              basicDocsUnderReview++;
+              basicUnderReviewNames.push(label);
+            }
           });
         }
 
@@ -263,6 +305,9 @@ export function useStudentsQuery() {
           is_archived: student.is_archived || false,
           is_dropped: student.is_dropped || false,
           placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
+          placement_fee_amount: lockedApplication?.scholarships?.placement_fee_amount ?? null,
+          fee_override_placement_fee: feeOverridesMap[student.user_id]?.placement_fee ?? null,
+          fee_override_i20_fee: feeOverridesMap[student.user_id]?.i20_control_fee ?? null,
           placement_fee_due_date: student.placement_fee_due_date || null,
           placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
           placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
@@ -276,6 +321,9 @@ export function useStudentsQuery() {
           basic_docs_total_approved: basicDocsApproved,
           basic_docs_total_rejected: basicDocsRejected,
           basic_docs_total_under_review: basicDocsUnderReview,
+          basic_docs_approved_names: basicApprovedNames,
+          basic_docs_rejected_names: basicRejectedNames,
+          basic_docs_under_review_names: basicUnderReviewNames,
         };
       }) || [];
 
@@ -546,6 +594,9 @@ export interface DocStats {
   docs_total_approved: number;
   docs_total_rejected: number;
   docs_total_under_review: number;
+  docs_approved_names?: string[];
+  docs_rejected_names?: string[];
+  docs_under_review_names?: string[];
 }
 
 /**
@@ -561,13 +612,13 @@ export function useStudentDocsStats(students: StudentRecord[]) {
       const [{ data: globalDocs, error: drError }, { data: appDocs, error: appDrError }, { data: uploads, error: upError }] = await Promise.all([
         supabase
           .from('document_requests')
-          .select('id, university_id, applicable_student_types, scholarship_application_id')
+          .select('id, title, university_id, applicable_student_types, scholarship_application_id')
           .eq('is_global', true)
           .eq('status', 'open'),
         appIds.length > 0
           ? supabase
               .from('document_requests')
-              .select('id, university_id, applicable_student_types, scholarship_application_id')
+              .select('id, title, university_id, applicable_student_types, scholarship_application_id')
               .in('scholarship_application_id', appIds)
               .eq('status', 'open')
           : Promise.resolve({ data: [] as any[], error: null }),
@@ -614,13 +665,24 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         });
 
         let uploaded = 0, approved = 0, rejected = 0, underReview = 0;
+        const approvedNames: string[] = [];
+        const rejectedNames: string[] = [];
+        const underReviewNames: string[] = [];
+
         for (const dr of requiredDocs) {
           const status = latestUpload.get(`${dr.id}:${student.user_id}`);
           if (status) {
             uploaded++;
-            if (status === 'approved') approved++;
-            else if (status === 'rejected') rejected++;
-            else if (status === 'under_review') underReview++;
+            if (status === 'approved') {
+              approved++;
+              approvedNames.push(dr.title);
+            } else if (status === 'rejected') {
+              rejected++;
+              rejectedNames.push(dr.title);
+            } else if (status === 'under_review') {
+              underReview++;
+              underReviewNames.push(dr.title);
+            }
           }
         }
 
@@ -630,6 +692,9 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           docs_total_approved: approved,
           docs_total_rejected: rejected,
           docs_total_under_review: underReview,
+          docs_approved_names: approvedNames,
+          docs_rejected_names: rejectedNames,
+          docs_under_review_names: underReviewNames,
         });
       }
 

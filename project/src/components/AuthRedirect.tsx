@@ -78,7 +78,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               const userRole = session.user.user_metadata?.role || 'student';
               if (userRole === 'student') {
                 navigate('/student/dashboard', { replace: true });
-              } else if (userRole === 'admin') {
+              } else if (userRole === 'admin' || userRole === 'post_sales') {
                 navigate('/admin/dashboard', { replace: true });
               } else if (userRole === 'seller') {
                 navigate('/seller/dashboard', { replace: true });
@@ -135,8 +135,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) return;
 
-    // Evitar re-execução se o path não mudou e o estado de pagamento/role é estável
-    if (lastCheckedPath.current === currentPath && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
+    // Evitar re-execução se o path e o role não mudaram e o estado de pagamento é estável
+    const checkKey = `${user?.id}-${user?.role}-${currentPath}`;
+    if (lastCheckedPath.current === checkKey && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
       return;
     }
     
@@ -144,7 +145,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // Mas só fazemos se não for uma rota pública
     
     const checkAndRedirect = async () => {
-      lastCheckedPath.current = currentPath;
+      lastCheckedPath.current = checkKey;
       const isWhitelistedInternalRegister = currentPath === '/student/register';
 
       // REDIRECIONAMENTO APÓS LOGIN
@@ -165,7 +166,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           }
         }
 
-        if (user.role === 'admin') { navigate('/admin/dashboard', { replace: true }); return; }
+        if (user.role === 'admin' || user.role === 'post_sales') { navigate('/admin/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
@@ -204,7 +205,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/student/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
+      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
         navigate('/admin/dashboard', { replace: true }); return;
       }
 
@@ -220,14 +221,43 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA ESCOLAS
-      if (user.role === 'school' && currentPath === '/') {
-        setCheckingUniversity(true);
-        const { error, university } = await checkUniversityStatus(user.id);
-        if (error) { setCheckingUniversity(false); return; }
-        if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
-        if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
-        setCheckingUniversity(false);
+      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA
+      if (currentPath === '/') {
+        if (user.role === 'school') {
+          setCheckingUniversity(true);
+          const { error, university } = await checkUniversityStatus(user.id);
+          if (error) { setCheckingUniversity(false); return; }
+          if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
+          if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
+          navigate('/school/dashboard', { replace: true });
+          setCheckingUniversity(false);
+          return;
+        }
+        
+        if (user.role === 'admin' || user.role === 'post_sales') {
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
+        
+        if (user.role === 'student') {
+          if (hasPendingOrRejectedSelectionPayment) {
+            navigate('/student/onboarding?step=selection_fee', { replace: true });
+          } else {
+            navigate('/student/dashboard', { replace: true });
+          }
+          return;
+        }
+        
+        if (user.role === 'seller') {
+          navigate('/seller/dashboard', { replace: true });
+          return;
+        }
+        
+        if (user.role === 'affiliate' || user.role === 'affiliate_admin') {
+          const path = user.role === 'affiliate_admin' ? '/affiliate-admin/dashboard' : '/affiliate/dashboard';
+          navigate(path, { replace: true });
+          return;
+        }
       }
     };
 

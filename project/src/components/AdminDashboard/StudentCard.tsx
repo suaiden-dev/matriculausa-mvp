@@ -1,7 +1,7 @@
 import React from 'react';
 import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
 import { StudentRecord } from './hooks/useStudentApplicationsQueries';
-import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
+import { ApplicationFlowStageKey, APPLICATION_FLOW_STAGES } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
 import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
@@ -19,18 +19,91 @@ interface StudentCardProps {
   currentStageKey?: ApplicationFlowStageKey;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
-  const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
+  const currentAdminProfileId = (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') ? userProfile.id : null;
+  
+  // Lógica de Débito Proativa
+  const totalDebt = React.useMemo(() => {
+    try {
+      let total = 0;
+      
+      // 1. Balanço pendente direto do banco (Placement Fee parcial ou outras)
+      const pendingBalance = Number(student.placement_fee_pending_balance || 0);
+      total += pendingBalance;
+
+      // Se não sabemos o estágio, retornamos apenas o balanço pendente
+      if (!propCurrentStageKey) return total;
+
+      const stages = APPLICATION_FLOW_STAGES.map(s => s.key);
+      const currentIndex = stages.indexOf(propCurrentStageKey);
+      
+      // 2. Verificação Proativa de Taxas (Baseado em estágios passados)
+      
+      // A. Selection Fee ($400)
+      const selectionPaid = student.has_paid_selection_process_fee || (student as any).source === 'migma';
+      const selectionIndex = stages.indexOf('selection_fee');
+      if (!selectionPaid && currentIndex > selectionIndex && selectionIndex !== -1) {
+        total += 400;
+      }
+
+      // B. Application Fee ($350) - Cobrada após aprovação da bolsa
+      const appFeeIndex = stages.indexOf('application_fee');
+      if (!student.is_application_fee_paid && currentIndex > appFeeIndex && appFeeIndex !== -1) {
+        total += 350;
+      }
+
+      // C. Placement Fee / Scholarship Fee
+      if (student.placement_fee_flow) {
+        const placementIndex = stages.indexOf('placement_fee');
+        if (!student.is_placement_fee_paid && currentIndex > placementIndex && placementIndex !== -1) {
+          if (pendingBalance === 0) {
+            // Prioridade: override > placement_fee_amount da scholarship > $550 padrão
+            const overrideAmt = student.fee_override_placement_fee != null ? Number(student.fee_override_placement_fee) : null;
+            const scholarshipAmt = student.placement_fee_amount ? Number(student.placement_fee_amount) : null;
+            total += overrideAmt ?? scholarshipAmt ?? 550;
+          }
+        }
+      } else {
+        // Fluxo Antigo (Scholarship Fee $1600)
+        const scholarshipIndex = stages.indexOf('scholarship_fee');
+        if (!student.is_scholarship_fee_paid && currentIndex > scholarshipIndex && scholarshipIndex !== -1) {
+          total += 1600;
+        }
+      }
+
+      // D. I-20 Control Fee
+      const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+      const isI20Applicable =
+          student.student_process_type === 'initial' ||
+          student.student_process_type === 'change_of_status' ||
+          (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
+
+      const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+      const i20Index = stages.indexOf('i20_fee');
+      if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
+        total += i20Amount;
+      }
+
+      return total;
+    } catch (err) {
+      console.error('[StudentCard] Erro no cálculo de débito:', err);
+      return 0;
+    }
+  }, [student, propCurrentStageKey]);
   
   // Pode editar se: não for admin (super) ou se o admin não for restrito
+  // Post Sales sempre pode editar (parity)
   const canEdit = !currentAdminProfileId ||
+    userProfile?.role === 'post_sales' ||
     userProfile?.is_restricted_admin === false;
+
+  const currentStageKey = propCurrentStageKey;
 
   const [showDropModal, setShowDropModal] = React.useState(false);
   const [showRestoreModal, setShowRestoreModal] = React.useState(false);
@@ -224,6 +297,18 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     return `${Math.floor(diffDays / 365)} anos atrás`;
   };
 
+  const renderDocNames = (names?: string[]) => {
+    if (!names || names.length === 0) return null;
+    // Mostrar no máximo 3 nomes para não quebrar o layout do card
+    const displayNames = names.slice(0, 3);
+    const hasMore = names.length > 3;
+    return (
+      <div className="mt-0.5 ml-4.5 text-[9px] text-gray-500 opacity-80 leading-tight italic truncate" title={names.join(', ')}>
+        {displayNames.join(', ')}{hasMore ? ` +${names.length - 3}` : ''}
+      </div>
+    );
+  };
+
   return (
     <div
       onClick={onClick}
@@ -323,9 +408,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       {currentStageKey === 'university_docs' && (
         <div className="flex flex-col gap-1 mb-2">
           {(student.docs_total_rejected ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
-              <XCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_rejected} doc(s) recusado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_rejected} documento(s) recusado(s)
+              </div>
+              {renderDocNames(student.docs_rejected_names)}
             </div>
           )}
           {(() => {
@@ -333,14 +421,17 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} doc(s) pendente(s)
+                {pending} documento(s) pendente(s)
               </div>
             ) : null;
           })()}
           {(student.docs_total_under_review ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
-              <Clock className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_under_review} doc(s) em revisão
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.docs_under_review_names)}
             </div>
           )}
         </div>
@@ -350,21 +441,30 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       {currentStageKey === 'docs_approval' && (
         <div className="flex flex-col gap-1 mb-2">
           {(student.docs_total_under_review ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
-              <Clock className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_under_review} em revisão
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.docs_under_review_names)}
             </div>
           )}
           {(student.docs_total_rejected ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
-              <XCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_rejected} recusado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_rejected} documento(s) recusado(s)
+              </div>
+              {renderDocNames(student.docs_rejected_names)}
             </div>
           )}
           {(student.docs_total_approved ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
-              <CheckCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_approved}/{student.docs_total_required} aprovado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+                <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_approved}/{student.docs_total_required} documento(s) aprovado(s)
+              </div>
+              {renderDocNames(student.docs_approved_names)}
             </div>
           )}
           {(() => {
@@ -372,7 +472,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} ainda pendente(s) de upload
+                {pending} documento(s) pendente(s) de upload
               </div>
             ) : null;
           })()}
@@ -383,21 +483,30 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       {currentStageKey === 'review' && (
         <div className="flex flex-col gap-1 mb-2">
           {(student.basic_docs_total_under_review ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
-              <Clock className="w-3 h-3 flex-shrink-0" />
-              {student.basic_docs_total_under_review} em revisão
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.basic_docs_under_review_names)}
             </div>
           )}
           {(student.basic_docs_total_rejected ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
-              <XCircle className="w-3 h-3 flex-shrink-0" />
-              {student.basic_docs_total_rejected} recusado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_rejected} documento(s) recusado(s)
+              </div>
+              {renderDocNames(student.basic_docs_rejected_names)}
             </div>
           )}
           {(student.basic_docs_total_approved ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
-              <CheckCircle className="w-3 h-3 flex-shrink-0" />
-              {student.basic_docs_total_approved}/{student.basic_docs_total_required} aprovado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+                <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_approved}/{student.basic_docs_total_required} documento(s) aprovado(s)
+              </div>
+              {renderDocNames(student.basic_docs_approved_names)}
             </div>
           )}
           {(() => {
@@ -491,10 +600,10 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
               {student.total_applications} app{student.total_applications > 1 ? 's' : ''}
             </span>
           )}
-          {(student.placement_fee_pending_balance ?? 0) > 0 && (
+          {totalDebt > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
               <AlertCircle className="w-3 h-3" />
-              Debt: ${(student.placement_fee_pending_balance ?? 0).toFixed(0)}
+              Debt: ${totalDebt.toFixed(0)}
             </span>
           )}
         </div>

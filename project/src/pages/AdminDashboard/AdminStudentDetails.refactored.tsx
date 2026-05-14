@@ -362,7 +362,7 @@ const AdminStudentDetails: React.FC = () => {
 
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
-  const isPlatformAdmin = user?.role === 'admin';
+  const isPlatformAdmin = user?.role === 'admin' || user?.role === 'post_sales';
 
   // Hooks para Transfer Form
   const {
@@ -2326,11 +2326,15 @@ const AdminStudentDetails: React.FC = () => {
       const updatedDocs = currentDocs.map((d: any) => {
         if (d?.type === docType) {
           found = true;
+          // Preservar versão anterior no histórico antes de sobrescrever
+          const { history: prevHistory = [], ...oldDoc } = d;
+          const historyEntry = { ...oldDoc, saved_at: new Date().toISOString() };
           return {
-            ...d,
+            type: docType,
             url: publicUrl,
             status: 'under_review',
-            uploaded_at: new Date().toISOString()
+            uploaded_at: new Date().toISOString(),
+            history: [...prevHistory, historyEntry]
           };
         }
         return d;
@@ -2338,7 +2342,7 @@ const AdminStudentDetails: React.FC = () => {
 
       const finalDocs = found
         ? updatedDocs
-        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString() }];
+        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString(), history: [] }];
 
       const { data, error } = await supabase
         .from('scholarship_applications')

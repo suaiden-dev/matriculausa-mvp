@@ -110,7 +110,7 @@ const AdminDashboard: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && (user.role === 'admin' || user.role === 'post_sales')) {
       loadAdminData();
     }
   }, [user]);
@@ -636,8 +636,8 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Check if user is admin
-  if (!user || user.role !== 'admin') {
+  // Check if user is admin or post_sales
+  if (!user || (user.role !== 'admin' && user.role !== 'post_sales')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

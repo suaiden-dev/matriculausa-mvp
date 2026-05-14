@@ -632,15 +632,10 @@ export const useDocumentRequestHandlers = (
     
     setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
     try {
-      // First delete all uploads
-      const { error: deleteUploadsError } = await supabase
-        .from('document_request_uploads')
-        .delete()
-        .eq('document_request_id', requestId);
+      // Uploads são preservados intencionalmente para manter histórico de auditoria.
+      // Apenas a request em si é deletada.
 
-      if (deleteUploadsError) throw deleteUploadsError;
-
-      // Then delete the request
+      // Delete the request
       const { error: deleteRequestError } = await supabase
         .from('document_requests')
         .delete()

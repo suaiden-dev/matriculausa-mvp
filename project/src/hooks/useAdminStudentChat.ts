@@ -151,8 +151,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       if (userProfile.role === 'affiliate_admin') {
         // Affiliate admins only see their own conversations
         query = query.eq('admin_id', user.id).eq('student_id', targetRecipientId);
-      } else if (userProfile.role === 'admin') {
-        // Regular admins look for any existing conversation with this student
+      } else if (userProfile.role === 'admin' || userProfile.role === 'post_sales') {
+        // Regular admins and post_sales look for any existing conversation with this student
         query = query.eq('student_id', targetRecipientId);
       } else {
         // Students look for conversations with them
@@ -171,7 +171,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       }
 
       // Create new conversation
-      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') 
+      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') 
         ? { admin_id: user.id, student_id: targetRecipientId }
         : { admin_id: targetRecipientId, student_id: user.id };
 
@@ -534,6 +534,11 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
     // Admins não devem marcar mensagens como lidas quando visualizam conversas
     if (userProfile?.role !== 'student') {
+      // Allow post_sales to be treated as admin here (admins use markAdminMessagesAsRead)
+      if (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') {
+        // We'll let them fall through to markAdminMessagesAsRead which is called from UI
+        return;
+      }
       console.log('⚠️ [markAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
       return;
     }
@@ -553,8 +558,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const markAdminMessagesAsRead = async (conversationId: string) => {
     if (!user || !userProfile) return;
     
-    // Only allow admins and affiliate_admins to mark messages as read
-    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin') {
+    // Only allow admins, post_sales and affiliate_admins to mark messages as read
+    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin' && userProfile.role !== 'post_sales') {
       return;
     }
 
@@ -600,6 +605,9 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
     // Admins não devem marcar mensagens como lidas quando visualizam conversas
     if (userProfile?.role !== 'student') {
+      if (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') {
+        return;
+      }
       console.log('⚠️ [markAllAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
       return;
     }
@@ -758,7 +766,7 @@ export const useAdminStudentConversations = () => {
         // Students only see their own conversations
         query = query.eq('student_id', user.id);
       }
-      // Regular admins (role === 'admin') see all conversations - no filter
+      // Regular admins (role === 'admin') and post_sales see all conversations - no filter
 
       const { data, error: fetchError } = await query;
 

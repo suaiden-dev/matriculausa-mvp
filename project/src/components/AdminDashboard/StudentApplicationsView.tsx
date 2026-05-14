@@ -207,7 +207,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   };
 
   useEffect(() => {
-    console.log('[StudentApplicationsView] 🚀 useEffect Mount - Carregando filtros');
     // Carregar filtros salvos primeiro
     loadFiltersFromStorage();
     // fetchStudents e fetchFilterData removidos - agora usando React Query hooks
@@ -282,7 +281,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
 
   // Salvar filtros no localStorage sempre que mudarem
   useEffect(() => {
-    console.log('[StudentApplicationsView] 💾 useEffect Filtros - Mudança detectada');
     saveFiltersToStorage();
   }, [
     searchTerm,

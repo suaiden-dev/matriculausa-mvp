@@ -36,7 +36,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false) {
   try {
     const { data: adminProfiles } = await supabase.from("user_profiles").select(
       "user_id, email, full_name, phone",
-    ).eq("role", "admin");
+    ).in("role", ["admin", "post_sales"]);
     let admins = adminProfiles ? adminProfiles.filter((a) => a.email) : [];
     if (isDevelopment) {
       admins = admins.filter((a) => !devBlockedEmails.includes(a.email));

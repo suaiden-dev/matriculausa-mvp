@@ -229,7 +229,7 @@ const Scholarships: React.FC = () => {
     
     // Filtro de bolsas de teste (is_test)
     const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
     if (scholarship.is_test && !isUorakUser && !isAdmin) {
       return false;
     }
@@ -268,7 +268,7 @@ const Scholarships: React.FC = () => {
     
     // Filtro de bolsas de teste (is_test)
     const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
     if (scholarship.is_test && !isUorakUser && !isAdmin) {
       return false;
     }

@@ -16,7 +16,8 @@ import {
   Grid3X3,
   UserPlus,
   DollarSign,
-  Store
+  Store,
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -44,7 +45,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
   onRefresh,
   onlyUsersMode
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'feeManagement'>(onlyUsersMode ? 'users' : 'applications');
+  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'feeManagement' | 'staffManagement'>(onlyUsersMode ? 'users' : 'applications');
+  const [promoteEmail, setPromoteEmail] = useState('');
+  const [promoteLoading, setPromoteLoading] = useState(false);
+  const [postSalesUsers, setPostSalesUsers] = useState<any[]>([]);
+  const [loadingPostSalesUsers, setLoadingPostSalesUsers] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -155,10 +160,62 @@ const UserManagement: React.FC<UserManagementProps> = ({
     return pages;
   };
 
+  const fetchPostSalesUsers = async () => {
+    setLoadingPostSalesUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, email, full_name, created_at')
+        .eq('role', 'post_sales')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPostSalesUsers(data || []);
+    } catch (err: any) {
+      toast.error('Erro ao carregar usuários Pós-Vendas');
+    } finally {
+      setLoadingPostSalesUsers(false);
+    }
+  };
+
+  const handlePromoteToPostSales = async () => {
+    if (!promoteEmail.trim()) return;
+    setPromoteLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: 'post_sales' })
+        .eq('email', promoteEmail.trim().toLowerCase());
+      if (error) throw error;
+      toast.success(`${promoteEmail} promovido para Pós-Vendas`);
+      setPromoteEmail('');
+      fetchPostSalesUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao promover usuário');
+    } finally {
+      setPromoteLoading(false);
+    }
+  };
+
+  const handleDemoteFromPostSales = async (email: string) => {
+    if (!confirm(`Remover acesso Pós-Vendas de ${email}?`)) return;
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: 'student' })
+        .eq('email', email);
+      if (error) throw error;
+      toast.success(`Acesso de ${email} removido`);
+      fetchPostSalesUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao remover acesso');
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin': return Crown;
       case 'affiliate_admin': return UserPlus;
+      case 'post_sales': return ShieldCheck;
       case 'school': return Building;
       case 'student': return GraduationCap;
       case 'seller': return Store;
@@ -170,6 +227,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
     switch (role) {
       case 'admin': return 'bg-purple-100 text-purple-800';
       case 'affiliate_admin': return 'bg-orange-100 text-orange-800';
+      case 'post_sales': return 'bg-teal-100 text-teal-800';
       case 'school': return 'bg-blue-100 text-blue-800';
       case 'student': return 'bg-green-100 text-green-800';
       case 'seller': return 'bg-amber-100 text-amber-800';
@@ -230,6 +288,19 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 <div className="flex items-center space-x-2">
                   <DollarSign className="h-5 w-5" />
                   <span>Fee Management</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setActiveTab('staffManagement'); fetchPostSalesUsers(); }}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'staffManagement'
+                    ? 'border-[#05294E] text-[#05294E]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  <span>Pós-Vendas Staff</span>
                 </div>
               </button>
             </>
@@ -321,6 +392,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <option value="seller">Sellers</option>
                   <option value="admin">Admins</option>
                   <option value="affiliate_admin">Affiliate Admins</option>
+                  <option value="post_sales">Pós-Vendas</option>
                 </select>
 
                 <select
@@ -497,9 +569,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         <option value="seller">Seller</option>
                         <option value="admin">Admin</option>
                         <option value="affiliate_admin">Affiliate Admin</option>
+                        <option value="post_sales">Pós-Vendas</option>
                       </select>
-                      
-                      {user.status === 'active' && !['admin', 'affiliate_admin'].includes(user.role) && (
+
+                      {user.status === 'active' && !['admin', 'affiliate_admin', 'post_sales'].includes(user.role) && (
                         <button
                           onClick={() => onSuspend(user.user_id)}
                           className="bg-red-100 text-red-700 py-2 px-3 rounded-lg hover:bg-red-200 transition-colors"
@@ -612,9 +685,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
                               <option value="seller">Seller</option>
                               <option value="admin">Admin</option>
                               <option value="affiliate_admin">Affiliate Admin</option>
+                              <option value="post_sales">Pós-Vendas</option>
                             </select>
                           )}
-                          
+
                           {user.status === 'active' && !['admin', 'affiliate_admin'].includes(user.role) && (
                             <button
                               onClick={() => onSuspend(user.user_id)}
@@ -929,6 +1003,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           <option value="seller">Seller</option>
                           <option value="admin">Admin</option>
                           <option value="affiliate_admin">Affiliate Admin</option>
+                          <option value="post_sales">Pós-Vendas</option>
                         </select>
                       </div>
                       
@@ -953,6 +1028,65 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </div>
       ) : activeTab === 'applications' ? (
         <StudentApplicationsView />
+      ) : activeTab === 'staffManagement' ? (
+        <div className="space-y-8">
+          {/* Promover usuário */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-[#05294E] rounded-xl flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Adicionar Usuário Pós-Vendas</h3>
+                <p className="text-sm text-slate-500">Promove um usuário existente para o role Pós-Vendas (acesso restrito ao admin)</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={promoteEmail}
+                onChange={e => setPromoteEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handlePromoteToPostSales()}
+                className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/30"
+              />
+              <button
+                onClick={handlePromoteToPostSales}
+                disabled={promoteLoading || !promoteEmail.trim()}
+                className="px-5 py-2 bg-[#05294E] text-white rounded-lg text-sm font-semibold hover:bg-[#041f38] disabled:opacity-50 transition-colors"
+              >
+                {promoteLoading ? 'Promovendo...' : 'Promover'}
+              </button>
+            </div>
+          </div>
+
+          {/* Lista de usuários Pós-Vendas ativos */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h3 className="text-base font-bold text-slate-900 mb-4">Usuários Pós-Vendas Ativos</h3>
+            {loadingPostSalesUsers ? (
+              <p className="text-sm text-slate-400">Carregando...</p>
+            ) : postSalesUsers.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">Nenhum usuário Pós-Vendas cadastrado ainda.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {postSalesUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{u.full_name || '—'}</p>
+                      <p className="text-xs text-slate-500">{u.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDemoteFromPostSales(u.email)}
+                      className="text-xs text-red-600 border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Remover acesso
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
         <FeeManagement />
       )}
