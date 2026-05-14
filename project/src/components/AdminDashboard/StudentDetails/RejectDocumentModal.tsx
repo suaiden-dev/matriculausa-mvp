@@ -64,33 +64,67 @@ const RejectDocumentModal: React.FC<RejectDocumentModalProps> = ({
             placeholder="Enter rejection reason..."
           />
 
-          {/* Sugestões de motivos */}
+          {/* Sugestões de motivos dinâmicas */}
           <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Common Reasons</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Common Reasons for {documentType.replace('_', ' ')}</p>
             <div className="flex flex-wrap gap-2">
-              {[
-                "ID only (missing selfie)",
-                "Selfie only (missing ID)",
-                "Blurry or low quality photo",
-                "Cropped or incomplete document",
-                "Unreadable information",
-                "Face does not match ID",
-                "Expired document",
-                "Glare or shadow hiding data"
-              ].map((sug) => (
-                <button
-                  key={sug}
-                  type="button"
-                  onClick={() => setReason(sug)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    reason === sug 
-                      ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' 
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {sug}
-                </button>
-              ))}
+              {(() => {
+                const type = documentType.toLowerCase();
+                let suggestions = [
+                  "Blurry or low quality photo",
+                  "Cropped or incomplete document",
+                  "Unreadable information",
+                  "Expired document",
+                  "Incorrect document type uploaded"
+                ];
+
+                if (type.includes('passport') || type.includes('id')) {
+                  suggestions = [
+                    "ID only (missing selfie)",
+                    "Selfie only (missing ID)",
+                    "Blurry or low quality photo",
+                    "Cropped or incomplete document",
+                    "Unreadable information",
+                    "Face does not match ID",
+                    "Expired document",
+                    "Glare or shadow hiding data"
+                  ];
+                } else if (type.includes('funds') || type.includes('bank') || type.includes('statement')) {
+                  suggestions = [
+                    "Insufficient balance for program",
+                    "Statement is older than 90 days",
+                    "Missing Sponsor Letter",
+                    "Missing English translation",
+                    "Transaction history not visible",
+                    "Account holder name doesn't match",
+                    "Missing official bank stamp/signature"
+                  ];
+                } else if (type.includes('diploma') || type.includes('transcript') || type.includes('academic')) {
+                  suggestions = [
+                    "Missing complete academic transcript",
+                    "Document is not official/notarized",
+                    "Missing certified English translation",
+                    "Incomplete pages (missing back side)",
+                    "Apostille/Authentication missing",
+                    "Low resolution scan"
+                  ];
+                }
+
+                return suggestions.map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => setReason(sug)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      reason === sug 
+                        ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sug}
+                  </button>
+                ));
+              })()}
             </div>
           </div>
           <div className="flex items-center space-x-3 pt-4">
