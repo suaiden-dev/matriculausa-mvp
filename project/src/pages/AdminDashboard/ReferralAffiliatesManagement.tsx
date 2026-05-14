@@ -9,7 +9,6 @@ import {
   Copy,
   DollarSign,
   TrendingUp,
-  UserCheck,
   ToggleLeft,
   ToggleRight,
   ChevronDown,
@@ -18,10 +17,12 @@ import {
   Calendar,
   Coins,
   Clock,
-  AlertCircle
+  AlertCircle,
+  GraduationCap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEnvironment } from '../../hooks/useEnvironment';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ReferralAffiliate {
   id: string;
@@ -51,8 +52,35 @@ interface PaymentRequest {
   admin_notes?: string;
 }
 
+interface ReferredStudent {
+  referral_id: string;
+  referred_id: string;
+  full_name: string;
+  email: string;
+  selection_process_paid_at: string | null;
+  application_fee_paid_at: string | null;
+  scholarship_fee_paid_at: string | null;
+  i20_paid_at: string | null;
+  credits_earned: number;
+  created_at: string;
+}
+
+const StepBadge = ({ label, date }: { label: string; date: string | null }) => (
+  <div className={`flex flex-col items-center text-center min-w-[60px] ${date ? 'text-green-700' : 'text-slate-400'}`}>
+    <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-0.5 ${date ? 'bg-green-100' : 'bg-slate-100'}`}>
+      {date
+        ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+        : <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+      }
+    </div>
+    <span className="text-[10px] font-medium leading-tight">{label}</span>
+    {date && <span className="text-[9px] text-slate-400 mt-0.5">{new Date(date).toLocaleDateString('pt-BR')}</span>}
+  </div>
+);
+
 const ReferralAffiliatesManagement: React.FC = () => {
   const { isDevelopment } = useEnvironment();
+  const { user } = useAuth();
   const [affiliates, setAffiliates] = useState<ReferralAffiliate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +88,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [paymentRequests, setPaymentRequests] = useState<Record<string, PaymentRequest[]>>({});
+  const [referredStudents, setReferredStudents] = useState<Record<string, ReferredStudent[]>>({});
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [updatingPayment, setUpdatingPayment] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -75,14 +104,13 @@ const ReferralAffiliatesManagement: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Buscar tudo em paralelo
       const [codesRes, usersRes, profilesRes, coinsRes, referralsRes, paymentReqRes] = await Promise.all([
         supabase
           .from('affiliate_codes')
           .select('id, user_id, code, is_active, total_referrals, total_earnings, created_at')
           .order('created_at', { ascending: false }),
         supabase.rpc('get_admin_users_data'),
-        supabase.from('user_profiles').select('user_id, full_name'),
+        supabase.from('user_profiles').select('user_id, full_name, role'),
         supabase.from('matriculacoin_credits').select('user_id, balance, total_earned'),
         supabase.from('affiliate_referrals').select('affiliate_code, status'),
         supabase.from('affiliate_payment_requests').select('referrer_user_id, amount_usd, status').in('status', ['pending', 'approved'])
@@ -92,31 +120,31 @@ const ReferralAffiliatesManagement: React.FC = () => {
 
       const codesData = codesRes.data || [];
 
-      // Email map
       const emailMap: Record<string, string> = {};
       (usersRes.data || []).forEach((u: any) => { emailMap[u.id] = u.email || ''; });
 
-      // Profile name map
       const nameMap: Record<string, string> = {};
-      (profilesRes.data || []).forEach((p: any) => { nameMap[p.user_id] = p.full_name || ''; });
+      const roleMap: Record<string, string> = {};
+      (profilesRes.data || []).forEach((p: any) => {
+        nameMap[p.user_id] = p.full_name || '';
+        roleMap[p.user_id] = p.role || '';
+      });
 
-      // Coins map
       const coinsMap: Record<string, { balance: number; total_earned: number }> = {};
       (coinsRes.data || []).forEach((c: any) => {
         coinsMap[c.user_id] = { balance: Number(c.balance) || 0, total_earned: Number(c.total_earned) || 0 };
       });
 
-      // Referrals by code
-      const referralsByCode: Record<string, { completed: number; pending: number }> = {};
+      const referralsByCode: Record<string, { total: number; completed: number; pending: number }> = {};
       (referralsRes.data || []).forEach((r: any) => {
         if (!referralsByCode[r.affiliate_code]) {
-          referralsByCode[r.affiliate_code] = { completed: 0, pending: 0 };
+          referralsByCode[r.affiliate_code] = { total: 0, completed: 0, pending: 0 };
         }
+        referralsByCode[r.affiliate_code].total++;
         if (r.status === 'completed') referralsByCode[r.affiliate_code].completed++;
         else if (r.status === 'pending') referralsByCode[r.affiliate_code].pending++;
       });
 
-      // Payment requests by user
       const paymentByUser: Record<string, { count: number; amount: number }> = {};
       (paymentReqRes.data || []).forEach((p: any) => {
         if (!paymentByUser[p.referrer_user_id]) {
@@ -126,36 +154,40 @@ const ReferralAffiliatesManagement: React.FC = () => {
         paymentByUser[p.referrer_user_id].amount += Number(p.amount_usd) || 0;
       });
 
-      const mapped: ReferralAffiliate[] = codesData.map((c: any) => {
-        const refStats = referralsByCode[c.code] || { completed: 0, pending: 0 };
-        const payStats = paymentByUser[c.user_id] || { count: 0, amount: 0 };
-        const coins = coinsMap[c.user_id] || { balance: 0, total_earned: 0 };
+      const mapped: ReferralAffiliate[] = codesData
+        // Filtrar apenas role='affiliate'
+        .filter((c: any) => roleMap[c.user_id] === 'affiliate')
+        .map((c: any) => {
+          const refStats = referralsByCode[c.code] || { total: 0, completed: 0, pending: 0 };
+          const payStats = paymentByUser[c.user_id] || { count: 0, amount: 0 };
+          const coins = coinsMap[c.user_id] || { balance: 0, total_earned: 0 };
 
-        return {
-          id: c.id,
-          user_id: c.user_id,
-          code: c.code,
-          is_active: c.is_active,
-          total_referrals: c.total_referrals || 0,
-          total_earnings: Number(c.total_earnings) || 0,
-          created_at: c.created_at,
-          full_name: nameMap[c.user_id] || emailMap[c.user_id] || 'Unknown',
-          email: emailMap[c.user_id] || '',
-          coin_balance: coins.balance,
-          coin_total_earned: coins.total_earned,
-          completed_referrals: refStats.completed,
-          pending_referrals: refStats.pending,
-          pending_payment_requests: payStats.count,
-          pending_amount: payStats.amount
-        };
-      });
+          return {
+            id: c.id,
+            user_id: c.user_id,
+            code: c.code,
+            is_active: c.is_active,
+            total_referrals: refStats.total,
+            total_earnings: Number(c.total_earnings) || 0,
+            created_at: c.created_at,
+            full_name: nameMap[c.user_id] || emailMap[c.user_id] || 'Unknown',
+            email: emailMap[c.user_id] || '',
+            coin_balance: coins.balance,
+            coin_total_earned: coins.total_earned,
+            completed_referrals: refStats.completed,
+            pending_referrals: refStats.pending,
+            pending_payment_requests: payStats.count,
+            pending_amount: payStats.amount
+          };
+        });
 
-      // Filtrar emails de teste em produção
-      const filtered = isDevelopment
-        ? mapped
-        : mapped.filter(a => !a.email.toLowerCase().includes('@uorak.com'));
+      const isUorak = (a: ReferralAffiliate) =>
+        a.email.toLowerCase().includes('@uorak.com') ||
+        a.full_name.toLowerCase().includes('@uorak.com');
 
-      setAffiliates(filtered);
+      const result = isDevelopment ? mapped : mapped.filter(a => !isUorak(a));
+
+      setAffiliates(result);
     } catch (e: any) {
       setError(e.message || 'Erro ao carregar dados');
     } finally {
@@ -172,6 +204,51 @@ const ReferralAffiliatesManagement: React.FC = () => {
       .order('created_at', { ascending: false });
 
     setPaymentRequests(prev => ({ ...prev, [userId]: data || [] }));
+  };
+
+  const loadReferredStudents = async (userId: string) => {
+    if (referredStudents[userId]) return;
+
+    const { data: referrals } = await supabase
+      .from('affiliate_referrals')
+      .select('id, referred_id, selection_process_paid_at, application_fee_paid_at, scholarship_fee_paid_at, i20_paid_at, credits_earned, created_at')
+      .eq('referrer_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (!referrals || referrals.length === 0) {
+      setReferredStudents(prev => ({ ...prev, [userId]: [] }));
+      return;
+    }
+
+    const referredIds = referrals.map((r: any) => r.referred_id).filter(Boolean);
+
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, full_name, email')
+      .in('user_id', referredIds);
+
+    const profileMap: Record<string, { full_name: string; email: string }> = {};
+    (profiles || []).forEach((p: any) => {
+      profileMap[p.user_id] = { full_name: p.full_name || '', email: p.email || '' };
+    });
+
+    const merged: ReferredStudent[] = referrals.map((r: any) => {
+      const profile = profileMap[r.referred_id] || { full_name: '', email: '' };
+      return {
+        referral_id: r.id,
+        referred_id: r.referred_id,
+        full_name: profile.full_name || profile.email || r.referred_id?.slice(0, 8),
+        email: profile.email,
+        selection_process_paid_at: r.selection_process_paid_at,
+        application_fee_paid_at: r.application_fee_paid_at,
+        scholarship_fee_paid_at: r.scholarship_fee_paid_at,
+        i20_paid_at: r.i20_paid_at,
+        credits_earned: Number(r.credits_earned) || 0,
+        created_at: r.created_at,
+      };
+    });
+
+    setReferredStudents(prev => ({ ...prev, [userId]: merged }));
   };
 
   useEffect(() => {
@@ -199,37 +276,68 @@ const ReferralAffiliatesManagement: React.FC = () => {
     }
   };
 
-  const handleUpdatePaymentStatus = async (
-    requestId: string,
-    newStatus: 'approved' | 'paid' | 'rejected',
-    userId: string
-  ) => {
+  const handleApprovePayment = async (requestId: string, userId: string) => {
     setUpdatingPayment(requestId);
     try {
-      const updateData: any = { status: newStatus };
-      if (newStatus === 'approved') updateData.approved_at = new Date().toISOString();
-      if (newStatus === 'paid') updateData.paid_at = new Date().toISOString();
-
-      const { error } = await supabase
-        .from('affiliate_payment_requests')
-        .update(updateData)
-        .eq('id', requestId);
-
+      const { error } = await supabase.rpc('admin_approve_affiliate_payment_request', {
+        p_id: requestId,
+        p_admin: user?.id,
+      });
       if (error) throw error;
-
-      // Atualizar lista local
       setPaymentRequests(prev => ({
         ...prev,
-        [userId]: (prev[userId] || []).map(r =>
-          r.id === requestId ? { ...r, status: newStatus } : r
-        )
+        [userId]: (prev[userId] || []).map(r => r.id === requestId ? { ...r, status: 'approved' } : r)
       }));
-
-      // Atualizar stats do afiliado
       await loadData();
-      showToast(`Solicitação ${newStatus === 'approved' ? 'aprovada' : newStatus === 'paid' ? 'marcada como paga' : 'rejeitada'}`);
+      showToast('Solicitação aprovada');
     } catch (e: any) {
-      showToast(e.message || 'Erro ao atualizar solicitação', 'error');
+      showToast(e.message || 'Erro ao aprovar', 'error');
+    } finally {
+      setUpdatingPayment(null);
+    }
+  };
+
+  const handleRejectPayment = async (requestId: string, userId: string) => {
+    const reason = window.prompt('Motivo da rejeição (opcional):') ?? '';
+    setUpdatingPayment(requestId);
+    try {
+      const { error } = await supabase.rpc('admin_reject_affiliate_payment_request', {
+        p_id: requestId,
+        p_admin: user?.id,
+        p_reason: reason,
+      });
+      if (error) throw error;
+      setPaymentRequests(prev => ({
+        ...prev,
+        [userId]: (prev[userId] || []).map(r => r.id === requestId ? { ...r, status: 'rejected', admin_notes: reason } : r)
+      }));
+      await loadData();
+      showToast('Solicitação rejeitada — coins devolvidos ao afiliado');
+    } catch (e: any) {
+      showToast(e.message || 'Erro ao rejeitar', 'error');
+    } finally {
+      setUpdatingPayment(null);
+    }
+  };
+
+  const handleMarkPaid = async (requestId: string, userId: string) => {
+    const reference = window.prompt('Referência do pagamento (opcional):') ?? '';
+    setUpdatingPayment(requestId);
+    try {
+      const { error } = await supabase.rpc('admin_mark_paid_affiliate_payment_request', {
+        p_id: requestId,
+        p_admin: user?.id,
+        p_reference: reference,
+      });
+      if (error) throw error;
+      setPaymentRequests(prev => ({
+        ...prev,
+        [userId]: (prev[userId] || []).map(r => r.id === requestId ? { ...r, status: 'paid' } : r)
+      }));
+      await loadData();
+      showToast('Marcado como pago');
+    } catch (e: any) {
+      showToast(e.message || 'Erro ao marcar como pago', 'error');
     } finally {
       setUpdatingPayment(null);
     }
@@ -247,7 +355,10 @@ const ReferralAffiliatesManagement: React.FC = () => {
       return;
     }
     setExpandedId(affiliate.id);
-    await loadPaymentRequests(affiliate.user_id);
+    await Promise.all([
+      loadPaymentRequests(affiliate.user_id),
+      loadReferredStudents(affiliate.user_id),
+    ]);
   };
 
   const filtered = useMemo(() => {
@@ -283,6 +394,17 @@ const ReferralAffiliatesManagement: React.FC = () => {
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'cancelled': return 'bg-slate-100 text-slate-600';
       default: return 'bg-slate-100 text-slate-600';
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendente';
+      case 'approved': return 'Aprovado';
+      case 'paid': return 'Pago';
+      case 'rejected': return 'Rejeitado';
+      case 'cancelled': return 'Cancelado';
+      default: return status;
     }
   };
 
@@ -343,7 +465,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Programa de Afiliados</h1>
             <p className="text-slate-500 mt-1 text-sm">
-              Gerencie os usuários cadastrados no programa "Torne-se Afiliado" (códigos MATR####)
+              Afiliados profissionais (role=affiliate) — gestão completa de indicações e saques
             </p>
           </div>
           <button
@@ -357,9 +479,9 @@ const ReferralAffiliatesManagement: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <p className="text-xs font-medium text-slate-500 mb-1">Total Afiliados</p>
+          <p className="text-xs font-medium text-slate-500 mb-1">Afiliados Profissionais</p>
           <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -371,12 +493,8 @@ const ReferralAffiliatesManagement: React.FC = () => {
           <p className="text-2xl font-bold text-slate-400">{stats.total - stats.active}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <p className="text-xs font-medium text-slate-500 mb-1">Total Indicações</p>
+          <p className="text-xs font-medium text-slate-500 mb-1">Total Alunos</p>
           <p className="text-2xl font-bold text-blue-600">{stats.totalReferrals}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <p className="text-xs font-medium text-slate-500 mb-1">Conversões</p>
-          <p className="text-2xl font-bold text-purple-600">{stats.totalConversions}</p>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <p className="text-xs font-medium text-slate-500 mb-1">Saques Pendentes</p>
@@ -409,7 +527,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
           </select>
         </div>
         <p className="text-xs text-slate-400 mt-3">
-          {filtered.length} de {affiliates.length} afiliados
+          {filtered.length} de {affiliates.length} afiliados profissionais
         </p>
       </div>
 
@@ -418,12 +536,13 @@ const ReferralAffiliatesManagement: React.FC = () => {
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500">Nenhum afiliado encontrado</p>
+            <p className="text-slate-500">Nenhum afiliado profissional encontrado</p>
           </div>
         ) : (
           filtered.map(affiliate => {
             const isExpanded = expandedId === affiliate.id;
             const requests = paymentRequests[affiliate.user_id] || [];
+            const students = referredStudents[affiliate.user_id] || [];
 
             return (
               <div key={affiliate.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -440,13 +559,17 @@ const ReferralAffiliatesManagement: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-slate-900 text-sm">{affiliate.full_name}</span>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          affiliate.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-slate-100 text-slate-500'
+                          affiliate.is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-500'
                         }`}>
                           {affiliate.is_active ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                           {affiliate.is_active ? 'Ativo' : 'Inativo'}
                         </span>
+                        {affiliate.pending_payment_requests > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                            <DollarSign className="h-3 w-3" />
+                            {affiliate.pending_payment_requests} saque pend.
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
@@ -468,35 +591,28 @@ const ReferralAffiliatesManagement: React.FC = () => {
                         className="ml-1 text-slate-400 hover:text-slate-600 transition-colors"
                         title="Copiar código"
                       >
-                        {copiedCode === affiliate.code ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
+                        {copiedCode === affiliate.code
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          : <Copy className="h-3.5 w-3.5" />
+                        }
                       </button>
                     </div>
 
                     {/* Quick stats */}
-                    <div className="hidden lg:grid grid-cols-4 gap-6 text-center">
+                    <div className="hidden lg:grid grid-cols-3 gap-6 text-center">
                       <div>
                         <p className="text-sm font-bold text-slate-900">{affiliate.total_referrals}</p>
-                        <p className="text-xs text-slate-500">Indicações</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-purple-600">{affiliate.completed_referrals}</p>
-                        <p className="text-xs text-slate-500">Conversões</p>
+                        <p className="text-xs text-slate-500">Alunos</p>
                       </div>
                       <div>
                         <p className="text-sm font-bold text-amber-600">{affiliate.coin_balance.toLocaleString()}</p>
-                        <p className="text-xs text-slate-500">MatriculaCoins</p>
+                        <p className="text-xs text-slate-500">Coins</p>
                       </div>
                       <div>
                         <p className="text-sm font-bold text-orange-600">
-                          {affiliate.pending_payment_requests > 0
-                            ? `$${affiliate.pending_amount.toLocaleString()}`
-                            : '–'}
+                          {affiliate.pending_payment_requests > 0 ? `$${affiliate.pending_amount.toLocaleString()}` : '–'}
                         </p>
-                        <p className="text-xs text-slate-500">Saques pend.</p>
+                        <p className="text-xs text-slate-500">Saque pend.</p>
                       </div>
                     </div>
 
@@ -508,24 +624,21 @@ const ReferralAffiliatesManagement: React.FC = () => {
                         title={affiliate.is_active ? 'Desativar código' : 'Ativar código'}
                         className="p-2 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
                       >
-                        {togglingId === affiliate.id ? (
-                          <Loader2 className="h-5 w-5 text-slate-400 animate-spin" />
-                        ) : affiliate.is_active ? (
-                          <ToggleRight className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-5 w-5 text-slate-400" />
-                        )}
+                        {togglingId === affiliate.id
+                          ? <Loader2 className="h-5 w-5 text-slate-400 animate-spin" />
+                          : affiliate.is_active
+                            ? <ToggleRight className="h-5 w-5 text-green-600" />
+                            : <ToggleLeft className="h-5 w-5 text-slate-400" />
+                        }
                       </button>
-
                       <button
                         onClick={() => handleExpand(affiliate)}
                         className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
                       >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-slate-500" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-slate-500" />
-                        )}
+                        {isExpanded
+                          ? <ChevronUp className="h-4 w-4 text-slate-500" />
+                          : <ChevronDown className="h-4 w-4 text-slate-500" />
+                        }
                       </button>
                     </div>
                   </div>
@@ -534,11 +647,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
                   <div className="lg:hidden flex flex-wrap gap-4 mt-3 pt-3 border-t border-slate-100">
                     <div className="flex items-center gap-1 text-xs text-slate-600">
                       <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
-                      <span><b>{affiliate.total_referrals}</b> indicações</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-600">
-                      <UserCheck className="h-3.5 w-3.5 text-purple-500" />
-                      <span><b>{affiliate.completed_referrals}</b> conversões</span>
+                      <span><b>{affiliate.total_referrals}</b> alunos</span>
                     </div>
                     <div className="flex items-center gap-1 text-xs text-slate-600">
                       <Coins className="h-3.5 w-3.5 text-amber-500" />
@@ -561,31 +670,19 @@ const ReferralAffiliatesManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Expanded: detalhes + payment requests */}
+                {/* Expanded panel */}
                 {isExpanded && (
                   <div className="border-t border-slate-200 bg-slate-50">
-                    <div className="p-5 space-y-5">
+                    <div className="p-5 space-y-6">
+
                       {/* Stats detalhados */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white rounded-lg border border-slate-200 p-4">
                           <div className="flex items-center gap-2 mb-1">
                             <TrendingUp className="h-4 w-4 text-blue-500" />
-                            <p className="text-xs text-slate-500">Total Indicações</p>
+                            <p className="text-xs text-slate-500">Alunos usando o código</p>
                           </div>
-                          <p className="text-xl font-bold text-slate-900">{affiliate.total_referrals}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{affiliate.pending_referrals} pendentes</p>
-                        </div>
-                        <div className="bg-white rounded-lg border border-slate-200 p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <UserCheck className="h-4 w-4 text-purple-500" />
-                            <p className="text-xs text-slate-500">Conversões</p>
-                          </div>
-                          <p className="text-xl font-bold text-purple-600">{affiliate.completed_referrals}</p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {affiliate.total_referrals > 0
-                              ? `${Math.round((affiliate.completed_referrals / affiliate.total_referrals) * 100)}% conversão`
-                              : '–'}
-                          </p>
+                          <p className="text-xl font-bold text-slate-900">{students.length}</p>
                         </div>
                         <div className="bg-white rounded-lg border border-slate-200 p-4">
                           <div className="flex items-center gap-2 mb-1">
@@ -595,16 +692,55 @@ const ReferralAffiliatesManagement: React.FC = () => {
                           <p className="text-xl font-bold text-amber-600">{affiliate.coin_balance.toLocaleString()}</p>
                           <p className="text-xs text-slate-400 mt-0.5">{affiliate.coin_total_earned.toLocaleString()} ganhos total</p>
                         </div>
-                        <div className="bg-white rounded-lg border border-slate-200 p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="h-4 w-4 text-green-500" />
-                            <p className="text-xs text-slate-500">Ganhos Totais</p>
-                          </div>
-                          <p className="text-xl font-bold text-green-600">${affiliate.total_earnings.toLocaleString()}</p>
-                        </div>
                       </div>
 
-                      {/* Solicitações de pagamento */}
+                      {/* Alunos Indicados */}
+                      <div>
+                        <h4 className="font-semibold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" />
+                          Alunos Indicados
+                          <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                            {students.length}
+                          </span>
+                        </h4>
+
+                        {students.length === 0 ? (
+                          <div className="text-center py-6 bg-white rounded-lg border border-slate-200">
+                            <GraduationCap className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                            <p className="text-sm text-slate-400">Nenhum aluno indicado ainda</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {students.map(student => (
+                              <div key={student.referral_id} className="bg-white rounded-lg border border-slate-200 p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-slate-900 text-sm">{student.full_name}</p>
+                                    <p className="text-xs text-slate-500">{student.email}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                      Indicado em {new Date(student.created_at).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <StepBadge label="Processo Seletivo" date={student.selection_process_paid_at} />
+                                    <StepBadge label="Taxa de Matrícula" date={student.application_fee_paid_at} />
+                                    <StepBadge label="Placement Fee" date={student.scholarship_fee_paid_at} />
+                                    <StepBadge label="Control Fee" date={student.i20_paid_at} />
+                                    {student.credits_earned > 0 && (
+                                      <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                                        <Coins className="h-3.5 w-3.5 text-amber-500" />
+                                        <span className="text-xs font-bold text-amber-700">+{student.credits_earned}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Solicitações de Saque */}
                       <div>
                         <h4 className="font-semibold text-slate-800 text-sm mb-3 flex items-center gap-2">
                           <DollarSign className="h-4 w-4" />
@@ -628,32 +764,28 @@ const ReferralAffiliatesManagement: React.FC = () => {
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                   <div className="flex items-center gap-3">
                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(req.status)}`}>
-                                      {req.status === 'pending' ? 'Pendente' :
-                                       req.status === 'approved' ? 'Aprovado' :
-                                       req.status === 'paid' ? 'Pago' :
-                                       req.status === 'rejected' ? 'Rejeitado' : req.status}
+                                      {statusLabel(req.status)}
                                     </span>
                                     <div>
-                                      <p className="font-semibold text-slate-900 text-sm">${Number(req.amount_usd).toLocaleString()}</p>
+                                      <p className="font-semibold text-slate-900 text-sm">${Number(req.amount_usd).toLocaleString()} USD</p>
                                       <p className="text-xs text-slate-500">
-                                        {req.payout_method} · {new Date(req.created_at).toLocaleDateString('pt-BR')}
+                                        {req.payout_method.toUpperCase()} · {new Date(req.created_at).toLocaleDateString('pt-BR')}
                                       </p>
                                       {req.payout_details && (
                                         <p className="text-xs text-slate-400 mt-0.5">
                                           {typeof req.payout_details === 'object'
-                                            ? Object.entries(req.payout_details).map(([k, v]) => `${k}: ${v}`).join(' · ')
+                                            ? Object.entries(req.payout_details).map(([k, v]) => `${v}`).join(' · ')
                                             : req.payout_details}
                                         </p>
                                       )}
                                     </div>
                                   </div>
 
-                                  {/* Actions por status */}
                                   {req.status === 'pending' && (
                                     <div className="flex gap-2">
                                       <button
                                         disabled={updatingPayment === req.id}
-                                        onClick={() => handleUpdatePaymentStatus(req.id, 'approved', affiliate.user_id)}
+                                        onClick={() => handleApprovePayment(req.id, affiliate.user_id)}
                                         className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
                                       >
                                         {updatingPayment === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
@@ -661,7 +793,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
                                       </button>
                                       <button
                                         disabled={updatingPayment === req.id}
-                                        onClick={() => handleUpdatePaymentStatus(req.id, 'rejected', affiliate.user_id)}
+                                        onClick={() => handleRejectPayment(req.id, affiliate.user_id)}
                                         className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs hover:bg-red-200 transition-colors disabled:opacity-50 flex items-center gap-1"
                                       >
                                         <XCircle className="h-3 w-3" />
@@ -672,7 +804,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
                                   {req.status === 'approved' && (
                                     <button
                                       disabled={updatingPayment === req.id}
-                                      onClick={() => handleUpdatePaymentStatus(req.id, 'paid', affiliate.user_id)}
+                                      onClick={() => handleMarkPaid(req.id, affiliate.user_id)}
                                       className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1"
                                     >
                                       {updatingPayment === req.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
@@ -690,6 +822,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
                           </div>
                         )}
                       </div>
+
                     </div>
                   </div>
                 )}
