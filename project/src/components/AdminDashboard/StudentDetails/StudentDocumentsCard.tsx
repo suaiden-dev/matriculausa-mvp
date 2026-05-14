@@ -2,6 +2,17 @@ import React from 'react';
 import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot, Upload } from 'lucide-react';
 import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
 import { useDocumentRejectionDetails } from '../../../hooks/useDocumentRejectionDetails';
+import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
+
+interface DocumentHistoryEntry {
+  url?: string;
+  status?: string;
+  uploaded_at?: string;
+  approved_at?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
+  saved_at?: string;
+}
 
 interface Document {
   type: string;
@@ -13,6 +24,7 @@ interface Document {
   rejection_reason?: string;
   changes_requested_at?: string;
   review_notes?: string;
+  history?: DocumentHistoryEntry[];
 }
 
 interface Application {
@@ -392,6 +404,44 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                 </div>
                               </div>
                             )}
+
+                            {/* Histórico de versões anteriores */}
+                            {(() => {
+                              // Histórico explícito (uploads futuros após a implementação)
+                              const explicitHistory = (doc.history || []).map((h: DocumentHistoryEntry, i: number) => ({
+                                id: `${doc.type}-history-${i}`,
+                                file_url: h.url || '',
+                                status: (h.status === 'approved' ? 'approved' : h.status === 'rejected' ? 'rejected' : 'under_review') as 'approved' | 'rejected' | 'under_review',
+                                uploaded_at: h.uploaded_at || h.saved_at || '',
+                                rejection_reason: h.rejection_reason,
+                              }));
+
+                              // Histórico sintético: para docs existentes que têm rejected_at
+                              // mas o status atual não é "rejected" (rejeição de ciclo anterior)
+                              const syntheticHistory = [];
+                              if (
+                                explicitHistory.length === 0 &&
+                                doc.rejected_at &&
+                                doc.rejection_reason &&
+                                doc.status !== 'rejected'
+                              ) {
+                                syntheticHistory.push({
+                                  id: `${doc.type}-synthetic-0`,
+                                  // Usa a URL do doc atual — é o mesmo arquivo que foi rejeitado
+                                  // (não houve reenvio com histórico preservado)
+                                  file_url: doc.url || '',
+                                  status: 'rejected' as const,
+                                  uploaded_at: doc.rejected_at,
+                                  rejection_reason: doc.rejection_reason,
+                                });
+                              }
+
+                              const allHistory = [...explicitHistory, ...syntheticHistory];
+                              if (allHistory.length === 0) return null;
+
+                              const docLabel = (doc.type || '').replace(/_/g, ' ').replace(/^./, (c: string) => c.toUpperCase());
+                              return <DocumentHistoryAccordion uploads={allHistory} documentLabel={docLabel} onViewDocument={onViewDocument} />;
+                            })()}
                           </div>
                         ))}
                       </div>

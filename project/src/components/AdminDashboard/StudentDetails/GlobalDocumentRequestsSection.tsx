@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw } from 'lucide-react';
 import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
+import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
 
 interface GlobalDocumentRequestsSectionProps {
   globalRequests: any[];
@@ -120,9 +121,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
           ) : (
             <div className="space-y-4">
               {globalRequests.map((request) => {
-                const studentUpload = (request.document_request_uploads || [])
+                const allStudentUploads = (request.document_request_uploads || [])
                   .filter((u: any) => u.uploaded_by === studentUserId)
-                  .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+                  .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+                const studentUpload = allStudentUploads[0];
                 const isExpanded = expandedRequests[request.id] !== false; // expanded by default
                 const applicableTypes: string[] = request.applicable_student_types || ['all'];
 
@@ -218,6 +220,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                             <p className="text-slate-500 text-sm">No response submitted yet</p>
                           </div>
                         ) : (
+                          <>
                           <div className="bg-white border border-slate-200 rounded-2xl p-4" data-upload-id={studentUpload.id}>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                               <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
@@ -300,6 +303,12 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                               </div>
                             )}
                           </div>
+
+                          {/* Histórico de versões anteriores */}
+                          {allStudentUploads.length > 1 && (
+                            <DocumentHistoryAccordion uploads={allStudentUploads} skipFirst documentLabel={request.title} onViewDocument={onViewDocument} />
+                          )}
+                          </>
                         )}
                       </div>
                     )}

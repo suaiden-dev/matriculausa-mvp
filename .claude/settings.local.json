@@ -41,7 +41,8 @@
       "Bash(find \"/c/Users/victurib/Matricula USA/matriculausa-mvp/project/src\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"createClient\\\\|supabase\" {} \\\\;)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); deps={**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}; [print\\(f'{k}: {v}'\\) for k,v in sorted\\(deps.items\\(\\)\\) if any\\(x in k.lower\\(\\) for x in ['tus','upload','supabase','storage']\\)]\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(rtk npm:*)"
     ]
   }
 }

@@ -113,7 +113,7 @@ interface AuthProviderProps {
 
 interface SignUpOptions {
   referralCode?: string;
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
   utm?: StoredUtmAttribution | null;
 }
 

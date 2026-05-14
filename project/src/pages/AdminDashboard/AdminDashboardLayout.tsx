@@ -115,8 +115,8 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
 
   const sidebarItems = allSidebarItems.filter(item => {
     if (isPostSales) {
-      // Pós-Vendas só vê o básico de gestão de alunos/universidades/bolsas
-      const allowedItems = ['overview', 'users', 'scholarships', 'universities'];
+      // Pós-Vendas: overview, users, scholarships, universities e payments
+      const allowedItems = ['overview', 'users', 'scholarships', 'universities', 'payments'];
       return allowedItems.includes(item.id);
     }
     return true;
@@ -162,14 +162,14 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-center mt-3">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                isPostSales ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-[#05294E]'
-              }`}>
-                <Shield className="h-3 w-3 mr-1" />
-                {isPostSales ? 'Restricted Access' : 'Full Access'}
-              </span>
-            </div>
+            {!isPostSales && (
+              <div className="flex items-center justify-center mt-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Full Access
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}

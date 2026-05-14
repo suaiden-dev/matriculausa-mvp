@@ -87,7 +87,7 @@ const TransferReports: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'post_sales') {
       loadReportData();
     }
   }, [user, filters]);

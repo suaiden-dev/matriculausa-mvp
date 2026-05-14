@@ -42,7 +42,7 @@ async function getAllAdmins(supabase: any) {
     const { data: adminProfiles } = await supabase
       .from('user_profiles')
       .select('user_id, email, full_name, phone')
-      .eq('role', 'admin');
+      .in('role', ['admin', 'post_sales']);
     const admins = adminProfiles ? adminProfiles.filter((a: any) => a.email) : [];
     return admins.length > 0 ? admins : [{ user_id: '', email: 'admin@matriculausa.com', full_name: 'Admin MatriculaUSA', phone: '' }];
   } catch {

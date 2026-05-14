@@ -613,14 +613,14 @@ const AdminDashboard: React.FC = () => {
             <Route path="universities" element={<UniversityManagement universities={universities} stats={componentStats.universities} onApprove={handleApproveUniversity} onReject={handleRejectUniversity} />} />
             <Route path="universities/:universityId" element={<UniversityDetails />} />
             <Route path="users" element={<UsersHub />} />
+            <Route path="payments" element={<PaymentManagement />} />
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
             
-            {/* Rotas restritas para Pós-Vendas */}
-            {!isPostSales && (
+            {/* Rotas restritas para Pós-Vendas (Se houver alguma que precise ser estritamente admin) */}
+            {!isPostSales ? (
               <>
-                <Route path="payments" element={<PaymentManagement />} />
                 <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
                 <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
                 <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
@@ -636,6 +636,10 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/coupons" element={<CouponManagement />} />
                 <Route path="/newsletter" element={<NewsletterManagement />} />
                 <Route path="/terms" element={<TermsManagement />} />
+              </>
+            ) : (
+              <>
+                {/* Opcional: Adicionar rotas específicas para post_sales se necessário */}
               </>
             )}
 

@@ -16,7 +16,19 @@
       "mcp__supabase__execute_sql",
       "Bash(echo.:*)",
       "Bash(rtk tsc:*)",
-      "Bash(rtk git:*)"
+      "Bash(rtk git:*)",
+      "Bash(grep -l \"CREATE TABLE.*document_request\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "Bash(find supabase/migrations -name \"*.sql\" -exec grep -l \"document_request\" {} \\\\;)",
+      "Bash(find . -name \"*.sql\" -exec grep -l \"CREATE TABLE.*document_request_uploads\" {} \\\\;)",
+      "Bash(python3 -c \"import sys, json; data=json.load\\(sys.stdin\\); [print\\(json.dumps\\(t, indent=2\\)\\) for t in data['tables'] if 'document_request_uploads' in t['name']]\")",
+      "Bash(mcp-supabase execute_sql --query \"SELECT constraint_name, constraint_type, table_name FROM information_schema.table_constraints WHERE table_name = 'document_request_uploads' AND table_schema = 'public';\")",
+      "mcp__supabase__list_edge_functions",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); funcs=json.loads\\(data[0]['text']\\); [print\\(f['slug'], '| verify_jwt:', f.get\\('verify_jwt','?'\\)\\) for f in funcs if f['slug'] in ['verify-stripe-session-application-fee','verify-stripe-session-placement-fee','verify-stripe-session-selection-process-fee','verify-stripe-session-package-fee','verify-stripe-session-scholarship-fee','verify-stripe-session-i20-control-fee','verify-stripe-session-reinstatement-fee','notify-university-document-reupload','parcelow-webhook']]\")",
+      "Bash(python3:*)",
+      "Bash(rtk npm:*)",
+      "Bash(date /t)"
     ]
   }
 }

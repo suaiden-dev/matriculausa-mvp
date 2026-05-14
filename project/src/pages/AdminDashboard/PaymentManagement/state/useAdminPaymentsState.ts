@@ -28,7 +28,7 @@ export interface AdminPaymentsStateReturn {
 	setActiveTab: (tab: string) => void;
 }
 
-export function useAdminPaymentsState(): AdminPaymentsStateReturn {
+export function useAdminPaymentsState(initialTab: string = 'payments'): AdminPaymentsStateReturn {
 	const [filters, setFiltersState] = useState<AdminPaymentsFilters>({});
 	const [loading, setLoading] = useState<boolean>(false);
 	const [currentPage, setCurrentPage] = useState<number>(1);
@@ -51,7 +51,7 @@ export function useAdminPaymentsState(): AdminPaymentsStateReturn {
 	const [showDetails, setShowDetails] = useState<boolean>(false);
 	const [selectedPayment, setSelectedPayment] = useState<any>(null);
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-	const [activeTab, setActiveTab] = useState<string>('payments');
+	const [activeTab, setActiveTab] = useState<string>(initialTab);
 
 	const setFilters = useCallback(
 		(updater: (prev: AdminPaymentsFilters) => AdminPaymentsFilters) => {

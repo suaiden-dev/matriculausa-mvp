@@ -67,7 +67,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       const dashboardPath =
         role === 'affiliate' ? '/affiliate/dashboard' :
         role === 'seller' ? '/seller/dashboard' :
-        role === 'admin' ? '/admin/dashboard' :
+        role === 'admin' || role === 'post_sales' ? '/admin/dashboard' :
         '/student/dashboard';
       navigate(dashboardPath, { replace: true });
     }

@@ -43,7 +43,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
         const { data } = await supabase
           .from('user_profiles')
           .select('user_id, full_name, email, role')
-          .in('role', ['admin', 'affiliate_admin']);
+          .in('role', ['admin', 'affiliate_admin', 'post_sales']);
         const map: Record<string, string> = {};
         (data || []).forEach((u: any) => {
           map[u.user_id] = u.full_name || u.email || u.user_id;
@@ -71,7 +71,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Fetch basic student info for header when admin selects a conversation
   React.useEffect(() => {
     const fetchRecipientInfo = async () => {
-      if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin')) {
+      if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'post_sales')) {
         setSelectedRecipientInfo(null);
         setSelectedRecipientProfileId(null);
         return;
@@ -207,7 +207,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                       <h3 className="text-white font-semibold truncate">
                         {selectedRecipientName || 'Chat'}
                       </h3>
-                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && (
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') && (
                         <div className="text-slate-200 text-xs flex flex-wrap gap-x-4 gap-y-1">
                           {selectedRecipientInfo?.email && <span className="truncate">{selectedRecipientInfo.email}</span>}
                           {selectedRecipientInfo?.phone && <span className="truncate">{selectedRecipientInfo.phone}</span>}
@@ -223,7 +223,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     >
                       <HelpCircle className="w-4 h-4" />
                     </button>
-                    {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && selectedRecipientProfileId && (
+                    {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales') && selectedRecipientProfileId && (
                       <Link
                         to={`/admin/dashboard/students/${selectedRecipientProfileId}`}
                         className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] sm:text-xs text-white border border-white/30 bg-white/10 hover:bg-white/20 backdrop-blur-[2px] shadow-sm transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/40"
