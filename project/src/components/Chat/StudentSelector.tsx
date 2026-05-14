@@ -22,7 +22,7 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
   onClose, 
   onStudentSelect 
 }) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { isDevelopment } = useEnvironment();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +62,17 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
     if (!shouldFilter) return false; // Em desenvolvimento, não excluir
+
+    // Se o próprio usuário logado for um usuário de teste, ou se for Admin/School, permitir ver outros usuários de teste
+    if (
+      userProfile?.email?.toLowerCase().endsWith('@uorak.com') ||
+      userProfile?.role === 'admin' ||
+      userProfile?.role === 'school' ||
+      userProfile?.role === 'affiliate_admin'
+    ) {
+      return false;
+    }
+
     return email.toLowerCase().includes('@uorak.com');
   };
 
@@ -71,22 +82,60 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const { data, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('user_id, full_name, email, avatar_url')
-        .eq('role', 'student')
-        .order('full_name', { ascending: true });
+      let filteredData: Student[] = [];
 
-      if (fetchError) throw fetchError;
+      if (userProfile?.role === 'school') {
+        // 1. Obter o ID da universidade para o usuário logado
+        const { data: univData, error: univError } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (univError) throw univError;
+
+        // 2. Buscar estudantes que aplicaram para bolsas desta universidade
+        // Buscamos nas aplicações vinculadas às bolsas da universidade
+        const { data: applications, error: appsError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            student_id,
+            scholarships!inner(university_id)
+          `)
+          .eq('scholarships.university_id', univData.id);
+
+        if (appsError) throw appsError;
+
+        const studentIds = Array.from(new Set((applications || []).map(app => app.student_id)));
+
+        if (studentIds.length > 0) {
+          // 3. Buscar os perfis desses estudantes
+          const { data: profiles, error: profilesError } = await supabase
+            .from('user_profiles')
+            .select('user_id, full_name, email, avatar_url')
+            .in('id', studentIds)
+            .order('full_name', { ascending: true });
+
+          if (profilesError) throw profilesError;
+          filteredData = profiles || [];
+        }
+      } else {
+        // Comportamento padrão para Admin: buscar todos os estudantes
+        const { data, error: fetchError } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email, avatar_url')
+          .eq('role', 'student')
+          .order('full_name', { ascending: true });
+
+        if (fetchError) throw fetchError;
+        filteredData = data || [];
+      }
 
       // Filtrar estudantes @uorak.com em produção/staging
-      let filteredData = data || [];
-      if (shouldFilter) {
-        console.log('🔍 [StudentSelector] Filtrando estudantes:', { total: filteredData.length, shouldFilter });
+      if (shouldFilter && filteredData.length > 0) {
         filteredData = filteredData.filter((student: Student) => {
           return !shouldExcludeEmail(student.email);
         });
-        console.log('🔍 [StudentSelector] Estudantes filtrados:', { depois: filteredData.length });
       }
 
       setStudents(filteredData);

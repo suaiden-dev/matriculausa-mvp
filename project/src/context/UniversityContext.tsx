@@ -102,7 +102,15 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           .select(`
             *,
             scholarships(*),
-            user_profiles!student_id(id, user_id, full_name, phone, country, documents_status, documents, is_application_fee_paid, is_scholarship_fee_paid)
+            user_profiles!student_id(
+              id, user_id, full_name, phone, country, email,
+              documents_status, documents, 
+              is_application_fee_paid, is_scholarship_fee_paid, 
+              is_placement_fee_paid, placement_fee_flow, 
+              placement_fee_pending_balance, placement_fee_due_date, 
+              placement_fee_installment_number, placement_fee_installment_enabled,
+              source, student_process_type
+            )
           `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
 
@@ -110,7 +118,75 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           console.error('Error loading applications:', applicationsError);
           throw applicationsError;
         }
-        setApplications(applicationsData || []);
+
+        // --- ENRIQUECIMENTO DE DOCUMENTOS DA UNIVERSIDADE ---
+        const appIds = (applicationsData || []).map(a => a.id);
+        
+        if (appIds.length > 0) {
+          // 1. Buscar todos os requests (específicos e globais da universidade)
+          const { data: allReqs, error: reqsError } = await supabase
+            .from('document_requests')
+            .select('id, scholarship_application_id, is_global, applicable_student_types')
+            .or(`scholarship_application_id.in.(${appIds.join(',')}),and(university_id.eq.${universityData.id},is_global.eq.true)`);
+
+          if (reqsError) console.error('[UNI_CONTEXT_DEBUG] Reqs Error:', reqsError);
+
+          // 2. Buscar todos os uploads para esses requests
+          const { data: allUploads, error: uploadsError } = await supabase
+            .from('document_request_uploads')
+            .select('id, document_request_id, status, uploaded_by')
+            .in('document_request_id', (allReqs || []).map(r => r.id));
+
+          if (uploadsError) console.error('[UNI_CONTEXT_DEBUG] Uploads Error:', uploadsError);
+
+          console.log('[UNI_CONTEXT_DEBUG]', {
+            reqsFound: allReqs?.length,
+            uploadsFound: allUploads?.length,
+            appIds: appIds.length
+          });
+
+          // 3. Mapear para cada aplicação
+          const enrichedApps = (applicationsData || []).map(app => {
+            const studentUserId = app.user_profiles?.user_id;
+            const studentProcessType = app.student_process_type || app.user_profiles?.student_process_type || 'initial';
+            
+            // Requests que se aplicam a esta aplicação: específicos + globais filtrados por tipo de aluno
+            const relevantReqs = (allReqs || []).filter(r => {
+              if (r.scholarship_application_id === app.id) return true;
+              if (r.is_global) {
+                // Se não houver tipos especificados, assume que é para todos
+                if (!r.applicable_student_types || r.applicable_student_types.length === 0) return true;
+                return r.applicable_student_types.includes(studentProcessType);
+              }
+              return false;
+            });
+
+            // Uploads que pertencem a esses requests E a este aluno
+            const relevantUploads = (allUploads || []).filter(u => 
+              relevantReqs.some(r => r.id === u.document_request_id) && 
+              u.uploaded_by === studentUserId
+            );
+
+            const stats = {
+              required: relevantReqs.length,
+              uploaded: relevantUploads.length,
+              approved: relevantUploads.filter(u => u.status === 'approved').length,
+              rejected: relevantUploads.filter(u => u.status === 'rejected' || u.status === 'changes_requested').length,
+              under_review: relevantUploads.filter(u => u.status === 'under_review' || !u.status).length
+            };
+
+            return {
+              ...app,
+              university_document_stats: stats
+            };
+          });
+
+          console.log('[UNI_CONTEXT_DEBUG] Enriched Apps Sample:', enrichedApps[0]?.university_document_stats);
+
+          setApplications(enrichedApps);
+        } else {
+          setApplications(applicationsData || []);
+        }
       }
       
       // Marcar que já carregamos dados uma vez

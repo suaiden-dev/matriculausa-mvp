@@ -89,7 +89,7 @@ export interface StudentRecord {
   docs_total_approved?: number;
   docs_total_rejected?: number;
   docs_total_under_review?: number;
-  
+
   // Basic docs aggregation fields (passport, diploma, funds_proof)
   basic_docs_total_required?: number;
   basic_docs_total_uploaded?: number;
@@ -331,7 +331,6 @@ export function getStepStatus(
 
     case 'university_docs': {
       const total = student.docs_total_required ?? 0;
-      if (total === 0) return 'skipped';
       const alreadyProgressed =
         !!student.acceptance_letter_url ||
         student.acceptance_letter_status === 'sent' ||
@@ -339,12 +338,15 @@ export function getStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      if (alreadyProgressed) return 'completed';
+      
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
+
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
       const uploaded = student.docs_total_uploaded ?? 0;
+      
       if (rejected > 0) return 'pending';
-      // Opção B: se tem pelo menos 1 em revisão, passa para docs_approval
       if (underReview > 0) return 'completed';
       if (uploaded < total) return 'pending';
       return 'completed';
@@ -352,7 +354,6 @@ export function getStepStatus(
 
     case 'docs_approval': {
       const total = student.docs_total_required ?? 0;
-      if (total === 0) return 'skipped';
       const alreadyProgressed =
         !!student.acceptance_letter_url ||
         student.acceptance_letter_status === 'sent' ||
@@ -360,12 +361,15 @@ export function getStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      if (alreadyProgressed) return 'completed';
+      
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
+
       const approved = student.docs_total_approved ?? 0;
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
+      
       if (approved >= total) return 'completed';
-      // Rejeitado sem re-upload → volta para university_docs (handled lá)
       if (rejected > 0) return 'pending';
       if (underReview > 0 || approved > 0) return 'in_progress';
       return 'pending';
@@ -373,18 +377,18 @@ export function getStepStatus(
 
     case 'send_docs_to_university':
       // 'pending' é valor default da application — só conta URL ou status 'sent'
-      return (student.has_sent_docs_to_university || !!student.acceptance_letter_url || student.acceptance_letter_status === 'sent')
+      return (student.has_sent_docs_to_university || !!student.acceptance_letter_url || student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled')
         ? 'completed'
         : 'pending';
 
     case 'receive_acceptance_letter':
       // Só completa quando admin fez upload da carta (URL existe)
-      return student.acceptance_letter_url ? 'completed' : 'pending';
+      return (student.acceptance_letter_url || student.application_status === 'enrolled') ? 'completed' : 'pending';
 
     case 'send_acceptance_letter':
-      // Só aparece quando admin já fez upload da carta
-      if (!student.acceptance_letter_url) return 'skipped';
-      return student.acceptance_letter_status === 'sent' ? 'completed' : 'pending';
+      // Show as completed if sent or URL exists (depending on school preference)
+      if (student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled') return 'completed';
+      return student.acceptance_letter_url ? 'in_progress' : 'pending';
 
     case 'student_sends_letter':
       if (student.student_process_type !== 'transfer') return 'skipped';

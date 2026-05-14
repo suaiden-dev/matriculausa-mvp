@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { Scholarship } from '../types';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import type { Scholarship } from "../types";
 
 export function useScholarships() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -26,10 +26,10 @@ export function useScholarships() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Query unificada para visitantes e usuários autenticados
         const { data, error } = await supabase
-          .from('scholarships')
+          .from("scholarships")
           .select(`
             id,
             title,
@@ -65,28 +65,28 @@ export function useScholarships() {
             min_english_proficiency,
             universities (id, name, logo_url, image_url, location, is_approved, university_fees_page_url)
           `)
-          .eq('is_active', true)
-          .neq('is_test', true)
-        
+          .eq("is_active", true)
+          .neq("is_test", true);
+
         if (error) {
-          console.error('❌ [useScholarships] Erro ao buscar bolsas:', error);
+          console.error("❌ [useScholarships] Erro ao buscar bolsas:", error);
           setError(error.message);
           setScholarships([]);
         } else {
           setScholarships((data || []) as unknown as Scholarship[]);
         }
       } catch (err) {
-        console.error('❌ [useScholarships] Erro inesperado:', err);
-        setError('Erro inesperado ao carregar bolsas');
+        console.error("❌ [useScholarships] Erro inesperado:", err);
+        setError("Erro inesperado ao carregar bolsas");
         setScholarships([]);
       } finally {
         setLoading(false);
         setHasLoadedData(true);
       }
     }
-    
+
     fetchScholarships();
   }, []); // Removido hasLoadedData da dependência para evitar loop
-  
+
   return { scholarships, loading, error };
-} 
+}
