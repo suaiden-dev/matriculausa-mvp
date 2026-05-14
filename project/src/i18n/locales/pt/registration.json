@@ -302,9 +302,15 @@
         "placeholder": "+55 11 99999-9999"
       },
       "4": {
-        "text": "Você está atualmente nos EUA?",
-        "extraLabel": "Qual status atual?",
-        "placeholder": "Ex: B1/B2, F-1, etc."
+        "text": "Quantos dependentes você possui? (cônjuge e filhos menores de 21 anos)",
+        "options": {
+          "0": "0 Dependentes",
+          "1": "1 Dependente",
+          "2": "2 Dependentes",
+          "3": "3 Dependentes",
+          "4": "4 Dependentes",
+          "5": "5 Dependentes"
+        }
       },
       "5": {
         "text": "Qual é o seu perfil hoje?",
@@ -705,6 +711,9 @@
       },
       "5_3": {
         "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
+      },
+      "5_4": {
+        "text": "Data de expiração do status/I-94"
       }
     }
   },
