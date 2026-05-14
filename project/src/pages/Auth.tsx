@@ -29,8 +29,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     country: '',
     fieldOfInterest: '',
     englishLevel: '',
-    dependents: null as number | null, // Dependents field for SUAIDEN code - initialized as null
-    // University specific fields
+    // Referral code field - unified
     universityName: '',
     position: '',
     website: '',
@@ -487,15 +486,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          const directSalesCodes = ['SUAIDEN', 'BRANT'];
          const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
          
-          // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
-          if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
-            setError(t('authPage.messages.invalidDependents'));
-            setLoading(false);
-            return;
-          }
-          
-          // Como a validação acima garante que não é null, usamos o valor diretamente
-          const finalDependents = formData.dependents;
+
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
@@ -525,8 +516,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                scholarship_package_number: 3,
                desired_scholarship_range: 4500
              }),
-              // ✅ Dependents: Sempre salvar para todos os estudantes
-              dependents: finalDependents
+
            })
         };
 
@@ -1038,47 +1028,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     )}
                   </div>
 
-                  {/* Dependents field - Always shown for all students - placed right after Referral Code */}
-                  {activeTab === 'student' && (
-                    <div className="lg:col-span-1">
-                      <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
-                        {t('authPage.register.dependentsLabel')} <span className="text-xs font-normal text-slate-500">{t('authPage.register.dependentsHint')}</span>
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
-                        <ChevronDown className="absolute right-4 top-4 h-5 w-5 text-slate-400 pointer-events-none z-10" />
-                        <select
-                          id="dependents"
-                          name="dependents"
-                          value={formData.dependents === null ? '' : formData.dependents}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? null : parseInt(e.target.value);
-                            setFormData(prev => ({ ...prev, dependents: val }));
-                          }}
-                          className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${
-                            error === t('authPage.messages.invalidDependents')
-                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                              : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                          }`}
-                          onBlur={() => trackFieldFilled('dependents')}
-                        >
-                          <option value="" disabled>{t('authPage.register.selectDependents')}</option>
-                          <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={1}>1 {t('authPage.register.dependentsLabel').slice(0, -1)}</option>
-                          <option value={2}>2 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={3}>3 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
-                          <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
-                        </select>
-                        {error === t('authPage.messages.invalidDependents') && (
-                          <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
-                            <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                            <span>{error}</span>
-                          </div>
-                        )}
-                      </div>
-              </div>
-            )}
+
 
                 </div>
               </>
