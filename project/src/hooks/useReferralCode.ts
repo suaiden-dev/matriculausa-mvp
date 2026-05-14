@@ -90,7 +90,7 @@ export const useReferralCode = () => {
           return {
             has_discount: true,
             affiliate_code: appliedCodeFromTable.affiliate_code,
-            discount_amount: appliedCodeFromTable.discount_amount || 50,
+            discount_amount: appliedCodeFromTable.discount_amount ?? 0,
             stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
             referrer_id: appliedCodeFromTable.referrer_id,
             applied_at: appliedCodeFromTable.applied_at,

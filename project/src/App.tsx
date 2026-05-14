@@ -41,6 +41,7 @@ const AdminRegistration = React.lazy(() => import('./pages/AdminRegistration'));
 const SellerRegistration = React.lazy(() => import('./pages/SellerRegistration'));
 const AffiliateRegistration = React.lazy(() => import('./pages/AffiliateRegistration'));
 const AffiliateDashboard = React.lazy(() => import('./pages/AffiliateDashboard/index'));
+const AffiliateRewardsStore = React.lazy(() => import('./pages/StudentDashboard/RewardsStore'));
 const SellerStudentRegistration = React.lazy(() => import('./pages/SellerStudentRegistration'));
 const StudentOnboarding = React.lazy(() => import('./pages/StudentOnboarding/StudentOnboarding'));
 const QuickRegistration = React.lazy(() => import('./pages/QuickRegistration'));
@@ -129,6 +130,7 @@ const AppContent = () => {
           <Route path="/seller/register" element={<SellerRegistration />} />
           <Route path="/affiliate/register" element={<AffiliateRegistration />} />
           <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+          <Route path="/affiliate/dashboard/rewards/store" element={<AffiliateRewardsStore />} />
           <Route path="/student/register" element={<SellerStudentRegistration />} />
           <Route path="/scholarships" element={<Scholarships />} />
           <Route path="/selection-fee-registration" element={<QuickRegistration />} />
