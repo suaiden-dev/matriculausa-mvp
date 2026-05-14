@@ -66,10 +66,9 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 next[3] = userProfile.phone;
                 hasChanged = true;
             }
-            // Q4: Nos EUA? (Verifica se o país é EUA)
-            if (!next[4] && userProfile?.country) {
-                const isUSA = ['usa', 'united states', 'eua', 'estados unidos'].includes(userProfile.country.toLowerCase());
-                next[4] = isUSA ? 'Sim' : 'Não';
+            // Q4: Dependentes
+            if (!next[4] && userProfile?.dependents !== undefined && userProfile?.dependents !== null) {
+                next[4] = String(userProfile.dependents);
                 hasChanged = true;
             }
 
@@ -122,7 +121,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         const sectionQuestions = questions.filter(
             (q) => q.id >= section.range[0] && q.id <= section.range[1]
         );
-        
+
         // Filtrar apenas questões que NÃO são dependentes de outra questão NA MESMA SEÇÃO
         // para que possam ser renderizadas "inline" pela questão pai.
         return sectionQuestions.filter(q => {
@@ -152,17 +151,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 } else if (q.id === 5 && answer === 'nao_sei') {
                     newErrors[5] = t('registration:selectionSurvey.questions.5.errorNaoSei');
                     isValid = false;
-                } else if (q.id === 4) {
-                    if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
-                        if (!answers[-4] || String(answers[-4]).trim() === '') {
-                            newErrors[-4] = 'selectionSurvey.required';
-                            isValid = false;
-                        }
-                        if (!answers[-41] || String(answers[-41]).trim() === '') {
-                            newErrors[-41] = 'selectionSurvey.required';
-                            isValid = false;
-                        }
-                    }
                 } else if (q.id === 3.3) {
                     const gpaValue = parseFloat(String(answer).replace(',', '.'));
                     if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
@@ -190,13 +178,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             if (!isVisible) return true;
             if (q.required && !answers[q.id]) return false;
             
-            // Lógica específica para a pergunta de graduação (id 4)
-            if (q.required && q.id === 4) {
-                const answer = answers[q.id];
-                if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
-                    if (!answers[-4] || !answers[-41]) return false;
-                }
-            }
             return true;
         });
     }, [answers, questions]);
@@ -318,6 +299,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                     field_of_interest: currentAnswers[3.1],
                     academic_level: currentAnswers[3.2],
                     gpa: currentAnswers[3.3] ? parseFloat(String(currentAnswers[3.3]).replace(',', '.')) : null,
+                    dependents: currentAnswers[4] !== undefined ? parseInt(String(currentAnswers[4])) : null,
                     english_proficiency: currentAnswers[8],
                     ...(processType && {
                         student_process_type: processType,

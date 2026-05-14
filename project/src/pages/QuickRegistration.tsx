@@ -193,7 +193,6 @@ const QuickRegistration: React.FC = () => {
         full_name: urlName || (parsed?.full_name || ''),
         email: urlEmail || (parsed?.email || ''),
         phone: urlPhone || (parsed?.phone || ''),
-        dependents: parsed?.dependents || '',
         password: '',
         confirm_password: '',
         termsAccepted: false,
@@ -209,7 +208,6 @@ const QuickRegistration: React.FC = () => {
         full_name: '',
         email: '',
         phone: '',
-        dependents: '',
         password: '',
         confirm_password: '',
         termsAccepted: false,
@@ -236,7 +234,6 @@ const QuickRegistration: React.FC = () => {
         full_name: userProfile?.full_name || prev.full_name,
         email: supabaseUser.email || prev.email,
         phone: userProfile?.phone || prev.phone,
-        dependents: userProfile?.dependents !== undefined && userProfile?.dependents !== null ? userProfile.dependents : prev.dependents,
         termsAccepted: true
       }));
     }
@@ -680,8 +677,7 @@ const QuickRegistration: React.FC = () => {
     const { name, value, type } = e.target;
     setFormData((prev: any) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-        name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
 
     // Limpar erro do campo ao digitar
@@ -770,9 +766,7 @@ const QuickRegistration: React.FC = () => {
       newFieldErrors.confirm_password = t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem';
     }
 
-    if (formData.dependents === '') {
-      newFieldErrors.dependents = 'Por favor, selecione o número de dependentes.';
-    }
+
 
     if (!formData.termsAccepted) {
       newFieldErrors.termsAccepted = t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos';
@@ -811,7 +805,6 @@ const QuickRegistration: React.FC = () => {
       const userData: any = {
         full_name: formData.full_name,
         phone: formData.phone,
-        dependents: formData.dependents,
         role: 'student' as const,
         cpf_document: formData.cpf, // Include CPF in metadata
         newsletter_consent: formData.newsletter_consent
@@ -1170,57 +1163,7 @@ const QuickRegistration: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Dependents Selector */}
-                    <div className="flex flex-col">
-                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1 leading-tight">
-                        <span className="text-[#D0151C] font-bold mr-1">*</span>
-                        {t('rapidRegistration.form.dependents')}
-                        <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          {t('rapidRegistration.form.dependentsSubtitle')}
-                        </span>
-                      </label>
-                      <div className="relative mt-auto">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                          <Users className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none z-10">
-                          <ChevronDown className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <select
-                          id="dependents"
-                          name="dependents"
-                          value={formData.dependents}
-                          disabled={isRegistered}
-                          required
-                          onBlur={() => trackFieldFilled('dependents')}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? '' : parseInt(e.target.value);
-                            setFormData((prev: any) => ({ ...prev, dependents: value }));
-                            if (fieldErrors.dependents) {
-                              setFieldErrors(prev => {
-                                const next = { ...prev };
-                                delete next.dependents;
-                                return next;
-                              });
-                            }
-                          }}
-                          className={`appearance-none block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.dependents ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.dependents ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} ${formData.dependents === '' ? 'text-slate-400' : 'text-slate-900'} bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          <option value="" disabled hidden className="text-slate-400">{t('common.select', 'Selecione')}</option>
-                          <option value={0} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
-                          <option value={1} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
-                          <option value={2} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
-                          <option value={3} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
-                          <option value={4} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
-                          <option value={5} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
-                        </select>
-                      </div>
-                      {fieldErrors.dependents && (
-                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                          {fieldErrors.dependents}
-                        </p>
-                      )}
-                    </div>
+
 
                     {/* Password */}
                     {!isRegistered && (
