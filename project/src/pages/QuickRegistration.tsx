@@ -395,9 +395,9 @@ const QuickRegistration: React.FC = () => {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref)
-    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 50) > 0) {
-      const discount = validationResult.discountAmount || 50;
+    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref e afiliados sem desconto)
+    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 0) > 0) {
+      const discount = validationResult.discountAmount || 0;
       return Math.max(baseFee - discount, 0);
     }
 
@@ -517,11 +517,24 @@ const QuickRegistration: React.FC = () => {
         }
       }
 
-      // Se for apenas pré-registro, validamos localmente para a UI
-      const discountAmount = targetCode === 'TFOE' ? 300 : 50;
+      // Determinar desconto: TFOE=$300, senão verificar role do referenciador
+      let discountAmount = 0;
+      if (targetCode === 'TFOE') {
+        discountAmount = 300;
+      } else if (affiliateCodeData?.user_id) {
+        // Verificar role do referenciador: alunos (role='student') dão $50, afiliados profissionais dão $0
+        const { data: referrerProfile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', affiliateCodeData.user_id)
+          .maybeSingle();
+        if (referrerProfile?.role === 'student') discountAmount = 50;
+      }
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`,
+        message: discountAmount > 0
+          ? (t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`)
+          : (t('preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!'),
         discountAmount,
         codeType
       });
@@ -621,6 +634,11 @@ const QuickRegistration: React.FC = () => {
     }
   }, [currentFee, exchangeRate]);
 
+  // Load active terms from database on mount
+  useEffect(() => {
+    loadActiveTerms();
+  }, []);
+
   // Load active terms from database
   const loadActiveTerms = async () => {
     try {
@@ -711,6 +729,17 @@ const QuickRegistration: React.FC = () => {
           if (hasValidStudentCpf && (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf)) {
             console.log("[QuickRegistration] 🔄 Atualizando CPF no perfil do estudante...");
             await updateUserProfile({ cpf_document: formData.cpf });
+          }
+        }
+
+        // Gravar aceitação de termos para usuário já registrado
+        const targetUserId = userProfile?.user_id || supabaseUser?.id;
+        if (activeTerm && targetUserId) {
+          try {
+            console.log("[QuickRegistration] 📝 Gravando aceitação de termos para usuário registrado...");
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms', targetUserId);
+          } catch (termErr) {
+            console.error('Failed to record terms for registered user:', termErr);
           }
         }
 
@@ -1711,7 +1740,7 @@ const QuickRegistration: React.FC = () => {
                           </span>
                         </div>
 
-                        {isCouponValid && timeLeft > 0 && (
+                        {isCouponValid && timeLeft > 0 && (validationResult?.discountAmount ?? 0) > 0 && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
                               <Ticket className="w-2.5 h-2.5 mr-1" />
