@@ -3894,15 +3894,13 @@ const AdminStudentDetails: React.FC = () => {
 
 
 
-            {termAcceptances.length > 0 && (
-              <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
-                <TermAcceptancesCard
-                  termAcceptances={termAcceptances}
-                  loading={false}
-                  onDownloadPDF={handleDownloadTermPDF}
-                />
-              </Suspense>
-            )}
+            <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+              <TermAcceptancesCard
+                termAcceptances={termAcceptances}
+                loading={false}
+                onDownloadPDF={handleDownloadTermPDF}
+              />
+            </Suspense>
 
             {/* Identity Photo Verification Card — dados vêm de user_profiles */}
             {(() => {
