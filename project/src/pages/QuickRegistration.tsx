@@ -133,7 +133,7 @@ const QuickRegistration: React.FC = () => {
   const { t } = useTranslation(['registration', 'payment', 'common', 'auth']);
   const navigate = useNavigate();
   const location = useLocation();
-  const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
+  const { register, supabaseUser, userProfile, updateUserProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const { recordTermAcceptance } = useTermsAcceptance();
   const { trackFieldFilled, trackStepReached, trackFormSubmitted } = useFormTracking({ formName: 'quick_registration' });
@@ -258,8 +258,8 @@ const QuickRegistration: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [couponCode, setCouponCode] = useState('');
-  const [isCouponValid, setIsCouponValid] = useState(false);
+  const [couponCode, setCouponCode] = useState(() => sessionStorage.getItem('matricula_quick_coupon_code') || '');
+  const [isCouponValid, setIsCouponValid] = useState(() => sessionStorage.getItem('matricula_quick_is_coupon_valid') === 'true');
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>(() => {
     return (sessionStorage.getItem('matricula_quick_selected_method') as any) || 'stripe';
   });
@@ -272,13 +272,7 @@ const QuickRegistration: React.FC = () => {
   const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
 
   // Persistir método selecionado e estado do modal Zelle
-  useEffect(() => {
-    sessionStorage.setItem('matricula_quick_selected_method', selectedMethod);
-  }, [selectedMethod]);
 
-  useEffect(() => {
-    sessionStorage.setItem('matricula_quick_show_zelle', String(showZelleCheckout));
-  }, [showZelleCheckout]);
 
   // Loading Progress State
   const [loadingStep, setLoadingStep] = useState('');
@@ -313,14 +307,21 @@ const QuickRegistration: React.FC = () => {
   // Aligned with SelectionFeeStep coupon states
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [codeApplied, setCodeApplied] = useState(() => sessionStorage.getItem('matricula_quick_code_applied') === 'true');
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
     message: string;
     discountAmount?: number;
     isSelfReferral?: boolean;
     codeType?: 'rewards' | 'seller';
-  } | null>(null);
-  const [codeApplied, setCodeApplied] = useState(false);
+  } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('matricula_quick_validation_result');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Detectar se o aluno chegou via link de rastreamento sem desconto (?sref=)
   // Nesse caso, ocultamos toda a seção de cupons — ele já está vinculado ao vendedor
@@ -334,8 +335,48 @@ const QuickRegistration: React.FC = () => {
     discountAmount?: number;
     finalAmount?: number;
     couponId?: string;
-  } | null>(null);
-  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('matricula_quick_promo_validation');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [promotionalCoupon, setPromotionalCoupon] = useState(() => sessionStorage.getItem('matricula_quick_promotional_coupon') || '');
+
+  // Persist states to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_selected_method', selectedMethod);
+  }, [selectedMethod]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_show_zelle', String(showZelleCheckout));
+  }, [showZelleCheckout]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_coupon_code', couponCode);
+  }, [couponCode]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_is_coupon_valid', String(isCouponValid));
+  }, [isCouponValid]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_code_applied', String(codeApplied));
+  }, [codeApplied]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_validation_result', JSON.stringify(validationResult));
+  }, [validationResult]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_promotional_coupon', promotionalCoupon);
+  }, [promotionalCoupon]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_promo_validation', JSON.stringify(promotionalCouponValidation));
+  }, [promotionalCouponValidation]);
 
   // Auto-scroll to top when Zelle checkout is shown
   useEffect(() => {
@@ -400,6 +441,13 @@ const QuickRegistration: React.FC = () => {
 
     return baseFee;
   })();
+
+  // Se o valor for 0, forçar método Zelle (que será usado para o fluxo de registro gratuito)
+  useEffect(() => {
+    if (currentFee === 0 && selectedMethod !== 'zelle') {
+      setSelectedMethod('zelle');
+    }
+  }, [currentFee, selectedMethod]);
 
   const formattedAmount = formatFeeAmount(currentFee);
 
@@ -739,6 +787,11 @@ const QuickRegistration: React.FC = () => {
           }
         }
 
+        if (currentFee === 0) {
+          await handleFreeRegistration();
+          return;
+        }
+
         if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
           await handlePaymentCheckout(selectedMethod || 'stripe');
         } else if (selectedMethod === 'zelle') {
@@ -849,7 +902,9 @@ const QuickRegistration: React.FC = () => {
       setLoadingProgress(30);
 
       // 3. Initiate Payment
-      if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
+      if (currentFee === 0) {
+        await handleFreeRegistration();
+      } else if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
         await handlePaymentCheckout(selectedMethod || 'stripe');
       } else if (selectedMethod === 'zelle') {
         setShowZelleCheckout(true);
@@ -862,6 +917,88 @@ const QuickRegistration: React.FC = () => {
       clearAllIntervals();
       console.error('Registration failed:', err);
       setError(err.message || t('rapidRegistration.form.error.general', 'Ocorreu um erro no registro.'));
+      setLoading(false);
+    }
+  };
+
+  const handleFreeRegistration = async () => {
+    console.log("[QuickRegistration] 🎁 Processando registro grátis...");
+    setLoading(true);
+    setError(null);
+    setLoadingStep("Finalizando sua inscrição gratuita...");
+    setLoadingProgress(50);
+
+    try {
+      // Pega o ID da sessão atual (mais confiável do que o estado React pós-registro)
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || userProfile?.user_id || supabaseUser?.id;
+      if (!userId) throw new Error('User ID not found');
+
+      const activeAffiliateCode = (codeApplied && timeLeft > 0 && validationResult?.codeType !== 'seller') ? couponCode : undefined;
+      const activePromoCoupon = (promotionalCouponValidation?.isValid && timeLeft > 0) ? promotionalCoupon : undefined;
+
+      // Determinar nota para o admin
+      let adminNote = '[' + new Date().toISOString().slice(0, 16).replace('T', ' ') + '] ';
+      if (activeAffiliateCode) {
+        adminNote += `Inscrição isenta via código de indicação ${activeAffiliateCode} (100% OFF)`;
+      } else if (activePromoCoupon) {
+        adminNote += `Inscrição isenta via cupom promocional ${activePromoCoupon} (100% OFF)`;
+      } else {
+        adminNote += 'Inscrição isenta (100% OFF)';
+      }
+
+      // 1. Atualizar perfil diretamente (RLS permite: users can update their own profile)
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          has_paid_selection_process_fee: true,
+          selection_process_fee_payment_method: 'coupon',
+          onboarding_current_step: 'identity_verification',
+          admin_notes: adminNote,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+
+      if (updateError) throw updateError;
+
+      // 2. Registrar uso do código de afiliado (best-effort, não bloqueia)
+      if (activeAffiliateCode) {
+        try {
+          const { data: affiliateData } = await supabase
+            .from('affiliate_codes')
+            .select('user_id')
+            .eq('code', activeAffiliateCode)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('email')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          await supabase.from('used_referral_codes').insert({
+            user_id: userId,
+            affiliate_code: activeAffiliateCode,
+            referrer_id: affiliateData?.user_id || null,
+            discount_amount: 400,
+            status: 'used',
+            applied_at: new Date().toISOString(),
+            email: profileData?.email || null
+          });
+        } catch (refErr) {
+          console.warn('[QuickRegistration] Referral tracking failed (non-blocking):', refErr);
+        }
+      }
+
+      // Atualizar contexto de auth antes de navegar para o onboarding ver o perfil já atualizado
+      await refetchUserProfile();
+
+      setLoadingProgress(100);
+      navigate('/student/onboarding');
+    } catch (err: any) {
+      console.error('Free registration failed:', err);
+      setError(err.message || 'Error occurred');
       setLoading(false);
     }
   };
@@ -995,6 +1132,12 @@ const QuickRegistration: React.FC = () => {
   };
 
   const getButtonText = () => {
+    if (currentFee === 0) {
+      return isRegistered
+        ? t('rapidRegistration.payment.freeSection.completeRegistered', 'Finalizar Inscrição Gratuita')
+        : t('rapidRegistration.payment.freeSection.complete', 'Criar Conta e Finalizar');
+    }
+
     const methodNames: Record<string, string> = {
       stripe: t('rapidRegistration.payment.methods.stripe', 'Cartão de Crédito'),
       pix: t('rapidRegistration.payment.methods.pix', 'PIX'),
@@ -1034,6 +1177,12 @@ const QuickRegistration: React.FC = () => {
               onSuccess={() => {
                 sessionStorage.removeItem('matricula_quick_selected_method');
                 sessionStorage.removeItem('matricula_quick_show_zelle');
+                sessionStorage.removeItem('matricula_quick_coupon_code');
+                sessionStorage.removeItem('matricula_quick_is_coupon_valid');
+                sessionStorage.removeItem('matricula_quick_code_applied');
+                sessionStorage.removeItem('matricula_quick_validation_result');
+                sessionStorage.removeItem('matricula_quick_promotional_coupon');
+                sessionStorage.removeItem('matricula_quick_promo_validation');
                 navigate('/student/onboarding?step=selection_fee&payment=success');
               }}
               onProcessingChange={setIsZelleProcessing}
@@ -1518,16 +1667,34 @@ const QuickRegistration: React.FC = () => {
 
                 <div className="relative z-10">
                   <h3 className="text-2xl font-black text-grey-900 mb-8 flex items-center uppercase tracking-tight">
-                    {t('rapidRegistration.payment.selectMethod')}
+                    {currentFee === 0
+                      ? t('rapidRegistration.payment.freeSection.title', 'Confirme sua Inscrição')
+                      : t('rapidRegistration.payment.selectMethod')}
                   </h3>
 
-                  <div className={`space-y-4 ${hasPaid ? 'filter blur-[4px] opacity-40 pointer-events-none select-none transition-all duration-300' : ''}`}>
+                  {currentFee === 0 && (
+                    <div className="mb-8 p-6 bg-emerald-50 border-2 border-emerald-200 rounded-3xl flex items-center space-x-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                      <div className="bg-emerald-500 text-white p-3 rounded-2xl shadow-lg shadow-emerald-200">
+                        <Ticket className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black text-emerald-900 uppercase tracking-tight">
+                          {t('rapidRegistration.payment.freeBanner.title', 'Inscrição Gratuita!')}
+                        </h4>
+                        <p className="text-emerald-700 font-medium leading-tight">
+                          {t('rapidRegistration.payment.freeBanner.description', 'Seu cupom de 100% de desconto foi aplicado com sucesso.')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentFee > 0 && <div className={`space-y-4 ${hasPaid ? 'filter blur-[4px] opacity-40 pointer-events-none select-none transition-all duration-300' : ''}`}>
                     {[
                       { id: 'stripe' as const, name: t('rapidRegistration.payment.methods.stripe'), icon: StripeIcon },
                       { id: 'pix' as const, name: t('rapidRegistration.payment.methods.pix'), icon: PixIcon },
                       { id: 'parcelow' as const, name: t('rapidRegistration.payment.methods.parcelow'), icon: ParcelowIcon },
                       { id: 'zelle' as const, name: t('rapidRegistration.payment.methods.zelle'), icon: ZelleIcon }
-                    ].map((method) => {
+                    ].filter(() => true).map((method) => {
                       const Icon = method.icon;
                       const isSelected = selectedMethod === method.id;
                       const isFormValid = formData.full_name && formData.email && formData.phone && formData.password && formData.confirm_password;
@@ -1551,7 +1718,11 @@ const QuickRegistration: React.FC = () => {
                                   <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm">
                                     <Icon className="w-6 h-6 sm:w-10 sm:h-10 text-gray-700" />
                                   </div>
-                                  <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">{method.name}</h4>
+                                  <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">
+                                    {currentFee === 0 && method.id === 'zelle' 
+                                      ? t('rapidRegistration.payment.methods.free', 'Confirmar sem Custo') 
+                                      : method.name}
+                                  </h4>
                                 </div>
                                 <div className="flex items-center gap-1 sm:gap-3">
                                   {method.id === 'stripe' && (
@@ -1608,7 +1779,7 @@ const QuickRegistration: React.FC = () => {
                         </React.Fragment>
                       );
                     })}
-                  </div>
+                  </div>}
 
                   {hasPaid && (
                     <div className="absolute inset-x-0 bottom-0 top-16 flex flex-col items-center justify-center z-20 bg-white/20 backdrop-blur-[2px] rounded-b-3xl">
@@ -1743,13 +1914,13 @@ const QuickRegistration: React.FC = () => {
                   type="submit"
                   form="registration-form"
                   disabled={
-                    loading || 
-                    (!formData.termsAccepted && !isRegistered) || 
-                    (selectedMethod === 'parcelow' && (
+                    loading ||
+                    (!formData.termsAccepted && !isRegistered) ||
+                    (currentFee > 0 && selectedMethod === 'parcelow' && (
                       (payerInfo ? (!payerInfo.cpf || payerInfo.cpf.replace(/\D/g, '').length < 11) : (!formData.cpf || formData.cpf.replace(/\D/g, '').length < 11))
                     ))
                   }
-                  className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (payerInfo ? (payerInfo.cpf && payerInfo.cpf.replace(/\D/g, '').length === 11) : (formData.cpf && formData.cpf.replace(/\D/g, '').length === 11))) ? 'bg-[#05294E]' : 'bg-slate-400'
+                  className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (currentFee === 0 || selectedMethod !== 'parcelow' || (payerInfo ? (payerInfo.cpf && payerInfo.cpf.replace(/\D/g, '').length === 11) : (formData.cpf && formData.cpf.replace(/\D/g, '').length === 11))) ? 'bg-[#05294E]' : 'bg-slate-400'
                     }`}
                 >
                   {getButtonText()}

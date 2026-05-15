@@ -1,6 +1,5 @@
 import React from 'react';
-import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot, Upload } from 'lucide-react';
-import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
+import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot } from 'lucide-react';
 import { useDocumentRejectionDetails } from '../../../hooks/useDocumentRejectionDetails';
 import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
 
@@ -60,7 +59,6 @@ interface StudentDocumentsCardProps {
   onRejectDocument: (appId: string, docType: string) => void;
   onApproveApplication?: (appId: string) => void;
   onRejectApplication?: (appId: string) => void;
-  onUploadAttachment?: (appId: string, title: string, file: File) => Promise<void>;
 }
 
 /**
@@ -85,7 +83,6 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   onRejectDocument,
   onApproveApplication,
   onRejectApplication,
-  onUploadAttachment,
 }) => {
   const [expandedAI, setExpandedAI] = React.useState<Record<string, boolean>>({});
   const { rejectionDetails } = useDocumentRejectionDetails(studentId);
@@ -94,13 +91,6 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
     setExpandedAI(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
-  const [activeAppForUpload, setActiveAppForUpload] = React.useState<{ id: string, title: string } | null>(null);
-
-  const handleOpenUploadModal = (appId: string, title: string) => {
-    setActiveAppForUpload({ id: appId, title });
-    setIsUploadModalOpen(true);
-  };
   if (applications.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -455,63 +445,6 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                       </div>
                     )}
 
-                    {/* Admin Attachments Section */}
-                    <div className="mt-6 border-t border-slate-100 pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-bold text-slate-900 flex items-center">
-                          <Upload className="w-4 h-4 mr-2 text-[#05294E]" />
-                          Admin Attachments
-                        </h4>
-                        {canUniversityManage && (
-                          <button
-                            onClick={() => handleOpenUploadModal(app.id, scholarship?.title || 'Application')}
-                            className="text-xs font-bold text-[#05294E] hover:text-[#0a4a7a] flex items-center space-x-1 px-3 py-1.5 bg-blue-50 rounded-lg transition-all hover:bg-blue-100 border border-blue-100"
-                          >
-                            <Upload className="w-3 h-3" />
-                            <span>Add Attachment</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {(() => {
-                        const adminDocs = (app.documents || []).filter((d: any) => d.source === 'admin');
-                        if (adminDocs.length === 0) {
-                          return (
-                            <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-200 text-center">
-                              <p className="text-xs text-slate-500 italic">No admin attachments uploaded yet.</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="grid gap-2">
-                            {adminDocs.map((doc: any, idx: number) => (
-                              <div key={`admin-doc-${idx}`} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-all">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900">{doc.title || doc.type}</p>
-                                    <p className="text-[10px] text-slate-500">
-                                      {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => onViewDocument({ file_url: doc.url, filename: doc.title || doc.type })}
-                                  className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                                  title="View Attachment"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    
                     {/* Application Approval Section - Only for Platform Admins */}
                     {canPlatformAdmin && (
                       <div className={`mt-4 p-4 rounded-lg border ${
@@ -610,12 +543,6 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
         </div>
       </div>
 
-      <AdminUploadAttachmentModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        onUpload={(title, file) => onUploadAttachment?.(activeAppForUpload?.id || '', title, file) || Promise.resolve()}
-        applicationTitle={activeAppForUpload?.title}
-      />
     </div>
   );
 }, (prevProps, nextProps) => {

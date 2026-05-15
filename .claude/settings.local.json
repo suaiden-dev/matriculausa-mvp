@@ -47,7 +47,13 @@
       "Bash(python3 -c \"import sys, json; content = sys.stdin.read\\(\\); print\\(json.dumps\\(content\\)\\)\")",
       "Bash(rtk npx:*)",
       "Bash(supabase functions:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(rtk ls:*)",
+      "Bash(rm:*)",
+      "Bash(where gh:*)",
+      "Bash(grep -l \"document_requests\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
+      "Bash(grep -l \"CREATE OR REPLACE FUNCTION\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
+      "Bash(grep:*)"
     ]
   }
 }

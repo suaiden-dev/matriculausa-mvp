@@ -240,7 +240,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                   {formatCurrency(originalValue)}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.withScholarship')}</span>
                 <span className="text-green-700 font-extrabold text-base">

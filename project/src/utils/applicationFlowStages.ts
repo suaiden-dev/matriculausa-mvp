@@ -285,8 +285,8 @@ export function getStepStatus(
 
   switch (step) {
     case 'selection_fee':
-      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       if (student.application_status === 'enrolled') return 'completed';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       return student.has_submitted_form ? 'completed' : 'in_progress';
 
     case 'apply':
@@ -467,6 +467,12 @@ export function getCurrentStage(student: StudentRecord): {
   stage: ApplicationFlowStageKey | null;
   status: StageStatus;
 } {
+  // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
+  // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
+  if (student.application_status === 'enrolled') {
+    return { stage: 'enrollment', status: 'completed' };
+  }
+
   for (const stageDef of APPLICATION_FLOW_STAGES) {
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;
