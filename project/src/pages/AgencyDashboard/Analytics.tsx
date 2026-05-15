@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
+import { 
+  useFinancialStatsQuery, 
+  useAgencyCommissionsQuery,
+  useAgencyRevenueCalculationQuery 
+} from '../../hooks/useAgencyQueries';
 
 interface AnalyticsProps {
   stats: {
@@ -22,18 +27,13 @@ interface MonthlyPerformance {
   active_sellers: number;
 }
 
-const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) => {
-  const [monthlyData, setMonthlyData] = useState<MonthlyPerformance[]>([]);
-  const [loadingMonthly, setLoadingMonthly] = useState(false);
+const Analytics: React.FC<AnalyticsProps> = ({ stats: initialStats, sellers = [], userId }) => {
+  // Queries do React Query
+  const { data: financialData, isLoading: loadingFinancial } = useFinancialStatsQuery(userId);
+  const { data: revenueData, isLoading: loadingRevenue } = useAgencyRevenueCalculationQuery(userId);
+  const { data: commissionsData, isLoading: loadingCommissions } = useAgencyCommissionsQuery(userId);
 
-  // Estados para receita ajustada (mesmo padrão do Overview.tsx)
-  const [clientAdjustedRevenue, setClientAdjustedRevenue] = useState<number | null>(null);
-  const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useState<Record<string, number>>({});
-  const [loadingAdjusted, setLoadingAdjusted] = useState(false);
-
-  // Estados para diferenciar estudantes pagos vs registrados
-  const [paidStudentsCount, setPaidStudentsCount] = useState<number>(0);
-  const [registeredOnlyCount, setRegisteredOnlyCount] = useState<number>(0);
+  const loading = loadingFinancial || loadingRevenue || loadingCommissions;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -42,405 +42,84 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
     }).format(amount || 0);
   };
 
-  // Valores padrão para stats
-  const safeStats = {
-    totalSellers: stats?.totalSellers || 0,
-    activeSellers: stats?.activeSellers || 0,
-    totalStudents: stats?.totalStudents || 0,
-    totalRevenue: stats?.totalRevenue || 0
-  };
+  // 1. Processar dados mensais a partir de comissões REAIS
+  const monthlyData = React.useMemo(() => {
+    if (!commissionsData) return [];
 
-  // Carregar dados de receita ajustada (mesmo padrão do Overview.tsx)
-  const loadAdjustedRevenue = async () => {
-    try {
-      setLoadingAdjusted(true);
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData?.user?.id;
-      if (!currentUserId) {
-        setClientAdjustedRevenue(null);
-        return;
-      }
+    const monthlyMap: Record<string, { students_count: number; total_revenue: number; active_sellers: Set<string> }> = {};
 
-      // Descobrir affiliate_admin_id
-      const { data: aaList, error: aaErr } = await supabase
-        .from('affiliate_admins')
-        .select('id')
-        .eq('user_id', currentUserId)
-        .limit(1);
-      if (aaErr || !aaList || aaList.length === 0) {
-        setClientAdjustedRevenue(null);
-        return;
-      }
-      const affiliateAdminId = aaList[0].id;
-
-      // Buscar sellers vinculados a este affiliate admin
-      const { data: sellers, error: sellersErr } = await supabase
-        .from('sellers')
-        .select('referral_code')
-        .eq('affiliate_admin_id', affiliateAdminId);
-
-      if (sellersErr || !sellers || sellers.length === 0) {
-        setClientAdjustedRevenue(null);
-        return;
-      }
-
-      const referralCodes = sellers.map(s => s.referral_code);
-
-      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
-      const { data: profiles, error: profilesErr } = await supabase
-        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
-      if (profilesErr || !profiles) {
-        setClientAdjustedRevenue(null);
-        return;
-      }
-
-      // Preparar overrides por user_id
-      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
-      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-        return [uid, error ? null : data];
-      }));
-      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
-        if (res.status === 'fulfilled') {
-          const arr = res.value;
-          const uid = arr[0];
-          const data = arr[1];
-          if (data) acc[uid] = {
-            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          };
-        }
-        return acc;
-      }, {});
-
-      // Buscar valores reais pagos de individual_fee_payments
-      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-
-      // Buscar valores pagos para cada estudante
-      await Promise.all(profiles.map(async (p: any) => {
-        if (!p.user_id) return;
-
-        try {
-          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
-          realPaidAmountsMap[p.user_id] = {
-            selection_process: amounts.selection_process,
-            scholarship: amounts.scholarship,
-            i20_control: amounts.i20_control
-          };
-        } catch (error) {
-          console.error(`[Analytics] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
-        }
-      }));
-
-      // Calcular total usando valores reais pagos, com fallback para cálculo fixo, e somar por referral_code
-      const revenueByReferral: Record<string, number> = {};
-      const total = (profiles || []).reduce((sum, p) => {
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-        const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-        // Selection Process - usar valor real pago se disponível, senão calcular
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          if (realPaid.selection_process !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            selPaid = realPaid.selection_process;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-            // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null
-              ? baseSel
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-          }
-        }
-
-        // Scholarship Fee - usar valor real pago se disponível, senão calcular
-        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        let schPaid = 0;
-        if (hasAnyScholarshipPaid) {
-          if (realPaid.scholarship !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            schPaid = realPaid.scholarship;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const schBaseDefault = p?.system_type === 'simplified' ? 900 : 900;
-            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-            schPaid = schBase;
-          }
-        }
-
-        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-        let i20Paid = 0;
-        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-          if (realPaid.i20_control !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            i20Paid = realPaid.i20_control;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-            i20Paid = i20Base;
-          }
-        }
-
-        const subtotal = selPaid + schPaid + i20Paid;
-        const ref = p?.seller_referral_code || '__unknown__';
-        revenueByReferral[ref] = (revenueByReferral[ref] || 0) + subtotal;
-        return sum + subtotal;
-      }, 0);
-
-      // Calcular contagens de estudantes pagos vs não pagos
-      const paidCount = (profiles || []).filter(p => p?.has_paid_selection_process_fee).length;
-      const notPaidCount = (profiles || []).filter(p => !p?.has_paid_selection_process_fee).length;
-
-      setClientAdjustedRevenue(total);
-      setAdjustedRevenueByReferral(revenueByReferral);
-      setPaidStudentsCount(paidCount);
-      setRegisteredOnlyCount(notPaidCount);
-    } catch {
-      setClientAdjustedRevenue(null);
-      setPaidStudentsCount(0);
-      setRegisteredOnlyCount(0);
-    } finally {
-      setLoadingAdjusted(false);
-    }
-  };
-
-  // Carregar dados de performance mensal - agora calcula manualmente com overrides
-  const loadMonthlyPerformance = async () => {
-    if (!userId) {
-      console.warn('No user ID provided for analytics');
-      return;
+    // Inicializar últimos 12 meses
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      monthlyMap[monthYear] = {
+        students_count: 0,
+        total_revenue: 0,
+        active_sellers: new Set()
+      };
     }
 
-    // Aguardar os dados de receita ajustada serem carregados
-    if (loadingAdjusted) {
-      return;
-    }
-
-    try {
-      setLoadingMonthly(true);
-
-      // Descobrir affiliate_admin_id
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData?.user?.id;
-      if (!currentUserId) {
-        setMonthlyData([]);
-        return;
+    commissionsData.forEach((c: any) => {
+      const date = new Date(c.created_at);
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (monthlyMap[monthYear]) {
+        monthlyMap[monthYear].total_revenue += Number(c.amount) || 0;
+        monthlyMap[monthYear].active_sellers.add(c.student_id); // Usando student_id como proxy para atividade
+        // Nota: Para students_count real por mês, precisaríamos contar alunos únicos
       }
+    });
 
-      const { data: aaList, error: aaErr } = await supabase
-        .from('affiliate_admins')
-        .select('id')
-        .eq('user_id', currentUserId)
-        .limit(1);
-      if (aaErr || !aaList || aaList.length === 0) {
-        setMonthlyData([]);
-        return;
-      }
-      const affiliateAdminId = aaList[0].id;
-
-      // Buscar sellers vinculados a este affiliate admin
-      const { data: sellers, error: sellersErr } = await supabase
-        .from('sellers')
-        .select('referral_code')
-        .eq('affiliate_admin_id', affiliateAdminId);
-
-      if (sellersErr || !sellers || sellers.length === 0) {
-        setMonthlyData([]);
-        return;
-      }
-
-      const referralCodes = sellers.map(s => s.referral_code);
-
-      // Buscar perfis de estudantes vinculados via seller_referral_code com dados de criação
-      const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          dependents,
-          seller_referral_code,
-          system_type,
-          created_at,
-          scholarship_applications(is_scholarship_fee_paid, created_at)
-        `)
-        .in('seller_referral_code', referralCodes)
-        .order('created_at', { ascending: false });
-
-      if (profilesErr || !profiles) {
-        setMonthlyData([]);
-        return;
-      }
-
-      // Preparar overrides por user_id
-      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
-      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-        return [uid, error ? null : data];
-      }));
-      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
-        if (res.status === 'fulfilled') {
-          const arr = res.value;
-          const uid = arr[0];
-          const data = arr[1];
-          if (data) acc[uid] = {
-            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          };
-        }
-        return acc;
-      }, {});
-
-      // ✅ CORREÇÃO: Buscar valores reais pagos para usar nos cálculos (mesma lógica do loadAdjustedRevenue)
-      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-
-      // Buscar valores pagos para cada estudante
-      await Promise.all((profiles || []).map(async (p: any) => {
-        if (!p.user_id) return;
-
-        try {
-          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
-          realPaidAmountsMap[p.user_id] = {
-            selection_process: amounts.selection_process,
-            scholarship: amounts.scholarship,
-            i20_control: amounts.i20_control
-          };
-        } catch (error) {
-          console.error(`[Analytics] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
-        }
-      }));
-
-      // Calcular dados mensais dos últimos 12 meses
-      const monthlyMap: Record<string, { students_count: number; total_revenue: number; active_sellers: Set<string> }> = {};
-
-      // Inicializar últimos 12 meses
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
+    // Adicionar contagem de alunos registrados por mês (simplificado)
+    if (financialData?.enrichedProfiles) {
+      financialData.enrichedProfiles.forEach((p: any) => {
+        const date = new Date(p.created_at);
         const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyMap[monthYear] = {
-          students_count: 0,
-          total_revenue: 0,
-          active_sellers: new Set()
-        };
-      }
-
-      // Processar cada perfil de estudante usando valores reais pagos quando disponível
-      (profiles || []).forEach((p) => {
-        const createdDate = new Date(p.created_at);
-        const monthYear = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
-
-        if (!monthlyMap[monthYear]) return; // Fora do range de 12 meses
-
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-        const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-        // Selection Process - usar valor real pago se disponível, senão calcular
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          if (realPaid.selection_process !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            selPaid = realPaid.selection_process;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-            // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null
-              ? baseSel
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-          }
-        }
-
-        // Scholarship Fee - usar valor real pago se disponível, senão calcular
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((app: any) => app.is_scholarship_fee_paid)
-          : false;
-        let schPaid = 0;
-        if (hasAnyScholarshipPaid) {
-          if (realPaid.scholarship !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            schPaid = realPaid.scholarship;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const schBaseDefault = p?.system_type === 'simplified' ? 900 : 900;
-            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-            schPaid = schBase;
-          }
-        }
-
-        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-        let i20Paid = 0;
-        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-          if (realPaid.i20_control !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            i20Paid = realPaid.i20_control;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-            i20Paid = i20Base;
-          }
-        }
-
-        const totalRevenue = selPaid + schPaid + i20Paid;
-
-        monthlyMap[monthYear].students_count++;
-        monthlyMap[monthYear].total_revenue += totalRevenue;
-        if (p?.seller_referral_code) {
-          monthlyMap[monthYear].active_sellers.add(p.seller_referral_code);
+        if (monthlyMap[monthYear]) {
+          monthlyMap[monthYear].students_count++;
         }
       });
-
-      // Converter para array ordenado (decrescente - mais recente primeiro)
-      const monthlyDataArray = Object.entries(monthlyMap)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([monthYear, data]) => ({
-          month_year: monthYear,
-          students_count: data.students_count,
-          total_revenue: data.total_revenue,
-          active_sellers: data.active_sellers.size
-        }));
-
-      setMonthlyData(monthlyDataArray);
-    } catch (error) {
-      console.error('Error loading monthly performance:', error);
-    } finally {
-      setLoadingMonthly(false);
     }
+
+    return Object.entries(monthlyMap)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([monthYear, data]) => ({
+        month_year: monthYear,
+        students_count: data.students_count,
+        total_revenue: data.total_revenue,
+        active_sellers: data.active_sellers.size
+      }));
+  }, [commissionsData, financialData]);
+
+  // 2. Processar sellers com receita REAL
+  const displaySellers = React.useMemo(() => {
+    const revenueByReferral = revenueData?.adjustedRevenueByReferral || {};
+    return (sellers || []).map((s) => ({
+      ...s,
+      total_revenue: revenueByReferral[s?.referral_code] || 0
+    }));
+  }, [sellers, revenueData]);
+
+  // 3. Stats unificados
+  const stats = financialData?.stats || {
+    totalCredits: 0,
+    totalEarned: 0,
+    totalReferrals: 0,
+    activeReferrals: 0,
+    completedReferrals: 0
   };
 
-  // Carregar dados quando o componente montar ou userId mudar
-  useEffect(() => {
-    if (userId) {
-      loadAdjustedRevenue();
-    }
-  }, [userId]);
+  const paidStudentsCount = stats.completedReferrals;
+  const registeredOnlyCount = stats.totalReferrals - stats.completedReferrals;
+  const clientAdjustedRevenue = stats.totalCredits;
 
-  // Carregar dados mensais após receita ajustada ser carregada
-  useEffect(() => {
-    if (userId && !loadingAdjusted && clientAdjustedRevenue !== null) {
-      loadMonthlyPerformance();
-    }
-  }, [userId, loadingAdjusted, clientAdjustedRevenue]);
-
-  // Sellers com receita ajustada (mesmo padrão do Overview.tsx)
-  const displaySellers = (sellers || []).map((s) => ({
-    ...s,
-    total_revenue: adjustedRevenueByReferral[s?.referral_code] != null
-      ? adjustedRevenueByReferral[s.referral_code]
-      : (s.total_revenue || 0)
-  }));
+  const safeStats = {
+    totalSellers: sellers.length,
+    activeSellers: sellers.filter(s => s.is_active).length,
+    totalStudents: stats.totalReferrals,
+    totalRevenue: stats.totalCredits
+  };
 
   // Top vendedores por performance
   const topSellers = displaySellers
@@ -520,12 +199,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Paid Students</p>
-                  {loadingAdjusted ? (
+                  {loading ? (
                     <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
                   ) : (
                     <>
                       <p className="text-3xl font-bold text-green-600 mt-1">{paidStudentsCount}</p>
-                      <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
+                      <p className="text-xs text-slate-500 mt-1">At least one fee paid</p>
                     </>
                   )}
                 </div>
@@ -540,12 +219,12 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Registered Only</p>
-                  {loadingAdjusted ? (
+                  {loading ? (
                     <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
                   ) : (
                     <>
                       <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyCount}</p>
-                      <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
+                      <p className="text-xs text-slate-500 mt-1">No commissions generated yet</p>
                     </>
                   )}
                 </div>
@@ -611,13 +290,13 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Revenue per Student</p>
-                  {loadingAdjusted ? (
+                  {loading ? (
                     <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
                   ) : (
                     <>
                       <p className="text-3xl font-bold text-blue-600 mt-1">
                         {paidStudentsCount > 0
-                          ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / paidStudentsCount)
+                          ? formatCurrency(clientAdjustedRevenue / paidStudentsCount)
                           : '$0.00'
                         }
                       </p>
@@ -630,7 +309,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
                 </div>
               </div>
               <div className="mt-4 flex items-center text-sm">
-                {loadingAdjusted ? (
+                {loading ? (
                   <div className="h-4 bg-slate-200 rounded animate-pulse w-24"></div>
                 ) : (
                   <>
@@ -640,7 +319,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
                       {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` :
                         revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
                     </span>
-                    <span className="text-slate-600 ml-1">vs mês anterior</span>
+                    <span className="text-slate-600 ml-1">vs previous month</span>
                   </>
                 )}
               </div>
@@ -657,7 +336,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               </div>
 
               <div className="space-y-4">
-                {loadingMonthly || loadingAdjusted ? (
+                {loading ? (
                   // Skeleton loading para monthly performance
                   [...Array(6)].map((_, idx) => (
                     <div key={idx} className="flex items-center justify-between">
@@ -708,7 +387,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               </div>
 
               <div className="space-y-4">
-                {loadingAdjusted ? (
+                {loading ? (
                   // Skeleton loading para top sellers
                   [...Array(3)].map((_, idx) => (
                     <div key={idx} className="flex items-center justify-between">

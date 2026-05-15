@@ -53,10 +53,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     }
   });
 
+  // Trava de segurança para impedir loop infinito
+  const hasLoadedProfile = useRef(false);
+
   // Carregar dados do perfil diretamente do banco de dados
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (!authUser) return;
+      if (!authUser || hasLoadedProfile.current) return;
+      hasLoadedProfile.current = true;
       
       try {
         console.log('🔄 [ProfileSettings] Carregando perfil do banco de dados para user_id:', authUser.id);

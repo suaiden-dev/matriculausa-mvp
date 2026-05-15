@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -11,6 +11,12 @@ import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 import MyStudents from './MyStudents';
 import UtmTracking from './UtmTracking';
+import { 
+  useFinancialStatsQuery, 
+  useAgencySellersQuery, 
+  useAgencyStudentProfilesQuery,
+  useAgencyDataQuery
+} from '../../hooks/useAgencyQueries';
 
 interface AgencyStats {
   totalStudents: number;
@@ -51,18 +57,31 @@ interface Seller {
 }
 
 const AgencyDashboard: React.FC = () => {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [sellers, setSellers] = useState<Seller[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const userId = user?.id;
+  const userRole = user?.role;
 
-  // Memorizar user.id e user.role para evitar re-renders desnecessários
-  const userId = useMemo(() => user?.id, [user?.id]);
-  const userRole = useMemo(() => user?.role, [user?.role]);
+  // React Query hooks for data loading
+  const { data: adminData, isLoading: loadingAdmin } = useAgencyDataQuery(userId);
+  const affiliateAdminId = adminData?.affiliateAdminId;
 
-  const [stats, setStats] = useState<AgencyStats>({
+  const { data: statsData, isLoading: loadingStats, refetch: refetchStats } = useFinancialStatsQuery(userId);
+  const { data: sellersData, isLoading: loadingSellers, refetch: refetchSellers } = useAgencySellersQuery(affiliateAdminId);
+  const { data: studentsData, isLoading: loadingStudents, refetch: refetchStudents } = useAgencyStudentProfilesQuery(userId);
+
+  const loading = loadingAdmin || loadingStats || loadingSellers || loadingStudents;
+
+  // Processed data for components
+  const stats = statsData?.stats ? {
+    totalStudents: statsData.stats.totalReferrals,
+    totalRevenue: statsData.stats.totalCredits,
+    totalSellers: sellersData?.length || 0,
+    activeSellers: sellersData?.filter(s => s.is_active).length || 0,
+    pendingSellers: 0,
+    approvedSellers: 0,
+    rejectedSellers: 0
+  } : {
     totalStudents: 0,
     totalRevenue: 0,
     totalSellers: 0,
@@ -70,139 +89,25 @@ const AgencyDashboard: React.FC = () => {
     pendingSellers: 0,
     approvedSellers: 0,
     rejectedSellers: 0
-  });
+  };
 
-  const loadAgencyData = useCallback(async (forceRefresh = false) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Force refresh - clear cache
-      if (forceRefresh) {
-        console.log('🔄 Force refresh - clearing cache');
-        setStudents([]);
-        setSellers([]);
-        setStats({
-          totalStudents: 0,
-          totalRevenue: 0,
-          totalSellers: 0,
-          activeSellers: 0,
-          pendingSellers: 0,
-          approvedSellers: 0,
-          rejectedSellers: 0
-        });
-      }
+  const sellers = sellersData || [];
+  const students = studentsData || [];
 
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      refetchStats(),
+      refetchSellers(),
+      refetchStudents()
+    ]);
+  }, [refetchStats, refetchSellers, refetchStudents]);
 
-
-      // Verificar se o usuário é affiliate_admin através do role no perfil
-      if (userRole !== 'affiliate_admin') {
-        console.error('❌ User role is not affiliate_admin:', userRole);
-        throw new Error('Usuário não tem permissão de affiliate admin');
-      }
-
-      // Buscar estatísticas gerais usando a nova função SQL corrigida
-      const { data: analyticsData, error: analyticsError } = await supabase
-        .rpc('get_admin_analytics_fixed', { admin_user_id: userId });
-
-      if (analyticsError) {
-        console.error('❌ Error loading analytics data:', analyticsError);
-        throw new Error(`Failed to load analytics data: ${analyticsError.message}`);
-      }
-
-      // Buscar dados detalhados de vendedores usando a função com dependentes
-      const { data: sellersData, error: sellersError } = await supabase
-        .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
-
-      if (sellersError) {
-        console.error('❌ Error loading sellers data:', sellersError);
-        throw new Error(`Failed to load sellers data: ${sellersError.message}`);
-      }
-
-      // Buscar dados de estudantes referenciados usando a função corrigida
-      const { data: studentsData, error: studentsError } = await supabase
-        .rpc('get_admin_students_analytics', { admin_user_id: userId });
-
-      if (studentsError) {
-        console.error('Error loading students data:', studentsError);
-        throw new Error(`Failed to load students data: ${studentsError.message}`);
-      }
-
-      // Processar dados de analytics
-      const analytics = analyticsData?.[0] || {
-        total_sellers: 0,
-        active_sellers: 0,
-        pending_sellers: 0,
-        approved_sellers: 0,
-        rejected_sellers: 0,
-        total_students: 0,
-        total_revenue: 0,
-        monthly_growth: 0,
-        conversion_rate: 0,
-        avg_revenue_per_student: 0
-      };
-
-      // Processar vendedores
-      console.log('🔍 Raw sellers data:', sellersData);
-      const processedSellers = (sellersData || []).map((seller: any) => ({
-        id: seller.seller_id,
-        name: seller.seller_name || 'Nome não disponível',
-        referral_code: seller.referral_code || '',
-        email: seller.seller_email || 'Email não disponível',
-        created_at: seller.last_referral_date || new Date().toISOString(),
-        students_count: seller.students_count || 0,
-        total_revenue: seller.total_revenue || 0,
-        avg_revenue_per_student: seller.avg_revenue_per_student || 0,
-        is_active: seller.is_active
-      }));
-      console.log('🔍 Processed sellers:', processedSellers);
-
-      // Processar estudantes
-      const processedStudents = (studentsData || []).map((student: any) => ({
-        id: student.student_id,
-        full_name: student.student_name || 'Nome não disponível',
-        email: student.student_email || 'Email não disponível',
-        country: student.country || 'País não disponível',
-        referred_by_seller_id: student.referred_by_seller_id,
-        seller_name: student.seller_name || 'Vendedor não disponível',
-        seller_referral_code: student.seller_referral_code || '',
-        referral_code_used: student.referral_code_used || '',
-        total_paid: student.total_paid || 0,
-        created_at: student.created_at,
-        status: student.status || 'active',
-        application_status: student.application_status || 'Not specified',
-        system_type: student.system_type || 'legacy',
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid || false,
-        is_application_fee_paid: student.is_application_fee_paid || false
-      }));
-
-      // Atualizar estatísticas
-      const finalStats = {
-        totalStudents: analytics.total_students || 0,
-        totalRevenue: analytics.total_revenue || 0,
-        totalSellers: analytics.total_sellers || 0,
-        activeSellers: analytics.active_sellers || 0,
-        pendingSellers: analytics.pending_sellers || 0,
-        approvedSellers: analytics.approved_sellers || 0,
-        rejectedSellers: analytics.rejected_sellers || 0
-      };
-
-      setStats(finalStats);
-      setStudents(processedStudents);
-      setSellers(processedSellers);
-
-    } catch (error: any) {
-      console.error('Error loading affiliate admin data:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, userRole]);
+  // Trava para evitar loop infinito na checagem do onboarding
+  const hasCheckedOnboarding = useRef(false);
 
   useEffect(() => {
-    if (userId && userRole === 'affiliate_admin') {
+    if (userId && userRole === 'affiliate_admin' && !hasCheckedOnboarding.current) {
+      hasCheckedOnboarding.current = true;
       // Check onboarding completion before loading dashboard
       supabase
         .from('affiliate_admins')
@@ -212,12 +117,10 @@ const AgencyDashboard: React.FC = () => {
         .then(({ data }) => {
           if (data && !data.onboarding_completed) {
             navigate('/agency/onboarding');
-          } else {
-            loadAgencyData();
           }
         });
     }
-  }, [userId, userRole, loadAgencyData]);
+  }, [userId, userRole, navigate]);
 
 
 
@@ -232,24 +135,8 @@ const AgencyDashboard: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button 
-            onClick={() => loadAgencyData(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Tentar Novamente
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <AgencyDashboardLayout user={user} onRefresh={() => loadAgencyData(true)}>
+    <AgencyDashboardLayout user={user} onRefresh={handleRefresh}>
       <Routes>
         <Route 
           index 
@@ -258,7 +145,7 @@ const AgencyDashboard: React.FC = () => {
               stats={stats}
               sellers={sellers}
               students={students}
-              onRefresh={() => loadAgencyData(true)}
+              onRefresh={handleRefresh}
               userId={userId}
             />
           } 

@@ -34,7 +34,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ filteredStudents, allStudents }
           <div>
             <p className="text-sm font-medium text-slate-600">Students</p>
             <p className="text-3xl font-bold text-green-600 mt-1">{paidStudents.length}</p>
-            <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
+            <p className="text-xs text-slate-500 mt-1">At least one fee paid</p>
           </div>
           <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
             <UserCheck className="h-6 w-6 text-green-600" />
@@ -48,7 +48,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ filteredStudents, allStudents }
           <div>
             <p className="text-sm font-medium text-slate-600">Registered Only</p>
             <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyStudents.length}</p>
-            <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
+            <p className="text-xs text-slate-500 mt-1">No commissions generated yet</p>
           </div>
           <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
             <UserX className="h-6 w-6 text-orange-600" />

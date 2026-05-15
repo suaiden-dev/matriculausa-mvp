@@ -62,12 +62,12 @@ const SellersList: React.FC<SellersListProps> = ({
     
     // 3. Verificar Scholarship Fee - usar apenas o flag booleano
     if (!student.is_scholarship_fee_paid) {
-      missingFees.push({ name: 'Scholarship', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
+      missingFees.push({ name: 'Placement', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
     }
     
     // 4. Verificar I20 Control Fee - usar apenas o flag booleano
     if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
+      missingFees.push({ name: 'Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
     }
     
     // Debug: Log do resultado final
@@ -131,7 +131,7 @@ const SellersList: React.FC<SellersListProps> = ({
                       {(() => {
                         // Somar receita ajustada apenas dos estudantes que pagaram (não registrados)
                         const studentsForSeller = filteredStudents.filter((student: any) => 
-                          student.seller_referral_code === seller.referral_code && student.has_paid_selection_process_fee
+                          student.seller_referral_code === seller.referral_code && (student.has_paid_selection_process_fee || student.total_paid > 0)
                         );
                         const adjusted = studentsForSeller.reduce((sum: number, st: any) => {
                           const val = Number(st.total_paid_adjusted ?? st.total_paid ?? 0);
@@ -198,7 +198,7 @@ const SellersList: React.FC<SellersListProps> = ({
                           <React.Fragment key={student.id}>
                             <tr 
                               className={`hover:shadow-sm cursor-pointer transition-all duration-200 group ${
-                                student.has_paid_selection_process_fee 
+                                (student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0)
                                   ? 'hover:bg-green-50' 
                                   : 'hover:bg-orange-50 opacity-75'
                               }`}
@@ -221,7 +221,7 @@ const SellersList: React.FC<SellersListProps> = ({
                                     : 'bg-orange-100'
                                 }`}>
                                   <span className={`text-sm font-medium ${
-                                    student.has_paid_selection_process_fee 
+                                    (student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0)
                                       ? 'text-green-600' 
                                       : 'text-orange-600'
                                   }`}>
@@ -231,12 +231,12 @@ const SellersList: React.FC<SellersListProps> = ({
                                 <div className="ml-4 flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
-                                    {!student.has_paid_selection_process_fee && (
+                                    {!student.has_paid_selection_process_fee && (Number(student.total_paid) || 0) === 0 && (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">
                                         Registered Only
                                       </span>
                                     )}
-                                    {student.has_paid_selection_process_fee && (
+                                    {(student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0) && (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
                                         <CheckCircle2 className="h-3 w-3 mr-1" />
                                         Student
@@ -288,20 +288,20 @@ const SellersList: React.FC<SellersListProps> = ({
                                 {student.referral_code_used}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                {student.has_paid_selection_process_fee ? (
-                                  <>
-                                    <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                                    <span className="text-sm font-medium text-slate-900">
-                                      {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-sm text-slate-400 italic">Not paid yet</span>
-                                )}
-                              </div>
-                            </td>
+                             <td className="px-6 py-4 whitespace-nowrap">
+                               <div className="flex items-center">
+                                 {(student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0) ? (
+                                   <>
+                                     <DollarSign className="h-4 w-4 text-green-600 mr-1" />
+                                     <span className="text-sm font-medium text-slate-900">
+                                       {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
+                                     </span>
+                                   </>
+                                 ) : (
+                                   <span className="text-sm text-slate-400 italic">Not paid yet</span>
+                                 )}
+                               </div>
+                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-wrap gap-1">
                                 {(() => {
@@ -401,7 +401,7 @@ const SellersList: React.FC<SellersListProps> = ({
                                             )}
                                             {app.is_scholarship_fee_paid && (
                                               <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
-                                                Scholarship Fee Paid
+                                                Placement Fee Paid
                                               </span>
                                             )}
                                             {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (

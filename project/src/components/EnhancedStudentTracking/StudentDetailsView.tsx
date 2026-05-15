@@ -104,7 +104,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         scholarship_fee: scholarshipFee, // ✅ Valor considerando override
         total_paid: selectionProcessFee + i20ControlFee + scholarshipFee, // ✅ Total correto com overrides
         scholarship_amount: desiredRange,
-        package_name: `Scholarship Range $${desiredRange}+`,
+        package_name: `Placement Range $${desiredRange}+`,
         dependents: dependents // ✅ Informação dos dependentes
       };
       
@@ -424,7 +424,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
-                    Scholarship Details
+                    Placement Details
                   </h2>
                 </div>
                 <div className="p-6">
@@ -432,11 +432,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+                        <dt className="text-sm font-medium text-slate-600">Placement Program</dt>
                         <dd className="text-lg font-semibold text-slate-900">
                           {studentDetails?.scholarship_title && studentDetails.scholarship_title !== 'Scholarship not specified'
                             ? studentDetails.scholarship_title
-                            : 'Scholarship information not available'
+                            : 'Placement information not available'
                           }
                         </dd>
                       </div>
@@ -633,7 +633,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Scholarship Range</h3>
+                    <h3 className="text-lg font-semibold text-white">Placement Range</h3>
                     {!isEditingPackage && (
                       <button
                         onClick={handleStartEditPackage}
@@ -650,7 +650,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Select Scholarship Range
+                          Select Placement Range
                         </label>
                         <div className="space-y-2">
                           {[3800, 4200, 4500, 5000, 5500].map((range) => (
@@ -665,7 +665,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             >
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <h4 className="font-semibold text-slate-900">Scholarship Range ${range}+</h4>
+                                  <h4 className="font-semibold text-slate-900">Placement Range ${range}+</h4>
                                 </div>
                               </div>
                             </div>
@@ -711,13 +711,13 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             </div>
                           </div>
                           <div className="text-xs text-slate-500 text-center">
-                            Click edit to change scholarship range
+                            Click edit to change placement range
                           </div>
                         </>
                       ) : (
                         <div className="text-center py-4">
-                          <div className="text-slate-400 mb-2">No scholarship range set</div>
-                          <div className="text-sm text-slate-500">Click edit to set scholarship range</div>
+                          <div className="text-slate-400 mb-2">No placement range set</div>
+                          <div className="text-sm text-slate-500">Click edit to set placement range</div>
                         </div>
                       )}
                     </div>
@@ -798,51 +798,37 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Scholarship Fee Status */}
+                    {/* Placement Fee Status */}
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
                           <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
+                          <span className="text-sm font-medium text-slate-900">Placement Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
                             {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                           </span>
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou base)
-                               const systemType = (studentDetails as any)?.system_type || 'legacy';
-                               const isSimplified = systemType === 'simplified';
-                               const originalAmount = studentDetails?.scholarship_fee_amount != null
-                                 ? studentDetails.scholarship_fee_amount
-                                 : (isSimplified ? 550 : 900);
-                               return formatFeeAmount(originalAmount);
-                             })()}
-                           </span>
+                          <span className="text-xs text-slate-500">
+                            {formatFeeAmount(studentPackageFees?.scholarship_fee || 900)}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* I-20 Control Fee Status */}
+                    {/* Control Fee Status */}
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
                           <div className={`w-3 h-3 rounded-full ${studentDetails?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
+                          <span className="text-sm font-medium text-slate-900">Control Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className={`text-sm font-medium ${studentDetails?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                           </span>
                           <span className="text-xs text-slate-500">
-                            {(() => {
-                              // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou 900)
-                              const originalAmount = studentDetails?.i20_control_fee_amount != null
-                                ? studentDetails.i20_control_fee_amount
-                                : 900;
-                              return formatFeeAmount(originalAmount);
-                            })()}
+                            {formatFeeAmount(studentPackageFees?.i20_control_fee || 900)}
                           </span>
                         </div>
                       </div>
