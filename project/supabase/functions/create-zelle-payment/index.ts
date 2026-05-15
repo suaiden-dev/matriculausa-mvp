@@ -66,21 +66,22 @@ Deno.serve(async (req: any) => {
     });
 
     // Validar parâmetros obrigatórios mínimos
-    if (!fee_type || !amount || !comprovante_url) {
+    const isFree = amount === 0;
+    if (!fee_type || (amount === undefined || amount === null) || (!isFree && !comprovante_url)) {
       return corsResponse({ 
-        error: `Missing required fields: ${[!fee_type && 'fee_type', !amount && 'amount', !comprovante_url && 'comprovante_url'].filter(Boolean).join(', ')}`
+        error: `Missing required fields: ${[!fee_type && 'fee_type', (amount === undefined || amount === null) && 'amount', (!isFree && !comprovante_url) && 'comprovante_url'].filter(Boolean).join(', ')}`
       }, 400);
     }
 
     // Validar tipo de taxa
-    const validFeeTypes = ['selection_process', 'selection_process_fee', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package'];
+    const validFeeTypes = ['selection_process', 'selection_process_fee', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i20_control_fee', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package'];
     if (!validFeeTypes.includes(fee_type)) {
       return corsResponse({ error: 'Invalid fee_type: ' + fee_type }, 400);
     }
 
     // Validar valor
-    if (amount <= 0) {
-      return corsResponse({ error: 'Amount must be greater than 0' }, 400);
+    if (amount < 0) {
+      return corsResponse({ error: 'Amount must be greater than or equal to 0' }, 400);
     }
 
     // Autenticar usuário
@@ -251,6 +252,35 @@ Deno.serve(async (req: any) => {
       
     } catch (webhookPrepareError) {
       console.error('[create-zelle-payment] Erro fatal na preparação do webhook n8n:', webhookPrepareError);
+    }
+
+    // Se for um pagamento gratuito (cupom 100%), disparar aprovação automática em background
+    if (isFree && paymentId) {
+      console.log('[create-zelle-payment] 🆓 Pagamento gratuito detectado. Disparando aprovação automática em background...');
+      
+      const triggerAutoApproval = async () => {
+        try {
+          await supabase.functions.invoke('approve-zelle-payment-automatic', {
+            body: { 
+              user_id: finalUserId, 
+              fee_type_global: fee_type,
+              scholarship_ids: scholarships_ids,
+              temp_payment_id: paymentId
+            }
+          });
+          console.log('[create-zelle-payment-async] ✅ Aprovação automática para pagamento gratuito concluída');
+        } catch (autoApproveError) {
+          console.error('[create-zelle-payment-async] ❌ Erro ao disparar aprovação automática:', autoApproveError);
+        }
+      };
+
+      // @ts-ignore
+      if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(triggerAutoApproval());
+      } else {
+        triggerAutoApproval().catch(console.error);
+      }
     }
 
     console.log('[create-zelle-payment] Processamento concluído com sucesso');

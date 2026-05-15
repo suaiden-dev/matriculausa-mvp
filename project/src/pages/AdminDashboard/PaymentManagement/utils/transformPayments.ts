@@ -61,10 +61,12 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
+    } else if (student.selection_process_fee_payment_method === 'coupon') {
+      // Cupom 100% OFF — nenhum valor real pago
+      selectionProcessFee = 0;
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -672,10 +674,12 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
+    } else if (stripeUser.selection_process_fee_payment_method === 'coupon') {
+      // Cupom 100% OFF — nenhum valor real pago
+      selectionProcessFee = 0;
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
