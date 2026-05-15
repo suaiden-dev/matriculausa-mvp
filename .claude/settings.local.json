@@ -47,7 +47,8 @@
       "Bash(python3 -c \"import sys, json; content = sys.stdin.read\\(\\); print\\(json.dumps\\(content\\)\\)\")",
       "Bash(rtk npx:*)",
       "Bash(supabase functions:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(rtk ls:*)"
     ]
   }
 }
