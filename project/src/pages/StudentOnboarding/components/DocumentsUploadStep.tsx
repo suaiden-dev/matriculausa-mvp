@@ -32,6 +32,7 @@ import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
 import { PencilLoader } from '../../../components/PencilLoader';
 
+
 const DOCUMENT_TYPES = [
   { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport.' },
   { key: 'diploma', label: 'High School Diploma', description: 'Upload your high school diploma or equivalent.' },
@@ -529,6 +530,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         .order('created_at', { ascending: false });
       
       if (refreshedApps) setApplications(refreshedApps);
+      
       
       // Limpar seleção
       setSelectedFiles(prev => {

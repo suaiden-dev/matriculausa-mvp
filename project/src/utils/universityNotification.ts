@@ -9,6 +9,7 @@ export interface UniversityNotificationPayload {
   customMessage?: string;
   redirectUrl?: string;
   metadata?: any;
+  tipos_documentos?: string[];
 }
 
 /**
