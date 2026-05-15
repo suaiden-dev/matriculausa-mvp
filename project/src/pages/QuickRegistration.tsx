@@ -193,7 +193,6 @@ const QuickRegistration: React.FC = () => {
         full_name: urlName || (parsed?.full_name || ''),
         email: urlEmail || (parsed?.email || ''),
         phone: urlPhone || (parsed?.phone || ''),
-        dependents: parsed?.dependents || '',
         password: '',
         confirm_password: '',
         termsAccepted: false,
@@ -209,7 +208,6 @@ const QuickRegistration: React.FC = () => {
         full_name: '',
         email: '',
         phone: '',
-        dependents: '',
         password: '',
         confirm_password: '',
         termsAccepted: false,
@@ -236,7 +234,6 @@ const QuickRegistration: React.FC = () => {
         full_name: userProfile?.full_name || prev.full_name,
         email: supabaseUser.email || prev.email,
         phone: userProfile?.phone || prev.phone,
-        dependents: userProfile?.dependents !== undefined && userProfile?.dependents !== null ? userProfile.dependents : prev.dependents,
         termsAccepted: true
       }));
     }
@@ -395,9 +392,9 @@ const QuickRegistration: React.FC = () => {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref)
-    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 50) > 0) {
-      const discount = validationResult.discountAmount || 50;
+    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref e afiliados sem desconto)
+    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 0) > 0) {
+      const discount = validationResult.discountAmount || 0;
       return Math.max(baseFee - discount, 0);
     }
 
@@ -517,11 +514,24 @@ const QuickRegistration: React.FC = () => {
         }
       }
 
-      // Se for apenas pré-registro, validamos localmente para a UI
-      const discountAmount = targetCode === 'TFOE' ? 300 : 50;
+      // Determinar desconto: TFOE=$300, senão verificar role do referenciador
+      let discountAmount = 0;
+      if (targetCode === 'TFOE') {
+        discountAmount = 300;
+      } else if (affiliateCodeData?.user_id) {
+        // Verificar role do referenciador: alunos (role='student') dão $50, afiliados profissionais dão $0
+        const { data: referrerProfile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', affiliateCodeData.user_id)
+          .maybeSingle();
+        if (referrerProfile?.role === 'student') discountAmount = 50;
+      }
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`,
+        message: discountAmount > 0
+          ? (t('preCheckoutModal.validCode') || `Valid code! $${discountAmount} discount applied`)
+          : (t('preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!'),
         discountAmount,
         codeType
       });
@@ -621,6 +631,11 @@ const QuickRegistration: React.FC = () => {
     }
   }, [currentFee, exchangeRate]);
 
+  // Load active terms from database on mount
+  useEffect(() => {
+    loadActiveTerms();
+  }, []);
+
   // Load active terms from database
   const loadActiveTerms = async () => {
     try {
@@ -662,8 +677,7 @@ const QuickRegistration: React.FC = () => {
     const { name, value, type } = e.target;
     setFormData((prev: any) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-        name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
 
     // Limpar erro do campo ao digitar
@@ -714,6 +728,17 @@ const QuickRegistration: React.FC = () => {
           }
         }
 
+        // Gravar aceitação de termos para usuário já registrado
+        const targetUserId = userProfile?.user_id || supabaseUser?.id;
+        if (activeTerm && targetUserId) {
+          try {
+            console.log("[QuickRegistration] 📝 Gravando aceitação de termos para usuário registrado...");
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms', targetUserId);
+          } catch (termErr) {
+            console.error('Failed to record terms for registered user:', termErr);
+          }
+        }
+
         if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
           await handlePaymentCheckout(selectedMethod || 'stripe');
         } else if (selectedMethod === 'zelle') {
@@ -741,9 +766,7 @@ const QuickRegistration: React.FC = () => {
       newFieldErrors.confirm_password = t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem';
     }
 
-    if (formData.dependents === '') {
-      newFieldErrors.dependents = 'Por favor, selecione o número de dependentes.';
-    }
+
 
     if (!formData.termsAccepted) {
       newFieldErrors.termsAccepted = t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos';
@@ -782,7 +805,6 @@ const QuickRegistration: React.FC = () => {
       const userData: any = {
         full_name: formData.full_name,
         phone: formData.phone,
-        dependents: formData.dependents,
         role: 'student' as const,
         cpf_document: formData.cpf, // Include CPF in metadata
         newsletter_consent: formData.newsletter_consent
@@ -1141,57 +1163,7 @@ const QuickRegistration: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Dependents Selector */}
-                    <div className="flex flex-col">
-                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1 leading-tight">
-                        <span className="text-[#D0151C] font-bold mr-1">*</span>
-                        {t('rapidRegistration.form.dependents')}
-                        <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          {t('rapidRegistration.form.dependentsSubtitle')}
-                        </span>
-                      </label>
-                      <div className="relative mt-auto">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                          <Users className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none z-10">
-                          <ChevronDown className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <select
-                          id="dependents"
-                          name="dependents"
-                          value={formData.dependents}
-                          disabled={isRegistered}
-                          required
-                          onBlur={() => trackFieldFilled('dependents')}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? '' : parseInt(e.target.value);
-                            setFormData((prev: any) => ({ ...prev, dependents: value }));
-                            if (fieldErrors.dependents) {
-                              setFieldErrors(prev => {
-                                const next = { ...prev };
-                                delete next.dependents;
-                                return next;
-                              });
-                            }
-                          }}
-                          className={`appearance-none block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.dependents ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.dependents ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} ${formData.dependents === '' ? 'text-slate-400' : 'text-slate-900'} bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          <option value="" disabled hidden className="text-slate-400">{t('common.select', 'Selecione')}</option>
-                          <option value={0} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
-                          <option value={1} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
-                          <option value={2} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
-                          <option value={3} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
-                          <option value={4} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
-                          <option value={5} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
-                        </select>
-                      </div>
-                      {fieldErrors.dependents && (
-                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                          {fieldErrors.dependents}
-                        </p>
-                      )}
-                    </div>
+
 
                     {/* Password */}
                     {!isRegistered && (
@@ -1711,7 +1683,7 @@ const QuickRegistration: React.FC = () => {
                           </span>
                         </div>
 
-                        {isCouponValid && timeLeft > 0 && (
+                        {isCouponValid && timeLeft > 0 && (validationResult?.discountAmount ?? 0) > 0 && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
                               <Ticket className="w-2.5 h-2.5 mr-1" />

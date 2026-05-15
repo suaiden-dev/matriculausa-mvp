@@ -303,8 +303,15 @@
         "placeholder": "+1 123 456-7890"
       },
       "4": {
-        "text": "Are you currently in the US?",
-        "extraLabel": "Current status?"
+        "text": "How many dependents do you have? (spouse and children under 21)",
+        "options": {
+          "0": "0 Dependents",
+          "1": "1 Dependent",
+          "2": "2 Dependents",
+          "3": "3 Dependents",
+          "4": "4 Dependents",
+          "5": "5 Dependents"
+        }
       },
       "5": {
         "text": "What is your current profile?",
@@ -705,6 +712,9 @@
       },
       "5_3": {
         "text": "Have you already applied for an extension? If yes, what is your case number?"
+      },
+      "5_4": {
+        "text": "Status/I-94 expiration date"
       }
     }
   },

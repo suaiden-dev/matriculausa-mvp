@@ -112,7 +112,7 @@ const PaymentManagement = (): React.JSX.Element => {
   });
 
   // Estado centralizado (incremental: filtros/paginação/abas)
-  const adminState = useAdminPaymentsState(isPostSales ? 'zelle-payments' : 'payments');
+  const adminState = useAdminPaymentsState('payments');
   const { filters, setFilters, currentPage, setCurrentPage, pageSize, setPageSize, activeTab, setActiveTab } = adminState;
   // Inicialização padrão de filtros (apenas na primeira montagem)
   useEffect(() => {
@@ -143,7 +143,7 @@ const PaymentManagement = (): React.JSX.Element => {
   // Read URL parameters on component mount
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'zelle' || (isPostSales && !tab)) {
+    if (tab === 'zelle') {
       setActiveTab('zelle-payments');
     } else if (tab === 'university-requests' && !isPostSales) {
       setActiveTab('university-requests');
@@ -152,8 +152,7 @@ const PaymentManagement = (): React.JSX.Element => {
     } else if (tab === 'payments') {
       setActiveTab('payments');
     } else {
-      // Default for admins is payments, for post_sales is zelle
-      setActiveTab(isPostSales ? 'zelle-payments' : 'payments');
+      setActiveTab('payments');
     }
   }, [searchParams, isPostSales]);
   const [affiliateActionLoading, setAffiliateActionLoading] = useState(false);
@@ -907,7 +906,7 @@ const PaymentManagement = (): React.JSX.Element => {
       <Tabs activeTab={activeTab as any} setActiveTab={(t: any) => setActiveTab(t)} onRefresh={forceRefreshAll} isRefreshing={isRefreshing} isPostSales={isPostSales} />
 
       {/* Student Payments Tab Content */}
-      {activeTab === 'payments' && !isPostSales && (
+      {activeTab === 'payments' && (
         <PaymentsTab
           stats={stats}
           isLoading={isFetchingPayments} // ✅ NOVO: Passar estado de loading para mostrar skeletons
@@ -947,6 +946,7 @@ const PaymentManagement = (): React.JSX.Element => {
           onGoTo={goToPage}
           pageNumbers={getPageNumbers()}
           onItemsPerPageChange={handleItemsPerPageChange}
+          isPostSales={isPostSales}
         />
       )}
 

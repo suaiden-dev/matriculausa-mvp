@@ -33,6 +33,7 @@ import {
   useParticipatingUniversitiesQuery,
   useUpdateAffiliateCode
 } from '../../hooks/useStudentDashboardQueries';
+import AffiliateRedemptionSection from '../AffiliateDashboard/AffiliateRedemptionSection';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
 import NotificationService from '../../services/NotificationService';
@@ -51,7 +52,7 @@ const MatriculaRewards: React.FC = () => {
       <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
     </svg>
   );
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
   // React Query hooks com cache
@@ -320,7 +321,7 @@ const MatriculaRewards: React.FC = () => {
         notification_target: "student",
         next_step: !referral.selection_process_paid_at ? "Selection Process Fee" :
                    !referral.application_fee_paid_at ? "Application Fee" :
-                   !referral.scholarship_fee_paid_at ? "Scholarship Fee" : "I-20 Control Fee"
+                   !referral.scholarship_fee_paid_at ? "Placement Fee" : "Control Fee"
       };
 
       setNotificationStatus(prev => ({ ...prev, [referral.id]: 'loading' }));
@@ -357,6 +358,7 @@ const MatriculaRewards: React.FC = () => {
       <div className="mt-4 w-full">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('matriculaRewards.referralProgress')}</span>
+          {/* Notify button disabled
           {!referral.i20_paid_at && (
             <button
               onClick={() => handleNotifyStudent(referral)}
@@ -364,8 +366,8 @@ const MatriculaRewards: React.FC = () => {
               className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md transition-all duration-300 min-w-[100px] justify-center ${
                 cooldownRemaining[referral.id]
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : notificationStatus[referral.id] === 'success' 
-                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm' 
+                  : notificationStatus[referral.id] === 'success'
+                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm'
                     : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:shadow-sm'
               }`}
             >
@@ -378,7 +380,7 @@ const MatriculaRewards: React.FC = () => {
               ) : (
                 <Bell className="h-3 w-3" />
               )}
-              
+
               {cooldownRemaining[referral.id] ? (
                 <span>
                   {Math.floor(cooldownRemaining[referral.id] / 60)}:{(cooldownRemaining[referral.id] % 60).toString().padStart(2, '0')}
@@ -390,6 +392,7 @@ const MatriculaRewards: React.FC = () => {
               )}
             </button>
           )}
+          */}
         </div>
         <div className="relative flex justify-between">
           <div className="absolute top-4 left-0 w-full h-0.5 bg-slate-200 -z-10" />
@@ -656,70 +659,34 @@ const MatriculaRewards: React.FC = () => {
           </div>
         </Card>
 
-        {/* Quick Share Section */}
-        {affiliateCode && (
-          <Card className="p-6">
-            <div className="text-center mb-4">
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">
-                {t('matriculaRewards.shareWithFriends')}
-              </h2>
-              <p className="text-slate-600 text-sm">
-                {t('matriculaRewards.shareDescription')}
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <WhatsAppIcon width={16} height={16} className="text-white" />
-                <span className="text-sm font-medium">WhatsApp</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <FacebookLogo />
-                <span className="text-sm font-medium">Facebook</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <TwitterLogo />
-                <span className="text-sm font-medium">Twitter</span>
-              </button>
-              <button
-                onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-white hover:brightness-95 transition-all"
-              >
-                <Mail className="h-4 w-4" />
-                <span className="text-sm font-medium">Email</span>
-              </button>
+
+        {/* CTA Store / Redemption */}
+        {userProfile?.role === 'affiliate' ? (
+          <AffiliateRedemptionSection
+            coinBalance={credits?.balance || 0}
+            onRequestSubmitted={() => invalidateStudentDashboardRewards(queryClient)}
+          />
+        ) : (
+          <Card className="relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90" />
+            <div className="relative z-10 p-6 md:p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="text-center md:text-left">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-2">{t('matriculaRewards.spendYourCoins')}</h3>
+                  <p className="text-blue-100 text-lg">{t('matriculaRewards.visitStoreDescription')}</p>
+                </div>
+                <Link
+                  to="/student/dashboard/rewards/store"
+                  className="inline-flex items-center gap-3 rounded-xl bg-white/20 backdrop-blur-sm px-6 py-4 ring-2 ring-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Gift className="h-6 w-6"/>
+                  <span className="font-semibold text-lg">{t('matriculaRewards.visitRewardsStore')}</span>
+                  <ArrowUpRight className="h-5 w-5"/>
+                </Link>
+              </div>
             </div>
           </Card>
         )}
-
-        {/* CTA Store */}
-        <Card className="relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90" />
-          <div className="relative z-10 p-6 md:p-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="text-center md:text-left">
-                <h3 className="text-2xl md:text-3xl font-bold mb-2">{t('matriculaRewards.spendYourCoins')}</h3>
-                <p className="text-blue-100 text-lg">{t('matriculaRewards.visitStoreDescription')}</p>
-              </div>
-              <Link 
-                to="/student/dashboard/rewards/store" 
-                className="inline-flex items-center gap-3 rounded-xl bg-white/20 backdrop-blur-sm px-6 py-4 ring-2 ring-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <Gift className="h-6 w-6"/>
-                <span className="font-semibold text-lg">{t('matriculaRewards.visitRewardsStore')}</span>
-                <ArrowUpRight className="h-5 w-5"/>
-              </Link>
-            </div>
-          </div>
-        </Card>
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -835,27 +802,22 @@ const MatriculaRewards: React.FC = () => {
         {/* How it works */}
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.howItWorks')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">1</div>
               <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step1Title')}</h3>
               <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step1Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">2</div>
-              <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step2Title')}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step2Description')}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 p-5">
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">3</div>
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">2</div>
               <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step3Title')}</h3>
               <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step3Description')}</p>
             </div>
           </div>
         </Card>
 
-        {/* Participating Universities */}
-        <Card className="p-6">
+        {/* Participating Universities — only for students, not affiliates */}
+        {userProfile?.role !== 'affiliate' && <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.participatingUniversities')}</h2>
           <p className="text-slate-600 mb-6">
             {t('matriculaRewards.universitiesDescription')}
@@ -1002,7 +964,7 @@ const MatriculaRewards: React.FC = () => {
               </div>
             </div>
           )}
-        </Card>
+        </Card>}
       </div>
 
       {/* Coin styling */}

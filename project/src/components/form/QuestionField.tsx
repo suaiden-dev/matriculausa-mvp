@@ -200,34 +200,6 @@ const QuestionContent = ({
                 </div>
             )}
 
-            {/* Q4 extra fields: Status + Expiration Date */}
-            {question.id === 4 && value === 'Sim' && (
-                <div className="mt-4 space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <div>
-                        <label className="text-xs font-semibold text-slate-600 mb-2 block uppercase tracking-wider">
-                            {t('selectionSurvey.questions.4.extraLabel')}
-                        </label>
-                        <Input
-                            type="text"
-                            value={answers[-4] || ''}
-                            onChange={(e) => onChange(e.target.value, -4)}
-                            placeholder="Ex: B1/B2, F-1, etc."
-                            className="max-w-md bg-white"
-                        />
-                    </div>
-                    <div>
-                        <label className="text-xs font-semibold text-slate-600 mb-2 block uppercase tracking-wider">
-                            {t('common.expirationDate')}
-                        </label>
-                        <Input
-                            type="date"
-                            value={answers[-41] || ''}
-                            onChange={(e) => onChange(e.target.value, -41)}
-                            className="max-w-md bg-white"
-                        />
-                    </div>
-                </div>
-            )}
 
             {error && (
                 <div className="flex items-center gap-2 mt-3 text-red-600 text-sm font-medium animate-fade-in">

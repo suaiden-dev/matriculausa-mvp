@@ -1271,13 +1271,13 @@
     "step2Title": "Amigos Se Inscrevem",
     "step2Description": "Eles recebem $100 de desconto na taxa do processo seletivo.",
     "step3Title": "Ganhe Recompensas",
-    "step3Description": "Quando indicado pagar a taxa de Controle I-20, você ganha 100 coins.",
+    "step3Description": "Quando seu indicado concluir todo o processo e pagar todas as taxas, você ganha 100 coins.",
     "notificationSent": "Notificação enviada com sucesso!",
     "stages": {
       "selection": "Processo Seletivo",
       "application": "Taxa de Matrícula",
-      "scholarship": "Taxa de Bolsa",
-      "i20": "Controle I-20"
+      "scholarship": "Placement Fee",
+      "i20": "Control Fee"
     },
     "referralProgress": "Progresso da Indicação",
     "notifyFriend": "Notificar Amigo",

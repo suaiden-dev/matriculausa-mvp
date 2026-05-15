@@ -298,8 +298,15 @@
         "placeholder": "+34 600 000 000"
       },
       "4": {
-        "text": "¿Se encuentra actualmente en los EE. UU.?",
-        "extraLabel": "¿Estatus actual?"
+        "text": "¿Cuántos dependientes tiene? (cónyuge e hijos menores de 21 años)",
+        "options": {
+          "0": "0 Dependientes",
+          "1": "1 Dependiente",
+          "2": "2 Dependientes",
+          "3": "3 Dependientes",
+          "4": "4 Dependientes",
+          "5": "5 Dependientes"
+        }
       },
       "5": {
         "text": "¿Cuál es su perfil hoy?",
@@ -700,6 +707,9 @@
       },
       "5_3": {
         "text": "¿Ya ha realizado una extensión? Si es así, ¿cuál es su número de proceso?"
+      },
+      "5_4": {
+        "text": "Fecha de vencimiento del estatus/I-94"
       }
     }
   },

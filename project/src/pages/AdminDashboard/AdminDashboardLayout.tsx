@@ -57,6 +57,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
     if (path.includes('/affiliate-management')) return 'affiliate-management';
+    if (path.includes('/referral-affiliates')) return 'referral-affiliates';
     if (path.includes('/coupons')) return 'coupons';
     if (path.includes('/newsletter')) return 'newsletter';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
@@ -109,6 +110,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'coupons', label: 'Coupons', icon: Tag, path: '/admin/dashboard/coupons', badge: null },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, path: '/admin/dashboard/newsletter', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
+    { id: 'referral-affiliates', label: 'Affiliate Program', icon: Users, path: '/admin/dashboard/referral-affiliates', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'settings', label: 'Content Management', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];

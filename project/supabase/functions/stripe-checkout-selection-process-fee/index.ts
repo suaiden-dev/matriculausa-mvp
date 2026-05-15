@@ -656,9 +656,9 @@ Deno.serve(async (req) => {
       console.log(
         "[stripe-checkout-selection-process-fee] ✅ Informações do cupom promocional adicionadas ao metadata!",
       );
-    } // Aplica desconto de código de referência se houver (e não houver cupom promocional)
-    // ✅ CORREÇÃO: Verificar se o desconto já foi aplicado no frontend antes de aplicar novamente
-    else if (activeDiscount && activeDiscount.stripe_coupon_id) {
+    } // Aplica desconto de indicação se o referenciador for aluno (role='student', discount_amount=50).
+    // Afiliados profissionais têm discount_amount=0 e este bloco é ignorado automaticamente.
+    else if (activeDiscount && Number(activeDiscount.discount_amount) > 0) {
       // Verificar se o desconto já foi aplicado no frontend
       const discountAlreadyApplied =
         metadata?.discount_already_applied === "true" ||

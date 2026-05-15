@@ -483,6 +483,12 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, configSystemType, userSystemType, realPaidAmounts]);
   const [referralInfo, setReferralInfo] = useState<any>(null);
+  const [affiliateProgramReferral, setAffiliateProgramReferral] = useState<{
+    code: string;
+    affiliateId: string;
+    name: string | null;
+    email: string | null;
+  } | null>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
     name: string | null;
@@ -824,6 +830,33 @@ const AdminStudentDetails: React.FC = () => {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
+
+  // Carregar info do Affiliate Program (tabela affiliate_referrals) pelo referred_id do aluno
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    const fetchAffiliateProgramReferral = async () => {
+      const { data: referral } = await supabase
+        .from('affiliate_referrals')
+        .select('affiliate_code, referrer_id')
+        .eq('referred_id', student.user_id)
+        .limit(1)
+        .maybeSingle();
+      if (!referral?.referrer_id) { setAffiliateProgramReferral(null); return; }
+
+      const [{ data: profile }, { data: codeData }] = await Promise.all([
+        supabase.from('user_profiles').select('full_name, email').eq('user_id', referral.referrer_id).maybeSingle(),
+        supabase.from('affiliate_codes').select('id').eq('code', referral.affiliate_code).maybeSingle(),
+      ]);
+
+      setAffiliateProgramReferral({
+        code: referral.affiliate_code,
+        affiliateId: codeData?.id || referral.referrer_id,
+        name: profile?.full_name || null,
+        email: profile?.email || null,
+      });
+    };
+    fetchAffiliateProgramReferral();
+  }, [student?.user_id]);
 
   // Carregar informações do Matricula Rewards (quem indicou este aluno usando código MATR)
   // Usa os dados do secondaryDataQuery que já carrega via RPC (contorna RLS)
@@ -3760,17 +3793,24 @@ const AdminStudentDetails: React.FC = () => {
               />
 
 
-              {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
-              {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
+              {/* Referral Info Card - mostra seller referral, Matricula Rewards OU Affiliate Program */}
+              {(student.seller_referral_code || matriculaRewardsInfo?.code || affiliateProgramReferral) && student.all_applications && (
                 <ReferralInfoCard
-                  referralCode={matriculaRewardsInfo?.code || student.seller_referral_code || null}
+                  referralCode={matriculaRewardsInfo?.code || affiliateProgramReferral?.code || student.seller_referral_code || null}
                   referralInfo={
                     matriculaRewardsInfo
                       ? {
                         type: 'student',
                         name: matriculaRewardsInfo.name || 'Unknown',
                         email: matriculaRewardsInfo.email || 'No email',
-                        isRewards: true, // ✅ Indica que é Matricula Rewards
+                        isRewards: true,
+                      }
+                      : affiliateProgramReferral
+                      ? {
+                        type: 'affiliate_program',
+                        name: affiliateProgramReferral.name || 'Unknown',
+                        email: affiliateProgramReferral.email || 'No email',
+                        affiliateId: affiliateProgramReferral.affiliateId,
                       }
                       : referralInfo
                   }
@@ -3894,15 +3934,13 @@ const AdminStudentDetails: React.FC = () => {
 
 
 
-            {termAcceptances.length > 0 && (
-              <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
-                <TermAcceptancesCard
-                  termAcceptances={termAcceptances}
-                  loading={false}
-                  onDownloadPDF={handleDownloadTermPDF}
-                />
-              </Suspense>
-            )}
+            <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+              <TermAcceptancesCard
+                termAcceptances={termAcceptances}
+                loading={false}
+                onDownloadPDF={handleDownloadTermPDF}
+              />
+            </Suspense>
 
             {/* Identity Photo Verification Card — dados vêm de user_profiles */}
             {(() => {

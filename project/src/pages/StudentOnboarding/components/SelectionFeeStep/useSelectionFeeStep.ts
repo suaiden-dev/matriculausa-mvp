@@ -146,8 +146,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
       setShowCodeStep(true);
       setValidationResult({
         isValid: true,
-        message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
-        discountAmount: activeDiscount.discount_amount || 50,
+        message: t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!',
+        discountAmount: activeDiscount.discount_amount || 0,
       });
     }
   }, [activeDiscount?.has_discount, activeDiscount?.affiliate_code, activeDiscount?.discount_amount, t]);
@@ -187,7 +187,11 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      const discountAmt = result?.discount_amount ?? 0;
+      const msg = discountAmt > 0
+        ? (t('payment:preCheckoutModal.validCode') || `Valid code! $${discountAmt} discount applied`)
+        : (t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!');
+      setValidationResult({ isValid: true, message: msg, discountAmount: discountAmt });
       setCodeApplied(true);
     } catch (e) {
       setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
@@ -227,7 +231,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
           setCodeApplied(true);
           setHasReferralCode(true);
           setShowCodeStep(true);
-          setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code!', discountAmount: usedCode.discount_amount || 50 });
+          setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!', discountAmount: usedCode.discount_amount || 0 });
         }
       } catch (e) {
         console.error('Erro ao buscar código usado:', e);
@@ -427,7 +431,11 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      const discountAmt = result?.discount_amount ?? 0;
+      const msg = discountAmt > 0
+        ? (t('payment:preCheckoutModal.validCode') || `Valid code! $${discountAmt} discount applied`)
+        : (t('payment:preCheckoutModal.referralCodeApplied') || 'Código de indicação aplicado!');
+      setValidationResult({ isValid: true, message: msg, discountAmount: discountAmt });
       setCodeApplied(true);
     } catch (e) {
       setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
@@ -439,8 +447,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
 
   const computedBasePrice = (() => {
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) return promotionalCouponValidation.finalAmount;
-    if (activeDiscount?.has_discount) { const discount = activeDiscount.discount_amount || 50; return Math.max(selectionFeeAmount - discount, 0); }
-    if (validationResult?.isValid && codeApplied) return Math.max(selectionFeeAmount - 50, 0);
+    if (activeDiscount?.has_discount) { const discount = activeDiscount.discount_amount || 0; return Math.max(selectionFeeAmount - discount, 0); }
+    if (validationResult?.isValid && codeApplied && (validationResult.discountAmount ?? 0) > 0) return Math.max(selectionFeeAmount - (validationResult.discountAmount || 0), 0);
     return selectionFeeAmount;
   })();
 

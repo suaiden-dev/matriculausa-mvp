@@ -65,60 +65,11 @@ Deno.serve(async (req) => {
       return corsResponse({ success: false, error: errorMessage }, 200);
     }
 
-    // Criar cupom no Stripe com ID válido
-    try {
-      const discountAmount = result.discount_amount;
-      const couponName = `Matricula Rewards - ${normalized}`;
-      
-      // Criar cupom no Stripe (Stripe gera o ID automaticamente)
-      const coupon = await stripe.coupons.create({
-        amount_off: discountAmount * 100,
-        currency: 'usd',
-        duration: 'once',
-        name: couponName,
-        metadata: { 
-          affiliate_code: normalized, 
-          user_id: user.id, 
-          referrer_id: result.referrer_id 
-        }
-      });
+    // O desconto depende do role do referenciador (veja migrate role_aware_affiliate_discount):
+    // role='student' → $50, role='affiliate' → $0. O valor é gravado em used_referral_codes pelo RPC.
+    console.log('[validate-referral-code] ✅ Código validado e indicação registrada:', normalized, '| discount_amount:', result.discount_amount);
 
-      // Atualizar o registro na base de dados com o ID real do cupom
-      const { error: updateError } = await supabase
-        .from('used_referral_codes')
-        .update({ 
-          stripe_coupon_id: coupon.id,
-          status: 'applied'
-        })
-        .eq('user_id', user.id)
-        .eq('affiliate_code', normalized);
-
-      if (updateError) {
-        console.error('[validate-referral-code] Error updating coupon ID:', updateError);
-      }
-
-      // Criar Promotion Code com o próprio código de referência
-      try {
-        await stripe.promotionCodes.create({
-          coupon: coupon.id,
-          code: normalized,
-          active: true,
-          metadata: { affiliate_code: normalized }
-        });
-      } catch (promoError: any) {
-        // Se já existe, não é problema
-        if (promoError.code !== 'resource_already_exists') {
-          console.error('[validate-referral-code] Promotion code error:', promoError);
-        }
-      }
-
-      console.log('[validate-referral-code] ✅ Coupon created successfully:', coupon.id, 'for code:', normalized);
-    } catch (stripeError: any) {
-      console.error('[validate-referral-code] Stripe error:', stripeError?.message || stripeError);
-      // Continua retornando success para não travar a UX
-    }
-
-    return corsResponse({ success: true });
+    return corsResponse({ success: true, discount_amount: result.discount_amount ?? 0 });
   } catch (error) {
     console.error('validate-referral-code error:', error);
     return corsResponse({ success: false, error: 'Failed to validate code' }, 200);

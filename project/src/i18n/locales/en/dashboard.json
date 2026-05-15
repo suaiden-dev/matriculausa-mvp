@@ -1377,13 +1377,13 @@
       "step2Title": "They pay the selection process fee",
       "step2Description": "When they use your code and pay the selection process fee, you earn coins",
       "step3Title": "Redeem your rewards",
-      "step3Description": "When referred pays the I-20 Control Fee, you earn 100 coins.",
+      "step3Description": "When your referred completes the full process and pays all fees, you earn 100 coins.",
       "notificationSent": "Notification sent successfully!",
       "stages": {
         "selection": "Selection Process",
         "application": "Application Fee",
-        "scholarship": "Scholarship Fee",
-        "i20": "I-20 Control"
+        "scholarship": "Placement Fee",
+        "i20": "Control Fee"
       },
       "referralProgress": "Referral Progress",
       "notifyFriend": "Notify Friend",
