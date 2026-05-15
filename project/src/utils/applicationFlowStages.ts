@@ -285,8 +285,8 @@ export function getStepStatus(
 
   switch (step) {
     case 'selection_fee':
-      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       if (student.application_status === 'enrolled') return 'completed';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       return student.has_submitted_form ? 'completed' : 'in_progress';
 
     case 'apply':
