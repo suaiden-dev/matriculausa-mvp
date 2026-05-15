@@ -93,8 +93,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     });
 
     displayStudents.forEach(student => {
-      // Alunos já matriculados (enrolled) ou legados (enrolados antes da plataforma) → vão direto para Enrollment
-      if ((student.application_status === 'enrolled' || student.student_process_type === 'enrolled') && stageMap.has('enrollment')) {
+      // Alunos já matriculados → vão direto para Enrollment
+      if (student.application_status === 'enrolled' && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }

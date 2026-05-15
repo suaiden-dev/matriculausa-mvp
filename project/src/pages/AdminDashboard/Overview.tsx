@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import PendingPaymentsSummary from '../../components/AdminDashboard/PendingPaymentsSummary';
 import PendingDocumentsOverview from '../../components/AdminDashboard/PendingDocumentsOverview';
+import PendingGlobalDocumentsOverview from '../../components/AdminDashboard/PendingGlobalDocumentsOverview';
 import PendingConversationsOverview from '../../components/AdminDashboard/PendingConversationsOverview';
 import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
 
@@ -178,6 +179,8 @@ const Overview: React.FC<OverviewProps> = ({
           />
 
           <PendingDocumentsOverview />
+
+          <PendingGlobalDocumentsOverview />
         </div>
 
         {/* Pending University Approvals - 1/3 width */}
