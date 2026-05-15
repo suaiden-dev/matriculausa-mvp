@@ -827,7 +827,7 @@ const Scholarships: React.FC = () => {
                                   ${formatAmount(originalValue)}
                                 </span>
                               </div>
-                              
+
                               <div className="flex items-center justify-between">
                                 <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
                                 <span className="text-green-700 font-extrabold text-base">
@@ -1198,7 +1198,7 @@ const Scholarships: React.FC = () => {
                                     ${formatAmount(originalValue)}
                                   </span>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between">
                                   <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
                                   <span className="text-green-700 font-extrabold text-base">
