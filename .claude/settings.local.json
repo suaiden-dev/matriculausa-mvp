@@ -49,7 +49,11 @@
       "Bash(supabase functions:*)",
       "mcp__ide__getDiagnostics",
       "Bash(rtk ls:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(where gh:*)",
+      "Bash(grep -l \"document_requests\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
+      "Bash(grep -l \"CREATE OR REPLACE FUNCTION\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
+      "Bash(grep:*)"
     ]
   }
 }
