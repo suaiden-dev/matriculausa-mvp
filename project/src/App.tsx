@@ -175,6 +175,7 @@ const AppContent = () => {
           <Route path="/affiliate-admin/onboarding" element={<Navigate to="/agency/onboarding" replace />} />
           <Route path="/affiliate-admin/pending-approval" element={<Navigate to="/agency/pending-approval" replace />} />
           <Route path="/affiliate-admin/dashboard/*" element={<Navigate to="/agency/dashboard" replace />} />
+          <Route path="/admin/dashboard/affiliate-management" element={<Navigate to="/admin/dashboard/agencies" replace />} />
           {/* Seller Dashboard */}
           <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
           {/* Seller Student Details */}

@@ -59,6 +59,25 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, [paymentIsBlocked, pendingPayment, rejectedPayment]);
 
   useEffect(() => {
+    const currentPath = location.pathname;
+
+    // Redirecionamentos de Legado (Affiliate Admin -> Agency)
+    // Executado antes de qualquer verificação de auth para garantir que a URL esteja correta
+    const legacyRedirects: Record<string, string> = {
+      '/affiliate-admin/onboarding': '/agency/onboarding',
+      '/affiliate-admin/pending-approval': '/agency/pending-approval',
+      '/affiliate-admin/dashboard': '/agency/dashboard',
+      '/admin/dashboard/affiliate-management': '/admin/dashboard/agencies'
+    };
+
+    for (const [oldPath, newPath] of Object.entries(legacyRedirects)) {
+      if (currentPath === oldPath || currentPath.startsWith(oldPath + '/')) {
+        const remainingPath = currentPath.substring(oldPath.length);
+        navigate(newPath + remainingPath + location.search, { replace: true });
+        return;
+      }
+    }
+
     // Tratar erros de verificação de email no hash da URL
     const hash = window.location.hash;
     if (hash && !user && !loading) {
@@ -103,9 +122,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Aguardar carregamento primordial
     if (loading) return;
-
-    const currentPath = location.pathname;
-
     // Se não há usuário autenticado, verificar se está tentando acessar rota protegida
     if (!user) {
       const protectedPaths = [
