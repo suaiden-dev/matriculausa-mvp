@@ -25,6 +25,11 @@ interface StudentInformationCardProps {
   onSaveDependents: () => void;
   onCancelEditDependents: () => void;
   savingDependents: boolean;
+  isEditingEnrollmentStatus: boolean;
+  savingEnrollmentStatus: boolean;
+  onEditEnrollmentStatus: () => void;
+  onSaveEnrollmentStatus: (newStatus: string) => Promise<void>;
+  onCancelEnrollmentStatus: () => void;
 }
 
 /**
@@ -54,6 +59,11 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
   onSaveDependents,
   onCancelEditDependents,
   savingDependents,
+  isEditingEnrollmentStatus,
+  savingEnrollmentStatus,
+  onEditEnrollmentStatus,
+  onSaveEnrollmentStatus,
+  onCancelEnrollmentStatus,
 }) => {
   const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
     if (!type) return 'not_specified';
@@ -70,7 +80,6 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
       transfer_reinstatement: 'Transfer – Needs Reinstatement',
       change_of_status: 'Change of Status',
       resident: 'Resident',
-      enrolled: 'Enrolled',
       not_specified: 'Not specified'
     };
     return labels[value] || value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -278,7 +287,6 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                       <option value="transfer_reinstatement">Transfer – Needs Reinstatement</option>
                       <option value="change_of_status">Change of Status</option>
                       <option value="resident">Resident</option>
-                      <option value="enrolled">Enrolled</option>
                     </select>
                     <button
                       onClick={onSaveProcessType}
@@ -313,6 +321,62 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                       onClick={onEditProcessType}
                       className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="Edit Process Type"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </dd>
+            </div>
+
+            {/* Enrollment Status */}
+            <div>
+              <dt className="text-sm font-medium text-slate-600">Enrollment Status</dt>
+              <dd className="text-base text-slate-900 mt-1">
+                {isEditingEnrollmentStatus ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      defaultValue={student.application_status === 'enrolled' ? 'enrolled' : 'approved'}
+                      onChange={(e) => {
+                        if (!savingEnrollmentStatus) onSaveEnrollmentStatus(e.target.value);
+                      }}
+                      className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={savingEnrollmentStatus}
+                    >
+                      <option value="approved">Not Enrolled</option>
+                      <option value="enrolled">Enrolled</option>
+                    </select>
+                    <button
+                      onClick={onCancelEnrollmentStatus}
+                      disabled={savingEnrollmentStatus}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                      title="Cancel"
+                    >
+                      {savingEnrollmentStatus ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <X className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {student.application_status === 'enrolled' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        Enrolled
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                        Not Enrolled
+                      </span>
+                    )}
+                    <button
+                      onClick={onEditEnrollmentStatus}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="Edit Enrollment Status"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -466,7 +530,10 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
     prevProps.editingProcessType !== nextProps.editingProcessType ||
     prevProps.savingProcessType !== nextProps.savingProcessType ||
     prevProps.isEditingDependents !== nextProps.isEditingDependents ||
-    prevProps.savingDependents !== nextProps.savingDependents
+    prevProps.savingDependents !== nextProps.savingDependents ||
+    prevProps.isEditingEnrollmentStatus !== nextProps.isEditingEnrollmentStatus ||
+    prevProps.savingEnrollmentStatus !== nextProps.savingEnrollmentStatus ||
+    prevProps.student.application_status !== nextProps.student.application_status
   );
   
   // Retornar false para permitir re-render quando há mudanças
