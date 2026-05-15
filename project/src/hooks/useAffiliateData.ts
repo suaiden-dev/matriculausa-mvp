@@ -21,6 +21,18 @@ function shouldExcludeStudent(email: string | null | undefined): boolean {
   return email.toLowerCase().includes('@uorak.com');
 }
 
+export interface CommissionRule {
+  type: 'fixed' | 'percentage';
+  value: number;
+}
+
+export interface CommissionRules {
+  selection_process?: CommissionRule;
+  scholarship?: CommissionRule;
+  i20_control?: CommissionRule;
+  application?: CommissionRule;
+}
+
 export interface Affiliate {
   id: string;
   user_id: string;
@@ -37,6 +49,7 @@ export interface Affiliate {
   total_revenue: number;
   is_active: boolean;
   commission_per_sale: number | null;
+  commission_rules?: CommissionRules;
   sellers: Seller[];
   students: Student[];
 }
@@ -88,7 +101,7 @@ export const useAffiliateData = () => {
       // 1. Buscar todos os affiliate admins
       const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
         .from('affiliate_admins')
-        .select('id, user_id, is_active, created_at, commission_per_sale')
+        .select('id, user_id, is_active, created_at, commission_per_sale, commission_rules')
         .order('created_at', { ascending: false });
 
       if (affiliateAdminsError) throw affiliateAdminsError;
@@ -202,6 +215,7 @@ export const useAffiliateData = () => {
             total_revenue: totalRevenue,
             is_active: !!affiliateAdmin.is_active,
             commission_per_sale: affiliateAdmin.commission_per_sale ?? null,
+            commission_rules: affiliateAdmin.commission_rules,
             sellers: sellers.map(s => ({
               ...s,
               students_count: studentsData.filter(std => std.seller_referral_code === s.referral_code).length,

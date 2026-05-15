@@ -128,9 +128,10 @@ const AffiliateManagement: React.FC = () => {
   const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
   const [loadingManualPayments, setLoadingManualPayments] = useState(false);
 
-  // ===== Comissão por agência =====
-  const [editingCommission, setEditingCommission] = useState<Record<string, string>>({});
-  const [savingCommission, setSavingCommission] = useState<Record<string, boolean>>({});
+  // ===== Comissão por agência (Rules) =====
+  const [commissionModalOpen, setCommissionModalOpen] = useState<string | null>(null);
+  const [tempRules, setTempRules] = useState<any>({});
+  const [savingRules, setSavingRules] = useState(false);
 
   interface CommissionBalance {
     vendas_comissionadas: number;
@@ -243,19 +244,31 @@ const AffiliateManagement: React.FC = () => {
     }
   };
 
-  const handleSaveCommission = async (affiliateId: string, value: string) => {
-    const parsed = parseFloat(value);
-    if (isNaN(parsed) || parsed < 0) return;
-    setSavingCommission(prev => ({ ...prev, [affiliateId]: true }));
+  const handleOpenCommissionModal = (affiliate: any) => {
+    const rules = affiliate.commission_rules || {
+      selection_process: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
+      scholarship: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
+      i20_control: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
+      application: { type: 'fixed', value: affiliate.commission_per_sale || 0 }
+    };
+    setTempRules(rules);
+    setCommissionModalOpen(affiliate.id);
+  };
+
+  const handleSaveCommissionRules = async (affiliateId: string) => {
+    setSavingRules(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('affiliate_admins')
-        .update({ commission_per_sale: parsed })
+        .update({ commission_rules: tempRules })
         .eq('id', affiliateId);
-      setEditingCommission(prev => { const n = { ...prev }; delete n[affiliateId]; return n; });
+      if (error) throw error;
+      setCommissionModalOpen(null);
       refetch();
+    } catch (err: any) {
+      alert('Erro ao salvar comissões: ' + err.message);
     } finally {
-      setSavingCommission(prev => { const n = { ...prev }; delete n[affiliateId]; return n; });
+      setSavingRules(false);
     }
   };
 
@@ -1706,51 +1719,16 @@ const AffiliateManagement: React.FC = () => {
                           })()}
                         </div>
 
-                        {/* Comissão por venda */}
+                        {/* Configuração de Comissões Flexíveis */}
                         <div className="text-center">
-                          {editingCommission[affiliate.id] !== undefined ? (
-                            <div className="flex items-center gap-1 justify-center">
-                              <span className="text-sm text-slate-500">$</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={editingCommission[affiliate.id]}
-                                onChange={e => setEditingCommission(prev => ({ ...prev, [affiliate.id]: e.target.value }))}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') handleSaveCommission(affiliate.id, editingCommission[affiliate.id]);
-                                  if (e.key === 'Escape') setEditingCommission(prev => { const n = { ...prev }; delete n[affiliate.id]; return n; });
-                                }}
-                                className="w-16 text-center text-sm border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                autoFocus
-                              />
-                              <button
-                                onClick={() => handleSaveCommission(affiliate.id, editingCommission[affiliate.id])}
-                                disabled={savingCommission[affiliate.id]}
-                                className="text-green-600 hover:text-green-700 disabled:opacity-50"
-                              >
-                                {savingCommission[affiliate.id] ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                              </button>
-                              <button
-                                onClick={() => setEditingCommission(prev => { const n = { ...prev }; delete n[affiliate.id]; return n; })}
-                                className="text-slate-400 hover:text-slate-600"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              className="flex items-center justify-center gap-1 cursor-pointer group"
-                              onClick={() => setEditingCommission(prev => ({ ...prev, [affiliate.id]: String(affiliate.commission_per_sale ?? '') }))}
-                              title="Clique para editar comissão por venda"
-                            >
-                              <p className="text-lg font-bold text-blue-600">
-                                {affiliate.commission_per_sale != null ? `$${affiliate.commission_per_sale}` : '—'}
-                              </p>
-                              <Pencil className="h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          )}
-                          <p className="text-xs text-slate-600">Comissão/Venda</p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenCommissionModal(affiliate); }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                            title="Configurar Regras de Comissão"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                            <span className="text-sm font-semibold">Configurar Regras</span>
+                          </button>
                         </div>
 
                       </div>
@@ -2491,6 +2469,110 @@ const AffiliateManagement: React.FC = () => {
           })
         )}
       </div>
+
+      {/* Modal de Regras de Comissão */}
+      {commissionModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  Regras de Comissão Flexíveis
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Configure as regras de comissionamento individualizadas por tipo de taxa.
+                </p>
+              </div>
+              <button 
+                onClick={() => setCommissionModalOpen(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {[
+                { id: 'selection_process', label: 'Selection Process Fee', icon: Activity },
+                { id: 'scholarship', label: 'Scholarship Fee', icon: GraduationCap },
+                { id: 'i20_control', label: 'I-20 Control Fee', icon: ShieldCheck },
+                { id: 'application', label: 'Application Fee', icon: CreditCard }
+              ].map(fee => {
+                const rule = tempRules[fee.id] || { type: 'fixed', value: 0 };
+                const Icon = fee.icon;
+                
+                return (
+                  <div key={fee.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-white rounded-lg border border-slate-200">
+                        <Icon className="w-4 h-4 text-slate-600" />
+                      </div>
+                      <h4 className="font-semibold text-slate-800">{fee.label}</h4>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Tipo de Comissão</label>
+                        <select 
+                          value={rule.type}
+                          onChange={e => setTempRules({
+                            ...tempRules,
+                            [fee.id]: { ...rule, type: e.target.value }
+                          })}
+                          className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        >
+                          <option value="fixed">Fixo ($)</option>
+                          <option value="percentage">Porcentagem (%)</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-slate-500 sm:text-sm">
+                              {rule.type === 'fixed' ? '$' : '%'}
+                            </span>
+                          </div>
+                          <input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={rule.value}
+                            onChange={e => setTempRules({
+                              ...tempRules,
+                              [fee.id]: { ...rule, value: parseFloat(e.target.value) || 0 }
+                            })}
+                            className="w-full text-sm border border-slate-300 rounded-lg pl-8 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setCommissionModalOpen(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleSaveCommissionRules(commissionModalOpen)}
+                disabled={savingRules}
+                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {savingRules ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar Regras
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
