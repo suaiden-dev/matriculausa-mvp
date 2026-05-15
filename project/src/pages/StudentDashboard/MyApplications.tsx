@@ -28,6 +28,7 @@ import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotional
 import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPlacementFee, formatPlacementFee } from '../../utils/placementFeeCalculator';
+
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -63,13 +64,6 @@ const MyApplications: React.FC = () => {
     const deps = Number(userProfile?.dependents) || 0;
     // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
     return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
-  };
-
-  // Labels amigáveis para os documentos principais
-  const DOCUMENT_LABELS: Record<string, string> = {
-    passport: t('studentDashboard.myApplications.documents.passport'),
-    diploma: t('studentDashboard.myApplications.documents.highSchoolDiploma'),
-    funds_proof: t('studentDashboard.myApplications.documents.proofOfFunds'),
   };
 
   // Convert query error to string for compatibility
@@ -433,35 +427,6 @@ const MyApplications: React.FC = () => {
         newDocs = [...base, { ...newDoc, history: [] }];
       }
       await supabase.from('scholarship_applications').update({ documents: newDocs }).eq('id', applicationId);
-
-      // Notificar universidade sobre o reenvio do documento
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token && app?.scholarships?.university_id) {
-          const documentLabel = DOCUMENT_LABELS[type] || type;
-          const notificationPayload = {
-            user_id: user.id,
-            application_id: applicationId,
-            document_type: type,
-            document_label: documentLabel,
-            university_id: app.scholarships.university_id,
-            scholarship_title: app.scholarships.title,
-            is_reupload: true
-          };
-
-          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-reupload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify(notificationPayload),
-          });
-        }
-      } catch (notificationError) {
-        console.error('Erro ao notificar universidade sobre reenvio:', notificationError);
-        // Não falhar o upload se a notificação falhar
-      }
 
       // Invalidate applications query to refetch fresh data
       invalidateStudentDashboardApplications(queryClient);

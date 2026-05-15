@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
       customMessage,
       redirectUrl,
       metadata = {},
+      tipos_documentos,
     } = body;
 
     // 0. Intelligent Webhook Detection & Mapping
@@ -96,6 +97,86 @@ Deno.serve(async (req) => {
         tipoNotf = 'Reinstatement Fee Paga - Universidade';
       }
     }
+    else if (body.table === 'document_request_uploads' && body.record) {
+      const { record, old_record, type } = body;
+      
+      const { data: requestData } = await supabaseClient
+        .from('document_requests')
+        .select('is_global, university_id, scholarship_application_id, title')
+        .eq('id', record.document_request_id)
+        .single();
+        
+      if (requestData) {
+        studentId = record.uploaded_by;
+        universityId = requestData.university_id;
+        applicationId = requestData.scholarship_application_id;
+        
+        // Determinar se é reenvio (verificando se já houve rejeição anterior para este documento)
+        const { data: previousRejected } = await supabaseClient
+          .from('document_request_uploads')
+          .select('id')
+          .eq('document_request_id', record.document_request_id)
+          .eq('uploaded_by', record.uploaded_by)
+          .eq('status', 'rejected')
+          .limit(1);
+          
+        const isResubmission = (previousRejected && previousRejected.length > 0) || 
+                               (type === 'UPDATE' && old_record?.status === 'rejected');
+
+        if (type === 'INSERT' || (type === 'UPDATE' && record.status === 'under_review' && old_record?.status !== 'under_review')) {
+          if (isResubmission) {
+            tipoNotf = requestData.is_global 
+              ? 'Documento global reenviado - Universidade' 
+              : 'Documento reenviado pelo aluno - Universidade';
+          } else {
+            tipoNotf = requestData.is_global 
+              ? 'Novo documento global enviado - Universidade' 
+              : 'Novo documento enviado para análise - Universidade';
+          }
+        }
+        
+        metadata.document_title = requestData.title;
+        tipos_documentos = [requestData.title];
+      }
+    }
+    else if (body.table === 'transfer_form_uploads' && body.record) {
+      const { record, old_record, type } = body;
+      applicationId = record.application_id;
+      studentId = record.uploaded_by;
+
+      // Buscar universidade a partir da aplicação
+      const { data: appData } = await supabaseClient
+        .from('scholarship_applications')
+        .select('scholarship_id, scholarships(university_id)')
+        .eq('id', applicationId)
+        .single();
+
+      if (appData) {
+        scholarshipId = appData.scholarship_id;
+        const scholarship = Array.isArray(appData.scholarships) ? appData.scholarships[0] : appData.scholarships;
+        universityId = scholarship?.university_id;
+      }
+
+      // Determinar se é reenvio
+      const { data: previousRejected } = await supabaseClient
+        .from('transfer_form_uploads')
+        .select('id')
+        .eq('application_id', applicationId)
+        .eq('status', 'rejected')
+        .limit(1);
+
+      const isResubmission = (previousRejected && previousRejected.length > 0) || 
+                             (type === 'UPDATE' && old_record?.status === 'rejected');
+
+      if (type === 'INSERT' || (type === 'UPDATE' && record.status === 'under_review' && old_record?.status !== 'under_review')) {
+        tipoNotf = isResubmission 
+          ? 'Transfer Form reenviado - Universidade' 
+          : 'Transfer Form Enviado - Universidade';
+      }
+      
+      metadata.document_title = 'Transfer Form';
+      tipos_documentos = ['Transfer Form'];
+    }
 
     if (!studentId || !tipoNotf) {
       // Se não conseguimos identificar o evento, apenas logamos e retornamos sucesso (para não travar o webhook)
@@ -104,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     // 0.1 Fetch missing IDs (applicationId, scholarshipId, universityId)
-    if (!applicationId && studentId && (tipoNotf.includes('Documentos') || tipoNotf.includes('onboarding'))) {
+    if (!applicationId && studentId && (tipoNotf.includes('Documentos') || tipoNotf.includes('onboarding') || tipoNotf.includes('Reinstatement') || tipoNotf.includes('global'))) {
       const { data: appData } = await supabaseClient
         .from("scholarship_applications")
         .select("id, scholarship_id")
@@ -198,16 +279,25 @@ Deno.serve(async (req) => {
     const formattedMessage = customMessage || 
       (tipoNotf.includes('Application Fee') 
         ? `O aluno ${studentInfo.full_name} realizou o pagamento da Application Fee para a bolsa ${scholarshipTitle}.`
-        : tipoNotf.includes('Documento reenviado')
-        ? `O aluno ${studentInfo.full_name} reenviou documentos pendentes para a bolsa ${scholarshipTitle}.`
+        : tipoNotf.includes('Documento reenviado') || tipoNotf.includes('global reenviado')
+        ? `O aluno ${studentInfo.full_name} reenviou o documento "${metadata.document_title || 'pendente'}" para a bolsa ${scholarshipTitle}.`
+        : tipoNotf.includes('global enviado')
+        ? `O aluno ${studentInfo.full_name} enviou o documento "${metadata.document_title || 'Documento Global'}" para análise.`
         : tipoNotf.includes('confirmada')
         ? `O aluno ${studentInfo.full_name} confirmou a escolha da bolsa ${scholarshipTitle} para prosseguir.`
         : tipoNotf.includes('Reinstatement Fee')
         ? `O aluno ${studentInfo.full_name} realizou o pagamento da Reinstatement Fee para a bolsa ${scholarshipTitle}.`
+        : tipoNotf.includes('Transfer Form')
+        ? `O aluno ${studentInfo.full_name} ${tipoNotf.includes('reenviado') ? 'reenviou' : 'enviou'} o Transfer Form para a bolsa ${scholarshipTitle}.`
         : `O aluno ${studentInfo.full_name} disparou o evento: ${tipoNotf} para a bolsa ${scholarshipTitle}.`);
 
     // 5. Idempotency Check & In-App Notification Log
-    const idempotencyKey = `${tipoNotf}-${studentId}-${scholarshipId || 'general'}-${new Date().toISOString().split('T')[0]}`;
+    let idempotencyKey = `${tipoNotf}-${studentId}-${scholarshipId || 'general'}-${new Date().toISOString().split('T')[0]}`;
+    
+    // Para uploads de documentos, queremos notificação individual SEMPRE (sem bloqueio diário)
+    if ((body.table === 'document_request_uploads' || body.table === 'transfer_form_uploads') && body.record?.id) {
+      idempotencyKey = `doc_upload_${body.record.id}`;
+    }
     
     const { data: existingNotif } = await supabaseClient
       .from("university_notifications")
@@ -226,8 +316,8 @@ Deno.serve(async (req) => {
     // 6. Send to n8n Webhook
     const n8nPayload = {
       tipo_notf: tipoNotf,
-      email_aluno: student.email,
-      nome_aluno: student.full_name,
+      email_aluno: studentInfo.email,
+      nome_aluno: studentInfo.full_name,
       nome_bolsa: scholarshipTitle,
       nome_universidade: university.name,
       email_universidade: emailUniversidade,
@@ -242,6 +332,7 @@ Deno.serve(async (req) => {
       fee_amount: metadata?.fee_amount || 0,
       scholarship_fee_paid: metadata?.scholarship_fee_paid || false,
       metadata: metadata || {},
+      tipos_documentos: tipos_documentos || metadata?.tipos_documentos || [],
     };
 
     console.log("[send-university-notification] Sending to n8n:", n8nPayload);
