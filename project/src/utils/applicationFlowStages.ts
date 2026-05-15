@@ -463,6 +463,12 @@ export function getCurrentStage(student: StudentRecord): {
   stage: ApplicationFlowStageKey | null;
   status: StageStatus;
 } {
+  // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
+  // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
+  if (student.application_status === 'enrolled') {
+    return { stage: 'enrollment', status: 'completed' };
+  }
+
   for (const stageDef of APPLICATION_FLOW_STAGES) {
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;

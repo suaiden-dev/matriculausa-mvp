@@ -282,7 +282,7 @@ const AdminStudentDetails: React.FC = () => {
       const dependentCost = sysType === 'simplified' ? 0 : dependents * 150;
 
       // Selection Process Fee
-      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process !== null) {
         normalized.selection_process = realPaidAmounts.selection_process;
         console.log(`[AdminStudentDetails] ✅ Usando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
       } else if (paymentFlags?.selection_process_fee_payment_method === 'coupon' && paymentFlags?.has_paid_selection) {
