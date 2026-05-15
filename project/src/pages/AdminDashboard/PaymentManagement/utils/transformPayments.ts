@@ -61,8 +61,8 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // ✅ PRIORIDADE: Valor real pago (Auditável)
+    if (realPaid?.selection_process !== undefined && realPaid?.selection_process !== null) {
+      // ✅ PRIORIDADE: Valor real pago (inclui $0 registrado pelo admin)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
     } else if (student.selection_process_fee_payment_method === 'coupon') {
       // Cupom 100% OFF — nenhum valor real pago
@@ -674,8 +674,8 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // ✅ PRIORIDADE: Valor real pago (Auditável)
+    if (realPaid?.selection_process !== undefined && realPaid?.selection_process !== null) {
+      // ✅ PRIORIDADE: Valor real pago (inclui $0 registrado pelo admin)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
     } else if (stripeUser.selection_process_fee_payment_method === 'coupon') {
       // Cupom 100% OFF — nenhum valor real pago
