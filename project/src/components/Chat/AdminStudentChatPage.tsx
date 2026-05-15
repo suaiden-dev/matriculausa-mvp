@@ -32,7 +32,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
   const [guideEnter, setGuideEnter] = useState(false);
   const [guideExit, setGuideExit] = useState(false);
-  const [adminSenders, setAdminSenders] = useState<Record<string, string>>({});
+  const [adminSenders, setAdminSenders] = useState<Record<string, string> | null>(null);
 
   // Hook for the selected conversation
   const { updateConversationUnreadCount } = useAdminStudentConversations();
@@ -270,6 +270,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             className="flex-1 min-h-0"
             inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
             adminSenders={adminSenders}
+            otherPartyId={selectedRecipientId || undefined}
           />
         </div>
       );
@@ -319,6 +320,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
               onMarkAllAsRead={chat.markAllAsRead}
               otherPartyLabel={getOtherPartyLabel()}
               adminSenders={adminSenders}
+              otherPartyId={selectedRecipientId || undefined}
             />
           </div>
         </div>
@@ -381,6 +383,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             className="flex-1 min-h-0"
             inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder')}
             adminSenders={adminSenders}
+            otherPartyId={selectedRecipientId || undefined}
           />
       </div>
     );
@@ -448,6 +451,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   overrideHeights={true}
                   className="h-full"
                   adminSenders={adminSenders}
+                  otherPartyId={selectedRecipientId || undefined}
                 />
             </>
           ) : (

@@ -1044,6 +1044,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               }
             }
             await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', app.id);
+
           }
         }
       }

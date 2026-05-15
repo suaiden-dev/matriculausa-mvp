@@ -90,6 +90,7 @@ const StudentDetails: React.FC = () => {
       application_status: application.status,
       applied_at: application.applied_at,
       scholarship_name: application.scholarships?.title || null,
+      course_name: application.scholarships?.field_of_study || null,
       university_name: application.scholarships?.university_name || null,
       scholarship_fee_amount: application.scholarships?.scholarship_fee_amount || 0,
       application_fee_amount: application.scholarships?.application_fee_amount || 0,
@@ -2336,6 +2337,9 @@ const StudentDetails: React.FC = () => {
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
+                        <dt className="text-sm font-medium text-slate-600">Course / Field of Study</dt>
+                        <dd className="text-lg font-semibold text-slate-900 mb-4">{application.scholarships.field_of_study || '-'}</dd>
+                        
                         <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
                         <dd className="text-lg font-semibold text-slate-900">{application.scholarships.title}</dd>
                       </div>

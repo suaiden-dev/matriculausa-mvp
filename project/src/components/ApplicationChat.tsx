@@ -38,7 +38,8 @@ interface ApplicationChatProps {
   overrideHeights?: boolean; // If true, do not apply default min/max heights to message container
   className?: string; // Wrapper className for the entire chat component
   inputPlaceholder?: string; // i18n placeholder for the input
-  adminSenders?: Record<string, string>; // map of admin user_id -> display name
+  adminSenders?: Record<string, string> | null; // map of admin user_id -> display name
+  otherPartyId?: string; // ID of the other person (student in admin context)
 }
 
 interface I20ControlFeeCardProps {
@@ -146,7 +147,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   overrideHeights = false,
   className = '',
   inputPlaceholder = 'Type your message...',
-  adminSenders
+  adminSenders,
+  otherPartyId
 }) => {
 
     const [text, setText] = useState('');
@@ -286,19 +288,23 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 
           {messages.map((msg, index) => {
             const isAdminContext = !!adminSenders;
-            const isSenderAdmin = isAdminContext && !!(adminSenders && adminSenders[msg.senderId]);
-            const isViewerAdmin = isAdminContext && !!(adminSenders && adminSenders[_currentUserId]);
+            const isFromOtherParty = otherPartyId && msg.senderId === otherPartyId;
             
             const isOwn = msg.isOwn || (msg.senderId === _currentUserId);
-            const isOtherAdmin = isViewerAdmin && isSenderAdmin && !isOwn;
+            
+            // In Admin Context:
+            // - If we know the otherPartyId, align left ONLY if it's from that party.
+            // - Everything else (myself, other admins, system) goes to the right.
+            // In Student Context:
+            // - Align right if it's my own message.
+            const alignRight = isAdminContext 
+              ? (otherPartyId ? !isFromOtherParty : (isOwn || !!(adminSenders && adminSenders[msg.senderId])))
+              : isOwn;
 
-            // Alinhar à direita se:
-            // 1. For minha própria mensagem (isOwn ou ID match)
-            // 2. EU sou admin E a mensagem é de outro admin (Contexto de Suporte Staff)
-            const alignRight = isOwn || isOtherAdmin;
-
-            // Se NÃO está na direita, mas é de um admin, marcamos como isAdminMessage para o estilo diferenciado (bolha azul clara para o aluno)
+            // Mark as admin message for styling if it's an admin sender but NOT aligned right (student's view)
+            const isSenderAdmin = isAdminContext && !!(adminSenders && adminSenders[msg.senderId]);
             const isAdminMessage = isSenderAdmin && !alignRight;
+            const isOtherAdmin = isAdminContext && alignRight && !isOwn;
 
 
             return (
@@ -326,9 +332,9 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                       <span className="font-semibold text-xs truncate flex-1">
                         {isOwn
                           ? 'You'
-                          : isOtherAdmin 
-                            ? (adminSenders && adminSenders[msg.senderId]) || 'Admin'
-                            : otherPartyLabel}
+                          : isFromOtherParty 
+                            ? otherPartyLabel
+                            : (adminSenders && adminSenders[msg.senderId]) || 'Admin'}
                       </span>
                       <div className="flex items-center gap-2">
                         {msg.editedAt && (
