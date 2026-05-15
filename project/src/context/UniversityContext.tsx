@@ -139,11 +139,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
 
           if (uploadsError) console.error('[UNI_CONTEXT_DEBUG] Uploads Error:', uploadsError);
 
-          console.log('[UNI_CONTEXT_DEBUG]', {
-            reqsFound: allReqs?.length,
-            uploadsFound: allUploads?.length,
-            appIds: appIds.length
-          });
+
 
           // 3. Mapear para cada aplicação
           const enrichedApps = (applicationsData || []).map(app => {
@@ -181,7 +177,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
             };
           });
 
-          console.log('[UNI_CONTEXT_DEBUG] Enriched Apps Sample:', enrichedApps[0]?.university_document_stats);
+
 
           setApplications(enrichedApps);
         } else {
