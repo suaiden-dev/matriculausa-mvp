@@ -273,6 +273,7 @@ const AdminStudentDetails: React.FC = () => {
         has_paid_i20: boolean;
         has_paid_placement: boolean;
         has_paid_reinstatement?: boolean;
+        selection_process_fee_payment_method?: string;
       },
       applications?: any[]
     ): Record<string, number> => {
@@ -284,11 +285,14 @@ const AdminStudentDetails: React.FC = () => {
       if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
         normalized.selection_process = realPaidAmounts.selection_process;
         console.log(`[AdminStudentDetails] ✅ Usando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
+      } else if (paymentFlags?.selection_process_fee_payment_method === 'coupon' && paymentFlags?.has_paid_selection) {
+        // Cupom 100% OFF — nenhum valor real pago, exibir $0
+        normalized.selection_process = 0;
       } else if (paymentFlags?.has_paid_selection) {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
         const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
         let expectedSelectionProcess = hasMatrDiscount ? 350 : (sysType === 'simplified' ? 350 : 400);
-        
+
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
         } else {
@@ -705,7 +709,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_scholarship: student.is_scholarship_fee_paid,
             has_paid_i20: !!student.has_paid_i20_control_fee,
             has_paid_placement: !!student.is_placement_fee_paid,
-            has_paid_reinstatement: !!student.has_paid_reinstatement_package
+            has_paid_reinstatement: !!student.has_paid_reinstatement_package,
+            selection_process_fee_payment_method: student.selection_process_fee_payment_method
           },
           student.all_applications
         );
@@ -787,7 +792,8 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_application: !!student.is_application_fee_paid,
           has_paid_scholarship: !!student.is_scholarship_fee_paid,
           has_paid_i20: !!student.has_paid_i20_control_fee,
-          has_paid_placement: !!student.is_placement_fee_paid
+          has_paid_placement: !!student.is_placement_fee_paid,
+          selection_process_fee_payment_method: student.selection_process_fee_payment_method
         }
       );
 
