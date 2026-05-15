@@ -166,22 +166,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com"
   const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
 
-  // ✅ Debug: Log quando editingFees mudar
-  React.useEffect(() => {
-    console.log('🔍 [PaymentStatusCard] editingFees mudou:', editingFees);
-    if (editingFees) {
-      console.log('✅ [PaymentStatusCard] Valores de editingFees:', {
-        selection_process: editingFees.selection_process,
-        scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control,
-        placement: editingFees.placement,
-        ds160_package: editingFees.ds160_package,
-        i539_cos_package: editingFees.i539_cos_package
-      });
-    } else {
-      console.log('ℹ️ [PaymentStatusCard] editingFees é null/undefined');
-    }
-  }, [editingFees]);
+
 
   // This is a simplified version - full implementation would include all fee types
   return (
