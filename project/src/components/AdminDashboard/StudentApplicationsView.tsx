@@ -447,8 +447,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
 
-    // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
-    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee || student.source === 'migma';
+    // Filtro para mostrar apenas usuários que pagaram a taxa de seleção ou já estão matriculados
+    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee || student.source === 'migma' || student.application_status === 'enrolled';
 
     // Filtro para mostrar apenas usuários que usaram cupom BLACK
     const matchesBlackCoupon = !onlyBlackCouponUsers || blackCouponUsers.has(student.user_id);

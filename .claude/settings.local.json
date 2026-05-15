@@ -48,7 +48,8 @@
       "Bash(rtk npx:*)",
       "Bash(supabase functions:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(rtk ls:*)"
+      "Bash(rtk ls:*)",
+      "Bash(rm:*)"
     ]
   }
 }

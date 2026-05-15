@@ -357,7 +357,7 @@ export async function getDisplayAmounts(
     // Selection Process Fee - Prioridade: Valor Real Pago (se trustRealPaidAmounts) > override > cupom promocional > cálculo fixo
     // ✅ NOVO: Se trustRealPaidAmounts for true, aceitamos o valor real do banco (ex: Zelle manual)
     if (feeTypes.includes("selection_process")) {
-      if (trustRealPaidAmounts && realPaidMap.selection_process) {
+      if (trustRealPaidAmounts && realPaidMap.selection_process !== undefined) {
         amounts.selection_process = realPaidMap.selection_process;
       } else if (overrides.selection_process_fee != null) {
         amounts.selection_process = Number(overrides.selection_process_fee);
@@ -486,7 +486,9 @@ export async function getRealPaidAmounts(
         "fee_type, amount, payment_method, payment_intent_id, payment_date, gross_amount_usd, parcelow_status",
       )
       .eq("user_id", userId)
-      .in("fee_type", feeTypes);
+      .in("fee_type", feeTypes)
+      .order("payment_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("[paymentConverter] Erro ao buscar pagamentos:", error);
@@ -586,12 +588,8 @@ export async function getRealPaidAmounts(
       } else if (
         payment.payment_method === "stripe" && !payment.payment_intent_id
       ) {
-        // ✅ Stripe sem payment_intent_id: não podemos determinar moeda, IGNORAR
-        // Isso evita contar valores BRL antigos como USD quando não temos metadados
-        console.warn(
-          `[paymentConverter] ⚠️ Stripe payment sem payment_intent_id para ${payment.fee_type}, não é possível determinar moeda - IGNORANDO (use valores fixos como fallback)`,
-        );
-        continue;
+        // Pagamento manual do admin (sem payment_intent_id real do Stripe): usar amount diretamente em USD
+        amountUSD = payment.gross_amount_usd ? Number(payment.gross_amount_usd) : Number(payment.amount);
       } else if (payment.payment_method === "parcelow") {
         // ✅ Parcelow: usar o valor bruto conforme recebido $350.00
         // Para a Stephanie, o valor real pago é 350
@@ -622,8 +620,8 @@ export async function getRealPaidAmounts(
           : null;
 
       if (feeTypeKey) {
-        // Se já existe um valor para este fee_type, usar o maior (mais recente)
-        if (!amounts[feeTypeKey] || amountUSD > amounts[feeTypeKey]) {
+        // Usar o primeiro registro por fee_type (query já ordena por mais recente primeiro)
+        if (!(feeTypeKey in amounts)) {
           amounts[feeTypeKey] = amountUSD;
         }
       }
