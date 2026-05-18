@@ -30,6 +30,10 @@ interface GlobalDocumentUpload {
     };
 }
 
+// Em produção, ocultar usuários de teste com email @uorak.com
+const isProductionHost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'matriculausa.com' || window.location.hostname === 'www.matriculausa.com');
+
 const PendingGlobalDocumentsOverview: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [uploads, setUploads] = useState<GlobalDocumentUpload[]>([]);
@@ -71,7 +75,14 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
                 return;
             }
 
-            setUploads((data || []) as GlobalDocumentUpload[]);
+            // Em produção, filtrar usuários de teste @uorak.com
+            const filtered = isProductionHost
+                ? (data || []).filter((u: GlobalDocumentUpload) =>
+                    !(u.user_profiles?.email || '').toLowerCase().includes('uorak')
+                  )
+                : (data || []);
+
+            setUploads(filtered as GlobalDocumentUpload[]);
         } catch (err) {
             console.error('[PendingGlobalDocumentsOverview] Unexpected error:', err);
         } finally {
@@ -127,6 +138,10 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
     // Group by student
     const groups = Array.from(
         uploads
+            .filter((upload) => {
+                if (!isProductionHost) return true;
+                return !(upload.user_profiles?.email || '').toLowerCase().includes('uorak');
+            })
             .reduce((acc, upload) => {
                 const userId = upload.uploaded_by;
                 if (!acc.has(userId)) {
