@@ -1449,25 +1449,6 @@ const NewScholarship: React.FC = () => {
                       Set the application fee amount for this scholarship. Students will see this value when applying.
                     </p>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Placement Fee Amount (USD) <span className="text-slate-400 font-normal">(Optional)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="placement_fee_amount"
-                      value={formData.placement_fee_amount}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="e.g., 1450.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Optional custom Placement Fee. If left blank, standard table rates will apply.
-                    </p>
-                  </div>
                 </div>
 
                 {/* Information about application fees */}
