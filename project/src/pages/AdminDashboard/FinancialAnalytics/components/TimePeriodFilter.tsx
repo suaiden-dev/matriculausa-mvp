@@ -97,16 +97,16 @@ export function TimePeriodFilter({
       case 'application_fee':
       case 'application':
         return 'Application Fee';
+      case 'control_fee':
+      case 'ds160_package':
+      case 'i539_package':
+      case 'i539_cos_package':
+        return 'Control Fee';
       case 'scholarship_fee':
       case 'scholarship':
-        return 'Scholarship Fee';
       case 'i20_control_fee':
       case 'i20_control':
-        return 'I-20 Control Fee';
-      case 'ds160_package':
-        return 'DS-160 Package';
-      case 'i539_package':
-        return 'I-539 Package';
+        return 'Placement Fee';
       case 'placement':
       case 'placement_fee':
         return 'Placement Fee';
