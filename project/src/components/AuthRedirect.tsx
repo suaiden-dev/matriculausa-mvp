@@ -234,19 +234,21 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
         
-        if (user.role === 'admin' || user.role === 'post_sales') {
-          navigate('/admin/dashboard', { replace: true });
-          return;
-        }
+        // Admins e pós-vendas podem navegar livremente na Home (/) sem serem redirecionados de volta para o dashboard
+        // if (user.role === 'admin' || user.role === 'post_sales') {
+        //   navigate('/admin/dashboard', { replace: true });
+        //   return;
+        // }
         
-        if (user.role === 'student') {
-          if (hasPendingOrRejectedSelectionPayment) {
-            navigate('/student/onboarding?step=selection_fee', { replace: true });
-          } else {
-            navigate('/student/dashboard', { replace: true });
-          }
-          return;
-        }
+        // Estudantes podem navegar livremente na Home (/) sem serem redirecionados de volta para o dashboard
+        // if (user.role === 'student') {
+        //   if (hasPendingOrRejectedSelectionPayment) {
+        //     navigate('/student/onboarding?step=selection_fee', { replace: true });
+        //   } else {
+        //     navigate('/student/dashboard', { replace: true });
+        //   }
+        //   return;
+        // }
         
         if (user.role === 'seller') {
           navigate('/seller/dashboard', { replace: true });

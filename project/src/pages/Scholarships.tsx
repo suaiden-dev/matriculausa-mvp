@@ -8,7 +8,6 @@ import type { Scholarship } from '../types';
 import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
-import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
@@ -47,7 +46,7 @@ const Scholarships: React.FC = () => {
   const [selectedField, setSelectedField] = useState('all');
   const [selectedStudyMode, setSelectedStudyMode] = useState('all');
   const [selectedWorkAuth, setSelectedWorkAuth] = useState('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   const { scholarships, loading: scholarshipsLoading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
@@ -57,7 +56,7 @@ const Scholarships: React.FC = () => {
   const scholarshipsSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Estados para o modal de detalhes
-  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
+
 
   // Determinar se o usuário pode ver detalhes sensíveis (ex: nome da universidade, logo real da faculdade)
   const canViewSensitive = isAuthenticated && (
@@ -376,16 +375,7 @@ const Scholarships: React.FC = () => {
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   }; */
 
-  // Funções para controlar o modal
-  const openScholarshipModal = (scholarship: any) => {
-    setSelectedScholarshipForModal(scholarship);
-    setIsModalOpen(true);
-  };
 
-  const closeScholarshipModal = () => {
-    setIsModalOpen(false);
-    setSelectedScholarshipForModal(null);
-  };
 
   const DEFAULT_PAGE_SIZE = 21;
   const MOBILE_PAGE_SIZE = 10;
@@ -620,7 +610,32 @@ const Scholarships: React.FC = () => {
 
 
         {/* Featured Scholarships Section */}
-        {filteredFeaturedScholarships.length > 0 && (
+        {scholarshipsLoading ? (
+          // Skeleton para a seção de destaques durante o carregamento
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <div className="h-8 bg-slate-200 rounded-full w-48 mx-auto mb-4 animate-pulse" />
+              <div className="h-10 bg-slate-200 rounded-lg w-80 mx-auto mb-4 animate-pulse" />
+              <div className="h-5 bg-slate-100 rounded w-96 mx-auto animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden animate-pulse">
+                  <div className="w-full aspect-[8/3] bg-slate-200" />
+                  <div className="p-5 space-y-4">
+                    <div className="h-6 bg-slate-200 rounded w-3/4" />
+                    <div className="h-4 bg-slate-100 rounded w-1/2" />
+                    <div className="space-y-2">
+                      <div className="h-10 bg-slate-100 rounded-xl" />
+                      <div className="h-10 bg-slate-100 rounded-xl" />
+                    </div>
+                    <div className="h-12 bg-slate-200 rounded-2xl" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
@@ -742,8 +757,8 @@ const Scholarships: React.FC = () => {
                                 {scholarship.universities?.logo_url ? (
                                   <div className="relative w-full h-full flex items-center justify-center">
                                     <img 
-                                      src={scholarship.universities.logo_url} 
-                                      alt={scholarship.universities.name || "University Logo"} 
+                                      src={canViewSensitive ? scholarship.universities.logo_url : "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/University_lock_icon.webp"} 
+                                      alt={canViewSensitive ? (scholarship.universities.name || "University Logo") : "University Logo"} 
                                       className={`w-full h-full object-contain p-2 transition-all duration-500 ${!canViewSensitive ? 'blur-[4px] opacity-50' : ''}`} 
                                     />
                                     {!canViewSensitive && (
@@ -920,7 +935,7 @@ const Scholarships: React.FC = () => {
 
                           {/* View Details Button - 25% (Ícone de Olhinho) */}
                           <button
-                            onClick={() => openScholarshipModal(scholarship)}
+                            onClick={() => navigate(`/scholarships/${scholarship.id}`)}
                             className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
                             aria-label={`View details for ${scholarship.title} scholarship`}
                             title={t('scholarshipsPage.scholarshipCard.details')}
@@ -1113,8 +1128,8 @@ const Scholarships: React.FC = () => {
                                   {scholarship.universities?.logo_url ? (
                                     <div className="relative w-full h-full flex items-center justify-center">
                                       <img 
-                                        src={scholarship.universities.logo_url} 
-                                        alt={scholarship.universities.name || "University Logo"} 
+                                        src={canViewSensitive ? scholarship.universities.logo_url : "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/University_lock_icon.webp"} 
+                                        alt={canViewSensitive ? (scholarship.universities.name || "University Logo") : "University Logo"} 
                                         className={`w-full h-full object-contain p-2 transition-all duration-500 ${!canViewSensitive ? 'blur-[4px] opacity-50' : ''}`} 
                                       />
                                       {!canViewSensitive && (
@@ -1291,7 +1306,7 @@ const Scholarships: React.FC = () => {
 
                             {/* View Details Button - 25% (Ícone de Olhinho) */}
                             <button
-                              onClick={() => openScholarshipModal(scholarship)}
+                              onClick={() => navigate(`/scholarships/${scholarship.id}`)}
                               className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:bg-transparent hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
                               aria-label={`View details for ${scholarship.title} scholarship`}
                               title={t('scholarshipsPage.scholarshipCard.details')}
@@ -1340,15 +1355,7 @@ const Scholarships: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de Detalhes da Bolsa */}
-      <ScholarshipDetailModal
-        scholarship={selectedScholarshipForModal}
-        isOpen={isModalOpen}
-        onClose={closeScholarshipModal}
-        userProfile={userProfile}
-        user={user as any}
-        userRole={user?.role || null}
-      />
+
 
       <SmartChat />
     </div>

@@ -2514,20 +2514,10 @@ const StudentDetails: React.FC = () => {
       )} */}
       
       {activeTab === 'survey' && (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-gradient-to-r rounded-t-3xl from-slate-600 to-slate-700 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white flex items-center">
-              <FileText className="w-6 h-6 mr-3" />
-              Selection Survey
-            </h2>
-          </div>
-          <div className="p-6">
-            <SelectionSurveyView
-              userId={application?.user_profiles?.user_id || ''}
-              surveyPassed={application?.user_profiles?.selection_survey_passed}
-            />
-          </div>
-        </div>
+        <SelectionSurveyView
+          userId={application?.user_profiles?.user_id || ''}
+          surveyPassed={application?.user_profiles?.selection_survey_passed}
+        />
       )}
 
         {activeTab === 'documents' && (
