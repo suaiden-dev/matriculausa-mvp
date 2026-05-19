@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
-import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
 
 interface GlobalDocumentRequestsSectionProps {
   globalRequests: any[];
@@ -32,6 +31,22 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
   rejected: { label: 'Rejected', className: 'bg-red-100 text-red-800', icon: XCircle },
 };
 
+function formatDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+import { groupUploadsBySubmission, getFileName } from '../../../utils/documentUploadUtils';
+
 const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps> = ({
   globalRequests = [],
   studentUserId,
@@ -52,9 +67,14 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
   const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (id: string) => {
     setExpandedRequests(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleHistory = (id: string) => {
+    setExpandedHistory(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleConfirmReject = () => {
@@ -75,7 +95,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
   return (
     <>
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-        {/* Section Header - Matched with DocumentsView.tsx style */}
+        {/* Section Header */}
         <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-start sm:items-center space-x-4 min-w-0">
@@ -122,18 +142,32 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
             <div className="space-y-4">
               {globalRequests.map((request) => {
                 const allStudentUploads = (request.document_request_uploads || [])
-                  .filter((u: any) => u.uploaded_by === studentUserId)
-                  .sort((a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
-                const studentUpload = allStudentUploads[0];
-                const isExpanded = expandedRequests[request.id] !== false; // expanded by default
+                  .filter((u: any) => u.uploaded_by === studentUserId);
+
+                const { closedGroups, currentGroup } = groupUploadsBySubmission(allStudentUploads);
+
+                // The upload used for approve/reject is the most recent of the current pending group
+                const activeUpload = currentGroup.length > 0
+                  ? currentGroup[currentGroup.length - 1]
+                  : closedGroups.length > 0
+                    ? closedGroups[closedGroups.length - 1][closedGroups[closedGroups.length - 1].length - 1]
+                    : null;
+
+                // Groups shown in history: all closedGroups when currentGroup is pending,
+                // or all closedGroups except the last when last closed group is shown in main card
+                const historyGroups = currentGroup.length > 0
+                  ? closedGroups
+                  : closedGroups.slice(0, -1);
+
+                const isExpanded = expandedRequests[request.id] !== false;
+                const isHistoryOpen = expandedHistory[request.id] === true;
                 const applicableTypes: string[] = request.applicable_student_types || ['all'];
 
                 return (
                   <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 relative group">
-                    {/* Admin Action Buttons - Absolute positioned like in DocumentsView */}
+                    {/* Admin Action Buttons */}
                     <div className="absolute top-4 right-4 flex items-center gap-1 sm:gap-2">
-                       {/* Template download - moved to top right like in individual docs */}
-                       {(request.template_url || request.attachment_url) && (
+                      {(request.template_url || request.attachment_url) && (
                         <a
                           href={request.template_url || request.attachment_url}
                           target="_blank"
@@ -146,7 +180,6 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                         </a>
                       )}
 
-                      {/* Admin delete */}
                       {isAdmin && onDeleteDocumentRequest && (
                         <button
                           onClick={() => setDeleteRequestId(request.id)}
@@ -158,7 +191,6 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                         </button>
                       )}
 
-                      {/* Expand toggle */}
                       <button
                         onClick={() => toggleExpand(request.id)}
                         className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
@@ -168,14 +200,11 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start gap-4">
-                      {/* Icon */}
                       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-200/50">
                         <FileText className="h-6 w-6 text-blue-600" />
                       </div>
 
-                      {/* Content Wrapper - with right padding for the buttons */}
                       <div className="flex-1 min-w-0 pr-0 sm:pr-40">
-                        {/* Title Row */}
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h4 className="text-lg font-bold text-slate-900 leading-tight break-words">
                             {request.title || 'Global Request'}
@@ -195,14 +224,12 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                           </div>
                         </div>
 
-                        {/* Description */}
                         {request.description && (
                           <p className="text-sm text-slate-600 mb-3 leading-relaxed break-words">
                             {request.description}
                           </p>
                         )}
 
-                        {/* Due Date */}
                         {request.due_date && (
                           <div className="flex items-center text-xs font-medium text-slate-400 mb-4 bg-slate-50 self-start px-2 py-1 rounded">
                             <Clock className="w-3.5 h-3.5 mr-1.5" />
@@ -215,112 +242,255 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                     {/* Upload Status (expandable) */}
                     {isExpanded && (
                       <div className="mt-6 pt-6 border-t border-slate-100">
-                        {!studentUpload ? (
+                        {allStudentUploads.length === 0 ? (
                           <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
                             <p className="text-slate-500 text-sm">No response submitted yet</p>
                           </div>
                         ) : (
                           <>
-                          <div className="bg-white border border-slate-200 rounded-2xl p-4" data-upload-id={studentUpload.id}>
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <FileText className="h-6 w-6 text-green-600" />
+                            {/* Main card */}
+                            {currentGroup.length > 0 ? (
+                              /* PENDING SUBMISSION — one card per file */
+                              <div className="space-y-3">
+                                  {currentGroup.map((upload: any, idx: number) => (
+                                    <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                      <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
+                                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                          <FileText className="h-6 w-6 text-green-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-slate-900 break-all">
+                                            {upload.file_url ? getFileName(upload.file_url) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
+                                          </p>
+                                          <p className="text-sm text-slate-500">
+                                            Submitted on {new Date(upload.uploaded_at).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2 items-center">
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium bg-yellow-100 text-yellow-800">
+                                          <Clock className="h-4 w-4" />
+                                          Under Review
+                                        </span>
+
+                                        {upload.file_url && (
+                                          <button
+                                            onClick={() => onViewDocument?.({
+                                              ...upload,
+                                              file_url: upload.file_url,
+                                              filename: request.title || 'Student Response',
+                                            })}
+                                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
+                                          >
+                                            View
+                                          </button>
+                                        )}
+
+                                        {isAdmin && (
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => onApproveDocument && onApproveDocument(upload.id)}
+                                              disabled={approvingStates[upload.id]}
+                                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                                            >
+                                              {approvingStates[upload.id] ? 'Approving...' : 'Approve'}
+                                            </button>
+                                            <button
+                                              onClick={() => setRejectModalUploadId(upload.id)}
+                                              disabled={rejectingStates[upload.id]}
+                                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                                            >
+                                              Reject
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-slate-900 break-words">
-                                      {studentUpload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file'}
-                                    </p>
-                                    {studentUpload.is_admin_upload && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
-                                        Admin
-                                      </span>
-                                    )}
-                                  </div>
-                                  {studentUpload.uploaded_at && (
-                                    <p className="text-sm text-slate-500">
-                                      Submitted on {new Date(studentUpload.uploaded_at).toLocaleDateString()}
-                                    </p>
+                              ) : (
+                                /* LAST CLOSED GROUP — all files, approved or rejected */
+                                <div className="space-y-3">
+                                  {closedGroups[closedGroups.length - 1].map((upload: any) => {
+                                    const cfg = STATUS_CONFIG[upload.status] || STATUS_CONFIG['under_review'];
+                                    const Icon = cfg.icon;
+                                    return (
+                                      <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
+                                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <FileText className="h-6 w-6 text-green-600" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <p className="font-medium text-slate-900 break-all">
+                                                {upload.file_url ? getFileName(upload.file_url) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
+                                              </p>
+                                              {upload.is_admin_upload && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+                                                  Admin
+                                                </span>
+                                              )}
+                                            </div>
+                                            {upload.uploaded_at && (
+                                              <p className="text-sm text-slate-500">
+                                                Submitted on {new Date(upload.uploaded_at).toLocaleDateString()}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 items-center">
+                                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium ${cfg.className}`}>
+                                            <Icon className="h-4 w-4" />
+                                            {cfg.label}
+                                          </span>
+                                          {upload.file_url && (
+                                            <button
+                                              onClick={() => onViewDocument?.({
+                                                ...upload,
+                                                file_url: upload.file_url,
+                                                filename: request.title || 'Student Response'
+                                              })}
+                                              className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
+                                            >
+                                              View
+                                            </button>
+                                          )}
+                                          {isAdmin && upload.status === 'under_review' && (
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                onClick={() => onApproveDocument && onApproveDocument(upload.id)}
+                                                disabled={approvingStates[upload.id]}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                                              >
+                                                {approvingStates[upload.id] ? 'Approving...' : 'Approve'}
+                                              </button>
+                                              <button
+                                                onClick={() => setRejectModalUploadId(upload.id)}
+                                                disabled={rejectingStates[upload.id]}
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                                              >
+                                                Reject
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {activeUpload!.rejection_reason && (
+                                    <div className="w-full mt-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                      <p className="text-xs font-semibold text-red-800 uppercase mb-1">Rejection Reason</p>
+                                      <p className="text-sm text-red-900">{activeUpload!.rejection_reason}</p>
+                                    </div>
                                   )}
                                 </div>
-                              </div>
+                              )}
 
-                              <div className="flex flex-wrap gap-2 items-center">
-                                {/* Status badge */}
-                                {(() => {
-                                  const cfg = STATUS_CONFIG[studentUpload.status] || STATUS_CONFIG['under_review'];
-                                  const Icon = cfg.icon;
-                                  return (
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium ${cfg.className}`}>
-                                      <Icon className="h-4 w-4" />
-                                      {cfg.label}
-                                    </span>
-                                  );
-                                })()}
+                            {/* Grouped submission history */}
+                            {historyGroups.length > 0 && (
+                              <div className="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleHistory(request.id)}
+                                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-medium text-slate-600"
+                                >
+                                  <span>
+                                    Histórico de envios
+                                    {request.title && <span className="text-slate-800 font-semibold"> — {request.title}</span>}
+                                    <span className="ml-1 text-slate-400">({historyGroups.length} {historyGroups.length === 1 ? 'tentativa anterior' : 'tentativas anteriores'})</span>
+                                  </span>
+                                  {isHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
 
-                                {/* File link - Changed to button to open modal */}
-                                {studentUpload.file_url && (
-                                  <button
-                                    onClick={() => onViewDocument?.({
-                                      ...studentUpload,
-                                      file_url: studentUpload.file_url,
-                                      filename: request.title || 'Student Response'
+                                {isHistoryOpen && (
+                                  <ul className="divide-y divide-slate-100">
+                                    {[...historyGroups].reverse().map((group, groupIdx) => {
+                                      const groupNumber = historyGroups.length - groupIdx;
+                                      const lastUpload = group[group.length - 1];
+                                      const cfg = STATUS_CONFIG[lastUpload.status] || STATUS_CONFIG['under_review'];
+                                      const Icon = cfg.icon;
+                                      return (
+                                        <li key={groupIdx} className="px-4 py-3 bg-white">
+                                          <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-slate-400 font-medium">Tentativa #{groupNumber}</span>
+                                              <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.className}`}>
+                                                <Icon className="w-3 h-3" />
+                                                {cfg.label}
+                                              </span>
+                                              <span className="text-xs text-slate-400">{group.length} arquivo(s)</span>
+                                            </div>
+                                            <span className="text-xs text-slate-400">{formatDate(lastUpload.uploaded_at)}</span>
+                                          </div>
+
+                                          {lastUpload.rejection_reason && (
+                                            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
+                                              <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                            </p>
+                                          )}
+
+                                          <div className="space-y-1">
+                                            {group.map((upload: any, fileIdx: number) => (
+                                              <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                  <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                                  <div className="flex flex-col min-w-0">
+                                                    <span className="text-xs text-slate-700 font-medium truncate">
+                                                      {upload.file_url ? getFileName(upload.file_url) : `Arquivo ${fileIdx + 1}`}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400">
+                                                      {upload.is_admin_upload ? 'Enviado pelo admin' : 'Enviado pelo aluno'} · {formatDate(upload.uploaded_at)}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                {upload.file_url && (
+                                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                                    <button
+                                                      onClick={() => onViewDocument?.({
+                                                        ...upload,
+                                                        file_url: upload.file_url,
+                                                        filename: upload.file_url ? getFileName(upload.file_url) : `${request.title || 'Document'} — tentativa ${groupNumber}, arquivo ${fileIdx + 1}`,
+                                                      })}
+                                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                                                    >
+                                                      <ExternalLink className="w-3 h-3" />
+                                                      Ver
+                                                    </button>
+                                                    <a
+                                                      href={upload.file_url}
+                                                      download
+                                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                      <Download className="w-3 h-3" />
+                                                    </a>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </li>
+                                      );
                                     })}
-                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
-                                  >
-                                    View
-                                  </button>
+                                  </ul>
                                 )}
-
-                                {/* Admin actions */}
-                                {isAdmin && studentUpload.status === 'under_review' && (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => onApproveDocument && onApproveDocument(studentUpload.id)}
-                                      disabled={approvingStates[studentUpload.id]}
-                                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-                                    >
-                                      {approvingStates[studentUpload.id] ? 'Approving...' : 'Approve'}
-                                    </button>
-                                    <button
-                                      onClick={() => setRejectModalUploadId(studentUpload.id)}
-                                      disabled={rejectingStates[studentUpload.id]}
-                                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-                                    >
-                                      Reject
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Review notes */}
-                            {studentUpload.rejection_reason && (
-                              <div className="w-full mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-xs font-semibold text-red-800 uppercase mb-1">Rejection Reason</p>
-                                <p className="text-sm text-red-900">{studentUpload.rejection_reason}</p>
                               </div>
                             )}
-                          </div>
-
-                          {/* Histórico de versões anteriores */}
-                          {allStudentUploads.length > 1 && (
-                            <DocumentHistoryAccordion uploads={allStudentUploads} skipFirst documentLabel={request.title} onViewDocument={onViewDocument} />
-                          )}
                           </>
                         )}
                       </div>
                     )}
 
-                    {/* Admin Upload Section (matches individual requests) */}
+                    {/* Admin Upload Section */}
                     {isAdmin && onUploadDocument && (
                       <div className="mt-6 pt-6 border-t border-slate-100">
                         <h5 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
                           <Plus className="w-4 h-4 mr-2 text-blue-600" />
                           Admin Upload:
                         </h5>
-                        
+
                         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
                           <div className="flex flex-col sm:flex-row items-start gap-3">
                             <div className="flex-1">
@@ -357,7 +527,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
         </div>
       </div>
 
-      {/* Rejection Modal - Modernized */}
+      {/* Rejection Modal */}
       {rejectModalUploadId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
@@ -366,7 +536,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 <XCircle className="w-5 h-5" />
                 <h3 className="text-lg font-bold">Reject Document</h3>
               </div>
-              <button 
+              <button
                 onClick={() => { setRejectModalUploadId(null); setRejectReason(''); }}
                 className="text-white/70 hover:text-white transition-colors p-1"
               >
@@ -381,7 +551,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">
-                    Please provide a clear justification for rejecting this document. 
+                    Please provide a clear justification for rejecting this document.
                     This will be sent to the student to help them correct the submission.
                   </p>
                 </div>
@@ -418,7 +588,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
         </div>
       )}
 
-      {/* Delete Confirmation Modal - Modernized */}
+      {/* Delete Confirmation Modal */}
       {deleteRequestId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
@@ -427,7 +597,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 <Trash2 className="w-5 h-5" />
                 <h3 className="text-lg font-bold">Delete Request</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setDeleteRequestId(null)}
                 className="text-white/70 hover:text-white transition-colors p-1"
               >
@@ -442,7 +612,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">
-                    Are you sure you want to delete this document request? 
+                    Are you sure you want to delete this document request?
                     This action <span className="font-bold text-red-600">cannot be undone</span> and will also remove any student submissions.
                   </p>
                 </div>
