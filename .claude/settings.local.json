@@ -53,7 +53,10 @@
       "Bash(where gh:*)",
       "Bash(grep -l \"document_requests\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
       "Bash(grep -l \"CREATE OR REPLACE FUNCTION\" \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\migrations\"/*.sql)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(rtk vitest:*)",
+      "Bash(node:*)",
+      "mcp__supabase__list_tables"
     ]
   }
 }

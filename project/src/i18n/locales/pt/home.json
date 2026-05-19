@@ -100,7 +100,7 @@
         },
         "q8": {
           "question": "Minhas informações de pagamento estão seguras?",
-          "answer": "Sim. Todos os pagamentos são processados pelo Stripe, um líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+          "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
         },
         "q9": {
           "question": "Posso obter reembolso?",
@@ -258,11 +258,6 @@
         "name": "Ana Chen",
         "major": "Engenharia"
       },
-      "story2": {
-        "text": "\"Graças ao MatriculaUSA, recebi uma bolsa integral e suporte durante todo o meu processo de visto. A equipe sempre esteve lá por mim!\"",
-        "name": "Lucas Silva",
-        "major": "Ciência da Computação"
-      },
       "story3": {
         "text": "\"O processo de candidatura foi tão fácil e transparente. Me senti apoiada em cada etapa. Recomendo muito!\"",
         "name": "Priya Patel",
@@ -311,7 +306,7 @@
       },
       "q8": {
         "question": "Minhas informações de pagamento são seguras?",
-        "answer": "Sim. Todos os pagamentos são processados pelo Stripe, líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações son criptografadas para sua proteção."
+        "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
       },
       "q9": {
         "question": "Posso obter reembolso?",

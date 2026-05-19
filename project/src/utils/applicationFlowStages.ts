@@ -295,6 +295,8 @@ export function getStepStatus(
 
     case 'bdp_collection':
       if (student.application_status === 'enrolled') return 'completed';
+      // If student has progressed past BDP (approved or app fee paid), consider complete
+      if (student.application_status === 'approved' || student.is_application_fee_paid) return 'completed';
       return student.documents_uploaded ? 'completed' : 'pending';
 
     case 'review':

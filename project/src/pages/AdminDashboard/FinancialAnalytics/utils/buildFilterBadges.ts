@@ -7,16 +7,16 @@ const FEE_TYPE_LABELS: Record<string, string> = {
   // Application
   application: 'Application Fee',
   application_fee: 'Application Fee',
-  // Scholarship
-  scholarship: 'Scholarship Fee',
-  scholarship_fee: 'Scholarship Fee',
-  // I-20 Control
-  i20_control: 'I-20 Control Fee',
-  i20_control_fee: 'I-20 Control Fee',
-  // DS-160 Package (separado)
-  ds160_package: 'DS-160 Package',
-  // I-539 Package (separado)
-  i539_package: 'I-539 Package',
+  // Control Fee (inclui legados DS-160, I-539)
+  control_fee: 'Control Fee',
+  ds160_package: 'Control Fee',
+  i539_package: 'Control Fee',
+  i539_cos_package: 'Control Fee',
+  // Legados absorvidos pelo Placement Fee
+  scholarship: 'Placement Fee',
+  scholarship_fee: 'Placement Fee',
+  i20_control: 'Placement Fee',
+  i20_control_fee: 'Placement Fee',
   // Placement
   placement: 'Placement Fee',
   placement_fee: 'Placement Fee',
