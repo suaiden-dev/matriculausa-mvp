@@ -218,7 +218,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
             <tbody className="divide-y divide-slate-100">
               <tr className="bg-slate-50/50">
                 <td className="py-3 px-4 text-slate-500 font-medium">
-                  {t('scholarships:scholarshipsPage.modal.originalAnnualCost', 'Custo Original')}
+                  {t('scholarships:scholarshipsPage.modal.originalAnnualCost', 'Investimento Original')}
                 </td>
                 <td className="py-3 px-4 text-right text-slate-400 line-through">
                   ${formatAmount(scholarship.original_annual_value)}
@@ -235,7 +235,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
               {scholarship.original_value_per_credit && (
                 <tr>
                   <td className="py-3 px-4 text-slate-500 text-xs">
-                    {t('scholarships:scholarshipsPage.modal.costPerCredit', 'Custo por Crédito')}
+                    {t('scholarships:scholarshipsPage.modal.costPerCredit', 'Investimento por Crédito')}
                   </td>
                   <td className="py-3 px-4 text-right text-slate-500 text-xs font-bold">
                     ${formatAmount(scholarship.original_value_per_credit)}

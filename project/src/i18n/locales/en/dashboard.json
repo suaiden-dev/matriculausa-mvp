@@ -909,7 +909,7 @@
           "view": "View",
           "download": "Download",
           "finance": {
-            "originalAnnualCost": "Original Annual Cost",
+            "originalAnnualCost": "Original Annual Investment",
             "withExclusiveScholarship": "With Exclusive Scholarship",
             "perYear": "/year",
             "perCredit": "Per Credit",

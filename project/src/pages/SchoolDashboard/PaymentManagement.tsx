@@ -14,7 +14,6 @@ import {
   ChevronRight, 
   Loader2,
   FileText,
-  Globe,
   Plus,
   XCircle,
   Shield,
@@ -352,7 +351,7 @@ const PaymentManagement: React.FC = () => {
              application_fee_amount
            )
          `)
-         .eq('scholarships.university_id', university.id);
+         .in('scholarships.university_id', universityIds);
         
        if (paidError) {
          console.error('Error fetching university applications for balance:', paidError);
@@ -458,12 +457,21 @@ const PaymentManagement: React.FC = () => {
 
   // Função para carregar análises financeiras detalhadas
   const loadFinancialAnalytics = async () => {
-    if (!university?.id) return;
+    if (!university?.id || !user?.id) return;
     
     try {
-      // Buscar aplicações dos últimos 90 dias para análise temporal
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      // Buscar todas as universidades do usuário
+      const { data: userUniversities } = await supabase
+        .from('universities')
+        .select('id')
+        .eq('user_id', user.id);
+      
+      const universityIds = (userUniversities || []).map(u => u.id);
+      if (universityIds.length === 0) return;
+
+      // Buscar aplicações dos últimos 365 dias para análise temporal abranger 12 meses históricos
+      const threeHundredSixtyFiveDaysAgo = new Date();
+      threeHundredSixtyFiveDaysAgo.setDate(threeHundredSixtyFiveDaysAgo.getDate() - 365);
       
       const { data: applications, error: appsError } = await supabase
         .from('scholarship_applications')
@@ -477,8 +485,8 @@ const PaymentManagement: React.FC = () => {
             application_fee_amount
           )
         `)
-        .eq('scholarships.university_id', university.id)
-        .gte('created_at', ninetyDaysAgo.toISOString())
+        .in('scholarships.university_id', universityIds)
+        .gte('created_at', threeHundredSixtyFiveDaysAgo.toISOString())
         .order('created_at', { ascending: false });
 
       if (appsError) {
@@ -791,8 +799,8 @@ const PaymentManagement: React.FC = () => {
     const ctx = paymentStatusChartRef.current.getContext('2d');
     
     // Calculate payment status distribution
-    const totalPaid = financialStats.paidApplicationsCount;
-    const totalPending = financialStats.pendingRequests;
+    const totalPaid = universityPaymentRequests.filter((r: any) => r.status === 'paid' || r.status === 'approved').length;
+    const totalPending = universityPaymentRequests.filter((r: any) => r.status === 'pending').length;
     const totalRejected = universityPaymentRequests.filter((r: any) => r.status === 'rejected').length;
 
     const chart = new window.Chart(ctx, {
@@ -1034,7 +1042,7 @@ const PaymentManagement: React.FC = () => {
         }
       }
     };
-  }, [financialAnalytics, revenueChartType, revenueChartPeriod]);
+  }, [financialAnalytics, revenueChartType, revenueChartPeriod, activeTab]);
 
   // Calculate metrics when financial data changes
   useEffect(() => {
@@ -1232,9 +1240,6 @@ const PaymentManagement: React.FC = () => {
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
                     Monitor and manage all scholarship payment requests and application fees.
-                  </p>
-                  <p className="mt-3 text-sm text-slate-500">
-                    Track student payments and request payouts from your available balance.
                   </p>
                 </div>
 
@@ -1585,10 +1590,6 @@ const PaymentManagement: React.FC = () => {
                           <div>
                             <div className="text-sm font-medium text-gray-900">{payment.student_name}</div>
                             <div className="text-sm text-gray-500">{payment.student_email}</div>
-                            <div className="text-xs text-gray-400 flex items-center mt-1">
-                              <Globe className="w-3 h-3 mr-1" />
-                              {payment.student_country}
-                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -2294,13 +2295,13 @@ const PaymentManagement: React.FC = () => {
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 <div>
                   <div className="text-lg font-semibold text-green-600">
-                    {financialStats.paidApplicationsCount}
+                    {universityPaymentRequests.filter((r: any) => r.status === 'paid' || r.status === 'approved').length}
                   </div>
                   <div className="text-xs text-slate-600">Paid</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-yellow-600">
-                    {financialStats.pendingRequests}
+                    {universityPaymentRequests.filter((r: any) => r.status === 'pending').length}
                   </div>
                   <div className="text-xs text-slate-600">Pending</div>
                 </div>

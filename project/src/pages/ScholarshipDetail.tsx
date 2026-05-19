@@ -289,43 +289,14 @@ const ScholarshipDetail: React.FC = () => {
   })();
 
   // Taxas Internas
-  let internalFeesData = scholarship.internal_fees;
-  if (typeof internalFeesData === 'string') {
-    try { internalFeesData = JSON.parse(internalFeesData); } catch (e) { internalFeesData = []; }
-  }
-  const baseInternalFees = Array.isArray(internalFeesData) ? internalFeesData : [];
-  const processType = userProfile?.student_process_type;
-  const visaTransferActive = userProfile?.visa_transfer_active;
-
-  const fixedFees = (() => {
-    if (!processType) {
-      return [
-        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) },
-        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial/Transfer' }) },
-        { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-      ];
+  const internalFees = [
+    { 
+      name: 'Control Fee', 
+      amount: 1800, 
+      details: t('scholarshipsPage.modal.controlFeeHardcodedDetail', 'Taxa de processamento e emissão oficial do documento I-20 junto aos sistemas de imigração dos EUA (SEVIS) e universidade parceira.') 
     }
-    if (processType === 'initial') {
-      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial' }) }];
-    }
-    if (processType === 'change_of_status') {
-      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) }];
-    }
-    if (processType === 'transfer') {
-      if (visaTransferActive === false) {
-        return [
-          { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-          { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonTransfer') }) },
-        ];
-      }
-      return [];
-    }
-    return [];
-  })();
-  
-  const internalFees = [...fixedFees, ...baseInternalFees];
-  const hasInternalFees = internalFees.length > 0;
-  const canViewInternalFees = hasInternalFees;
+  ];
+  const canViewInternalFees = true;
 
   // Helper render functions to build responsive layouts modularly and avoid duplication
   const renderTitleAndSubtitle = () => (
@@ -404,7 +375,7 @@ const ScholarshipDetail: React.FC = () => {
     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100/60 text-left space-y-4">
       <div>
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-          {t('scholarshipsPage.detail.regularAnnualCost', 'Custo Anual Regular (Sem Bolsa)')}
+          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Anual (Sem Bolsa)')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-bold text-slate-400 line-through decoration-red-400/80">${formatAmount(scholarship.original_annual_value)}</span>
@@ -414,7 +385,7 @@ const ScholarshipDetail: React.FC = () => {
 
       <div className="pt-3 border-t border-slate-200/60">
         <span className="text-[11px] font-bold uppercase tracking-widest text-[#05294E] block mb-1">
-          {t('scholarshipsPage.detail.exclusiveScholarshipPrice', 'Preço com Bolsa Exclusiva')}
+          {t('scholarshipsPage.detail.exclusiveScholarshipPrice', 'Investimento com Bolsa Exclusiva')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-3xl sm:text-4xl font-black text-green-700">${formatAmount(scholarship.annual_value_with_scholarship)}</span>
@@ -593,7 +564,7 @@ const ScholarshipDetail: React.FC = () => {
 
       <div className="space-y-4">
         <h4 className="text-xs uppercase font-bold tracking-widest text-slate-400">
-          {t('scholarshipsPage.detail.academicEnrollmentCosts', 'Custos de Inscrição Acadêmica')}
+          {t('scholarshipsPage.detail.academicEnrollmentCosts', 'Investimentos de Inscrição Acadêmica')}
         </h4>
         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100/60">
           <div className="flex flex-col">
@@ -605,7 +576,7 @@ const ScholarshipDetail: React.FC = () => {
         </div>
 
         {/* Placement Fee */}
-        {userProfile?.placement_fee_flow && (() => {
+        {(() => {
           const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
           const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
           const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
@@ -619,7 +590,7 @@ const ScholarshipDetail: React.FC = () => {
                   {t('scholarshipsPage.detail.placementFeeDetail', 'Referente à consultoria especializada e suporte de visto')}
                 </span>
               </div>
-              <span className="text-lg font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
+              <span className="text-lg font-bold text-slate-800">{formatCurrency(placementFeeValue)}</span>
             </div>
           );
         })()}
@@ -988,7 +959,7 @@ const ScholarshipDetail: React.FC = () => {
                       <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/60 space-y-2 mt-2">
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                            {t('scholarshipsPage.detail.annualCost', 'Custo Anual')}
+                            {t('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
                           </span>
                           <span className="text-slate-400 text-xs font-bold line-through">
                             ${formatAmount(rec.original_annual_value)}

@@ -30,7 +30,7 @@ import { compressImage } from '../../../utils/imageCompression';
 import TruncatedText from '../../../components/TruncatedText';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
-import { PencilLoader } from '../../../components/PencilLoader';
+import PencilLoader from '../../../components/PencilLoader';
 
 
 const DOCUMENT_TYPES = [
