@@ -8,10 +8,9 @@ export interface CohortRetentionChartProps {
 
 // Fluxo atual (sempre exibido)
 const CURRENT_STAGES = [
-  { key: 'application' as const,   label: 'Application',  color: '#6366F1' },
-  { key: 'ds160_package' as const, label: 'DS-160',       color: '#14B8A6' },
-  { key: 'i539_package' as const,  label: 'I-539',        color: '#06B6D4' },
-  { key: 'placement' as const,     label: 'Placement',    color: '#10B981' },
+  { key: 'application' as const,  label: 'Application',  color: '#6366F1' },
+  { key: 'control_fee' as const,  label: 'Control Fee',  color: '#14B8A6' },
+  { key: 'placement' as const,    label: 'Placement',    color: '#10B981' },
 ];
 
 // Legado (exibido apenas se ao menos um cohort tiver dados > 0)
@@ -236,7 +235,7 @@ export function CohortRetentionChart({ data }: CohortRetentionChartProps) {
 
       {/* Rodapé */}
       <p className="text-[11px] text-gray-400 mt-4">
-        * Cohorts recentes podem ter taxas baixas por os alunos ainda estarem no processo. DS-160 e I-539 são mutuamente exclusivos. Dados históricos completos independente do filtro de período.
+        * Cohorts recentes podem ter taxas baixas por os alunos ainda estarem no processo. Control Fee agrupa DS-160 e I-539 (legado). Dados históricos completos independente do filtro de período.
       </p>
     </div>
   );

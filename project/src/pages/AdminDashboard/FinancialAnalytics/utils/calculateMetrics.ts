@@ -218,21 +218,39 @@ export function calculatePaymentMethodData(paymentRecords: any[]): PaymentMethod
 /**
  * Calcula distribuição por tipo de taxa (para gráficos de pizza)
  */
+const FEE_TYPE_DISPLAY: Record<string, string> = {
+  placement:               'Placement Fee',
+  placement_fee:           'Placement Fee',
+  i20_control:             'Placement Fee',
+  i20_control_fee:         'Placement Fee',
+  scholarship:             'Placement Fee',
+  scholarship_fee:         'Placement Fee',
+  selection_process:       'Selection Process',
+  selection_process_fee:   'Selection Process',
+  application:             'Application Fee',
+  application_fee:         'Application Fee',
+  ds160_package:           'Control Fee',
+  i539_package:            'Control Fee',
+  i539_cos_package:        'Control Fee',
+  control_fee:             'Control Fee',
+  reinstatement_fee:       'Reinstatement Fee',
+  reinstatement:           'Reinstatement Fee',
+  reinstatement_package:   'Reinstatement Fee',
+};
+
 export function calculateFeeTypeData(paymentRecords: any[]): FeeTypeData[] {
   const paidRecords = paymentRecords.filter(p => p.status === 'paid');
   const totalRevenue = paidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
-  
+
   const types: Record<string, { count: number; revenue: number }> = {};
-  
+
   paidRecords.forEach(record => {
-    const type = record.fee_type;
-    if (!types[type]) {
-      types[type] = { count: 0, revenue: 0 };
-    }
-    types[type].count += 1;
-    types[type].revenue += (record.amount || 0);
+    const label = FEE_TYPE_DISPLAY[record.fee_type] ?? record.fee_type;
+    if (!types[label]) types[label] = { count: 0, revenue: 0 };
+    types[label].count += 1;
+    types[label].revenue += (record.amount || 0);
   });
-  
+
   return Object.entries(types).map(([feeType, data]) => ({
     feeType,
     count: data.count,
@@ -255,7 +273,7 @@ export function calculateFunnelData(allStudents: any[], paymentRecords: any[]): 
   const total = allStudents.length;
   if (total === 0) return [];
 
-  const paidFeeTypes = new Map<string, Set<string>>();
+const paidFeeTypes = new Map<string, Set<string>>();
   paymentRecords.filter(p => p.status === 'paid').forEach(p => {
     const userId = p.student_id || p.user_id;
     // Normalizar variantes de fee_type para chaves canônicas
@@ -263,9 +281,9 @@ export function calculateFunnelData(allStudents: any[], paymentRecords: any[]): 
     let canonical = raw;
     if (raw === 'selection_process_fee') canonical = 'selection_process';
     if (raw === 'application_fee') canonical = 'application';
-    if (raw === 'scholarship_fee') canonical = 'scholarship';
-    if (raw === 'i20_control') canonical = 'i20_control_fee';
-    // ds160_package e i539_package permanecem separados (não normalizar)
+    if (raw === 'scholarship_fee' || raw === 'scholarship') canonical = 'placement';
+    if (raw === 'i20_control' || raw === 'i20_control_fee') canonical = 'placement';
+    if (raw === 'ds160_package' || raw === 'i539_package' || raw === 'i539_cos_package') canonical = 'control_fee';
     if (raw === 'placement_fee') canonical = 'placement';
     if (raw === 'reinstatement' || raw === 'reinstatement_package') canonical = 'reinstatement_fee';
 
@@ -275,13 +293,10 @@ export function calculateFunnelData(allStudents: any[], paymentRecords: any[]): 
 
   const stages = [
     { key: 'selection_process', label: 'Selection Process' },
-    { key: 'application', label: 'Application Fee' },
-    { key: 'i20_control_fee', label: 'I-20 Control Fee' },
-    { key: 'ds160_package', label: 'DS-160 Package' },
-    { key: 'i539_package', label: 'I-539 Package' },
-    { key: 'scholarship', label: 'Scholarship Fee' },
-    { key: 'placement', label: 'Placement Fee' },
+    { key: 'application',       label: 'Application Fee' },
+    { key: 'placement',         label: 'Placement Fee' },
     { key: 'reinstatement_fee', label: 'Reinstatement Fee' },
+    { key: 'control_fee',       label: 'Control Fee' },
   ];
 
   return stages.map(stage => {
@@ -429,11 +444,12 @@ export function calculateCohortRetention(paymentRecords: any[]): CohortRetention
   const normalize = (raw: string): string => {
     if (raw === 'selection_process_fee') return 'selection_process';
     if (raw === 'application_fee')       return 'application';
-    if (raw === 'scholarship_fee')       return 'scholarship';
-    if (raw === 'i20_control')           return 'i20_control_fee';
+    if (raw === 'scholarship_fee' || raw === 'scholarship') return 'placement';
+    if (raw === 'i20_control' || raw === 'i20_control_fee') return 'placement';
+    if (raw === 'ds160_package' || raw === 'i539_package' || raw === 'i539_cos_package') return 'control_fee';
     if (raw === 'placement_fee')         return 'placement';
     if (raw === 'reinstatement' || raw === 'reinstatement_package') return 'reinstatement_fee';
-    return raw; // ds160_package, i539_package passam sem alteração
+    return raw;
   };
 
   // Mapa: userId → { feeTypes pagos, mês do selection_process }
@@ -460,8 +476,7 @@ export function calculateCohortRetention(paymentRecords: any[]): CohortRetention
   type CohortEntry = {
     size: number;
     application: number;
-    ds160_package: number;
-    i539_package: number;
+    control_fee: number;
     placement: number;
     i20_control: number;
     scholarship: number;
@@ -478,14 +493,13 @@ export function calculateCohortRetention(paymentRecords: any[]): CohortRetention
       const parts = selectionMonth.split(' ');
       const monthIdx: Record<string, number> = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
       const date = new Date(parseInt(parts[1]), monthIdx[parts[0]] ?? 0, 1);
-      cohortMap.set(selectionMonth, { size: 0, application: 0, ds160_package: 0, i539_package: 0, placement: 0, i20_control: 0, scholarship: 0, reinstatement: 0, date });
+      cohortMap.set(selectionMonth, { size: 0, application: 0, control_fee: 0, placement: 0, i20_control: 0, scholarship: 0, reinstatement: 0, date });
     }
 
     const cohort = cohortMap.get(selectionMonth)!;
     cohort.size += 1;
     if (feeTypes.has('application'))      cohort.application += 1;
-    if (feeTypes.has('ds160_package'))    cohort.ds160_package += 1;
-    if (feeTypes.has('i539_package'))     cohort.i539_package += 1;
+    if (feeTypes.has('control_fee'))      cohort.control_fee += 1;
     if (feeTypes.has('placement'))        cohort.placement += 1;
     if (feeTypes.has('i20_control_fee'))  cohort.i20_control += 1;
     if (feeTypes.has('scholarship'))      cohort.scholarship += 1;
@@ -499,8 +513,7 @@ export function calculateCohortRetention(paymentRecords: any[]): CohortRetention
       cohortMonth,
       cohortSize: data.size,
       application: data.application,
-      ds160_package: data.ds160_package,
-      i539_package: data.i539_package,
+      control_fee: data.control_fee,
       placement: data.placement,
       i20_control: data.i20_control,
       scholarship: data.scholarship,

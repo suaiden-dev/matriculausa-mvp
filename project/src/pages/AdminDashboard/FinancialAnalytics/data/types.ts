@@ -88,8 +88,7 @@ export interface CohortRetentionData {
   cohortSize: number;        // alunos que pagaram selection_process neste mês
   // Fluxo atual
   application: number;
-  ds160_package: number;
-  i539_package: number;
+  control_fee: number;
   placement: number;
   // Legado (pode ser 0 para cohorts novos)
   i20_control: number;

@@ -118,7 +118,7 @@ async function loadZellePayments(): Promise<any[]> {
 async function loadAllStudents(): Promise<any[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, user_id, email, full_name, dependents, system_type, seller_referral_code, created_at')
+    .select('id, user_id, email, full_name, dependents, system_type, seller_referral_code, created_at, has_paid_reinstatement_package, reinstatement_package_payment_method, updated_at')
     .eq('role', 'student');
   
   if (error) throw error;

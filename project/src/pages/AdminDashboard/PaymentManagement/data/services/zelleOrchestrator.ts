@@ -254,17 +254,33 @@ export async function approveZelleFlow(params: {
     }
 
     // 🔍 Prioridade 2: Fallback para detecção via perfil (se metadata estiver ausente)
-    const currentInstallmentNumber = profileData?.placement_fee_installment_number ?? 0;
+    // Para evitar race conditions com os triggers de banco de dados (que já inserem o registro na
+    // tabela individual_fee_payments antes de executarmos este fluxo), contamos os pagamentos anteriores
+    // excluindo este pagamento atual.
+    const { data: placementPayments, error: placementError } = await supabase
+      .from("individual_fee_payments")
+      .select("id, zelle_payment_id")
+      .eq("user_id", payment.user_id)
+      .eq("fee_type", "placement");
+
+    if (placementError) {
+      console.error("❌ [approveZelleFlow] Erro ao buscar pagamentos de placement anteriores:", placementError);
+    }
+
+    const previousPayments = placementPayments 
+      ? placementPayments.filter(p => p.zelle_payment_id !== payment.id)
+      : [];
+    const actualInstallmentNumber = previousPayments.length;
 
     // Se parcelamento estava habilitado e é a 1ª parcela → redirecionar para approvePartialZelleFlow
-    if (isInstallmentEnabled && currentInstallmentNumber === 0) {
+    if (isInstallmentEnabled && actualInstallmentNumber === 0) {
       console.log("📝 [approveZelleFlow] Detectada 1ª Parcela via Profile Fallback");
       await approvePartialZelleFlow({ supabase, adminUserId, payment });
       return;
     }
 
-    // Se é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
-    if (currentInstallmentNumber === 1) {
+    // Se parcelamento estava habilitado e é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
+    if (isInstallmentEnabled && actualInstallmentNumber === 1) {
       console.log("📝 [approveZelleFlow] Detectada 2ª Parcela via Profile Fallback");
       await approveSecondInstallmentFlow({ supabase, adminUserId, payment });
       return;
@@ -1407,6 +1423,7 @@ export async function approveSecondInstallmentFlow(params: {
   await supabase
     .from("user_profiles")
     .update({
+      placement_fee_payment_method: "zelle",
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", payment.user_id);
