@@ -118,6 +118,19 @@ const MatriculaRewardsAdmin: React.FC = () => {
   const { user } = useAuth();
   const lastFetchKeyRef = useRef<string | null>(null);
 
+  // Em produção, ocultar usuários de teste com email @uorak.com
+  const isProductionHost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'matriculausa.com' || window.location.hostname === 'www.matriculausa.com');
+
+  const filterUorak = <T extends { email?: string; userEmail?: string; referrerEmail?: string }>(arr: T[]): T[] => {
+    if (!isProductionHost) return arr;
+    return arr.filter(item => {
+      const email = (item.email || item.userEmail || '').toLowerCase();
+      const refEmail = (item.referrerEmail || '').toLowerCase();
+      return !email.includes('uorak') && !refEmail.includes('uorak');
+    });
+  };
+
   // Payouts state
   const [payouts, setPayouts] = useState<any[]>([]);
   const [loadingPayouts, setLoadingPayouts] = useState<boolean>(false);
@@ -292,6 +305,9 @@ const MatriculaRewardsAdmin: React.FC = () => {
 
   // Students pagination logic
   const filteredStudents = students.filter(student => {
+    // Em produção, excluir usuários @uorak.com
+    if (isProductionHost && (student.user_email || '').toLowerCase().includes('uorak')) return false;
+
     const searchLower = studentSearchTerm.toLowerCase();
     const matchesSearch = !studentSearchTerm || 
       (student.full_name && student.full_name.toLowerCase().includes(searchLower)) ||
@@ -541,17 +557,17 @@ const MatriculaRewardsAdmin: React.FC = () => {
         totalReferrals: Number(statsResult.total_referrals || 0),
         totalCoinsSpent: Number(statsResult.total_coins_spent || 0),
         totalCoinsEarned: Number(statsResult.total_coins_earned || 0),
-        conversionRate: Number(statsResult.avg_referrals_per_affiliate || 0), // Re-usando como métrica de média
+        conversionRate: Number(statsResult.avg_referrals_per_affiliate || 0),
         averageCoinsPerUser: 0,
         topReferrers: topReferrers || [],
-        recentActivity: [...recentRedemptions, ...recentPayouts].sort((a,b)=> new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10),
-        topStudentsByBalance,
-        topStudentsBySpent,
+        recentActivity: [...recentRedemptions, ...recentPayouts].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10),
+        topStudentsByBalance: filterUorak(topStudentsByBalance),
+        topStudentsBySpent: filterUorak(topStudentsBySpent),
         couponUsage: { 
           totalUsed: Number(statsResult.total_coupons_redeemed || 0), 
           usedInRange: Number(statsResult.total_coupons_redeemed || 0) 
         },
-        couponUsageDetails: (couponDetails || []).map((c: any) => ({
+        couponUsageDetails: filterUorak((couponDetails || []).map((c: any) => ({
           id: c.id,
           fullName: c.student_name,
           userEmail: c.student_email,
@@ -561,8 +577,8 @@ const MatriculaRewardsAdmin: React.FC = () => {
           discountAmount: Number(c.discount_amount || 0),
           status: c.status,
           appliedAt: c.applied_at
-        })),
-        referralList: (detailedReferrals || []).map((r: any) => ({
+        }))),
+        referralList: filterUorak((detailedReferrals || []).map((r: any) => ({
           id: r.id,
           fullName: r.student_name,
           email: r.student_email,
@@ -570,7 +586,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
           referrerCode: r.referrer_code,
           createdAt: r.created_at,
           isConverted: r.is_converted
-        })),
+        }))),
         recentRedemptions: recentRedemptions as any
       } as any;
 
