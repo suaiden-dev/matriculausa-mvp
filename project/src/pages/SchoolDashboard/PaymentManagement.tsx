@@ -22,7 +22,8 @@ import {
   PieChart,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Coins
 } from 'lucide-react';
 
 // Declare Chart.js types
@@ -34,14 +35,15 @@ declare global {
 import { useUniversity } from '../../context/UniversityContext';
 import { useAuth } from '../../hooks/useAuth';
 import { usePayments } from '../../hooks/usePayments';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
   const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
   
   const {
     payments,
@@ -88,7 +90,9 @@ const PaymentManagement: React.FC = () => {
     totalPaidOut: 0,
     totalApproved: 0,
     pendingRequests: 0,
-    paidApplicationsCount: 0
+    paidApplicationsCount: 0,
+    totalReinstatementRevenue: 0,
+    paidReinstatementsCount: 0
   });
 
   // Detailed financial analytics state
@@ -218,8 +222,6 @@ const PaymentManagement: React.FC = () => {
   //   } finally {
   //     setLoadingStripeStatus(false);
   //   }
-  // };
-
   const loadUniversityPaymentRequests = async () => {
     if (!university?.id || !user?.id) return;
     
@@ -337,12 +339,12 @@ const PaymentManagement: React.FC = () => {
         .filter((r: any) => r.status === 'rejected')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-             // Calcular receita baseada APENAS em application fees pagas (TODAS as aplicações, não apenas 90 dias)
+      // Calcular receita baseada em taxas de aplicação e taxas de reintegração
       const { data: paidApplications, error: paidError } = await supabase
          .from('scholarship_applications')
          .select(`
-          scholarship_id,
-          student_id,
+           scholarship_id,
+           student_id,
            created_at,
            is_application_fee_paid,
            scholarships!inner(
@@ -350,74 +352,103 @@ const PaymentManagement: React.FC = () => {
              application_fee_amount
            )
          `)
-         .eq('is_application_fee_paid', true)
          .eq('scholarships.university_id', university.id);
-       
+        
        if (paidError) {
-         console.error('Error fetching paid applications:', paidError);
+         console.error('Error fetching university applications for balance:', paidError);
        }
-       
-      // Buscar dependentes/system_type dos estudantes dessas aplicações
+        
+      // Buscar dependentes/system_type/has_paid_reinstatement_package dos estudantes dessas aplicações
       const studentIds = Array.from(new Set((paidApplications || []).map((a: any) => a.student_id).filter(Boolean)));
       let studentsMap: Record<string, any> = {};
       if (studentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')
-          .select('id, dependents, system_type')
+          .select('id, dependents, system_type, has_paid_reinstatement_package, updated_at')
           .in('id', studentIds);
         (students || []).forEach((s: any) => { studentsMap[s.id] = s; });
       }
 
-      // Calcular receita total APENAS de application fees (em dólares) incluindo dependentes
-      // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
-      const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
+      // 1. Calcular receita total de Application Fees
+      const totalApplicationFeeRevenue = paidApplications?.filter((app: any) => app.is_application_fee_paid).reduce((sum: number, app: any) => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
         const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
       }, 0) || 0;
+
+      // 2. Calcular receita total de Reinstatement Fees (uma única vez por estudante que pagou)
+      const paidStudentIds = Array.from(new Set(paidApplications?.map((app: any) => app.student_id).filter(Boolean)));
+      const totalReinstatementFeeRevenue = paidStudentIds.reduce((sum: number, studentId: string) => {
+        const s = studentsMap[studentId];
+        if (s?.has_paid_reinstatement_package) {
+          return sum + getFeeAmount('reinstatement_fee');
+        }
+        return sum;
+      }, 0);
+
+      // Receita Acumulada Consolidada
+      const totalConsolidatedRevenue = totalApplicationFeeRevenue + totalReinstatementFeeRevenue;
        
-       // Calcular receita de application fees dos últimos 7 dias
-       const sevenDaysAgo = new Date();
-       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      // Calcular receita acumulada dos últimos 7 dias
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
        
+      // Application fees dos últimos 7 dias
       const last7DaysApplicationFeeRevenue = paidApplications?.filter((app: any) => {
          const appDate = new Date(app.created_at);
-         return appDate >= sevenDaysAgo;
-       }).reduce((sum: number, app: any) => {
+         return app.is_application_fee_paid && appDate >= sevenDaysAgo;
+      }).reduce((sum: number, app: any) => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
-        // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
         const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
-       }, 0) || 0;
+      }, 0) || 0;
+
+      // Reinstatement fees dos últimos 7 dias
+      const last7DaysReinstatementFeeRevenue = paidStudentIds.reduce((sum: number, studentId: string) => {
+        const s = studentsMap[studentId];
+        if (s?.has_paid_reinstatement_package) {
+          const updateDate = s.updated_at ? new Date(s.updated_at) : null;
+          if (updateDate && updateDate >= sevenDaysAgo) {
+            return sum + getFeeAmount('reinstatement_fee');
+          }
+        }
+        return sum;
+      }, 0);
+
+      const last7DaysConsolidatedRevenue = last7DaysApplicationFeeRevenue + last7DaysReinstatementFeeRevenue;
       
-             // Calcular saldo disponível: Application fees - Payment requests (pending + approved + paid) + rejeitados voltam ao saldo
-       const availableBalance = Math.max(0, totalApplicationFeeRevenue - totalPaidOut - totalApproved - totalPending);
-       setUniversityBalance(availableBalance);
-       
-       // Atualizar estatísticas financeiras
-       setFinancialStats({
-         totalRevenue: totalApplicationFeeRevenue,
-         last7DaysRevenue: last7DaysApplicationFeeRevenue,
-         totalPaidOut,
-         totalApproved,
-         pendingRequests: requestsWithUsers.filter((r: any) => r.status === 'pending').length,
-         paidApplicationsCount: paidApplications?.length || 0
-       });
-       
-       console.log('💰 [Balance] Calculation:', {
-         totalApplicationFeeRevenue,
-         last7DaysApplicationFeeRevenue,
-         totalPaidOut,
-         totalApproved,
-         totalPending,
-         totalRejected,
-         availableBalance,
-         paidApplicationsCount: paidApplications?.length || 0
-       });
+      // Calcular saldo disponível: Receitas consolidadas - Payment requests (pending + approved + paid)
+      const availableBalance = Math.max(0, totalConsolidatedRevenue - totalPaidOut - totalApproved - totalPending);
+      setUniversityBalance(availableBalance);
+      
+      // Atualizar estatísticas financeiras
+      setFinancialStats({
+        totalRevenue: totalConsolidatedRevenue,
+        last7DaysRevenue: last7DaysConsolidatedRevenue,
+        totalPaidOut,
+        totalApproved,
+        pendingRequests: requestsWithUsers.filter((r: any) => r.status === 'pending').length,
+        paidApplicationsCount: paidApplications?.filter((app: any) => app.is_application_fee_paid).length || 0,
+        totalReinstatementRevenue: totalReinstatementFeeRevenue,
+        paidReinstatementsCount: paidStudentIds.filter(id => studentsMap[id]?.has_paid_reinstatement_package).length
+      });
+      
+      console.log('💰 [Balance] Calculation:', {
+        totalConsolidatedRevenue,
+        totalApplicationFeeRevenue,
+        totalReinstatementFeeRevenue,
+        last7DaysConsolidatedRevenue,
+        totalPaidOut,
+        totalApproved,
+        totalPending,
+        totalRejected,
+        availableBalance,
+        paidApplicationsCount: paidApplications?.length || 0
+      });
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
     } finally {
@@ -430,25 +461,25 @@ const PaymentManagement: React.FC = () => {
     if (!university?.id) return;
     
     try {
-             // Buscar aplicações dos últimos 90 dias para análise temporal (APENAS application fees)
-       const ninetyDaysAgo = new Date();
-       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-       
+      // Buscar aplicações dos últimos 90 dias para análise temporal
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
       const { data: applications, error: appsError } = await supabase
-         .from('scholarship_applications')
-         .select(`
-           id,
-           created_at,
-           is_application_fee_paid,
+        .from('scholarship_applications')
+        .select(`
+          id,
+          created_at,
+          is_application_fee_paid,
           student_id,
-           scholarships!inner(
-             university_id,
-             application_fee_amount
-           )
-         `)
-         .eq('scholarships.university_id', university.id)
-         .gte('created_at', ninetyDaysAgo.toISOString())
-         .order('created_at', { ascending: false });
+          scholarships!inner(
+            university_id,
+            application_fee_amount
+          )
+        `)
+        .eq('scholarships.university_id', university.id)
+        .gte('created_at', ninetyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
 
       if (appsError) {
         console.error('Error fetching applications for analytics:', appsError);
@@ -462,7 +493,7 @@ const PaymentManagement: React.FC = () => {
       if (appStudentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')
-          .select('id, user_id, dependents, system_type')
+          .select('id, user_id, dependents, system_type, has_paid_reinstatement_package, reinstatement_package_payment_method, updated_at')
           .in('id', appStudentIds);
         (students || []).forEach((s: any) => { 
           analyticsStudentsMap[s.id] = s;
@@ -470,58 +501,87 @@ const PaymentManagement: React.FC = () => {
         });
       }
 
-      // Calcular receita diária de application fees dos últimos 30 dias
-       const dailyRevenue = [];
-       for (let i = 29; i >= 0; i--) {
-         const date = new Date();
-         date.setDate(date.getDate() - i);
-         const dateStr = date.toISOString().split('T')[0];
-         
-         const dayApplicationFeeRevenue = applications?.filter(app => {
-           const appDate = new Date(app.created_at).toISOString().split('T')[0];
-           return appDate === dateStr && app.is_application_fee_paid;
+      // Calcular receita diária dos últimos 30 dias (Application Fees + Reinstatement Fees)
+      const dailyRevenue = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // 1. Receita de Application Fees
+        const dayApplicationFeeRevenue = applications?.filter(app => {
+          const appDate = new Date(app.created_at).toISOString().split('T')[0];
+          return appDate === dateStr && app.is_application_fee_paid;
         }).reduce((sum, app) => {
           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
           const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
-         }, 0) || 0;
-         
-         dailyRevenue.push({ date: dateStr, amount: dayApplicationFeeRevenue });
-       }
+        }, 0) || 0;
 
-       // Calcular receita mensal de application fees dos últimos 12 meses
-       const monthlyRevenue = [];
-       for (let i = 11; i >= 0; i--) {
-         const date = new Date();
-         date.setMonth(date.getMonth() - i);
-         const monthStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-         
-         const monthApplicationFeeRevenue = applications?.filter(app => {
-           const appDate = new Date(app.created_at);
-           return appDate.getMonth() === date.getMonth() && 
-                  appDate.getFullYear() === date.getFullYear() && 
-                  app.is_application_fee_paid;
+        // 2. Receita de Reinstatement Fees (uma única vez por estudante no dia em que pagou)
+        const uniqueStudentIdsInDay = Array.from(new Set(applications?.filter(app => {
+          const s = analyticsStudentsMap[app.student_id];
+          if (s?.has_paid_reinstatement_package && s?.updated_at) {
+            const profileDate = new Date(s.updated_at).toISOString().split('T')[0];
+            return profileDate === dateStr;
+          }
+          return false;
+        }).map(app => app.student_id)));
+
+        const dayReinstatementRevenue = uniqueStudentIdsInDay.reduce((sum) => {
+          return sum + getFeeAmount('reinstatement_fee');
+        }, 0);
+        
+        dailyRevenue.push({ date: dateStr, amount: dayApplicationFeeRevenue + dayReinstatementRevenue });
+      }
+
+      // Calcular receita mensal dos últimos 12 meses (Application Fees + Reinstatement Fees)
+      const monthlyRevenue = [];
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        
+        // 1. Receita de Application Fees
+        const monthApplicationFeeRevenue = applications?.filter(app => {
+          const appDate = new Date(app.created_at);
+          return appDate.getMonth() === date.getMonth() && 
+                 appDate.getFullYear() === date.getFullYear() && 
+                 app.is_application_fee_paid;
         }).reduce((sum, app) => {
           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
           const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
-         }, 0) || 0;
-         
-         monthlyRevenue.push({ month: monthStr, amount: monthApplicationFeeRevenue });
-       }
+        }, 0) || 0;
 
-             // Calcular tendências de aplicação (APENAS application fees)
-       const totalApplications = applications?.length || 0;
-       const paidApplications = applications?.filter(app => app.is_application_fee_paid).length || 0;
-       const conversionRate = totalApplications > 0 ? (paidApplications / totalApplications) * 100 : 0;
+        // 2. Receita de Reinstatement Fees (uma única vez por estudante no mês em que pagou)
+        const uniqueStudentIdsInMonth = Array.from(new Set(applications?.filter(app => {
+          const s = analyticsStudentsMap[app.student_id];
+          if (s?.has_paid_reinstatement_package && s?.updated_at) {
+            const profileDate = new Date(s.updated_at);
+            return profileDate.getMonth() === date.getMonth() && 
+                   profileDate.getFullYear() === date.getFullYear();
+          }
+          return false;
+        }).map(app => app.student_id)));
+
+        const monthReinstatementRevenue = uniqueStudentIdsInMonth.reduce((sum) => {
+          return sum + getFeeAmount('reinstatement_fee');
+        }, 0);
+        
+        monthlyRevenue.push({ month: monthStr, amount: monthApplicationFeeRevenue + monthReinstatementRevenue });
+      }
+
+      // Calcular tendências de aplicação (Application fees)
+      const totalApplications = applications?.length || 0;
+      const paidApplications = applications?.filter(app => app.is_application_fee_paid).length || 0;
+      const conversionRate = totalApplications > 0 ? (paidApplications / totalApplications) * 100 : 0;
       const averageApplicationFee = paidApplications > 0 ? 
         applications?.filter(app => app.is_application_fee_paid)
           .reduce((sum, app) => {
@@ -546,54 +606,68 @@ const PaymentManagement: React.FC = () => {
         stripe: totalPaymentRequests > 0 ? Math.round((stripeCount / totalPaymentRequests) * 100) : 0
       };
 
-             // Criar atividade recente (últimos 10 eventos) - APENAS application fees e payment requests
-       const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
-       
-       // Adicionar application fees pagas recentes
-       // ✅ CORREÇÃO: Usar a mesma lógica da tabela Student Payments (base + dependentes)
-       applications?.slice(0, 10).forEach(app => {
-         if (app.is_application_fee_paid) {
-           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+      // Criar atividade recente (últimos 10 eventos) - Application fees, Reinstatement fees e Payout requests
+      const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
+      
+      // 1. Adicionar application fees pagas recentes
+      applications?.forEach(app => {
+        if (app.is_application_fee_paid) {
+          const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-           // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
-           const withDeps = deps > 0 ? base + deps * 100 : base;
+          const withDeps = deps > 0 ? base + deps * 100 : base;
           recentActivity.push({
-             date: app.created_at,
-             type: 'revenue',
+            date: app.created_at,
+            type: 'revenue',
             amount: withDeps,
-             description: 'Application fee received'
-           });
-         }
-       });
+            description: 'Application fee received'
+          });
+        }
+      });
 
-       // Adicionar payment requests recentes
-       universityPaymentRequests.slice(0, 5).forEach(request => {
-         recentActivity.push({
-           date: request.created_at,
-           type: request.status === 'paid' ? 'payout' : 'request',
-           amount: request.amount_usd,
-           description: `Payment request ${request.status}`
-         });
-       });
+      // 2. Adicionar reinstatement fees pagas recentes
+      const processedStudents = new Set<string>();
+      applications?.forEach(app => {
+        const s = analyticsStudentsMap[app.student_id];
+        if (s?.has_paid_reinstatement_package && !processedStudents.has(app.student_id)) {
+          processedStudents.add(app.student_id);
+          const reinstatementFeeAmt = getFeeAmount('reinstatement_fee');
+          recentActivity.push({
+            date: s.updated_at || app.created_at,
+            type: 'revenue',
+            amount: reinstatementFeeAmt,
+            description: 'Reinstatement fee received'
+          });
+        }
+      });
 
-       // Ordenar por data e pegar os 10 mais recentes
-       recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-       recentActivity.splice(10);
+      // 3. Adicionar payment requests recentes
+      universityPaymentRequests.slice(0, 5).forEach(request => {
+        recentActivity.push({
+          date: request.created_at,
+          type: request.status === 'paid' ? 'payout' : 'request',
+          amount: request.amount_usd,
+          description: `Payment request ${request.status}`
+        });
+      });
 
-       setFinancialAnalytics({
-         dailyRevenue,
-         monthlyRevenue,
-         applicationTrends: {
-           totalApplications,
-           paidApplications,
-           conversionRate,
-           averageFee: averageApplicationFee
-         },
-         paymentMethodBreakdown,
-         recentActivity
-       });
+      // Ordenar por data e pegar os 10 mais recentes
+      recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      recentActivity.splice(10);
+
+      setFinancialAnalytics({
+        dailyRevenue,
+        monthlyRevenue,
+        applicationTrends: {
+          totalApplications,
+          paidApplications,
+          conversionRate,
+          averageFee: averageApplicationFee
+        },
+        paymentMethodBreakdown,
+        recentActivity
+      });
 
     } catch (error: any) {
       console.error('Error loading financial analytics:', error);
@@ -1337,6 +1411,7 @@ const PaymentManagement: React.FC = () => {
                   >
                     <option value="all">All Types</option>
                     <option value="application_fee">Application Fee</option>
+                    <option value="reinstatement_fee">Reinstatement Fee</option>
                     <option value="scholarship_fee">Scholarship Fee</option>
                   </select>
                 </div>
@@ -1374,7 +1449,7 @@ const PaymentManagement: React.FC = () => {
           </div>
 
           {/* Student Payment Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 rounded-xl">
@@ -1413,14 +1488,26 @@ const PaymentManagement: React.FC = () => {
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
+                <div className="p-3 bg-violet-100 rounded-xl">
+                  <Coins className="w-6 h-6 text-violet-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Paid Reinstatements</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.paid_reinstatement_fees}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
                 <div className="p-3 bg-purple-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-purple-600" />
                 </div>
-                                 <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
-                   <p className="text-xs text-slate-500">From application fees</p>
-                 </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
+                  <p className="text-xs text-slate-500">From all payment types</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1527,12 +1614,26 @@ const PaymentManagement: React.FC = () => {
                           {getApplicationStatusBadge(payment.application_status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(payment.status)}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {payment.payment_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {formatCurrency(payment.amount_charged)}
+                          <div className="flex flex-col gap-1.5">
+                            <div>{getStatusBadge(payment.status)}</div>
+                            <div>
+                              {payment.payment_type === 'application_fee' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                  Application Fee
+                                </span>
+                              ) : payment.payment_type === 'reinstatement_fee' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                                  Reinstatement Fee
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                  Scholarship Fee
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs font-bold text-slate-800">
+                              {formatCurrency(payment.amount_charged)}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1687,13 +1788,13 @@ const PaymentManagement: React.FC = () => {
                     )} */}
 
           {/* University Requests Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
-                                 <div className="ml-4">
+                <div className="ml-4">
                    <p className="text-sm font-medium text-slate-600">Total Revenue</p>
                    <p className="text-2xl font-bold text-slate-900">
                      {loadingUniversityRequests ? (
@@ -1702,8 +1803,27 @@ const PaymentManagement: React.FC = () => {
                        formatCurrency(financialStats.totalRevenue)
                      )}
                    </p>
-                   <p className="text-xs text-slate-500">From application fees</p>
+                   <p className="text-xs text-slate-500">From all payment types</p>
                  </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-violet-100 rounded-xl">
+                  <Coins className="w-6 h-6 text-violet-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Reinstatement Revenue</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {loadingUniversityRequests ? (
+                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                    ) : (
+                      formatCurrency(financialStats.totalReinstatementRevenue)
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-500">From {financialStats.paidReinstatementsCount} students</p>
+                </div>
               </div>
             </div>
             
@@ -1731,7 +1851,7 @@ const PaymentManagement: React.FC = () => {
                 <div className="p-3 bg-yellow-100 rounded-xl">
                   <Clock className="w-6 h-6 text-yellow-600" />
                 </div>
-                                 <div className="ml-4">
+                <div className="ml-4">
                    <p className="text-sm font-medium text-slate-600">Pending Payment Requests</p>
                    <p className="text-2xl font-bold text-slate-900">
                      {loadingUniversityRequests ? (
@@ -1750,7 +1870,7 @@ const PaymentManagement: React.FC = () => {
                 <div className="p-3 bg-purple-100 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-                                 <div className="ml-4">
+                <div className="ml-4">
                    <p className="text-sm font-medium text-slate-600">Available Balance</p>
                    <p className="text-2xl font-bold text-slate-900">
                      {loadingUniversityRequests ? (
@@ -1759,7 +1879,7 @@ const PaymentManagement: React.FC = () => {
                        formatCurrency(universityBalance)
                      )}
                    </p>
-                   <p className="text-xs text-slate-500">Application fees - active payment requests</p>
+                   <p className="text-xs text-slate-500">All revenues - active payment requests</p>
                  </div>
               </div>
             </div>
@@ -1917,15 +2037,15 @@ const PaymentManagement: React.FC = () => {
             </div>
           )}
         </div>
-        </>
-      )}
+      </>
+    )}
 
       {/* Financial Overview Tab Content */}
       {activeTab === 'financial-overview' && (
         <>
 
           {/* Key Financial Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             {/* Total Revenue Card */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
@@ -1951,6 +2071,22 @@ const PaymentManagement: React.FC = () => {
               </div>
             </div>
 
+            {/* Reinstatement Revenue Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-violet-100 to-violet-50 rounded-xl">
+                  <Coins className="w-6 h-6 text-violet-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Reinstatement Revenue</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(financialStats.totalReinstatementRevenue)}
+                </p>
+                <p className="text-xs text-slate-500">From {financialStats.paidReinstatementsCount} students</p>
+              </div>
+            </div>
+
             {/* Conversion Rate Card */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
@@ -1973,7 +2109,6 @@ const PaymentManagement: React.FC = () => {
                 <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>

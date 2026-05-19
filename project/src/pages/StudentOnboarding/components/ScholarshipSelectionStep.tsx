@@ -10,7 +10,7 @@ import { ScholarshipCardFull } from './ScholarshipCardFull';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
-import { formatAmount } from '../../../utils/scholarshipHelpers';
+import { formatAmount, getDaysUntilDeadline } from '../../../utils/scholarshipHelpers';
 import { AlertTriangle, Loader2, AlertCircle as AlertCircleIcon } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
@@ -18,6 +18,16 @@ import { Fragment } from 'react';
 export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: _onBack }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const { user, userProfile } = useAuth();
+  
+  const isScholarshipSelectionBlocked = (scholarship: any): boolean => {
+    if (!scholarship) return false;
+    if (is3800ScholarshipBlocked(scholarship)) return true;
+    if (scholarship.deadline) {
+      const days = getDaysUntilDeadline(scholarship.deadline);
+      if (days < 0) return true;
+    }
+    return false;
+  };
   const { cart: originalCart, addToCart, removeFromCart, fetchCart } = useCartStore();
   const { data: allScholarships = [], isLoading: scholarshipsLoading, isError: scholarshipsIsError } = useAllScholarshipsQuery();
   const { data: appsData = [] } = useStudentApplicationsQuery(userProfile?.id);
@@ -377,8 +387,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       // 2. Fallback: Destaque original ou disponibilidade para desempate extra
       if (a.is_highlighted !== b.is_highlighted) return a.is_highlighted ? -1 : 1;
       
-      const aActive = a.is_active && !is3800ScholarshipBlocked(a);
-      const bActive = b.is_active && !is3800ScholarshipBlocked(b);
+      const aActive = a.is_active && !isScholarshipSelectionBlocked(a);
+      const bActive = b.is_active && !isScholarshipSelectionBlocked(b);
       if (aActive !== bActive) return aActive ? -1 : 1;
 
       return 0;
@@ -387,7 +397,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     // ✅ LÓGICA DE DESTAQUE DINÂMICO: As 6 primeiras DISPONÍVEIS ganham tag de destaque
     let availableCount = 0;
     return sorted.map(s => {
-      const isBlockedOrInactive = !s.is_active || is3800ScholarshipBlocked(s);
+      const isBlockedOrInactive = !s.is_active || isScholarshipSelectionBlocked(s);
       let is_highlighted = s.is_highlighted; // Mantém o original se já for
       
       if (!isBlockedOrInactive && availableCount < 6) {
@@ -442,8 +452,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const hasBlockedScholarships = useMemo(() => {
     return cart.some(item => {
       const scholarship = item.scholarships;
-      // Verificar se está inativa ou se é bolsa de $3800 bloqueada
-      return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+      // Verificar se está inativa ou se é bolsa bloqueada na seleção do onboarding
+      return !scholarship.is_active || isScholarshipSelectionBlocked(scholarship);
     });
   }, [cart]);
 
@@ -570,7 +580,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       // Validar se há bolsas bloqueadas antes de prosseguir
       const blockedScholarship = (cart as any[]).find(item => {
         const scholarship = item.scholarships;
-        return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+        return !scholarship.is_active || isScholarshipSelectionBlocked(scholarship);
       });
 
       if (blockedScholarship) return;
@@ -648,7 +658,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               <ul className="divide-y divide-slate-100 mb-8 font-medium">
                 {cart.map((item) => {
                   const scholarship = item.scholarships;
-                  const isBlocked = !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+                  const isBlocked = !scholarship.is_active || isScholarshipSelectionBlocked(scholarship);
                   const isRemoving = removingScholarshipId === scholarship.id;
                   
                   return (

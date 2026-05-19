@@ -2,36 +2,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Scholarship } from "../types";
 
-export function useScholarships() {
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  // Inicia como true para evitar o flash de lista vazia antes do fetch começar
-  const [loading, setLoading] = useState(true);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
+export function useScholarship(id: string | undefined) {
+  const [scholarship, setScholarship] = useState<Scholarship | null>(null);
+  // Inicia como true quando há um id para evitar o flash do estado de erro
+  // entre a montagem do componente e o início do fetch no useEffect
+  const [loading, setLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   useEffect(() => {
-    // Se já carregou os dados, apenas garante que loading está false e sai
-    if (hasLoadedData) {
-      setLoading(false);
+    if (!id) {
+      setScholarship(null);
       return;
     }
 
-    // Debounce: evitar múltiplas chamadas em sequência
-    const now = Date.now();
-    if (now - lastFetchTime < 5000) {
-      // Fetch suprimido por debounce, mas ainda sem dados: deixa loading true
-      // e aguarda o próximo ciclo disparar o fetch
-      return;
-    }
-    setLastFetchTime(now);
-
-    async function fetchScholarships() {
+    async function fetchScholarship() {
       try {
         setLoading(true);
         setError(null);
 
-        // Query unificada para visitantes e usuários autenticados
         const { data, error } = await supabase
           .from("scholarships")
           .select(`
@@ -67,30 +55,30 @@ export function useScholarships() {
             is_test,
             min_gpa,
             min_english_proficiency,
+            internal_fees,
             universities (id, name, logo_url, image_url, location, is_approved, university_fees_page_url)
           `)
-          .eq("is_active", true)
-          .neq("is_test", true);
+          .eq("id", id)
+          .single();
 
         if (error) {
-          console.error("❌ [useScholarships] Erro ao buscar bolsas:", error);
+          console.error("❌ [useScholarship] Erro ao buscar bolsa:", error);
           setError(error.message);
-          setScholarships([]);
+          setScholarship(null);
         } else {
-          setScholarships((data || []) as unknown as Scholarship[]);
+          setScholarship(data as unknown as Scholarship);
         }
       } catch (err) {
-        console.error("❌ [useScholarships] Erro inesperado:", err);
-        setError("Erro inesperado ao carregar bolsas");
-        setScholarships([]);
+        console.error("❌ [useScholarship] Erro inesperado:", err);
+        setError("Erro inesperado ao carregar os detalhes da bolsa");
+        setScholarship(null);
       } finally {
         setLoading(false);
-        setHasLoadedData(true);
       }
     }
 
-    fetchScholarships();
-  }, []); // Removido hasLoadedData da dependência para evitar loop
+    fetchScholarship();
+  }, [id]);
 
-  return { scholarships, loading, error };
+  return { scholarship, loading, error };
 }

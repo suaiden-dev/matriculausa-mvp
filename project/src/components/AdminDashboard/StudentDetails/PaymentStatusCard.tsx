@@ -604,9 +604,12 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             return formatFeeAmount(2100, true);
                           }
 
-                          // Not paid: always show the expected total fee
+                          // Not paid: show half if installment enabled (representing the 1st installment due), otherwise total
                           const total = calcTotalFee();
-                          if (total != null) return formatFeeAmount(total, true);
+                          if (total != null) {
+                            const displayAmount = student?.placement_fee_installment_enabled ? total / 2 : total;
+                            return formatFeeAmount(displayAmount, true);
+                          }
                           return 'N/A';
                         })()}
                         {currentOverrides?.placement_fee !== undefined && (
