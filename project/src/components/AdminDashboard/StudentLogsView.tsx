@@ -92,17 +92,23 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     return description.replace(/manual payment/gi, 'Outside payment');
   };
 
-  const getActionTypeColor = (actionType: string) => {
-    if (actionType.includes('approval') || actionType.includes('payment')) {
+  const getActionTypeColor = (actionType: string, description?: string) => {
+    const desc = description?.toLowerCase() || '';
+    const type = actionType.toLowerCase();
+
+    if (type.includes('pending') || desc.includes('pending') || desc.includes('pendente')) {
+      return 'text-amber-600';
+    }
+    if (type.includes('approval') || type.includes('payment')) {
       return 'text-green-600';
     }
-    if (actionType.includes('rejection') || actionType.includes('rejected')) {
+    if (type.includes('rejection') || type.includes('rejected')) {
       return 'text-red-600';
     }
-    if (actionType.includes('upload') || actionType.includes('created') || actionType === 'newsletter_email_sent') {
+    if (type.includes('upload') || type.includes('created') || type === 'newsletter_email_sent') {
       return 'text-blue-600';
     }
-    if (actionType === 'newsletter_email_failed') {
+    if (type === 'newsletter_email_failed') {
       return 'text-red-600';
     }
     return 'text-slate-600';
@@ -273,7 +279,7 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
                       <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPerformerTypeColor(log.performed_by_type)}`}>
                         {getPerformerTypeLabel(log.performed_by_type)}
                       </span>
-                      <span className={`text-sm font-medium ${getActionTypeColor(log.action_type)}`}>
+                      <span className={`text-sm font-medium ${getActionTypeColor(log.action_type, log.action_description)}`}>
                         {getActionTypeLabel(log.action_type)}
                       </span>
                     </div>

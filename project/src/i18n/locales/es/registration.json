@@ -38,10 +38,17 @@
     },
     "sidebar": {
       "title": "Resumen del Pago",
-      "selectionFee": "Tarifa del Proceso de Selección",
+      "selectionFee": "Proceso de Selección",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Ahora",
-      "feeExplanation": "La Tarifa del Proceso de Selección é o primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
+      "benefits": {
+        "title": "El Proceso de Selección te da acceso a:",
+        "item1": "Accede a más de 154 becas exclusivas en EE. UU.",
+        "item2": "Elige hasta 4 becas de estudios exclusivas alineadas a tu perfil.",
+        "item3": "Envía tus documentos para análisis y aprobación junto a las universidades asociadas.",
+        "item4": "Soporte especializado y continuo durante todo el proceso.",
+        "item5": "Concluye el proceso con tu carta de aceptación en mano, listo para estudiar."
+      },
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
@@ -49,7 +56,7 @@
       "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
       "couponApplied": "Cupón Aplicado",
       "refundAssuranceTitle": "Garantía de Reembolso",
-      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, la tarifa del proceso de selección será completamente reembolsada.",
+      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, el pago del Proceso de Selección será completamente reembolsado.",
       "alreadyPaidContinue": "Continuar en Onboarding"
     },
     "terms": {
@@ -99,7 +106,7 @@
       },
       "alreadyPaid": {
         "title": "¡Tarifa Ya Pagada!",
-        "description": "Ya ha realizado el pago de la tarifa del proceso de selección. Puede continuar con su inscripción.",
+        "description": "Ya ha realizado el pago del Proceso de Selección. Puede continuar con su inscripción.",
         "continue": "Continuar en Onboarding"
       }
     }
@@ -110,7 +117,7 @@
       "of": "de",
       "initiating": "Iniciando",
       "steps": {
-        "selectionFee": "Tarifa del Proceso de Selección",
+        "selectionFee": "Proceso de Selección",
         "selectionSurvey": "Cuestionario",
         "scholarshipSelection": "Selección de Becas",
         "processType": "Tipo de Proceso",

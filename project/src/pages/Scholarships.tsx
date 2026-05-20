@@ -95,7 +95,6 @@ const Scholarships: React.FC = () => {
 
   // Range state - Inicializado em 0 conforme solicitado (0 = sem limite superior no filtro matchesRange)
   const [maxPrice, setMaxPrice] = useState(0);
-  const [minPrice, setMinPrice] = useState(0);
 
   // Removida a atualização automática de maxPrice para evitar conflitos visuais e "pulos" de valores
   /* useEffect(() => {
@@ -110,11 +109,10 @@ const Scholarships: React.FC = () => {
       selectedField,
       selectedStudyMode,
       selectedWorkAuth,
-      minPrice,
       maxPrice
     };
     localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
-  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, maxPrice]);
 
   // Restaurar filtros do localStorage ao carregar
   useEffect(() => {
@@ -127,7 +125,6 @@ const Scholarships: React.FC = () => {
         if (filters.selectedField) setSelectedField(filters.selectedField);
         if (filters.selectedStudyMode) setSelectedStudyMode(filters.selectedStudyMode);
         if (filters.selectedWorkAuth) setSelectedWorkAuth(filters.selectedWorkAuth);
-        if (filters.minPrice !== undefined) setMinPrice(filters.minPrice);
         // maxPrice será definido pelo useEffect do maxScholarshipValue
       } catch (error) {
         // Error loading saved filters
@@ -251,7 +248,7 @@ const Scholarships: React.FC = () => {
       scholarship.title.toLowerCase().includes(term) ||
       (allowUniSearch && uniName.includes(term));
     const value = scholarship.annual_value_with_scholarship ?? 0;
-    const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
+    const matchesRange = (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
@@ -290,7 +287,7 @@ const Scholarships: React.FC = () => {
       scholarship.title.toLowerCase().includes(term) ||
       (allowUniSearch && uniName.includes(term));
     const value = scholarship.annual_value_with_scholarship ?? 0;
-    const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
+    const matchesRange = (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
@@ -475,7 +472,7 @@ const Scholarships: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, maxPrice]);
 
   // Scroll para a seção de bolsas quando a página mudar
   useEffect(() => {
@@ -497,8 +494,8 @@ const Scholarships: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
       {/* Header */}
-      <section className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] text-white pt-12 pb-12 relative overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] text-white pt-12 pb-12 relative z-30">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-5 left-10 w-56 h-56 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-5 right-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
         </div>
@@ -570,27 +567,6 @@ const Scholarships: React.FC = () => {
                 </div>
               </div>
 
-              {/* Coluna 2: Preço Mínimo */}
-              <div className="flex flex-col w-full lg:w-32 px-4 py-1.5 justify-center">
-                <label htmlFor="min-price-input" className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                  {t('scholarshipsPage.filters.minPriceLabel')}
-                </label>
-                <div className="flex items-center">
-                  <span className="text-sm font-bold text-slate-400 mr-0.5">$</span>
-                  <input
-                    id="min-price-input"
-                    type="number"
-                    min={0}
-                    max={maxScholarshipValue}
-                    value={minPrice || ''}
-                    onChange={e => setMinPrice(Number(e.target.value))}
-                    className="w-full bg-transparent outline-none border-none text-sm font-bold text-slate-700"
-                    placeholder="0"
-                    disabled={scholarshipsLoading}
-                  />
-                </div>
-              </div>
-
               {/* Coluna 3: Preço Máximo */}
               <div className="flex flex-col w-full lg:w-36 px-4 py-1.5 justify-center">
                 <label htmlFor="max-price-input" className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
@@ -632,7 +608,7 @@ const Scholarships: React.FC = () => {
                   </button>
 
                   {fieldDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-2 w-full lg:w-60 bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                       {fieldOptions.map((opt) => {
                         const isSelected = selectedField === opt.value;
                         return (
@@ -650,7 +626,6 @@ const Scholarships: React.FC = () => {
                             }`}
                           >
                             <span>{opt.label}</span>
-                            {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-[#D0151C]" />}
                           </button>
                         );
                       })}
@@ -679,7 +654,7 @@ const Scholarships: React.FC = () => {
                   </button>
 
                   {workDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-2 w-full lg:w-60 bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                       {workOptions.map((opt) => {
                         const isSelected = selectedWorkAuth === opt.value;
                         return (
@@ -697,7 +672,6 @@ const Scholarships: React.FC = () => {
                             }`}
                           >
                             <span>{opt.label}</span>
-                            {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-[#D0151C]" />}
                           </button>
                         );
                       })}
@@ -762,7 +736,6 @@ const Scholarships: React.FC = () => {
                   selectedField !== 'all' ||
                   selectedStudyMode !== 'all' ||
                   selectedWorkAuth !== 'all' ||
-                  minPrice !== 0 ||
                   maxPrice !== 0) && (
                   <button
                     type="button"
@@ -772,7 +745,6 @@ const Scholarships: React.FC = () => {
                       setSelectedField('all');
                       setSelectedStudyMode('all');
                       setSelectedWorkAuth('all');
-                      setMinPrice(0);
                       setMaxPrice(0);
                       setFieldDropdownOpen(false);
                       setWorkDropdownOpen(false);
@@ -1130,8 +1102,7 @@ const Scholarships: React.FC = () => {
                       setSelectedStudyMode('all');
                       setSelectedWorkAuth('all');
                        setMaxPrice(0);
-                      setMinPrice(0);
-                     localStorage.removeItem('scholarshipsPageFilters');
+                      localStorage.removeItem('scholarshipsPageFilters');
                    }}
                    className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
                  >
