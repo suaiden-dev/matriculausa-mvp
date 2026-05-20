@@ -60,6 +60,8 @@
       "Bash(find supabase/migrations -name \"*.sql\" -exec grep -l \"documents\" {} \\\\;)",
       "Bash(xargs -I {} grep -l \"documents\" \"{}\")",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); rows=json.loads\\(data[0]['text']\\); [print\\(r['id'], r['name']\\) for r in rows]\")"
+      "Bash(supabase --version)",
+      "Bash(rtk supabase:*)"
     ]
   }
 }
