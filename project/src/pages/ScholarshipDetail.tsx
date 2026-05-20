@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, AlertTriangle, Building, Star, MapPin, 
@@ -47,7 +47,6 @@ const ScholarshipDetail: React.FC = () => {
     }
   };
   const navigate = useNavigate();
-  const location = useLocation();
   
   const { scholarship: rawScholarship, loading, error } = useScholarship(id);
   const scholarship = rawScholarship as any;
@@ -288,44 +287,22 @@ const ScholarshipDetail: React.FC = () => {
     });
   })();
 
-  // Taxas Internas
-  let internalFeesData = scholarship.internal_fees;
-  if (typeof internalFeesData === 'string') {
-    try { internalFeesData = JSON.parse(internalFeesData); } catch (e) { internalFeesData = []; }
-  }
-  const baseInternalFees = Array.isArray(internalFeesData) ? internalFeesData : [];
   const processType = userProfile?.student_process_type;
   const visaTransferActive = userProfile?.visa_transfer_active;
 
-  const fixedFees = (() => {
-    if (!processType) {
-      return [
-        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) },
-        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial/Transfer' }) },
-        { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-      ];
+  // Taxas Internas
+  let internalFeesData = scholarship.internal_fees;
+  if (typeof internalFeesData === 'string') {
+    try {
+      internalFeesData = JSON.parse(internalFeesData);
+    } catch (e) {
+      internalFeesData = [];
     }
-    if (processType === 'initial') {
-      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial' }) }];
-    }
-    if (processType === 'change_of_status') {
-      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) }];
-    }
-    if (processType === 'transfer') {
-      if (visaTransferActive === false) {
-        return [
-          { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-          { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonTransfer') }) },
-        ];
-      }
-      return [];
-    }
-    return [];
-  })();
-  
-  const internalFees = [...fixedFees, ...baseInternalFees];
-  const hasInternalFees = internalFees.length > 0;
-  const canViewInternalFees = hasInternalFees;
+  }
+  const baseInternalFees = Array.isArray(internalFeesData) ? internalFeesData : [];
+
+  const internalFees = baseInternalFees;
+  const canViewInternalFees = internalFees.length > 0;
 
   // Helper render functions to build responsive layouts modularly and avoid duplication
   const renderTitleAndSubtitle = () => (
@@ -404,7 +381,7 @@ const ScholarshipDetail: React.FC = () => {
     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100/60 text-left space-y-4">
       <div>
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-          {t('scholarshipsPage.detail.regularAnnualCost', 'Custo Anual Regular (Sem Bolsa)')}
+          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Anual (Sem Bolsa)')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-bold text-slate-400 line-through decoration-red-400/80">${formatAmount(scholarship.original_annual_value)}</span>
@@ -414,7 +391,7 @@ const ScholarshipDetail: React.FC = () => {
 
       <div className="pt-3 border-t border-slate-200/60">
         <span className="text-[11px] font-bold uppercase tracking-widest text-[#05294E] block mb-1">
-          {t('scholarshipsPage.detail.exclusiveScholarshipPrice', 'Preço com Bolsa Exclusiva')}
+          {t('scholarshipsPage.detail.exclusiveScholarshipPrice', 'Investimento com Bolsa Exclusiva')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-3xl sm:text-4xl font-black text-green-700">${formatAmount(scholarship.annual_value_with_scholarship)}</span>
@@ -587,42 +564,80 @@ const ScholarshipDetail: React.FC = () => {
     <div className="p-6 sm:p-8 space-y-6 text-left">
       <div>
         <h3 className="text-lg font-black text-slate-900 tracking-tight">
-          {t('scholarshipsPage.modal.financialBreakdown', 'Detalhamento Financeiro Anual')}
+          {t('scholarshipsPage.modal.financialBreakdown', 'Taxas internas da plataforma')}
         </h3>
       </div>
 
       <div className="space-y-4">
         <h4 className="text-xs uppercase font-bold tracking-widest text-slate-400">
-          {t('scholarshipsPage.detail.academicEnrollmentCosts', 'Custos de Inscrição Acadêmica')}
+          {t('scholarshipsPage.detail.academicEnrollmentCosts', 'Investimentos de Inscrição Acadêmica')}
         </h4>
+        {/* Application Fee */}
         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100/60">
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-slate-800">
-              {t('scholarshipsPage.scholarshipCard.applicationFee', 'Taxa de Matrícula (Application Fee)')}
-            </span>
+          <div className="flex items-start gap-2.5 max-w-[75%]">
+            <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-800">
+                {t('scholarshipsPage.scholarshipCard.applicationFee', 'Taxa de Matrícula (Application Fee)')}
+              </span>
+            </div>
           </div>
           <span className="text-lg font-bold text-slate-900">${applicationFee.toFixed(0)}</span>
         </div>
 
         {/* Placement Fee */}
-        {userProfile?.placement_fee_flow && (() => {
+        {(() => {
           const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
           const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
           const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
           return (
             <div className="p-4 bg-blue-50/20 rounded-2xl border border-blue-100/50 flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-800">
-                  {t('scholarshipsPage.detail.placementFeeLabel', 'Placement Fee (Assessoria Técnica)')}
-                </span>
-                <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                  {t('scholarshipsPage.detail.placementFeeDetail', 'Referente à consultoria especializada e suporte de visto')}
-                </span>
+              <div className="flex items-start gap-2.5 max-w-[75%]">
+                <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-800">
+                    {t('scholarshipsPage.detail.placementFeeLabel', 'Placement Fee')}
+                  </span>
+                </div>
               </div>
-              <span className="text-lg font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
+              <span className="text-lg font-bold text-slate-800">{formatCurrency(placementFeeValue)}</span>
             </div>
           );
         })()}
+
+        {/* Control Fee */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100/60">
+          <div className="flex items-start gap-2.5 max-w-[75%]">
+            <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-800">
+                Control Fee
+              </span>
+              <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)')}
+              </span>
+            </div>
+          </div>
+          <span className="text-lg font-bold text-slate-900">$1,800</span>
+        </div>
+
+        {/* Reinstatement Fee */}
+        {(!processType || (processType === 'transfer' && visaTransferActive === false)) && (
+          <div className="p-4 bg-red-50/10 rounded-2xl border border-red-100/30 flex items-center justify-between">
+            <div className="flex items-start gap-2.5 max-w-[75%]">
+              <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-slate-800">
+                  Reinstatement Fee
+                </span>
+                <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                  {t('scholarshipsPage.modal.reinstatementPackageDescription', 'Taxa para processamento de reativação de visto F-1 irregular')}
+                </span>
+              </div>
+            </div>
+            <span className="text-lg font-bold text-slate-800">$500</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -636,7 +651,7 @@ const ScholarshipDetail: React.FC = () => {
         <p className="text-xs text-slate-500 mt-1 font-medium">
           {t('scholarshipsPage.detail.internalFeesDescription', 'Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.')}
         </p>
-        {scholarship.universities?.university_fees_page_url && (
+        {canViewSensitive && scholarship.universities?.university_fees_page_url && (
           <div className="mt-2.5">
             <a 
               href={scholarship.universities.university_fees_page_url}
@@ -705,11 +720,11 @@ const ScholarshipDetail: React.FC = () => {
         </button>
       ) : (!isAuthenticated) ? (
         <button
-          onClick={() => navigate(`/login${location.search}`)}
+          onClick={() => navigate('/selection-fee-registration')}
           className="w-full bg-gradient-to-r from-[#05294E] to-[#093766] hover:from-[#041f3a] hover:to-[#05294E] text-white py-4 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all duration-300 relative overflow-hidden group"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          {t('scholarshipsPage.detail.applyNowLogin', 'Candidatar-se Agora (Login)')}
+          {t('scholarshipsPage.detail.applyNowLogin', 'Candidatar-se Agora')}
         </button>
       ) : (
         <button
@@ -717,7 +732,7 @@ const ScholarshipDetail: React.FC = () => {
           className="w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white py-4 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wider shadow-lg active:scale-95 transition-all duration-300 relative overflow-hidden group"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          {t('scholarshipsPage.detail.fillApplication', 'Preencher Candidatura')}
+          {t('scholarshipsPage.detail.fillApplication', 'Candidatar-se')}
         </button>
       )}
     </div>
@@ -915,28 +930,59 @@ const ScholarshipDetail: React.FC = () => {
                     }}
                     className="group bg-white rounded-[2rem] border border-slate-200 shadow-[0_12px_30px_rgba(0,0,0,0.04)] hover:border-blue-200 hover:shadow-[0_24px_50px_rgba(5,41,78,0.12)] hover:-translate-y-1.5 transition-all duration-500 overflow-hidden cursor-pointer flex flex-col h-full"
                   >
-                    {/* Card Header (Cover Image) */}
-                    <div className="relative h-44 w-full bg-slate-900 overflow-hidden flex-shrink-0">
-                      {recImage ? (
-                        <img 
-                          src={recImage} 
-                          alt={rec.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#05294E] to-[#093766]" />
-                      )}
-                      {/* Shadow overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
+                    {/* Card Header (Cover Image with Course Banner & Matricula Logo) */}
+                    <div className="relative h-44 w-full bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
                       
+                      {/* Full Background Image */}
+                      <div className="absolute inset-0 z-0">
+                        {recImage ? (
+                          <img 
+                            src={recImage} 
+                            alt={rec.title} 
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" 
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full bg-slate-50 text-slate-400">
+                            <Building className="h-12 w-12 text-[#05294E]/20" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Text Overlay Layer (Left side fade) */}
+                      <div className="absolute inset-y-0 left-0 w-[65%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-4 pr-8">
+                        {/* Top Left Logo */}
+                        <div className="absolute top-4 left-4">
+                          <img 
+                            src="/logo.png" 
+                            alt="Matricula USA" 
+                            className="h-5 w-auto object-contain mb-1.5 drop-shadow-sm" 
+                          />
+                        </div>
+                        
+                        {/* Course / Field as Main Banner Text */}
+                        <p className="w-[95%] text-sm font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-8" style={{ lineHeight: 0.95 }}>
+                          {rec.field_of_study || t('scholarshipsPage.filters.anyField')}
+                        </p>
+                      </div>
+
+                      {/* Top Right Badges */}
+                      <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+                        {rec.is_exclusive && (
+                          <div className="bg-amber-500 text-white px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-white" />
+                            {t('common.exclusive', 'Exclusiva')}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Floating Level/Modal Badges */}
-                      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10">
-                        <span className="px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-xl text-[11px] font-bold uppercase tracking-widest text-slate-800 shadow-sm border border-white/20">
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                        <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-800 shadow-sm border border-white/20">
                           {getLevelLabel(rec.level || '')}
                         </span>
                         {rec.scholarship_percentage && (
-                          <span className="px-2.5 py-1 bg-green-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-sm">
-                            {rec.scholarship_percentage}% Bolsa
+                          <span className="px-2.5 py-1 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                            {rec.scholarship_percentage}%
                           </span>
                         )}
                       </div>
@@ -971,50 +1017,68 @@ const ScholarshipDetail: React.FC = () => {
                         </div>
 
                         {/* Scholarship title */}
-                        <h3 className="text-base font-black text-slate-900 line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors mb-2">
+                        <h3 className="text-base font-black text-slate-900 line-clamp-2 leading-snug mb-2">
                           {rec.title}
                         </h3>
 
                         {/* Course / Field of Study */}
                         {rec.field_of_study && (
-                          <div className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-bold bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5 mb-4 max-w-full">
-                            <GraduationCap className="h-3.5 w-3.5 text-[#05294E] flex-shrink-0" />
-                            <span className="truncate">{rec.field_of_study}</span>
+                          <div className="mb-2">
+                            <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                              <span className="truncate">{rec.field_of_study}</span>
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Specs Tags (Delivery Mode & Work Permissions) */}
+                        {(rec.delivery_mode || (rec.work_permissions && rec.work_permissions.length > 0)) && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {rec.delivery_mode && (
+                              <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                                <span className="truncate">{getDeliveryModeLabel(rec.delivery_mode)}</span>
+                              </span>
+                            )}
+
+                            {rec.work_permissions && rec.work_permissions.map((perm: string, i: number) => (
+                              <span key={i} className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                                <span className="truncate">{perm}</span>
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
 
-                      {/* Financial details */}
-                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/60 space-y-2 mt-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                            {t('scholarshipsPage.detail.annualCost', 'Custo Anual')}
+                      {/* Financial details - Premium Pricing Section */}
+                      <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4.5 sm:p-5 mt-2 flex items-center justify-between gap-4">
+                        {/* Left Side: Original Cost & Savings Badge */}
+                        <div className="flex flex-col text-left">
+                          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                            {t('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
                           </span>
-                          <span className="text-slate-400 text-xs font-bold line-through">
+                          <span className="text-sm font-bold text-slate-400 line-through leading-tight">
                             ${formatAmount(rec.original_annual_value)}
                           </span>
+                          {recAnnualSavings > 0 && (
+                            <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
+                              -{t('scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmount(recAnnualSavings)}
+                            </span>
+                          )}
                         </div>
 
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                        {/* Right Side: Hero Price with Scholarship */}
+                        <div className="flex flex-col text-right">
+                          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">
                             {t('scholarshipsPage.detail.withScholarship', 'Com Bolsa')}
                           </span>
-                          <span className="text-green-700 text-base sm:text-lg font-black leading-none">
-                            ${formatAmount(rec.annual_value_with_scholarship)}
-                            <span className="text-[10px] font-bold text-green-600">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
-                          </span>
-                        </div>
-
-                        {recAnnualSavings > 0 && (
-                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-green-600 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-md">
-                              {t('scholarshipsPage.detail.annualSavings', 'Economia Anual')}
+                          <div className="flex items-baseline justify-end">
+                            <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                              ${formatAmount(rec.annual_value_with_scholarship)}
                             </span>
-                            <span className="text-green-600 text-xs font-bold">
-                              +${formatAmount(recAnnualSavings)}{t('scholarshipsPage.detail.perYear', '/ano')}
+                            <span className="text-xs font-bold text-slate-500 ml-0.5">
+                              {t('scholarshipsPage.detail.perYear', '/ano')}
                             </span>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>

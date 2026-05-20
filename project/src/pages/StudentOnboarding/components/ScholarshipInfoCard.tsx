@@ -81,6 +81,28 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
     : null;
   const placementFee = getPlacementFee(annualValue, placementFeeAmount);
 
+  const getApplicationFeeWithDependents = (base: number): number => {
+    const deps = Number(userProfile?.dependents) || 0;
+    return deps > 0 ? base + deps * 100 : base;
+  };
+
+  const applicationFee = scholarship.application_fee_amount
+    ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount))
+    : getApplicationFeeWithDependents(350);
+
+  const processType = userProfile?.student_process_type;
+  const visaTransferActive = userProfile?.visa_transfer_active;
+
+  const processFees = [];
+  if (processType === 'initial') {
+    processFees.push({ name: 'Control Fee', amount: 1800 });
+  } else if (processType === 'change_of_status') {
+    processFees.push({ name: 'Control Fee', amount: 1800 });
+  } else if (processType === 'transfer' && visaTransferActive === false) {
+    processFees.push({ name: 'Control Fee', amount: 500 });
+    processFees.push({ name: 'Control Fee', amount: 1800 });
+  }
+
   const hasLetter = !!acceptanceLetter?.url;
 
   return (
@@ -211,14 +233,14 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
               <DollarSign className="w-3.5 h-3.5" />
-              {t('scholarships:scholarshipsPage.modal.financialBreakdown', 'Detalhes Financeiros')}
+              {t('scholarships:scholarshipsPage.modal.financialBreakdown', 'Taxas internas da plataforma')}
             </p>
           </div>
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-100">
               <tr className="bg-slate-50/50">
                 <td className="py-3 px-4 text-slate-500 font-medium">
-                  {t('scholarships:scholarshipsPage.modal.originalAnnualCost', 'Custo Original')}
+                  {t('scholarships:scholarshipsPage.modal.originalAnnualCost', 'Investimento Original')}
                 </td>
                 <td className="py-3 px-4 text-right text-slate-400 line-through">
                   ${formatAmount(scholarship.original_annual_value)}
@@ -235,7 +257,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
               {scholarship.original_value_per_credit && (
                 <tr>
                   <td className="py-3 px-4 text-slate-500 text-xs">
-                    {t('scholarships:scholarshipsPage.modal.costPerCredit', 'Custo por Crédito')}
+                    {t('scholarships:scholarshipsPage.modal.costPerCredit', 'Investimento por Crédito')}
                   </td>
                   <td className="py-3 px-4 text-right text-slate-500 text-xs font-bold">
                     ${formatAmount(scholarship.original_value_per_credit)}
@@ -250,6 +272,24 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
                   </td>
                 </tr>
               )}
+              {applicationFee > 0 && (
+                <tr>
+                  <td className="py-3 px-4 text-slate-500 font-medium">
+                    {t('scholarships:scholarshipsPage.scholarshipCard.applicationFee', 'Taxa de Matrícula (Application Fee)')}
+                  </td>
+                  <td className="py-3 px-4 text-right text-slate-900 font-bold">
+                    {formatCurrency(applicationFee)}
+                  </td>
+                </tr>
+              )}
+              {processFees.map((fee, idx) => (
+                <tr key={`process-fee-${idx}`}>
+                  <td className="py-3 px-4 text-slate-500 font-medium">{fee.name}</td>
+                  <td className="py-3 px-4 text-right text-slate-900 font-bold">
+                    {formatCurrency(fee.amount)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -404,7 +444,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
             </div>
           )}
 
-          {scholarship.universities?.university_fees_page_url && (
+          {canViewSensitive && scholarship.universities?.university_fees_page_url && (
             <a
               href={scholarship.universities.university_fees_page_url}
               target="_blank"
