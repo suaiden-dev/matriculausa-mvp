@@ -493,7 +493,6 @@ export const usePayments = (universityId: string | undefined) => {
       const csvHeaders = [
         'Student Name',
         'Student Email',
-        'Student Country',
         'Scholarship Title',
         'Application Status',
         'Application Fee Paid',
@@ -510,7 +509,6 @@ export const usePayments = (universityId: string | undefined) => {
         return [
           `"${userProfile?.full_name || 'Unknown'}"`,
           `"${userProfile?.email || 'Unknown'}"`,
-          `"${userProfile?.country || 'Unknown'}"`,
           `"${scholarship?.title || 'Unknown'}"`,
           `"${application.status}"`,
           `"${application.is_application_fee_paid ? 'Yes' : 'No'}"`,

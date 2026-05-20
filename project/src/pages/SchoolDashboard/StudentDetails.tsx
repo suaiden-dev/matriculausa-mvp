@@ -913,7 +913,7 @@ const StudentDetails: React.FC = () => {
       // Log: aprovação de document request pela universidade
       try {
         const studentProfileId = application?.user_profiles?.id;
-        const performedBy = user?.id || '';
+        const performedBy = user?.id;
         if (studentProfileId && performedBy) {
           // Enriquecer metadados com IP público (melhor esforço)
           let clientIp: string | undefined = undefined;
@@ -1096,13 +1096,18 @@ const StudentDetails: React.FC = () => {
 
       // 7. Log da ação
       try {
-        await supabase.rpc('log_student_action', {
-          p_student_id: application?.user_profiles?.id,
-          p_action_type: 'document_approval',
-          p_description: `Document ${type} approved by university admin`,
-          p_performed_by: user?.id,
-          p_metadata: { document_type: type, application_id: applicationId }
-        });
+        const studentProfileId = application?.user_profiles?.id;
+        const performedBy = user?.id;
+        if (studentProfileId && performedBy) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: studentProfileId,
+            p_action_type: 'document_approval',
+            p_action_description: `Document ${type} approved by university admin`,
+            p_performed_by: performedBy,
+            p_performed_by_type: 'university',
+            p_metadata: { document_type: type, application_id: applicationId }
+          });
+        }
       } catch (logErr) {
         console.error('Error logging action:', logErr);
       }
@@ -1506,6 +1511,25 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to approve transfer form: ' + error.message);
       }
 
+      // Atualizar também a aplicação associada
+      if (application?.id) {
+        const { error: appError } = await supabase
+          .from('scholarship_applications')
+          .update({
+            transfer_form_status: 'approved'
+          })
+          .eq('id', application.id);
+
+        if (appError) {
+          console.error('Failed to update application transfer form status:', appError);
+        } else {
+          setApplication((prev: any) => prev ? ({
+            ...prev,
+            transfer_form_status: 'approved'
+          }) : prev);
+        }
+      }
+
       // Recarregar uploads
       await fetchTransferFormUploads();
       
@@ -1531,6 +1555,25 @@ const StudentDetails: React.FC = () => {
       
       if (error) {
         throw new Error('Failed to reject transfer form: ' + error.message);
+      }
+
+      // Atualizar também a aplicação associada
+      if (application?.id) {
+        const { error: appError } = await supabase
+          .from('scholarship_applications')
+          .update({
+            transfer_form_status: 'returned' // 'returned' indica que retornou para correções no fluxo
+          })
+          .eq('id', application.id);
+
+        if (appError) {
+          console.error('Failed to update application transfer form status:', appError);
+        } else {
+          setApplication((prev: any) => prev ? ({
+            ...prev,
+            transfer_form_status: 'returned'
+          }) : prev);
+        }
       }
 
       // Recarregar uploads
@@ -1824,7 +1867,7 @@ const StudentDetails: React.FC = () => {
       // Log: envio de acceptance letter pela universidade
       try {
         const studentProfileId = application?.user_profiles?.id;
-        const performedBy = user?.id || '';
+        const performedBy = user?.id;
         if (studentProfileId && performedBy) {
           // Enriquecer metadados com IP público (melhor esforço)
           let clientIp: string | undefined = undefined;
