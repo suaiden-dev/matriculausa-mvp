@@ -245,7 +245,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     };
 
     loadPendingZelle();
-  }, [students?.length]); // Usando length para estabilidade
+  }, [students]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Carregar estudantes que usaram cupom BLACK
   useEffect(() => {
@@ -277,7 +277,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     };
 
     loadBlackCouponUsers();
-  }, [students?.length]); // Usando length para estabilidade
+  }, []); // black coupon users não dependem da lista de estudantes
 
   // Salvar filtros no localStorage sempre que mudarem
   useEffect(() => {
@@ -295,6 +295,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     onlyPaidSelectionFee,
     onlyBlackCouponUsers,
     showCurrentStudents,
+    processTypeFilter,
     currentPage
   ]);
 
