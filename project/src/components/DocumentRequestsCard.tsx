@@ -299,7 +299,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           .from('document_requests')
           .select('*')
           .eq('is_global', true)
-          .eq('university_id', universityId)
+          .or(`university_id.eq.${universityId},university_id.is.null`)
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
         globalRequests = (globalData || []).filter((req: any) => {
