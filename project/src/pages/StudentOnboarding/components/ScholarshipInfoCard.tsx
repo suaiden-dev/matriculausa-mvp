@@ -444,7 +444,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
             </div>
           )}
 
-          {scholarship.universities?.university_fees_page_url && (
+          {canViewSensitive && scholarship.universities?.university_fees_page_url && (
             <a
               href={scholarship.universities.university_fees_page_url}
               target="_blank"

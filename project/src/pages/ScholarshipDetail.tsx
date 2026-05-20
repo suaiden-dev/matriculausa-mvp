@@ -651,7 +651,7 @@ const ScholarshipDetail: React.FC = () => {
         <p className="text-xs text-slate-500 mt-1 font-medium">
           {t('scholarshipsPage.detail.internalFeesDescription', 'Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.')}
         </p>
-        {scholarship.universities?.university_fees_page_url && (
+        {canViewSensitive && scholarship.universities?.university_fees_page_url && (
           <div className="mt-2.5">
             <a 
               href={scholarship.universities.university_fees_page_url}

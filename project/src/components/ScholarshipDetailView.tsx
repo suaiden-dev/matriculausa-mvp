@@ -386,7 +386,7 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                     <p className="text-[10px] text-blue-700 mt-1 font-medium">
                       {t('scholarshipsPage.modal.internalFeesDisclaimer') || 'These fees are paid directly to the university, not through our platform'}
                     </p>
-                    {scholarship.universities?.university_fees_page_url && (
+                    {canViewSensitive && scholarship.universities?.university_fees_page_url && (
                       <a 
                         href={scholarship.universities.university_fees_page_url}
                         target="_blank"
