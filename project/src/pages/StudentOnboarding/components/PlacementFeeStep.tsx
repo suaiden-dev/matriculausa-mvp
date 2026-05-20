@@ -254,10 +254,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             const fullAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
 
             // Usar valor com desconto do cupom se aplicado
-            const finalAmount = couponFinalAmount !== undefined ? couponFinalAmount
+            const baseFinalAmount = couponFinalAmount !== undefined ? couponFinalAmount
                 : (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                     ? couponValidation.finalAmount
                     : fullAmount;
+            // Se installment ativo, cobrar apenas 50% agora
+            const finalAmount = installmentEnabled ? Math.ceil(baseFinalAmount / 2 * 100) / 100 : baseFinalAmount;
 
             const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
                 ? promotionalCoupon.trim().toUpperCase()
@@ -276,8 +278,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 },
                 body: JSON.stringify({
                     scholarships_ids: [application.scholarship_id],
-                    // Sempre envia o valor original — a Edge Function usa metadata.final_amount para o desconto
-                    amount: fullAmount,
+                    amount: finalAmount,
                     payment_method: method,
                     success_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
                     cancel_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=cancelled`,
@@ -436,9 +437,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                 : baseAmount;
                             // Se o admin habilitou parcelamento, o aluno paga 50% agora
                             const effectiveAmount = installmentEnabled ? Math.ceil(couponEffectiveBase / 2 * 100) / 100 : couponEffectiveBase;
-                            // Stripe/PIX/Parcelow sempre cobram valor cheio; só Zelle usa effectiveAmount (parcela)
-                            const cardAmount = calculateCardAmountWithFees(couponEffectiveBase);
-                            const pixInfo = calculatePIXTotalWithIOF(couponEffectiveBase, exchangeRate);
+                            // Todos os métodos usam effectiveAmount quando installment está ativo
+                            const cardAmount = calculateCardAmountWithFees(effectiveAmount);
+                            const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
 
                             return (
                                 <div
@@ -764,7 +765,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right flex flex-col items-end shrink-0">
-                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(couponEffectiveBase, true)}</div>
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(effectiveAmount, true)}</div>
                                                                         <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                                                     </div>
                                                                 </div>
