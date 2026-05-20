@@ -2586,7 +2586,7 @@ const AdminStudentDetails: React.FC = () => {
     }
 
     const appDocuments = currentApp.documents || [];
-    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    const requiredTypes = ['passport'];
 
     // 1. Verificar se os documentos obrigatórios básicos estão presentes
     const presentTypes = appDocuments.map((d: any) => (d.type || '').toLowerCase());

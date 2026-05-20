@@ -389,7 +389,7 @@ const StudentDetails: React.FC = () => {
   const syncDocumentsStatus = async () => {
     if (!application?.documents || !application?.user_profiles?.user_id) return;
     
-    const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+    const allDocsApproved = ['passport']
       .every((docType) => {
         const doc = application.documents.find((d: any) => d.type === docType);
         return doc && (doc as any).status === 'approved';
@@ -1209,14 +1209,14 @@ const StudentDetails: React.FC = () => {
     if (!application) return;
 
     // Verificar se todos os documentos básicos estão aprovados
-    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    const requiredTypes = ['passport'];
     const allApproved = requiredTypes.every(type => {
       const doc = latestDocByType(type);
       return doc && doc.status === 'approved';
     });
 
     if (!allApproved) {
-      if (!confirm('Not all required documents (Passport, Diploma, Funds Proof) are approved. Do you want to approve the application anyway?')) {
+      if (!confirm('Passport is not yet approved. Do you want to approve the application anyway?')) {
         return;
       }
     }
