@@ -1,95 +1,84 @@
-export interface DocumentRequestUpload {
+export interface UploadRecord {
   id: string;
-  document_request_id: string;
-  file_url: string;
   uploaded_at: string;
-  status: string;
-  review_notes?: string;
-  rejection_reason?: string;
-  uploaded_by?: string;
-  is_admin_upload?: boolean;
+  reviewed_at?: string | null;
+  status: 'under_review' | 'approved' | 'rejected';
+  file_url: string;
+  [key: string]: any;
+}
+
+export interface GroupedSubmissions {
+  closedGroups: UploadRecord[][];
+  currentGroup: UploadRecord[];
 }
 
 /**
- * Extrai o nome original do arquivo a partir de sua URL de armazenamento,
- * decodificando caracteres especiais e removendo timestamps adicionados no upload.
+ * Groups individual file uploads into logical "submission rounds" using review timestamps.
  *
- * Exemplo:
- * "1716161616_meu-documento.pdf" -> "meu-documento.pdf"
+ * Algorithm: all uploads whose `uploaded_at` is earlier than or equal to the earliest
+ * `reviewed_at` belong to the same submission round.  Once a round is fully reviewed
+ * (every file is approved or rejected) it is pushed to `closedGroups`.  Uploads that
+ * have not been reviewed yet (no `reviewed_at` on any remaining upload) form the
+ * `currentGroup`.
  */
-export function getFileName(fileUrl: string | null | undefined): string {
-  if (!fileUrl) return '';
+export function groupUploadsBySubmission(uploads: UploadRecord[]): GroupedSubmissions {
+  if (uploads.length === 0) return { closedGroups: [], currentGroup: [] };
 
-  // Obtém a última parte do caminho/URL
-  const parts = fileUrl.split('/');
-  const lastPart = parts[parts.length - 1];
+  const sorted = [...uploads].sort(
+    (a, b) => new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime()
+  );
 
-  let decoded = lastPart;
+  const closedGroups: UploadRecord[][] = [];
+  let remaining = [...sorted];
+
+  while (remaining.length > 0) {
+    const minReviewedAt = remaining
+      .filter(u => u.reviewed_at)
+      .reduce((min: number | null, u) => {
+        const t = new Date(u.reviewed_at!).getTime();
+        return min === null ? t : Math.min(min, t);
+      }, null as number | null);
+
+    // No reviews yet — all remaining uploads are the current pending submission
+    if (minReviewedAt === null) return { closedGroups, currentGroup: remaining };
+
+    const thisGroup = remaining.filter(
+      u => new Date(u.uploaded_at).getTime() <= minReviewedAt
+    );
+    remaining = remaining.filter(
+      u => new Date(u.uploaded_at).getTime() > minReviewedAt
+    );
+
+    if (thisGroup.length === 0) break;
+
+    const allReviewed = thisGroup.every(
+      u => u.status === 'rejected' || u.status === 'approved'
+    );
+
+    if (allReviewed) {
+      closedGroups.push(thisGroup);
+    } else {
+      // Some files still pending review — this is the current active submission
+      return { closedGroups, currentGroup: thisGroup };
+    }
+  }
+
+  return { closedGroups, currentGroup: [] };
+}
+
+/**
+ * Extracts a human-readable filename from a Supabase storage path or URL.
+ * Strips the leading timestamp prefix (e.g. "1779164388763_" or "1779164388763-")
+ * and URL-decodes the result.
+ */
+export function getFileName(fileUrl: string): string {
+  const segment = fileUrl.split('/').pop() || fileUrl;
+  const withoutTimestamp = segment
+    .replace(/^\d{10,}_/, '')
+    .replace(/^\d{10,}-/, '');
   try {
-    decoded = decodeURIComponent(lastPart);
-  } catch (e) {
-    // Silencia erros de decodificação se a string estiver mal formatada
+    return decodeURIComponent(withoutTimestamp);
+  } catch {
+    return withoutTimestamp;
   }
-
-  // Remove o timestamp inicial (dígitos numéricos seguidos de underscore)
-  return decoded.replace(/^\d+_(.+)$/, '$1');
-}
-
-/**
- * Agrupa uploads de documentos por lote de submissão/tentativa usando
- * a proximidade temporal dos envios (loteamento de múltiplos arquivos).
- *
- * Retorna dois blocos:
- * - closedGroups: Tentativas passadas já revisadas (aprovadas ou rejeitadas).
- * - currentGroup: Tentativa atual pendente de revisão (contém ao menos um item 'under_review').
- */
-export function groupUploadsBySubmission(uploads: DocumentRequestUpload[]) {
-  if (!uploads || uploads.length === 0) {
-    return { closedGroups: [], currentGroup: [] };
-  }
-
-  // 1. Ordena os uploads por data de envio de forma ascendente
-  const sortedUploads = [...uploads].sort((a, b) => {
-    return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
-  });
-
-  // 2. Agrupa uploads cuja diferença de tempo de envio seja de até 10 minutos
-  const TIME_THRESHOLD_MS = 10 * 60 * 1000;
-  const groups: DocumentRequestUpload[][] = [];
-
-  for (const upload of sortedUploads) {
-    if (groups.length === 0) {
-      groups.push([upload]);
-    } else {
-      const lastGroup = groups[groups.length - 1];
-      const lastUploadInGroup = lastGroup[lastGroup.length - 1];
-
-      const timeDiff = new Date(upload.uploaded_at).getTime() - new Date(lastUploadInGroup.uploaded_at).getTime();
-
-      if (timeDiff <= TIME_THRESHOLD_MS) {
-        lastGroup.push(upload);
-      } else {
-        groups.push([upload]);
-      }
-    }
-  }
-
-  // 3. Classifica os grupos em finalizados (closedGroups) ou pendentes (currentGroup)
-  const closedGroups: DocumentRequestUpload[][] = [];
-  let currentGroup: DocumentRequestUpload[] = [];
-
-  if (groups.length > 0) {
-    const lastGroup = groups[groups.length - 1];
-    // Se o grupo mais recente tiver pelo menos um upload 'under_review', é a tentativa ativa
-    const hasPending = lastGroup.some(u => u.status === 'under_review');
-
-    if (hasPending) {
-      currentGroup = lastGroup;
-      closedGroups.push(...groups.slice(0, -1));
-    } else {
-      closedGroups.push(...groups);
-    }
-  }
-
-  return { closedGroups, currentGroup };
 }
