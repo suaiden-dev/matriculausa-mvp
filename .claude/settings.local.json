@@ -56,7 +56,11 @@
       "Bash(grep:*)",
       "Bash(rtk vitest:*)",
       "Bash(node:*)",
-      "mcp__supabase__list_tables"
+      "mcp__supabase__list_tables",
+      "Bash(find supabase/migrations -name \"*.sql\" -exec grep -l \"documents\" {} \\\\;)",
+      "Bash(xargs -I {} grep -l \"documents\" \"{}\")",
+      "Bash(supabase --version)",
+      "Bash(rtk supabase:*)"
     ]
   }
 }
