@@ -88,6 +88,7 @@ export interface StudentRecord {
   docs_total_uploaded?: number;
   docs_total_approved?: number;
   docs_total_rejected?: number;
+  docs_total_rejected_files?: number;
   docs_total_under_review?: number;
 
   // Basic docs aggregation fields (passport, diploma, funds_proof)

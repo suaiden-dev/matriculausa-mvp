@@ -420,22 +420,20 @@ export const useDocumentRequestHandlers = (
     setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: true }));
     try {
       // Buscar informações do upload antes de atualizar
+      // Usa joins opcionais (sem !inner) para suportar global requests onde
+      // scholarship_application_id é null
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
         .select(`
           id,
           document_request_id,
           file_url,
+          uploaded_by,
           document_requests!inner(
             title,
             scholarship_application_id,
-            scholarship_applications!inner(
-              student_id,
-              user_profiles!inner(
-                user_id,
-                email,
-                full_name
-              )
+            scholarship_applications(
+              student_id
             )
           )
         `)
@@ -448,7 +446,7 @@ export const useDocumentRequestHandlers = (
 
       const { error } = await supabase
         .from('document_request_uploads')
-        .update({ 
+        .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
           reviewed_by: userId,
@@ -458,11 +456,33 @@ export const useDocumentRequestHandlers = (
 
       if (error) throw error;
 
-      // Extrair studentProfile do uploadData
+      // Buscar student profile via uploaded_by (funciona para requests globais e específicos)
+      // Mesmo padrão do handleApproveDocumentRequest
+      let studentProfile: { user_id?: string; email?: string; full_name?: string } | null = null;
+      if (uploadData?.uploaded_by) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('user_id, email, full_name')
+          .eq('id', uploadData.uploaded_by)
+          .maybeSingle();
+        if (profile) studentProfile = profile;
+      }
+
+      // Fallback: tentar extrair pelo scholarship_application quando uploaded_by não resolve
+      if (!studentProfile) {
+        const docReqFallback: any = Array.isArray(uploadData?.document_requests) ? (uploadData as any).document_requests[0] : uploadData?.document_requests;
+        const scholarshipApp = Array.isArray(docReqFallback?.scholarship_applications) ? docReqFallback.scholarship_applications[0] : docReqFallback?.scholarship_applications;
+        if (scholarshipApp?.student_id) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id, email, full_name')
+            .eq('id', scholarshipApp.student_id)
+            .maybeSingle();
+          if (profile) studentProfile = profile;
+        }
+      }
+
       const docRequest: any = Array.isArray(uploadData?.document_requests) ? (uploadData as any).document_requests[0] : uploadData?.document_requests;
-      const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
-      const userProfiles = Array.isArray(scholarshipApp?.user_profiles) ? scholarshipApp.user_profiles[0] : scholarshipApp?.user_profiles;
-      const studentProfile = userProfiles || null;
 
       // Log da ação
       if (logAction && userId) {
@@ -533,11 +553,12 @@ export const useDocumentRequestHandlers = (
           const accessToken = session?.access_token;
           
           if (accessToken) {
-            const documentTitle = uploadData.document_requests.title || 'Document';
-            const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
+            const documentTitle = docRequest?.title || 'Document';
+            const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
+            const studentProfileId = scholarshipApp?.student_id;
 
             // uploaded_by já é user_profiles.id — usar diretamente como fallback
-            const finalStudentId = studentProfileId || uploadData.uploaded_by;
+            const finalStudentId = studentProfileId || uploadData?.uploaded_by;
 
             const notificationPayload = {
               student_id: finalStudentId,
