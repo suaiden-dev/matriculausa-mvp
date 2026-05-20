@@ -38,10 +38,17 @@
     },
     "sidebar": {
       "title": "Resumo do Pagamento",
-      "selectionFee": "Taxa do Processo Seletivo",
+      "selectionFee": "Processo Seletivo",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Agora",
-      "feeExplanation": "A Taxa do Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "benefits": {
+        "title": "O Processo Seletivo te dá acesso a:",
+        "item1": "Tenha acesso a mais de 154 bolsas exclusivas nos EUA.",
+        "item2": "Escolha de até 4 bolsas de estudos exclusivas alinhadas ao seu perfil.",
+        "item3": "Envie seus documentos para análise e aprovação junto às universidades parceiras.",
+        "item4": "Tenha suporte especializado e humanizado durante todo o processo.",
+        "item5": "Conclusão do processo com a sua carta de aceitação em mãos, pronto para estudar."
+      },
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa de Bolsa",
@@ -49,7 +56,7 @@
       "futureFeesNote": "As taxas futuras são estimativas e variam conforme a universidade.",
       "couponApplied": "Cupom Aplicado",
       "refundAssuranceTitle": "Garantia de Reembolso",
-      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, a taxa do processo seletivo será totalmente reembolsada.",
+      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, o pagamento do Processo Seletivo será totalmente reembolsado.",
       "alreadyPaidContinue": "Continuar no Onboarding"
     },
     "terms": {
@@ -101,7 +108,7 @@
       },
       "alreadyPaid": {
         "title": "Taxa Já Paga!",
-        "description": "Você já realizou o pagamento da taxa do processo seletivo. Pode prosseguir com sua inscrição.",
+        "description": "Você já realizou o pagamento do Processo Seletivo. Pode prosseguir com sua inscrição.",
         "continue": "Continuar no Onboarding"
       }
     }
@@ -112,7 +119,7 @@
       "of": "de",
       "initiating": "Iniciando",
       "steps": {
-        "selectionFee": "Taxa do Processo Seletivo",
+        "selectionFee": "Processo Seletivo",
         "selectionSurvey": "Questionário",
         "scholarshipSelection": "Escolha de Bolsas",
         "processType": "Tipo de Processo",
