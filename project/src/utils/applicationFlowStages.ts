@@ -424,6 +424,9 @@ export function getStepStatus(
       return 'skipped';
 
     case 'visa_approval':
+      // Visa approval only applies to initial (new F-1) students.
+      // COS students do status change via I-539; transfer students use SEVIS transfer.
+      if (student.student_process_type !== 'initial') return 'skipped';
       return student.visa_approved ? 'completed' : 'pending';
 
     // Legacy stages — kept for backward compat, no longer in flow array

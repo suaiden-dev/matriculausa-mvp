@@ -963,7 +963,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 acceptance_letter_url: publicUrl,
                                 acceptance_letter_status: 'sent',
                                 acceptance_letter_sent_at: new Date().toISOString(),
-                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', currentApplication.id);
                             if (updateError) throw updateError;
@@ -973,7 +972,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_url: publicUrl,
                               acceptance_letter_status: 'sent',
                               acceptance_letter_sent_at: new Date().toISOString(),
-                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
                             queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
@@ -1124,7 +1122,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 acceptance_letter_url: publicUrl,
                                 acceptance_letter_status: 'sent',
                                 acceptance_letter_sent_at: new Date().toISOString(),
-                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
@@ -1142,7 +1139,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_url: publicUrl,
                               acceptance_letter_status: 'sent',
                               acceptance_letter_sent_at: new Date().toISOString(),
-                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
                             queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
@@ -1228,7 +1224,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .update({
                                 acceptance_letter_status: 'sent',
                                 acceptance_letter_sent_at: new Date().toISOString(),
-                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
@@ -1244,7 +1239,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               ...prev,
                               acceptance_letter_status: 'sent',
                               acceptance_letter_sent_at: new Date().toISOString(),
-                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
                             queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
                             setMarkSentSuccess('Acceptance letter marked as sent.');
