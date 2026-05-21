@@ -4,7 +4,7 @@ import { useStudentUnreadMessages } from '../../../hooks/useStudentUnreadMessage
 import { useGlobalStudentUnread } from '../../../hooks/useGlobalStudentUnread';
 import SchoolApplicationKanbanView from './SchoolApplicationKanbanView';
 import SchoolApplicationTableView from './SchoolApplicationTableView';
-import { StudentRecord } from '../../../components/AdminDashboard/StudentApplicationsView';
+import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import ProfileCompletionGuard from '../../../components/ProfileCompletionGuard';
 import { Search, LayoutGrid, Table } from 'lucide-react';
 import { Scholarship } from '../../../types';
@@ -55,6 +55,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
 
         application_id: app.id,
         scholarship_id: app.scholarship_id,
+        university_id: university?.id || scholarship.university_id || null,
         status: status,
         application_status: status, // Keeping it simple, matching DB
         applied_at: app.created_at,
@@ -97,6 +98,12 @@ const SchoolApplicationTrackingView: React.FC = () => {
         visa_approved: student.visa_approved || false,
         documents_uploaded: docsUploaded > 0,
         source: student.source || app.source || null,
+
+        // Novos campos para suportar etapas de visto e reintegração
+        visa_transfer_active: student.visa_transfer_active,
+        has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
+        has_paid_ds160_package: student.has_paid_ds160_package || false,
+        has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
       } as StudentRecord;
     });
 
