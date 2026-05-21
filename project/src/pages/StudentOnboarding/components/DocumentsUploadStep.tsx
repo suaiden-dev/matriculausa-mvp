@@ -29,8 +29,8 @@ import { formatCurrency } from '../../../utils/currency';
 import { compressImage } from '../../../utils/imageCompression';
 import TruncatedText from '../../../components/TruncatedText';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
-
 import PencilLoader from '../../../components/PencilLoader';
+
 
 
 const DOCUMENT_TYPES = [
@@ -548,15 +548,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? t('studentOnboarding.documentsUpload.approvedApps.title') : t('studentOnboarding.documentsUpload.review.title')}
               </h2>
-              {!isApproved && (
-                <button
-                  onClick={() => setIsLocked(false)}
-                  className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  {t('studentDashboard.documentsUploadStep.reuploadPassport', 'Re-upload Passport')}
-                </button>
-              )}
             </div>
 
             {/* Main Standard White Container */}
@@ -1121,23 +1112,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-      {/* Upload Overlay */}
-      {uploading && (
-        <div
-          className="fixed top-0 left-0 w-screen h-screen z-[9999] flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-500"
-          style={{ margin: 0, padding: 0 }}
-        >
-          <div className="bg-white rounded-[2.5rem] p-12 max-w-sm w-full shadow-2xl text-center space-y-6 border border-white/20 relative mx-auto my-auto">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-            <p className="text-lg font-black text-gray-900 uppercase tracking-tight">
-              {t('studentDashboard.documentsUploadStep.uploadingDocuments')}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Analysis Overlay */}
-      {analyzing && (
+      {/* Upload + Analysis Overlay */}
+      {(uploading || analyzing) && (
         <div
           className="fixed top-0 left-0 w-screen h-screen z-[9999] flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-500"
           style={{ margin: 0, padding: 0 }}
