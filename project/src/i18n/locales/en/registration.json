@@ -38,13 +38,20 @@
     },
     "sidebar": {
       "title": "Payment Summary",
-      "selectionFee": "Selection Process Fee",
+      "selectionFee": "Selection Process",
       "total": "TOTAL",
       "currentFee": "Total to Pay Now",
       "couponApplied": "Coupon Applied",
-      "feeExplanation": "The Selection Process Fee is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
+      "benefits": {
+        "title": "The Selection Process gives you access to:",
+        "item1": "Access more than 154 exclusive scholarships in the US.",
+        "item2": "Choose up to 4 exclusive scholarships tailored to your profile.",
+        "item3": "Submit your documents for review and approval directly with our partner universities.",
+        "item4": "Dedicated expert support throughout the entire process.",
+        "item5": "Complete the process with your acceptance letter in hand, ready to study."
+      },
       "refundAssuranceTitle": "Refund Guarantee",
-      "refundAssuranceText": "If you are not accepted to any partner university, your selection process fee will be fully refunded.",
+      "refundAssuranceText": "If you are not accepted to any partner university, your selection process payment will be fully refunded.",
       "alreadyPaidContinue": "Continue to Onboarding",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Application Fee",
@@ -101,7 +108,7 @@
       },
       "alreadyPaid": {
         "title": "Fee Already Paid!",
-        "description": "You have already paid the selection process fee. You can proceed with your application.",
+        "description": "You have already paid for the Selection Process. You can proceed with your application.",
         "continue": "Continue to Onboarding"
       }
     }
@@ -112,7 +119,7 @@
       "of": "of",
       "initiating": "Initiating",
       "steps": {
-        "selectionFee": "Selection Process Fee",
+        "selectionFee": "Selection Process",
         "selectionSurvey": "Questionnaire",
         "scholarshipSelection": "Scholarship Selection",
         "processType": "Process Type",
