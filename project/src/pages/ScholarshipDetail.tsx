@@ -673,7 +673,22 @@ const ScholarshipDetail: React.FC = () => {
               <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-slate-800">{fee.category || fee.name}</span>
-                {fee.details && <span className="text-xs text-slate-500 mt-1 leading-relaxed">{fee.details}</span>}
+                {fee.details && (
+                  <span className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    {(() => {
+                      const standardKeys: Record<string, string> = {
+                        'One-time': 'scholarshipsPage.frequencies.oneTime',
+                        'Per Semester': 'scholarshipsPage.frequencies.perSemester',
+                        'Per Year': 'scholarshipsPage.frequencies.perYear',
+                        'Per Credit': 'scholarshipsPage.frequencies.perCredit',
+                        'Per Course': 'scholarshipsPage.frequencies.perCourse',
+                        'Monthly': 'scholarshipsPage.frequencies.monthly'
+                      };
+                      const key = standardKeys[fee.details.trim()];
+                      return key ? t(key, fee.details) : fee.details;
+                    })()}
+                  </span>
+                )}
               </div>
             </div>
             <span className="text-lg font-bold text-slate-900">${Number(fee.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
