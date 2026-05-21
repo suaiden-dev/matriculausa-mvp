@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
@@ -231,18 +231,6 @@ const Universities: React.FC = () => {
                   {t('universitiesPage.header.subtitle')}
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-end">
-                  <button 
-                    onClick={() => document.getElementById('university-search')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#b01218] text-white rounded-2xl font-black text-xl transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden"
-                  >
-                    <span className="relative z-10">Explorar Agora</span>
-                    <span className="relative z-10 bg-white/20 p-1 rounded-lg">
-                      <ArrowDown className="w-6 h-6 group-hover:translate-y-1 transition-transform" />
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  </button>
-                </div>
               </motion.div>
             </div>
           </div>

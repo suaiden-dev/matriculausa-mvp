@@ -28,6 +28,12 @@
     "zellePaymentPending": "Please wait for your Zelle payment verification before starting a new process."
   },
   "footer": {
+    "sections": {
+      "platform": "The Platform",
+      "helpContact": "Help & Contact",
+      "explore": "Explore",
+      "followUs": "Follow us on social media"
+    },
     "company": {
       "title": "Company",
       "about": "About Us",
@@ -125,7 +131,8 @@
         "processErrorRetry": "Error processing unsubscribe request. Please try again."
       }
     },
-    "copyright": "© 2026 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Made with ❤ for our students"
   },
   "common": {
     "select": "Select",

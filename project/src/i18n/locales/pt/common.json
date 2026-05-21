@@ -28,6 +28,12 @@
     "zellePaymentPending": "Aguarde a verificação do seu pagamento Zelle antes de iniciar um novo processo."
   },
   "footer": {
+    "sections": {
+      "platform": "A Plataforma",
+      "helpContact": "Ajuda e Contato",
+      "explore": "Explore",
+      "followUs": "Siga-nos nas redes sociais"
+    },
     "company": {
       "title": "Empresa",
       "about": "Sobre Nós",
@@ -125,7 +131,8 @@
         "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. Todos os direitos reservados."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Feito com ❤ para nossos estudantes"
   },
   "common": {
     "select": "Selecione",

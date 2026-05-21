@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Star, BookOpen, ChevronRight, Clock, Gift, Image } from 'lucide-react';
+import { ArrowRight, Star, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,8 @@ import { useUniversityLogos } from '../hooks/useUniversityLogos';
 import SEOHead from '../components/SEO/SEOHead';
 import { useWindowSize } from 'usehooks-ts';
 import { motion } from 'framer-motion';
+import { useScholarships } from '../hooks/useScholarships';
+import { useTranslation } from 'react-i18next';
 
 const Home: React.FC = () => {
   
@@ -23,75 +25,129 @@ const Home: React.FC = () => {
   const STATIC_SCHOLARSHIPS = [
     {
       id: 'b1069ada-917d-4f08-a5d0-3d6592e0a875',
-      title: 'Master of Computer Information Systems',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'STEM Scholarship',
+      title: 'STEM Scholarship',
+      level: 'graduate',
+      field_of_study: 'Master of Computer Information Systems',
       description: 'STEM Degree Scholarship covers 53% tuition of MCIS program for qualified students. During the enrollment students may apply for full-time or part-time CPT and 3 years OPT upon graduation.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_01_campus_bandeira.webp',
+      original_annual_value: 18000,
+      annual_value_with_scholarship: 8500,
+      scholarship_percentage: 53,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: '8e44fc08-3363-4c5e-a236-572206ecad65',
-      title: 'Master of Business Administration',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'Leadership Scholarship',
+      title: 'Leadership Scholarship',
+      level: 'graduate',
+      field_of_study: 'Master of Business Administration',
       description: 'Established for students who demonstrate leadership. Award: Up to $4,000 tuition per semester. Eligibility: Must have completed two semesters with a 3.5/4.0 GPA.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_03_masculino_campus_edificio.webp',
+      original_annual_value: 16000,
+      annual_value_with_scholarship: 12000,
+      scholarship_percentage: 25,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
-      id: 'aad50945-c9c4-4284-84e7-ca2779dcab1b',
-      title: 'Master of Philosophy',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: "Dean's Scholarship",
+      id: '7cc8fce4-e7c1-47f1-a49d-d722c44184a3',
+      title: "Dean's Scholarship",
+      level: 'graduate',
+      field_of_study: 'Master of Philosophy',
       description: "The Dean's Scholarship covers 15% or more of tuition ONLY. Other fees such as registration, technology fees, etc. are not included in the tuition.",
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_09_feminino_mochila_bandeira.webp',
+      original_annual_value: 15000,
+      annual_value_with_scholarship: 12750,
+      scholarship_percentage: 15,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: '83f80002-f56f-45d9-90bd-3f7931d78e4e',
-      title: 'Bachelor of Arts in Biblical Studies',
-      level: 'Graduação / Bacharelado',
-      field_of_study: 'Faculty and Staff Scholarship',
+      title: 'Faculty and Staff Scholarship',
+      level: 'undergraduate',
+      field_of_study: 'Bachelor of Arts in Biblical Studies',
       description: 'Established by the faculty and staff of Oikos University for deserving students chosen by the scholarship committee. Award: Up to 10% of tuition per semester.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_12_masculino_campus_bandeira.webp',
+      original_annual_value: 12000,
+      annual_value_with_scholarship: 10800,
+      scholarship_percentage: 10,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: '9a010b5e-df72-4a03-ab2e-9f032646ba40',
-      title: 'Master of Divinity',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'Chaplain Scholarship',
+      title: 'Chaplain Scholarship',
+      level: 'graduate',
+      field_of_study: 'Master of Divinity',
       description: 'Chaplain’s Scholarship has been established to honor students who have vowed and being trained as a professional pastor. Award: Up to 50% of tuition.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_13_feminino_bolsa_bandeira.webp',
+      original_annual_value: 14000,
+      annual_value_with_scholarship: 7000,
+      scholarship_percentage: 50,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: '59daad29-68be-43e3-851c-44ce3c014948',
-      title: 'Doctor of Philosophy',
-      level: 'Doutorado',
-      field_of_study: "President's Sacrificial Scholarship",
+      title: "President's Sacrificial Scholarship",
+      level: 'doctorate',
+      field_of_study: 'Doctor of Philosophy',
       description: "The President's Sacrificial Leadership Scholarship has been established to honor students who have exhibited extraordinary leadership qualities.",
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_07_feminino_campus_edificio.webp',
+      original_annual_value: 20000,
+      annual_value_with_scholarship: 15000,
+      scholarship_percentage: 25,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: 'b7bbfb1c-8e65-4624-84be-b6cae1e5ca18',
-      title: 'Master of Business In Business Analytics',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'STEM',
+      title: 'STEM Scholarship',
+      level: 'graduate',
+      field_of_study: 'Master of Business In Business Analytics',
       description: 'Prepare-se para o mercado com o programa STEM de Business Analytics. Carga horária de 30 Credit hours para formação completa.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_08_feminino_mochila_bandeira.webp',
+      original_annual_value: 18000,
+      annual_value_with_scholarship: 9000,
+      scholarship_percentage: 50,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: 'fb5e4a34-ba94-41b9-b14f-cd126f8119e7',
-      title: 'Master Of Science In Computer Science',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'STEM',
+      title: 'STEM Scholarship',
+      level: 'graduate',
+      field_of_study: 'Master Of Science In Computer Science',
       description: 'Aprofunde seus conhecimentos em tecnologia e desenvolvimento de software. Carga horária total de 31 Credit hours.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_02_feminino_campus_edificio.webp',
+      original_annual_value: 18000,
+      annual_value_with_scholarship: 9000,
+      scholarship_percentage: 50,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     },
     {
       id: 'cfbcc249-da4f-4892-9ecf-a3f9d2e694f7',
-      title: 'MBA With Data Analytics Concentration',
-      level: 'Mestrado / Pós-Graduação',
-      field_of_study: 'STEM',
+      title: 'STEM Scholarship',
+      level: 'graduate',
+      field_of_study: 'MBA With Data Analytics Concentration',
       description: 'Combine administração de negócios com análise de dados avançada. Carga horária de 36 Credit hours.',
       image_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-banners/banner_card_05_masculino_campus_edificio.webp',
+      original_annual_value: 18000,
+      annual_value_with_scholarship: 9000,
+      scholarship_percentage: 50,
+      delivery_mode: 'in_person',
+      university_name: 'Oikos University',
+      work_permissions: ['CPT', 'OPT']
     }
   ];
 
@@ -100,8 +156,67 @@ const Home: React.FC = () => {
   const sliderRef = useRef<HTMLDivElement>(null);
   const [slideItemWidth, setSlideItemWidth] = useState(0);
 
-  // Array ampliado para simular loop infinito de forma suave
-  const infiniteScholarships = Array(15).fill(STATIC_SCHOLARSHIPS).flat();
+  // Integração Inteligente com Supabase e Hooks de Tradução Isolada
+  const { t: tSch } = useTranslation(['scholarships', 'common', 'school', 'dashboard']);
+  const { scholarships: dbScholarships } = useScholarships();
+
+  const getLevelLabel = (lvl: string) => {
+    switch (lvl?.toLowerCase()) {
+      case 'undergraduate':
+        return tSch('scholarshipsPage.filters.levels.undergraduate', 'Graduação');
+      case 'graduate':
+        return tSch('scholarshipsPage.filters.levels.graduate', 'Pós-Graduação');
+      case 'doctorate':
+        return tSch('scholarshipsPage.filters.levels.doctorate', 'Doutorado');
+      default:
+        return lvl;
+    }
+  };
+
+  const getDeliveryModeLabel = (mode: string) => {
+    switch (mode?.toLowerCase()) {
+      case 'in_person':
+        return tSch('scholarshipsPage.detail.inPersonUS', 'Presencial (Estados Unidos)');
+      case 'online':
+        return tSch('scholarshipsPage.filters.courseModalities.online', 'Online');
+      case 'hybrid':
+        return tSch('scholarshipsPage.filters.courseModalities.hybrid', 'Híbrido');
+      default:
+        return mode;
+    }
+  };
+
+  const formatAmount = (amount: any) => {
+    if (typeof amount === 'string') return amount;
+    if (typeof amount === 'number') return amount.toLocaleString('en-US');
+    return amount;
+  };
+
+  const canViewSensitive = isAuthenticated && (
+    user?.role !== 'student' || 
+    (userProfile as any)?.has_paid_selection_process_fee ||
+    (userProfile as any)?.has_paid_application_fee
+  );
+
+  const HOME_SCHOLARSHIP_IDS = [
+    'b1069ada-917d-4f08-a5d0-3d6592e0a875', // STEM Scholarship (MCIS)
+    '8e44fc08-3363-4c5e-a236-572206ecad65', // Leadership Scholarship (MBA)
+    '7cc8fce4-e7c1-47f1-a49d-d722c44184a3', // Dean's Scholarship (MPhil)
+    '83f80002-f56f-45d9-90bd-3f7931d78e4e', // Faculty and Staff Scholarship (Biblical Studies)
+    '9a010b5e-df72-4a03-ab2e-9f032646ba40', // Chaplain Scholarship (Divinity)
+    '59daad29-68be-43e3-851c-44ce3c014948', // President's Sacrificial Scholarship (PhD)
+    'b7bbfb1c-8e65-4624-84be-b6cae1e5ca18', // Master of Business In Business Analytics
+    'fb5e4a34-ba94-41b9-b14f-cd126f8119e7', // Master Of Science In Computer Science
+    'cfbcc249-da4f-4892-9ecf-a3f9d2e694f7'  // MBA With Data Analytics Concentration
+  ];
+
+  const featuredScholarships = React.useMemo(() => {
+    if (!dbScholarships || dbScholarships.length === 0) return [];
+    return HOME_SCHOLARSHIP_IDS.map(id => dbScholarships.find(s => s.id === id)).filter(Boolean);
+  }, [dbScholarships]);
+
+  const activeList = featuredScholarships.length > 0 ? featuredScholarships : STATIC_SCHOLARSHIPS;
+  const infiniteScholarships = Array(15).fill(activeList).flat();
 
   // Cálculo de largura exata do card em pixels para evitar esticamentos (stretching)
   useEffect(() => {
@@ -259,14 +374,20 @@ const Home: React.FC = () => {
             <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50/50 to-transparent"></div>
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-              <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                 <div className="max-w-2xl text-center md:text-left mx-auto md:mx-0">
-                  <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6 leading-tight">
+                  <h2 className="text-4xl md:text-5xl font-black text-[#05294E] leading-tight">
                     {t('home.featuredScholarships.title')}
                   </h2>
-                  <p className="text-lg text-slate-600 leading-relaxed font-medium">
-                    {t('home.featuredScholarships.subtitle')}
-                  </p>
+                </div>
+                <div className="shrink-0 flex justify-center">
+                  <Link
+                    to="/scholarships"
+                    className="group inline-flex items-center gap-1.5 text-[#05294E] hover:text-[#D0151C] font-black text-lg transition-colors duration-300"
+                  >
+                    <span>Ver todas</span>
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </div>
               </div>
 
@@ -312,63 +433,179 @@ const Home: React.FC = () => {
                       sliderRef.current?.removeAttribute('data-touch-end');
                     }}
                   >
-                    {infiniteScholarships.map((scholarship, index) => (
-                      <div 
-                        key={`${scholarship.id}-${index}`}
-                        className="flex-shrink-0"
-                        style={{ width: slideItemWidth > 0 ? `${slideItemWidth}px` : '100%' }}
-                      >
-                        <motion.div
-                          className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 flex flex-col h-[550px] group relative"
-                          whileHover={{ y: -10 }}
-                          transition={{ duration: 0.3 }}
+                    {infiniteScholarships.map((scholarship: any, index) => {
+                      const recAnnualSavings = (Number(scholarship.original_annual_value) || 0) - (Number(scholarship.annual_value_with_scholarship) || 0);
+                      const recImage = scholarship.image_url || scholarship.universities?.image_url;
+
+                      return (
+                        <div 
+                          key={`${scholarship.id}-${index}`}
+                          className="flex-shrink-0"
+                          style={{ width: slideItemWidth > 0 ? `${slideItemWidth}px` : '100%' }}
                         >
-                          {/* Image Section */}
-                          <div className="relative h-48 w-full overflow-hidden">
-                            {scholarship.image_url ? (
-                              <img 
-                                src={scholarship.image_url} 
-                                alt={scholarship.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-200 transition-colors">
-                                <Image className="h-10 w-10 opacity-20" />
+                          <motion.div
+                            onClick={() => {
+                              navigate(`/scholarships/${scholarship.id}`);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="group bg-white rounded-[2rem] border border-slate-200 shadow-[0_12px_30px_rgba(0,0,0,0.04)] hover:border-blue-200 hover:shadow-[0_24px_50px_rgba(5,41,78,0.12)] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col h-[480px] relative text-left"
+                            whileHover={{ y: -10 }}
+                          >
+                            {/* Card Header (Cover Image with Course Banner & Matricula Logo) */}
+                            <div className="relative h-44 w-full bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0">
+                              
+                              {/* Full Background Image */}
+                              <div className="absolute inset-0 z-0">
+                                {recImage ? (
+                                  <img 
+                                    src={recImage} 
+                                    alt={scholarship.title} 
+                                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" 
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center w-full h-full bg-slate-50 text-slate-400">
+                                    <Building className="h-12 w-12 text-[#05294E]/20" />
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
 
-                          {/* Content Part */}
-                          <div className="p-8 flex flex-col flex-grow">
-                            <div className="text-slate-500 text-xs font-black uppercase tracking-widest mb-3 flex items-center">
-                              <span>{scholarship.level}</span>
+                              {/* Text Overlay Layer (Left side fade) */}
+                              <div className="absolute inset-y-0 left-0 w-[65%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-4 pr-8">
+                                {/* Top Left Logo */}
+                                <div className="absolute top-4 left-4">
+                                  <img 
+                                    src="/logo.png" 
+                                    alt="Matricula USA" 
+                                    className="h-5 w-auto object-contain mb-1.5 drop-shadow-sm" 
+                                  />
+                                </div>
+                                
+                                {/* Course / Field as Main Banner Text */}
+                                <p className="w-[95%] text-sm font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-8" style={{ lineHeight: 0.95 }}>
+                                  {scholarship.field_of_study || tSch('scholarshipsPage.filters.anyField')}
+                                </p>
+                              </div>
+
+                              {/* Top Right Badges */}
+                              <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+                                {scholarship.is_exclusive && (
+                                  <div className="bg-amber-500 text-white px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                                    <Star className="h-3 w-3 fill-white" />
+                                    {tSch('common.exclusive', 'Exclusiva')}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Floating Level/Modal Badges */}
+                              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                                <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-800 shadow-sm border border-white/20">
+                                  {getLevelLabel(scholarship.level || '')}
+                                </span>
+                                {scholarship.scholarship_percentage && (
+                                  <span className="px-2.5 py-1 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                                    {scholarship.scholarship_percentage}%
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            <h3 className="text-2xl font-black text-slate-900 mb-4 leading-tight group-hover:text-[#05294E] transition-colors">
-                              {scholarship.title}
-                            </h3>
+                            {/* Card Body */}
+                            <div className="p-6 flex-1 flex flex-col justify-between overflow-hidden">
+                              <div className="min-h-0 flex-1 flex flex-col">
+                                {/* University details */}
+                                <div className="flex items-center gap-2 mb-3 shrink-0">
+                                  <div className="relative w-7 h-7 rounded-md border border-slate-100 bg-white p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    {scholarship.universities?.logo_url ? (
+                                      <img 
+                                        src={canViewSensitive ? scholarship.universities.logo_url : "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/University_lock_icon.webp"} 
+                                        alt={canViewSensitive ? (scholarship.universities.name || "University Logo") : "University Logo"} 
+                                        className={`w-full h-full object-contain transition-all duration-500 ${!canViewSensitive ? 'blur-[3px] opacity-40' : ''}`} 
+                                      />
+                                    ) : (
+                                      <Building className={`w-4 h-4 text-slate-400 ${!canViewSensitive ? 'blur-[1.5px]' : ''}`} />
+                                    )}
+                                    {!canViewSensitive && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[0.5px]">
+                                        <Lock className="h-3 w-3 text-slate-700" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[85%]">
+                                    {canViewSensitive
+                                      ? (scholarship.universities?.name || scholarship.university_name || 'Universidade')
+                                      : '********'}
+                                  </span>
+                                </div>
 
-                            <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-6">
-                              {scholarship.description}
-                            </p>
-                            
-                            <div className="flex items-center text-xs font-bold text-slate-400 group-hover:text-[#05294E] transition-colors mb-6">
-                              <BookOpen className="h-4 w-4 mr-2" />
-                              {scholarship.field_of_study}
-                            </div>
+                                {/* Scholarship title */}
+                                <h3 className="text-base font-black text-slate-900 line-clamp-2 leading-snug mb-2 shrink-0">
+                                  {scholarship.title}
+                                </h3>
 
-                            <div className="mt-auto flex flex-col gap-3">
-                              <button
-                                onClick={() => navigate('/scholarships')}
-                                className="w-full bg-[#05294E]/5 hover:bg-[#05294E]/10 text-[#05294E] py-3.5 rounded-xl font-bold text-center transition-all duration-300 border border-[#05294E]/10"
-                              >
-                                Mais Detalhes
-                              </button>
+                                {/* Course / Field of Study */}
+                                {scholarship.field_of_study && (
+                                  <div className="mb-2 shrink-0">
+                                    <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                                      <span className="truncate">{scholarship.field_of_study}</span>
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Specs Tags (Delivery Mode & Work Permissions) */}
+                                {(scholarship.delivery_mode || (scholarship.work_permissions && scholarship.work_permissions.length > 0)) && (
+                                  <div className="flex flex-wrap gap-2 mb-4 shrink-0">
+                                    {scholarship.delivery_mode && (
+                                      <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                                        <span className="truncate">{getDeliveryModeLabel(scholarship.delivery_mode)}</span>
+                                      </span>
+                                    )}
+
+                                    {scholarship.work_permissions && scholarship.work_permissions.map((perm: string, i: number) => (
+                                      <span key={i} className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                                        <span className="truncate">{perm}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Financial details - Premium Pricing Section */}
+                              <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4.5 sm:p-5 mt-2 flex items-center justify-between gap-4 shrink-0">
+                                {/* Left Side: Original Cost & Savings Badge */}
+                                <div className="flex flex-col text-left">
+                                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                                    {tSch('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+                                  </span>
+                                  <span className="text-sm font-bold text-slate-400 line-through leading-tight">
+                                    ${formatAmount(scholarship.original_annual_value)}
+                                  </span>
+                                  {recAnnualSavings > 0 && (
+                                    <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
+                                      -{tSch('scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmount(recAnnualSavings)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Right Side: Hero Price with Scholarship */}
+                                <div className="flex flex-col text-right">
+                                  <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">
+                                    {tSch('scholarshipsPage.detail.withScholarship', 'Com Bolsa')}
+                                  </span>
+                                  <div className="flex items-baseline justify-end">
+                                    <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                                      ${formatAmount(scholarship.annual_value_with_scholarship)}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-500 ml-0.5">
+                                      {tSch('scholarshipsPage.detail.perYear', '/ano')}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      </div>
-                    ))}
+                          </motion.div>
+                        </div>
+                      );
+                    })}
                   </motion.div>
                 </div>
 

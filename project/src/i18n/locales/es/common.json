@@ -28,6 +28,12 @@
     "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
   },
   "footer": {
+    "sections": {
+      "platform": "La Plataforma",
+      "helpContact": "Ayuda y Contacto",
+      "explore": "Explorar",
+      "followUs": "Síguenos en redes sociales"
+    },
     "company": {
       "title": "Empresa",
       "about": "Sobre Nosotros",
@@ -125,7 +131,8 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. Todos los derechos reservados."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Hecho con ❤ para nuestros estudiantes"
   },
   "common": {
     "select": "Seleccione",
