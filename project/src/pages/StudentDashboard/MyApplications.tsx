@@ -1374,7 +1374,7 @@ const MyApplications: React.FC = () => {
                                              {reqUploads.map((req, idx) => {
                                                const status = (req.status || '').toLowerCase();
                                                const isApproved = status === 'approved';
-                                               const isRejected = status === 'rejected';
+                                               const isRejected = status === 'rejected' || status === 'changes_requested';
                                                // const isUnderReview = status === 'under_review';
                                                
                                                return (

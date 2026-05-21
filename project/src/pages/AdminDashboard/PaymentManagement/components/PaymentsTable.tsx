@@ -233,7 +233,7 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										<div className="flex items-center">
 											<Calendar className="h-4 w-4 mr-1" />
 											{payment.payment_date 
-												? new Date(payment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+												? new Date(payment.payment_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 												: 'N/A'
 											}
 										</div>

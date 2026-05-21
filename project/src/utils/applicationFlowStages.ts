@@ -88,6 +88,7 @@ export interface StudentRecord {
   docs_total_uploaded?: number;
   docs_total_approved?: number;
   docs_total_rejected?: number;
+  docs_total_rejected_files?: number;
   docs_total_under_review?: number;
 
   // Basic docs aggregation fields (passport, diploma, funds_proof)
@@ -423,6 +424,9 @@ export function getStepStatus(
       return 'skipped';
 
     case 'visa_approval':
+      // Visa approval only applies to initial (new F-1) students.
+      // COS students do status change via I-539; transfer students use SEVIS transfer.
+      if (student.student_process_type !== 'initial') return 'skipped';
       return student.visa_approved ? 'completed' : 'pending';
 
     // Legacy stages — kept for backward compat, no longer in flow array

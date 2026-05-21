@@ -62,6 +62,7 @@ export interface StudentRecord {
   docs_total_uploaded?: number;
   docs_total_approved?: number;
   docs_total_rejected?: number;
+  docs_total_rejected_files?: number;
   docs_total_under_review?: number;
   basic_docs_total_required?: number;
   basic_docs_total_uploaded?: number;
@@ -592,7 +593,8 @@ export interface DocStats {
   docs_total_required: number;
   docs_total_uploaded: number;
   docs_total_approved: number;
-  docs_total_rejected: number;
+  docs_total_rejected: number;       // nº de document requests com rejeição (para lógica de stage)
+  docs_total_rejected_files: number; // nº real de arquivos rejeitados (para exibição no kanban)
   docs_total_under_review: number;
   docs_approved_names?: string[];
   docs_rejected_names?: string[];
@@ -637,14 +639,25 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         allDocsMap.set(d.id, d);
       }
 
-      // Latest upload per (doc_request_id, uploaded_by)
-      const latestUpload = new Map<string, string>();
-      const sorted = [...(uploads || [])].sort(
-        (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-      );
-      for (const u of sorted) {
+      // Effective status per (doc_request_id, uploaded_by) considerando TODOS os uploads do request.
+      // Prioridade: under_review > rejected > approved
+      // Assim, se 9 arquivos foram rejeitados e 1 aprovado, o request é 'rejected'.
+      // Se qualquer arquivo ainda está pendente, o request é 'under_review'.
+      const uploadsByKey = new Map<string, string[]>();
+      for (const u of uploads || []) {
         const key = `${u.document_request_id}:${u.uploaded_by}`;
-        if (!latestUpload.has(key)) latestUpload.set(key, u.status);
+        if (!uploadsByKey.has(key)) uploadsByKey.set(key, []);
+        uploadsByKey.get(key)!.push(u.status);
+      }
+      const latestUpload = new Map<string, string>();
+      for (const [key, statuses] of uploadsByKey) {
+        if (statuses.some(s => s === 'under_review')) {
+          latestUpload.set(key, 'under_review');
+        } else if (statuses.some(s => s === 'rejected')) {
+          latestUpload.set(key, 'rejected');
+        } else {
+          latestUpload.set(key, 'approved');
+        }
       }
 
       const result = new Map<string, DocStats>();
@@ -664,13 +677,14 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           return types.includes('all') || (processType ? types.includes(processType) : false);
         });
 
-        let uploaded = 0, approved = 0, rejected = 0, underReview = 0;
+        let uploaded = 0, approved = 0, rejected = 0, rejectedFiles = 0, underReview = 0;
         const approvedNames: string[] = [];
         const rejectedNames: string[] = [];
         const underReviewNames: string[] = [];
 
         for (const dr of requiredDocs) {
-          const status = latestUpload.get(`${dr.id}:${student.user_id}`);
+          const key = `${dr.id}:${student.user_id}`;
+          const status = latestUpload.get(key);
           if (status) {
             uploaded++;
             if (status === 'approved') {
@@ -678,6 +692,9 @@ export function useStudentDocsStats(students: StudentRecord[]) {
               approvedNames.push(dr.title);
             } else if (status === 'rejected') {
               rejected++;
+              // Conta o número real de arquivos rejeitados neste request
+              const allStatuses = uploadsByKey.get(key) || [];
+              rejectedFiles += allStatuses.filter(s => s === 'rejected').length;
               rejectedNames.push(dr.title);
             } else if (status === 'under_review') {
               underReview++;
@@ -691,6 +708,7 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           docs_total_uploaded: uploaded,
           docs_total_approved: approved,
           docs_total_rejected: rejected,
+          docs_total_rejected_files: rejectedFiles,
           docs_total_under_review: underReview,
           docs_approved_names: approvedNames,
           docs_rejected_names: rejectedNames,

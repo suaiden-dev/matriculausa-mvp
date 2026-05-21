@@ -20,7 +20,8 @@ import {
   Eye,
   EyeOff,
   Ticket,
-  CheckCircle
+  CheckCircle,
+  Check
 } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
@@ -891,6 +892,19 @@ const QuickRegistration: React.FC = () => {
           } catch (termErr) {
             console.error('Failed to record terms:', termErr);
             // Continue anyway, registration was successful
+          }
+        }
+
+        // Persist discount to user_fee_overrides so onboarding Step 1 and admin show the correct fee
+        if (validationResult?.discountAmount && validationResult.discountAmount > 0 && currentFee > 0) {
+          try {
+            await (supabase.rpc as any)('set_selection_process_fee_override', {
+              p_user_id: result.user.id,
+              p_discounted_amount: currentFee,
+            });
+          } catch (overrideErr) {
+            console.error('Failed to persist fee override:', overrideErr);
+            // Non-blocking: checkout continues normally
           }
         }
       }
@@ -1791,7 +1805,7 @@ const QuickRegistration: React.FC = () => {
                           {t('rapidRegistration.payment.alreadyPaid.title', 'Taxa Já Paga!')}
                         </h4>
                         <p className="text-emerald-700 text-sm mb-8 font-medium leading-relaxed">
-                          {t('rapidRegistration.payment.alreadyPaid.description', 'Você já realizou o pagamento da taxa do processo seletivo. Pode prosseguir com sua inscrição.')}
+                          {t('rapidRegistration.payment.alreadyPaid.description', 'Você já realizou o pagamento do Processo Seletivo. Pode prosseguir com sua inscrição.')}
                         </p>
                         <button
                           type="button"
@@ -1835,7 +1849,7 @@ const QuickRegistration: React.FC = () => {
                 <div className="space-y-6 mb-8 relative z-10">
                   <div className="flex flex-col">
                     <span className="text-lg sm:text-xl font-black text-slate-900 leading-none whitespace-nowrap mb-6">
-                      {t('rapidRegistration.sidebar.selectionFee', 'Taxa do Processo Seletivo')}
+                      {t('rapidRegistration.sidebar.selectionFee', 'Processo Seletivo')}
                     </span>
                     <div className="flex justify-between items-end">
                       <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
@@ -1866,10 +1880,26 @@ const QuickRegistration: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                    <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                      {t('rapidRegistration.sidebar.feeExplanation')}
-                    </p>
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100/80 shadow-inner">
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">
+                      {t('rapidRegistration.sidebar.benefits.title')}
+                    </h4>
+                    <ul className="space-y-3.5">
+                      {[
+                        t('rapidRegistration.sidebar.benefits.item1'),
+                        t('rapidRegistration.sidebar.benefits.item2'),
+                        t('rapidRegistration.sidebar.benefits.item3'),
+                        t('rapidRegistration.sidebar.benefits.item4'),
+                        t('rapidRegistration.sidebar.benefits.item5')
+                      ].map((benefit, idx) => (
+                        <li key={idx} className="flex items-start space-x-2.5">
+                          <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <span className="text-xs font-bold text-slate-600 leading-relaxed">
+                            {benefit}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
