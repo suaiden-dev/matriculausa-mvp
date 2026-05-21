@@ -23,16 +23,6 @@ const DOCUMENTS_INFO = [
     key: 'passport',
     label: 'Passport',
     description: 'A valid copy of the student\'s passport. Used for identification and visa purposes.'
-  },
-  {
-    key: 'diploma',
-    label: 'High School Diploma',
-    description: 'Proof of high school graduation. Required for university admission.'
-  },
-  {
-    key: 'funds_proof',
-    label: 'Proof of Funds',
-    description: 'A bank statement or financial document showing sufficient funds for study.'
   }
 ];
 
@@ -1050,7 +1040,7 @@ const StudentDetails: React.FC = () => {
       ));
 
       // 5. Verificar se todos os 3 documentos básicos estão aprovados
-      const basicDocTypes = ['passport', 'diploma', 'funds_proof'];
+      const basicDocTypes = ['passport'];
       const allBasicDocsApproved = basicDocTypes.every(t => {
         const doc = updatedDocuments.find((d: any) => d.type === t);
         return doc && doc.status === 'approved';
@@ -1068,8 +1058,6 @@ const StudentDetails: React.FC = () => {
         try {
           const docLabels: Record<string, string> = {
             passport: 'Passport',
-            diploma: 'High School Diploma',
-            funds_proof: 'Proof of Funds'
           };
           const label = docLabels[type] || type;
 
