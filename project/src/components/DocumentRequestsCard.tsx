@@ -245,6 +245,23 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // eslint-disable-next-line
   }, [requests.length, applicationId]);
 
+  // Realtime: re-fetch requests when document_requests are updated (e.g. admin hides/restores for student)
+  useEffect(() => {
+    if (!applicationId) return;
+    const channel = supabase
+      .channel(`doc-requests-${applicationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'document_requests' },
+        () => {
+          fetchRequests();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line
+  }, [applicationId]);
+
   useEffect(() => {
     // Logar uploads carregados para debug
     if (Object.keys(uploads).length > 0) {
@@ -272,15 +289,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       // Buscar a aplicação para obter o university_id e logo
       const { data: appData, error: appError } = await supabase
         .from('scholarship_applications')
-        .select('id, scholarship_id, scholarships(university_id, universities(logo_url, name)), student_process_type, student_id')
+        .select('id, scholarship_id, scholarships(university_id, level, universities(logo_url, name)), student_process_type, student_id')
         .eq('id', applicationId)
         .maybeSingle();
       if (appError || !appData) throw new Error('Failed to fetch application data');
       let universityId: any = undefined;
+      let scholarshipLevel: string | undefined = undefined;
       if (Array.isArray(appData.scholarships) && appData.scholarships.length > 0) {
         universityId = appData.scholarships[0]?.university_id;
+        scholarshipLevel = appData.scholarships[0]?.level;
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
         universityId = (appData.scholarships as any).university_id;
+        scholarshipLevel = (appData.scholarships as any).level;
       }
       // console.log('[DEBUG] appData:', appData);
       // console.log('[DocumentRequestsCard] universityId:', universityId);
@@ -302,17 +322,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           .or(`university_id.eq.${universityId},university_id.is.null`)
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         globalRequests = (globalData || []).filter((req: any) => {
           // Ocultar para estudantes quando status estiver fechado
           if (!isSchool && (req.status || '').toLowerCase() === 'closed') return false;
-          // Se não houver applicable_student_types ou não for array, não mostra para ninguém (segurança)
+          // Ocultar requests escondidos para este aluno
+          if (!isSchool && currentUser?.id && req.hidden_for_students?.includes(currentUser.id)) return false;
+          // Filtro por process type
           if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return false;
-          // Se o tipo do estudante estiver incluso, mostra
-          if (req.applicable_student_types.includes(studentType)) return true;
-          // Suporte legado: se o array inclui 'all', mostra para todos
-          if (req.applicable_student_types.includes('all')) return true;
-          // Caso contrário, não mostra
-          return false;
+          const passesStudentType = req.applicable_student_types.includes(studentType) || req.applicable_student_types.includes('all');
+          if (!passesStudentType) return false;
+          // Filtro por nível de bolsa
+          const levels = req.applicable_scholarship_levels;
+          if (!levels || !Array.isArray(levels) || levels.length === 0) return true; // retrocompatível
+          if (!scholarshipLevel) return true; // sem nível definido, não bloqueia
+          return levels.includes(scholarshipLevel);
         });
         // console.log('[DocumentRequestsCard] universityId usado:', universityId);
         // console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
@@ -1706,7 +1730,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </div>
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
-                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                     </div>
                   </div>
 
@@ -1927,7 +1951,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                      </div>
                      <div className="min-w-0 flex-1 overflow-hidden">
                         <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
-                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
+                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                      </div>
                   </div>
 

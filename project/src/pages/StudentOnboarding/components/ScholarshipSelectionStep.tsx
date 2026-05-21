@@ -703,13 +703,16 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                               {(getPrerequisites(scholarship.level).length > 0 || scholarship.requirements) && (
                                 <div className="mb-2">
                                   {getPrerequisites(scholarship.level).length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {getPrerequisites(scholarship.level).map((req) => (
-                                        <span key={req} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wide">
-                                          <FileText className="w-3 h-3" />
-                                          {req}
-                                        </span>
-                                      ))}
+                                    <div>
+                                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Documents Required:</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {getPrerequisites(scholarship.level).map((req) => (
+                                          <span key={req} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wide">
+                                            <FileText className="w-3 h-3" />
+                                            {req}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
                                   )}
                                   {getPrerequisites(scholarship.level).includes('Proof of Funds') && (

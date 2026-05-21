@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, FileText, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import { Globe, FileText, CheckCircle, XCircle, Clock, Download, EyeOff, Eye, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
 import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
 
 interface GlobalDocumentRequestsSectionProps {
@@ -8,7 +8,8 @@ interface GlobalDocumentRequestsSectionProps {
   isAdmin?: boolean;
   onApproveDocument?: (uploadId: string) => void;
   onRejectDocument?: (uploadId: string, reason: string) => void;
-  onDeleteDocumentRequest?: (requestId: string) => void;
+  onHideDocumentRequest?: (requestId: string) => void;
+  onRestoreDocumentRequest?: (requestId: string) => void;
   onUploadGlobalAttachment?: (title: string, file: File) => Promise<void>;
   onUploadDocument?: (requestId: string, file: File) => void;
   uploadingStates?: { [key: string]: boolean };
@@ -53,7 +54,8 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
   isAdmin = false,
   onApproveDocument,
   onRejectDocument,
-  onDeleteDocumentRequest,
+  onHideDocumentRequest,
+  onRestoreDocumentRequest,
   onUploadGlobalAttachment,
   onUploadDocument,
   uploadingStates = {},
@@ -64,7 +66,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
 }) => {
   const [rejectModalUploadId, setRejectModalUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
+  const [hideRequestId, setHideRequestId] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
@@ -85,10 +87,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
     }
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteRequestId && onDeleteDocumentRequest) {
-      onDeleteDocumentRequest(deleteRequestId);
-      setDeleteRequestId(null);
+  const handleConfirmHide = () => {
+    if (hideRequestId && onHideDocumentRequest) {
+      onHideDocumentRequest(hideRequestId);
+      setHideRequestId(null);
     }
   };
 
@@ -162,9 +164,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 const isExpanded = expandedRequests[request.id] !== false;
                 const isHistoryOpen = expandedHistory[request.id] === true;
                 const applicableTypes: string[] = request.applicable_student_types || ['all'];
+                const isHidden = (request.hidden_for_students || []).includes(studentUserId);
 
                 return (
-                  <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 relative group">
+                  <div key={request.id} className={`bg-white p-4 sm:p-6 rounded-xl border relative group ${isHidden ? 'border-slate-200 opacity-60' : 'border-slate-200'}`}>
                     {/* Admin Action Buttons */}
                     <div className="absolute top-4 right-4 flex items-center gap-1 sm:gap-2">
                       {(request.template_url || request.attachment_url) && (
@@ -180,15 +183,29 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                         </a>
                       )}
 
-                      {isAdmin && onDeleteDocumentRequest && (
-                        <button
-                          onClick={() => setDeleteRequestId(request.id)}
-                          disabled={deletingStates[request.id]}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Delete request"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      {isAdmin && (
+                        isHidden ? (
+                          <button
+                            onClick={() => onRestoreDocumentRequest && onRestoreDocumentRequest(request.id)}
+                            disabled={deletingStates[request.id]}
+                            className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                            title="Restore for this student"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>Restore</span>
+                          </button>
+                        ) : (
+                          onHideDocumentRequest && (
+                            <button
+                              onClick={() => setHideRequestId(request.id)}
+                              disabled={deletingStates[request.id]}
+                              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Hide for this student"
+                            >
+                              <EyeOff className="h-4 w-4" />
+                            </button>
+                          )
+                        )
                       )}
 
                       <button
@@ -209,6 +226,12 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                           <h4 className="text-lg font-bold text-slate-900 leading-tight break-words">
                             {request.title || 'Global Request'}
                           </h4>
+                          {isHidden && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-500 border border-slate-200">
+                              <EyeOff className="h-2.5 w-2.5" />
+                              Hidden for student
+                            </span>
+                          )}
                           <div className="flex flex-wrap gap-1.5">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight uppercase bg-blue-100 text-blue-800 border border-blue-200/50">
                               Global Request
@@ -594,17 +617,17 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteRequestId && (
+      {/* Hide Confirmation Modal */}
+      {hideRequestId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-200">
-            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-3 text-white">
-                <Trash2 className="w-5 h-5" />
-                <h3 className="text-lg font-bold">Delete Request</h3>
+                <EyeOff className="w-5 h-5" />
+                <h3 className="text-lg font-bold">Hide for This Student</h3>
               </div>
               <button
-                onClick={() => setDeleteRequestId(null)}
+                onClick={() => setHideRequestId(null)}
                 className="text-white/70 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -614,28 +637,27 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
             <div className="p-6 space-y-4">
               <div className="flex items-start space-x-4">
                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-slate-600" />
+                  <EyeOff className="w-5 h-5 text-slate-600" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">
-                    Are you sure you want to delete this document request?
-                    This action <span className="font-bold text-red-600">cannot be undone</span> and will also remove any student submissions.
+                    This request will be <span className="font-bold text-slate-800">hidden for this student only</span>. Other students will not be affected. You can restore it at any time.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-3 pt-2">
                 <button
-                  onClick={() => setDeleteRequestId(null)}
+                  onClick={() => setHideRequestId(null)}
                   className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleConfirmDelete}
-                  className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                  onClick={handleConfirmHide}
+                  className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                 >
-                  Delete Permanently
+                  Hide for This Student
                 </button>
               </div>
             </div>
