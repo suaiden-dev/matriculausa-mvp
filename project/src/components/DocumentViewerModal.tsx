@@ -146,8 +146,14 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             }
           }
         } else if (documentUrl.includes('/storage/v1/object/sign/')) {
+          // URL já é signed — usar diretamente sem revalidar
+          // Extrair extensão da parte antes do token (ex: _preview.jpg?token=...)
+          const urlBeforeQuery = documentUrl.split('?')[0];
+          const detectedType = detectDocumentType(urlBeforeQuery, fileName);
+          console.log(`✅ [MODAL] Signed URL detectada. Tipo: ${detectedType}, URL: ${urlBeforeQuery}`);
           setActualUrl(documentUrl);
-          setDocumentType(detectDocumentType(documentUrl, fileName));
+          setDocumentType(detectedType);
+          setDisplayTitle(fileName || getFriendlyName(urlBeforeQuery));
           setLoading(false);
           return;
         }

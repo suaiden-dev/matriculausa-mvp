@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
@@ -101,6 +102,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     const [promotionalCoupon, setPromotionalCoupon] = useState('');
     const [couponValidation, setCouponValidation] = useState<any>(null);
     const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+    const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const couponInputRef = useRef<HTMLInputElement>(null);
 
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
@@ -239,6 +241,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         method: 'stripe' | 'pix' | 'parcelow',
         couponFinalAmount?: number
     ) => {
+        // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
+        const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
         try {
             setIsProcessingCheckout(`${application.id}_${method}`);
             const { data: sessionData } = await supabase.auth.getSession();
@@ -250,10 +254,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             const fullAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
 
             // Usar valor com desconto do cupom se aplicado
-            const finalAmount = couponFinalAmount !== undefined ? couponFinalAmount
+            const baseFinalAmount = couponFinalAmount !== undefined ? couponFinalAmount
                 : (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                     ? couponValidation.finalAmount
                     : fullAmount;
+            // Se installment ativo, cobrar apenas 50% agora
+            const finalAmount = installmentEnabled ? Math.ceil(baseFinalAmount / 2 * 100) / 100 : baseFinalAmount;
 
             const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
                 ? promotionalCoupon.trim().toUpperCase()
@@ -272,8 +278,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 },
                 body: JSON.stringify({
                     scholarships_ids: [application.scholarship_id],
-                    // Sempre envia o valor original — a Edge Function usa metadata.final_amount para o desconto
-                    amount: fullAmount,
+                    amount: finalAmount,
                     payment_method: method,
                     success_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
                     cancel_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=cancelled`,
@@ -288,6 +293,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         final_amount: finalAmount.toString(),
                         promotional_coupon: appliedCoupon
                     },
+                    ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
                     payment_type: 'placement_fee',
                     fee_type: 'placement_fee',
                 })
@@ -344,6 +350,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
     const handleParcelowClick = (app: ApplicationWithScholarship) => {
+        // Verificar se há informações de titular de Cartão de Outra Pessoa
+        if (payerInfo) {
+            processCheckout(app, 'parcelow');
+            return;
+        }
+
         if (!(userProfile as any)?.cpf_document) {
             setShowInlineCpf(app.id);
             return;
@@ -425,9 +437,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                 : baseAmount;
                             // Se o admin habilitou parcelamento, o aluno paga 50% agora
                             const effectiveAmount = installmentEnabled ? Math.ceil(couponEffectiveBase / 2 * 100) / 100 : couponEffectiveBase;
-                            // Stripe/PIX/Parcelow sempre cobram valor cheio; só Zelle usa effectiveAmount (parcela)
-                            const cardAmount = calculateCardAmountWithFees(couponEffectiveBase);
-                            const pixInfo = calculatePIXTotalWithIOF(couponEffectiveBase, exchangeRate);
+                            // Todos os métodos usam effectiveAmount quando installment está ativo
+                            const cardAmount = calculateCardAmountWithFees(effectiveAmount);
+                            const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
 
                             return (
                                 <div
@@ -740,7 +752,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                             <button
                                                                 onClick={() => handleParcelowClick(app)}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf === app.id ? 'rounded-t-[2rem] border-b-0' : 'rounded-[2rem]'}`}
+                                                                className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf === app.id ? 'rounded-t-[2rem] border-b-0 shadow-none ring-1 ring-blue-600/20 bg-blue-50/5' : 'rounded-[2rem]'}`}
                                                             >
                                                                 <div className="flex items-center justify-between w-full">
                                                                     <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
@@ -753,7 +765,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right flex flex-col items-end shrink-0">
-                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(couponEffectiveBase, true)}</div>
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(effectiveAmount, true)}</div>
                                                                         <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                                                     </div>
                                                                 </div>
@@ -767,48 +779,19 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                 )}
                                                             </button>
 
+                                                            {/* Formulário de Dados do Titular com Botão Integrado */}
                                                             {showInlineCpf === app.id && (
-                                                                <div className="p-6 bg-slate-50 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                                    <div className="flex items-center justify-between mb-4">
-                                                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{t('placementFeeStep.cpfRequiredTitle')}</h4>
-                                                                        <button onClick={() => setShowInlineCpf(null)} title="Fechar">
-                                                                            <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="space-y-4">
-                                                                        <div className="relative">
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder={t('placementFeeStep.cpfPlaceholder')}
-                                                                                value={inlineCpf}
-                                                                                onChange={(e) => {
-                                                                                    // Máscara básica de CPF
-                                                                                    const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                                                                                    setInlineCpf(val);
-                                                                                    if (cpfError) setCpfError(null);
-                                                                                }}
-                                                                                className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
-                                                                            />
-                                                                            {savingCpf && (
-                                                                                <div className="absolute right-3 top-3">
-                                                                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        {cpfError && (
-                                                                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                                                                                <AlertCircle className="w-3 h-3" />
-                                                                                {cpfError}
-                                                                            </p>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() => saveCpfAndCheckout(app)}
-                                                                            disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                                                            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
-                                                                        >
-                                                                            {t('placementFeeStep.goToPayment')}
-                                                                        </button>
-                                                                    </div>
+                                                                <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm p-6 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                                    <PayerAlternativeForm 
+                                                                        onPayerInfoChange={setPayerInfo} 
+                                                                        initialCpf={userProfile?.cpf_document || ''}
+                                                                        onPayButtonClick={() => processCheckout(app, 'parcelow')}
+                                                                        isProcessing={isProcessingCheckout === `${app.id}_parcelow`}
+                                                                    />
+                                                                    
+                                                                    <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                                                                        Você será redirecionado para o ambiente seguro da Parcelow
+                                                                    </p>
                                                                 </div>
                                                             )}
                                                         </div>

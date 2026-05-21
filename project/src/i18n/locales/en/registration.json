@@ -38,13 +38,20 @@
     },
     "sidebar": {
       "title": "Payment Summary",
-      "selectionFee": "Selection Process Fee",
+      "selectionFee": "Selection Process",
       "total": "TOTAL",
       "currentFee": "Total to Pay Now",
       "couponApplied": "Coupon Applied",
-      "feeExplanation": "The Selection Process Fee is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
+      "benefits": {
+        "title": "The Selection Process gives you access to:",
+        "item1": "Access more than 154 exclusive scholarships in the US.",
+        "item2": "Choose up to 4 exclusive scholarships tailored to your profile.",
+        "item3": "Submit your documents for review and approval directly with our partner universities.",
+        "item4": "Dedicated expert support throughout the entire process.",
+        "item5": "Complete the process with your acceptance letter in hand, ready to study."
+      },
       "refundAssuranceTitle": "Refund Guarantee",
-      "refundAssuranceText": "If you are not accepted to any partner university, your selection process fee will be fully refunded.",
+      "refundAssuranceText": "If you are not accepted to any partner university, your selection process payment will be fully refunded.",
       "alreadyPaidContinue": "Continue to Onboarding",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Application Fee",
@@ -79,7 +86,9 @@
       },
       "notes": {
         "processingFees": "* May include processing fees",
-        "parcelowFees": "* May include carrier and platform processing fees",
+        "parcelowFees": "* May include operator and platform processing fees",
+        "parcelowAddressNoticeTitle": "Billing Address Notice",
+        "parcelowAddressNoticeContent": "For security reasons, the billing address must be that of the cardholder and will need to be entered directly on the next screen (Parcelow Checkout).",
         "zelleTime": "Processing can take up to 48 hours"
       },
       "payWith": "Continue with {{method}}",
@@ -99,7 +108,7 @@
       },
       "alreadyPaid": {
         "title": "Fee Already Paid!",
-        "description": "You have already paid the selection process fee. You can proceed with your application.",
+        "description": "You have already paid for the Selection Process. You can proceed with your application.",
         "continue": "Continue to Onboarding"
       }
     }
@@ -110,7 +119,7 @@
       "of": "of",
       "initiating": "Initiating",
       "steps": {
-        "selectionFee": "Selection Process Fee",
+        "selectionFee": "Selection Process",
         "selectionSurvey": "Questionnaire",
         "scholarshipSelection": "Scholarship Selection",
         "processType": "Process Type",
@@ -244,6 +253,8 @@
     "securityNotice": "Your data is protected and encrypted",
     "profilesIdentified": "Profile Identified",
     "identityVerifiedSuccess": "You have already submitted your identity photo and it is under review.",
+    "identityRejectedTitle": "Document Rejected",
+    "identityRejectedDefaultReason": "Your identity photo was rejected. Please upload a new, clear photo.",
     "title": "Questionnaire",
     "subtitle": "Answer carefully. To pass and continue your process, you must achieve at least <0>80% correct</0> on objective questions.",
     "mandatoryBadge": "Mandatory Selection Process",
@@ -298,35 +309,16 @@
         "text": "WhatsApp (with country code)",
         "placeholder": "+1 123 456-7890"
       },
-      "3_1": {
-        "text": "What is your main course or field of interest?",
-        "options": {
-          "engineering": "Engineering",
-          "business": "Business",
-          "computer-science": "Computer Science",
-          "medicine": "Medicine",
-          "law": "Law",
-          "arts": "Arts & Humanities",
-          "sciences": "Natural Sciences",
-          "other": "Other"
-        }
-      },
-      "3_2": {
-        "text": "What is your current academic level?",
-        "options": {
-          "high-school": "High School",
-          "undergraduate": "Bachelor's / Undergraduate",
-          "graduate": "Master's / Graduate",
-          "doctorate": "Doctorate"
-        }
-      },
-      "3_3": {
-        "text": "What is your approximate GPA?",
-        "placeholder": "e.g., 3.5"
-      },
       "4": {
-        "text": "Are you currently in the US?",
-        "extraLabel": "Current status?"
+        "text": "How many dependents do you have? (spouse and children under 21)",
+        "options": {
+          "0": "0 Dependents",
+          "1": "1 Dependent",
+          "2": "2 Dependents",
+          "3": "3 Dependents",
+          "4": "4 Dependents",
+          "5": "5 Dependents"
+        }
       },
       "5": {
         "text": "What is your current profile?",
@@ -338,19 +330,6 @@
           "nao_sei": "I don't know (I need guidance)"
         },
         "errorNaoSei": "Please select your actual profile (Initial, Transfer, or COS) to continue."
-      },
-      "5_1": {
-        "text": "Is your status active?",
-        "options": {
-          "sim": "Yes",
-          "nao": "No (terminated/cancelled)"
-        }
-      },
-      "5_2": {
-        "text": "What is your status limit (deadline)?"
-      },
-      "5_3": {
-        "text": "Have you already applied for an extension? If yes, what is your case number?"
       },
       "6": {
         "text": "What is your main goal with the program?",
@@ -701,6 +680,48 @@
         "text": "Final declaration",
         "placeholder": "Write your declaration...",
         "prompt": "\"I understand that my result depends on my discipline. If I don't follow the plan, I can harm my status and my project.\""
+      },
+      "3_1": {
+        "text": "What is your main course or field of interest?",
+        "options": {
+          "engineering": "Engineering",
+          "business": "Business",
+          "computer-science": "Computer Science",
+          "medicine": "Medicine",
+          "law": "Law",
+          "arts": "Arts & Humanities",
+          "sciences": "Natural Sciences",
+          "other": "Other"
+        }
+      },
+      "3_2": {
+        "text": "What is your current academic level?",
+        "options": {
+          "high-school": "High School",
+          "undergraduate": "Bachelor's / Undergraduate",
+          "graduate": "Master's / Graduate",
+          "doctorate": "Doctorate"
+        }
+      },
+      "3_3": {
+        "text": "What is your approximate GPA?",
+        "placeholder": "e.g., 3.5"
+      },
+      "5_1": {
+        "text": "Is your status active?",
+        "options": {
+          "sim": "Yes",
+          "nao": "No (terminated/cancelled)"
+        }
+      },
+      "5_2": {
+        "text": "What is your status limit (deadline)?"
+      },
+      "5_3": {
+        "text": "Have you already applied for an extension? If yes, what is your case number?"
+      },
+      "5_4": {
+        "text": "Status/I-94 expiration date"
       }
     }
   },
@@ -763,5 +784,12 @@
     "annualTuition": "Annual scholarship value: {{amount}}",
     "confirmedMessage": "Your reinstatement fee has been successfully confirmed.",
     "paidSuccess": "Payment Confirmed"
+  },
+  "i20Preview": {
+    "title": "Control Fee I-20 Document",
+    "description": "Your preview (limited) of the I-20 is available for verification. Pay the fee to release the original document.",
+    "payButton": "Go to Payment",
+    "viewPreview": "View I-20",
+    "watermark": "MATRÍCULA USA"
   }
 }

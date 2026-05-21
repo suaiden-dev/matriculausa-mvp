@@ -7,7 +7,6 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 // import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
 import { useAuth } from '../../hooks/useAuth';
-import { useTranslation } from 'react-i18next';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 
@@ -41,7 +40,6 @@ const TABS = [
 const SelectionProcess: React.FC = () => {
   const { applications, university, refreshData } = useUniversity();
   const { user } = useAuth();
-  const { t } = useTranslation();
   
   // States para filtros e pesquisa
   const [searchTerm, setSearchTerm] = useState('');
@@ -846,112 +844,7 @@ const SelectionProcess: React.FC = () => {
   });
   const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
 
-  // Document Rejection Modal State
-  const [showRejectDocumentModal, setShowRejectDocumentModal] = useState(false);
-  const [pendingRejectDocumentId, setPendingRejectDocumentId] = useState<string | null>(null);
-  const [rejectDocumentReason, setRejectDocumentReason] = useState('');
 
-  // Acceptance Letter Upload State
-  const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
-  const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState<boolean>(false);
-  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState<boolean>(false);
-
-  // State para documentos enviados pelo aluno
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
-  // State para requests criados pela universidade
-  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
-
-    // Função para buscar documentos enviados pelo aluno
-  const fetchStudentDocuments = async () => {
-    if (!selectedStudent) return;
-    
-    try {
-      // Simplificar a busca para evitar erros 400
-      // Buscar apenas uploads básicos sem inner join complexo
-      const { data: uploads, error } = await supabase
-        .from('document_request_uploads')
-        .select('*')
-        .eq('uploaded_by', selectedStudent.user_profiles.user_id);
-      
-      if (error) {
-        console.error('Erro ao buscar uploads:', error);
-        setStudentDocuments([]);
-        return;
-      }
-
-      if (!uploads || uploads.length === 0) {
-        setStudentDocuments([]);
-        return;
-      }
-
-      // Formatar os documentos para exibição de forma simples
-      const studentDocuments = uploads.map(upload => ({
-        id: upload.id,
-        filename: upload.file_url?.split('/').pop() || 'Document',
-        file_url: upload.file_url,
-        status: upload.status || 'under_review',
-        uploaded_at: upload.uploaded_at || upload.created_at,
-        request_title: 'Document Upload',
-        request_description: 'Student uploaded document',
-        request_created_at: upload.created_at,
-        is_global: false,
-        request_type: 'Individual Upload'
-      }));
-
-      setStudentDocuments(studentDocuments);
-    } catch (error) {
-      console.error("Error in fetchStudentDocuments:", error);
-      setStudentDocuments([]);
-    }
-  };
-
-
-
-  // Função para buscar requests criados pela universidade
-  const fetchDocumentRequests = async () => {
-    if (!selectedStudent) return;
-    
-    try {
-      // Buscar requests específicos para esta aplicação
-      const { data: requests, error: requestsError } = await supabase
-        .from('document_requests')
-        .select('*')
-        .eq('scholarship_application_id', selectedStudent.id)
-        .order('created_at', { ascending: false });
-      
-      if (requestsError) {
-        console.error("Error fetching document requests:", requestsError);
-        setDocumentRequests([]);
-        return;
-      }
-
-      // Buscar uploads para cada request
-      if (requests && requests.length > 0) {
-        const requestIds = requests.map(req => req.id);
-        
-        const { data: uploads, error: uploadsError } = await supabase
-          .from('document_request_uploads')
-          .select('*')
-          .in('document_request_id', requestIds);
-
-        if (uploadsError) {
-          console.error("Error fetching uploads:", uploadsError);
-        } else {
-          // Associar uploads aos requests
-          const requestsWithUploads = requests.map(request => ({
-            ...request,
-            uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
-          }));
-          setDocumentRequests(requestsWithUploads);
-        }
-      } else {
-        setDocumentRequests([]);
-      }
-    } catch (error) {
-      console.error("Error in fetchDocumentRequests:", error);
-      setDocumentRequests([]);
-    }
-  };
 
   // Função para baixar arquivo
   const handleDownloadDocument = async (doc: any) => {
@@ -1009,368 +902,14 @@ const SelectionProcess: React.FC = () => {
   };
 
 
-  // Função para visualizar upload de um request
-  const handleViewUpload = (upload: any) => {
-    if (!upload.file_url) return;
-    
-    // Converter a URL do storage para URL pública
-    try {
-      // Se file_url é um path do storage, converter para URL pública
-      if (upload.file_url && !upload.file_url.startsWith('http')) {
-        const publicUrl = supabase.storage
-          .from('student-documents')
-          .getPublicUrl(upload.file_url)
-          .data.publicUrl;
-        
-        setPreviewUrl(publicUrl);
-      } else {
-        // Se já é uma URL completa, usar diretamente
-        setPreviewUrl(upload.file_url);
-      }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      setPreviewUrl(upload.file_url);
-    }
-  };
-
-  // Função para aprovar documento enviado pelo aluno
-  const handleApproveDocument = async (uploadId: string) => {
-    try {
-      // Primeiro, buscar informações do upload para notificação
-      const { data: uploadData, error: fetchError } = await supabase
-        .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests!inner(
-            id,
-            title,
-            description
-          )
-        `)
-        .eq('id', uploadId)
-        .single();
-
-      if (fetchError) {
-        throw new Error('Failed to fetch upload data: ' + fetchError.message);
-      }
-
-      // Atualizar o status para aprovado
-      const { error } = await supabase
-        .from('document_request_uploads')
-        .update({ status: 'approved' })
-        .eq('id', uploadId);
-      
-      if (error) {
-        throw new Error('Failed to approve document: ' + error.message);
-      }
-
-      // Enviar notificação ao aluno
-      try {
-        const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('user_id', selectedStudent?.user_profiles.user_id)
-          .single();
-
-        if (userData?.email) {
-          const webhookPayload = {
-            tipo_notf: "Documento aprovado",
-            email_aluno: userData.email,
-            nome_aluno: selectedStudent?.user_profiles.full_name,
-            email_universidade: user?.email,
-            o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
-          };
-
-          
-          try {
-            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(webhookPayload),
-            });
-            
-            
-            if (!webhookResponse.ok) {
-              const webhookErrorText = await webhookResponse.text();
-              console.error('Webhook error:', webhookErrorText);
-            } else {
-            }
-          } catch (webhookError) {
-            console.error('Erro ao enviar webhook:', webhookError);
-          }
-
-          // Notificação in-app no sino do aluno
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
-            if (accessToken) {
-              await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-student-notification', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                  user_id: selectedStudent?.user_profiles.user_id,
-                  title: 'Document approved',
-                  message: `Your document ${uploadData.file_url?.split('/').pop()} was approved for request ${uploadData.document_requests?.title}.`,
-                  type: 'document_approved',
-                  link: '/student/dashboard',
-                }),
-              });
-            }
-          } catch (e) {
-            console.error('Error sending in-app student notification:', e);
-          }
-        }
-      } catch (notificationError) {
-        console.error('Error sending approval notification:', notificationError);
-      }
-
-      // Recarregar os dados para mostrar o novo status
-      if (selectedStudent) {
-        fetchStudentDocuments();
-      }
-
-      alert('Document approved successfully! The student will be notified.');
-    } catch (err: any) {
-      console.error("Error approving document:", err);
-      alert(`Failed to approve document: ${err.message}`);
-    }
-  };
-
-  // Função para rejeitar documento enviado pelo aluno
-  const handleRejectDocument = async (uploadId: string, reason: string) => {
-    try {
-      // Primeiro, buscar informações do upload para notificação
-      const { data: uploadData, error: fetchError } = await supabase
-        .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests!inner(
-            id,
-            title,
-            description
-          )
-        `)
-        .eq('id', uploadId)
-        .single();
-
-      if (fetchError) {
-        throw new Error('Failed to fetch upload data: ' + fetchError.message);
-      }
-
-      // Atualizar o status para rejeitado
-      const { error } = await supabase
-        .from('document_request_uploads')
-        .update({ 
-          status: 'rejected',
-          review_notes: reason || null
-        })
-        .eq('id', uploadId);
-      
-      if (error) {
-        throw new Error('Failed to reject document: ' + error.message);
-      }
-
-      // Enviar notificação ao aluno
-      try {
-        const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('user_id', selectedStudent?.user_profiles.user_id)
-          .single();
-
-        if (userData?.email) {
-          const webhookPayload = {
-            tipo_notf: "Changes Requested",
-            email_aluno: userData.email,
-            nome_aluno: selectedStudent?.user_profiles.full_name,
-            email_universidade: user?.email,
-            o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-          };
-
-          
-          try {
-            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(webhookPayload),
-            });
-            
-            
-            if (!webhookResponse.ok) {
-              const webhookErrorText = await webhookResponse.text();
-              console.error('Webhook error:', webhookErrorText);
-            } else {
-            }
-          } catch (webhookError) {
-            console.error('Erro ao enviar webhook:', webhookError);
-          }
-        }
-
-        // Notificação in-app no sino do aluno — deve ser enviada SEMPRE, independente do e-mail
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const accessToken = session?.access_token;
-          
-          if (accessToken) {
-            const notificationPayload = {
-              user_id: selectedStudent?.user_profiles.user_id,
-              title: t('notifications.documentRejected.title'),
-              message: t('notifications.documentRejected.message', { 
-                fileName: uploadData.file_url?.split('/').pop(),
-                reason: reason 
-              }),
-              type: 'document_rejected',
-              link: '/student/dashboard/applications',
-            };
-            const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify(notificationPayload),
-            });
-            
-            let responseData;
-            try {
-              responseData = await response.json();
-            } catch (parseError) {
-              console.error('Erro ao fazer parse da resposta da Edge Function:', parseError);
-              const responseText = await response.text();
-              console.error('Resposta da Edge Function (texto):', responseText);
-            }
-            
-            if (!response.ok) {
-              console.error('Erro na Edge Function:', responseData);
-            } else {
-              console.log('✅ Notificação de rejeição enviada com sucesso:', responseData);
-            }
-          } else {
-            console.error('Access token não encontrado');
-          }
-        } catch (e) {
-          console.error('Error sending in-app student notification:', e);
-          console.error('Error details:', e);
-        }
-      } catch (notificationError) {
-        console.error('Error sending rejection notification:', notificationError);
-      }
-
-      // Recarregar os dados para mostrar o novo status
-      if (selectedStudent) {
-        fetchStudentDocuments();
-      }
-
-      alert('Document rejected successfully! The student will be notified.');
-    } catch (err: any) {
-      console.error("Error rejecting document:", err);
-      alert(`Failed to reject document: ${err.message}`);
-    }
-  };
-
-  // Função para selecionar arquivo da carta de aceite
-  const handleAcceptanceLetterFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAcceptanceLetterFile(file);
-      setAcceptanceLetterUploaded(false);
-    }
-  };
-
-  // Função para sanitizar nomes de arquivos (remover acentos, espaços e caracteres especiais)
-  const sanitizeFileName = (fileName: string): string => {
-    return fileName
-      .normalize('NFD') // Decompor caracteres acentuados
-      .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos (acentos)
-      .replace(/[^a-zA-Z0-9.-]/g, '_') // Substituir caracteres especiais por underscore
-      .replace(/_+/g, '_') // Remover underscores múltiplos
-      .replace(/^_|_$/g, ''); // Remover underscores do início e fim
-  };
-
-  // Função para processar a carta de aceite
-  const handleProcessAcceptanceLetter = async () => {
-    if (!selectedStudent || !acceptanceLetterFile) {
-      alert('Please select a file first.');
-      return;
-    }
-
-    setUploadingAcceptanceLetter(true);
-    try {
-      // Sanitizar o nome do arquivo e gerar chave segura
-      const sanitizedFileName = sanitizeFileName(acceptanceLetterFile.name);
-      const fileName = `acceptance_letters/${Date.now()}_${sanitizedFileName}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('student-documents')
-        .upload(fileName, acceptanceLetterFile);
-
-      if (uploadError) {
-        throw new Error('Failed to upload file: ' + uploadError.message);
-      }
-
-      // Atualizar a aplicação com a URL da carta de aceite
-      const { error: updateError } = await supabase
-        .from('scholarship_applications')
-        .update({
-          acceptance_letter_url: uploadData.path,
-          acceptance_letter_status: 'sent',
-          acceptance_letter_sent_at: new Date().toISOString(),
-          status: 'enrolled'
-        })
-        .eq('id', selectedStudent.id);
-
-      if (updateError) {
-        throw new Error('Failed to update application: ' + updateError.message);
-      }
-
-      // Atualizar o perfil do usuário
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          documents_status: 'approved',
-          enrollment_status: 'enrolled'
-        })
-        .eq('user_id', selectedStudent.user_profiles.user_id);
-
-      if (profileError) {
-        console.error('Error updating user profile:', profileError);
-      }
 
 
-
-      setAcceptanceLetterUploaded(true);
-      alert('Acceptance letter processed successfully! The student is now enrolled and will be notified.');
-      
-      // Recarregar dados do estudante
-      if (selectedStudent) {
-        fetchStudentDetails(selectedStudent.id);
-      }
-    } catch (err: any) {
-      console.error("Error processing acceptance letter:", err);
-      alert(`Failed to process acceptance letter: ${err.message}`);
-    } finally {
-      setUploadingAcceptanceLetter(false);
-    }
-  };
 
   // Effect para buscar documentos e requests quando o estudante for selecionado
   useEffect(() => {
     if (selectedStudent) {
       // Debug: verificar todas as tabelas relacionadas
       debugAllTables();
-      
-      fetchStudentDocuments();
-      fetchDocumentRequests();
-      
-      // Verificar se já existe carta de aceite
-      if (selectedStudent.acceptance_letter_url) {
-        setAcceptanceLetterUploaded(true);
-      } else {
-        setAcceptanceLetterUploaded(false);
-      }
       
       // Verificar se o estudante deve ser movido para a página Students
       checkIfStudentShouldBeMoved(selectedStudent);
@@ -1430,17 +969,20 @@ const SelectionProcess: React.FC = () => {
         .from('student_documents')
         .select('*')
         .eq('user_id', selectedStudent.user_profiles.user_id);
+      console.log('Debug studentDocs:', studentDocs, studentDocsError);
       
       // 2. Verificar document_requests
       const { data: docRequests, error: docRequestsError } = await supabase
         .from('document_requests')
         .select('*')
         .eq('scholarship_application_id', selectedStudent.id);
+      console.log('Debug docRequests:', docRequests, docRequestsError);
       
       // 3. Verificar document_request_uploads (TODOS)
       const { data: docUploads, error: docUploadsError } = await supabase
         .from('document_request_uploads')
         .select('*');
+      console.log('Debug docUploads:', docUploads, docUploadsError);
       
       // 4. Verificar document_request_uploads com relacionamento
       const { data: docUploadsWithRel, error: docUploadsRelError } = await supabase
@@ -1456,6 +998,7 @@ const SelectionProcess: React.FC = () => {
             scholarship_application_id
           )
         `);
+      console.log('Debug docUploadsWithRel:', docUploadsWithRel, docUploadsRelError);
       
       // 5. Verificar document_request_uploads filtrados por uploaded_by
       const { data: docUploadsByUser, error: docUploadsByUserError } = await supabase
@@ -1472,18 +1015,21 @@ const SelectionProcess: React.FC = () => {
           )
         `)
         .eq('uploaded_by', selectedStudent.user_profiles.user_id);
+      console.log('Debug docUploadsByUser:', docUploadsByUser, docUploadsByUserError);
       
       // 6. Verificar scholarship_applications documents
       const { data: appDocs, error: appDocsError } = await supabase
         .from('scholarship_applications')
         .select('documents')
         .eq('id', selectedStudent.id);
+      console.log('Debug appDocs:', appDocs, appDocsError);
       
       // 7. Verificar user_profiles documents
       const { data: profileDocs, error: profileDocsError } = await supabase
         .from('user_profiles')
         .select('documents')
         .eq('user_id', selectedStudent.user_profiles.user_id);
+      console.log('Debug profileDocs:', profileDocs, profileDocsError);
       
     } catch (error) {
       console.error('Error in debugAllTables:', error);
@@ -1608,9 +1154,9 @@ const SelectionProcess: React.FC = () => {
       setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
       
       // Recarregar dados para mostrar o novo request
+      // Recarregar dados para mostrar o novo request
       if (selectedStudent) {
-        fetchDocumentRequests();
-        fetchStudentDocuments();
+        // fetchStudentDetails(selectedStudent.id);
       }
       
       // Mostrar mensagem de sucesso
@@ -2676,59 +2222,6 @@ const SelectionProcess: React.FC = () => {
           </div>
         )}
 
-        {/* Document Rejection Modal */}
-        {showRejectDocumentModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
-              <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">Reject Document</h3>
-              <p className="text-sm text-slate-600 mb-6 text-center">
-                Please provide a reason for rejecting this document. This will help the student understand what needs to be corrected.
-              </p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Rejection Reason <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[100px] resize-vertical"
-                    placeholder="Explain why this document was rejected and what needs to be corrected..."
-                    value={rejectDocumentReason}
-                    onChange={(e) => setRejectDocumentReason(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3 mt-8">
-                <button
-                  className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition"
-                  onClick={() => {
-                    setShowRejectDocumentModal(false);
-                    setPendingRejectDocumentId(null);
-                    setRejectDocumentReason('');
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
-                  onClick={() => {
-                    if (pendingRejectDocumentId && rejectDocumentReason.trim()) {
-                      handleRejectDocument(pendingRejectDocumentId, rejectDocumentReason);
-                      setShowRejectDocumentModal(false);
-                      setPendingRejectDocumentId(null);
-                      setRejectDocumentReason('');
-                    }
-                  }}
-                  disabled={!rejectDocumentReason.trim()}
-                >
-                  Reject Document
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </ProfileCompletionGuard>
   );

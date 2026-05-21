@@ -83,7 +83,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                 </span>
               </div>
             </>
-          ) : activeDiscount?.has_discount ? (
+          ) : activeDiscount?.has_discount && (activeDiscount.discount_amount ?? 0) > 0 ? (
             <>
               <div className="text-3xl font-bold text-blue-700 line-through">
                 ${computedBasePrice.toFixed(2)}
@@ -153,7 +153,9 @@ export const ModalContent: React.FC<ModalContentProps> = ({
               <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
               <div>
                 <p className="text-green-800 font-semibold">{t('preCheckoutModal.codeAlreadyUsed')}</p>
-                <p className="text-green-600 text-sm">{t('preCheckoutModal.discountAlreadyApplied')}</p>
+                {(activeDiscount.discount_amount ?? 0) > 0 && (
+                  <p className="text-green-600 text-sm">{t('preCheckoutModal.discountAlreadyApplied')}</p>
+                )}
               </div>
             </div>
           </div>

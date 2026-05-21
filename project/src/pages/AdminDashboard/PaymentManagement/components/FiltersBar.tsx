@@ -19,6 +19,7 @@ export interface FiltersBarProps {
 	currentPage: number;
 	totalPages: number;
   backendTotalCount?: number | null;
+  isPostSales?: boolean;
 }
 
 function FiltersBarBase(props: FiltersBarProps) {
@@ -40,6 +41,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 		currentPage,
 		totalPages,
     backendTotalCount,
+    isPostSales,
 	} = props;
 
 	const searchTimeoutRef = React.useRef<number | null>(null);
@@ -177,13 +179,15 @@ function FiltersBarBase(props: FiltersBarProps) {
 					>
 						{showFilters ? 'Hide Filters' : 'Show Filters'}
 					</button>
-					<button
-						onClick={handleExport}
-						className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
-					>
-						<Download size={16} />
-						Export CSV
-					</button>
+					{!isPostSales && (
+						<button
+							onClick={handleExport}
+							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
+						>
+							<Download size={16} />
+							Export CSV
+						</button>
+					)}
 					<div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
 						<button
 							onClick={() => handleViewModeChange('grid')}
@@ -264,7 +268,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 							<label className="block text-xs font-medium text-gray-700 mb-1.5">
 								Fee Type {getFilterArray(filters.feeType).length > 0 && `(${getFilterArray(filters.feeType).length} selected)`}
 							</label>
-							<div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white p-2 space-y-2">
+							<div className="border border-gray-200 rounded-lg bg-white p-2 space-y-2">
 								{FEE_TYPES.length === 0 ? (
 									<p className="text-xs text-gray-500 py-2">No types available</p>
 								) : (
@@ -340,7 +344,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 							<label className="block text-xs font-medium text-gray-700 mb-1.5">
 								Payment Method {getFilterArray(filters.paymentMethod).length > 0 && `(${getFilterArray(filters.paymentMethod).length} selected)`}
 							</label>
-							<div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white p-2 space-y-2">
+							<div className="border border-gray-200 rounded-lg bg-white p-2 space-y-2">
 								{uniquePaymentMethods.length === 0 ? (
 									<p className="text-xs text-gray-500 py-2">No methods available</p>
 								) : (

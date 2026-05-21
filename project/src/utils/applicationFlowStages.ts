@@ -52,6 +52,7 @@ export interface ApplicationFlowStage {
   requiresTransfer?: boolean;
   requiresProcessType?: string;
   actor: 'student' | 'admin' | 'both';
+  team?: string;
 }
 
 export interface StudentRecord {
@@ -87,7 +88,15 @@ export interface StudentRecord {
   docs_total_uploaded?: number;
   docs_total_approved?: number;
   docs_total_rejected?: number;
+  docs_total_rejected_files?: number;
   docs_total_under_review?: number;
+
+  // Basic docs aggregation fields (passport, diploma, funds_proof)
+  basic_docs_total_required?: number;
+  basic_docs_total_uploaded?: number;
+  basic_docs_total_approved?: number;
+  basic_docs_total_rejected?: number;
+  basic_docs_total_under_review?: number;
 }
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
@@ -97,7 +106,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Sel. Fee Paid',
     icon: CreditCard,
     description: 'Student has paid the Selection Process Fee',
-    actor: 'student'
+    actor: 'student',
+    team: 'Closer'
   },
   {
     key: 'apply',
@@ -105,7 +115,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Choosing',
     icon: FileText,
     description: 'Student selected scholarships but has not yet uploaded the 3 main documents',
-    actor: 'student'
+    actor: 'student',
+    team: 'Closer'
   },
   {
     key: 'bdp_collection',
@@ -113,7 +124,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'BDP',
     icon: FileText,
     description: 'Pending: Bank Statement, Diploma & Passport upload',
-    actor: 'student'
+    actor: 'student',
+    team: 'Document Specialist'
   },
   {
     key: 'review',
@@ -121,7 +133,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Eligibility',
     icon: Eye,
     description: 'Awaiting admin approval of submitted documents and selected scholarship',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Academic Advisor / University'
   },
   {
     key: 'start_admission',
@@ -129,7 +142,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Start Admission',
     icon: BookOpen,
     description: 'Scholarship approved — student selects a scholarship to proceed with admission',
-    actor: 'student'
+    actor: 'student',
+    team: 'Academic Advisor / University'
   },
   {
     key: 'application_fee',
@@ -137,7 +151,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'App Fee',
     icon: DollarSign,
     description: 'Student selected a scholarship — pending Application Fee payment',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'placement_fee',
@@ -145,7 +160,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Placement Fee',
     icon: DollarSign,
     description: 'Application fee paid — pending Placement Fee payment',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'reinstatement_fee',
@@ -153,7 +169,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Reinstatement',
     icon: DollarSign,
     description: 'Placement fee paid — pending Reinstatement Fee payment (transfer with inactive visa only)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'scholarship_fee',
@@ -161,7 +178,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Scholarship Fee',
     icon: Award,
     description: 'Student has paid the Scholarship Fee',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'university_docs',
@@ -169,7 +187,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Univ. Docs',
     icon: Upload,
     description: 'Student must upload university documents (filled and translated)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Document Specialist / University'
   },
   {
     key: 'docs_approval',
@@ -177,7 +196,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Doc Approval',
     icon: ClipboardCheck,
     description: 'Admin reviews uploaded documents — approve or reject each one',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'send_docs_to_university',
@@ -185,7 +205,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Send Docs',
     icon: Send,
     description: 'Admin confirms documents were sent to the university',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'receive_acceptance_letter',
@@ -193,7 +214,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Recv. Letter',
     icon: Mail,
     description: 'Admin uploads acceptance letter received from university',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'send_acceptance_letter',
@@ -201,7 +223,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Send Letter',
     icon: Send,
     description: 'Admin sends acceptance letter to the student',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'i20_fee',
@@ -209,7 +232,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'I-20 Fee',
     icon: CreditCard,
     description: 'Student pays the I-20 Control Fee (Initial, COS, Transfer/Reinstatement)',
-    actor: 'student'
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
     key: 'student_sends_letter',
@@ -218,7 +242,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     icon: FileText,
     description: 'Admin sends transfer form to student → student submits to current institution → student uploads completed form → admin approves.',
     requiresTransfer: true,
-    actor: 'both'
+    actor: 'both',
+    team: 'Admission / University'
   },
   {
     key: 'sevis_transfer',
@@ -227,7 +252,8 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     icon: RefreshCw,
     description: 'Admin confirms SEVIS transfer completed (happens outside the platform)',
     requiresTransfer: true,
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'visa_approval',
@@ -235,15 +261,17 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'Visa',
     icon: Shield,
     description: 'Admin confirms visa approved. Student must send documentation to lawyer (Aplikei) outside the platform.',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
     key: 'enrollment',
-    label: 'Enrollment',
-    shortLabel: 'Enrollment',
+    label: 'Admitted Enrollment',
+    shortLabel: 'Admitted',
     icon: GraduationCap,
     description: 'Student has been enrolled in the program',
-    actor: 'admin'
+    actor: 'admin',
+    team: 'Support / Customer Service'
   }
 ];
 
@@ -258,8 +286,8 @@ export function getStepStatus(
 
   switch (step) {
     case 'selection_fee':
-      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       if (student.application_status === 'enrolled') return 'completed';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       return student.has_submitted_form ? 'completed' : 'in_progress';
 
     case 'apply':
@@ -268,6 +296,8 @@ export function getStepStatus(
 
     case 'bdp_collection':
       if (student.application_status === 'enrolled') return 'completed';
+      // If student has progressed past BDP (approved or app fee paid), consider complete
+      if (student.application_status === 'approved' || student.is_application_fee_paid) return 'completed';
       return student.documents_uploaded ? 'completed' : 'pending';
 
     case 'review':
@@ -304,7 +334,6 @@ export function getStepStatus(
 
     case 'university_docs': {
       const total = student.docs_total_required ?? 0;
-      if (total === 0) return 'skipped';
       const alreadyProgressed =
         !!student.acceptance_letter_url ||
         student.acceptance_letter_status === 'sent' ||
@@ -312,12 +341,15 @@ export function getStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      if (alreadyProgressed) return 'completed';
+      
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
+
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
       const uploaded = student.docs_total_uploaded ?? 0;
+      
       if (rejected > 0) return 'pending';
-      // Opção B: se tem pelo menos 1 em revisão, passa para docs_approval
       if (underReview > 0) return 'completed';
       if (uploaded < total) return 'pending';
       return 'completed';
@@ -325,7 +357,6 @@ export function getStepStatus(
 
     case 'docs_approval': {
       const total = student.docs_total_required ?? 0;
-      if (total === 0) return 'skipped';
       const alreadyProgressed =
         !!student.acceptance_letter_url ||
         student.acceptance_letter_status === 'sent' ||
@@ -333,12 +364,15 @@ export function getStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      if (alreadyProgressed) return 'completed';
+      
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
+
       const approved = student.docs_total_approved ?? 0;
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
+      
       if (approved >= total) return 'completed';
-      // Rejeitado sem re-upload → volta para university_docs (handled lá)
       if (rejected > 0) return 'pending';
       if (underReview > 0 || approved > 0) return 'in_progress';
       return 'pending';
@@ -346,18 +380,18 @@ export function getStepStatus(
 
     case 'send_docs_to_university':
       // 'pending' é valor default da application — só conta URL ou status 'sent'
-      return (student.has_sent_docs_to_university || !!student.acceptance_letter_url || student.acceptance_letter_status === 'sent')
+      return (student.has_sent_docs_to_university || !!student.acceptance_letter_url || student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled')
         ? 'completed'
         : 'pending';
 
     case 'receive_acceptance_letter':
       // Só completa quando admin fez upload da carta (URL existe)
-      return student.acceptance_letter_url ? 'completed' : 'pending';
+      return (student.acceptance_letter_url || student.application_status === 'enrolled') ? 'completed' : 'pending';
 
     case 'send_acceptance_letter':
-      // Só aparece quando admin já fez upload da carta
-      if (!student.acceptance_letter_url) return 'skipped';
-      return student.acceptance_letter_status === 'sent' ? 'completed' : 'pending';
+      // Show as completed if sent or URL exists (depending on school preference)
+      if (student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled') return 'completed';
+      return student.acceptance_letter_url ? 'in_progress' : 'pending';
 
     case 'student_sends_letter':
       if (student.student_process_type !== 'transfer') return 'skipped';
@@ -390,6 +424,9 @@ export function getStepStatus(
       return 'skipped';
 
     case 'visa_approval':
+      // Visa approval only applies to initial (new F-1) students.
+      // COS students do status change via I-539; transfer students use SEVIS transfer.
+      if (student.student_process_type !== 'initial') return 'skipped';
       return student.visa_approved ? 'completed' : 'pending';
 
     // Legacy stages — kept for backward compat, no longer in flow array
@@ -436,6 +473,12 @@ export function getCurrentStage(student: StudentRecord): {
   stage: ApplicationFlowStageKey | null;
   status: StageStatus;
 } {
+  // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
+  // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
+  if (student.application_status === 'enrolled') {
+    return { stage: 'enrollment', status: 'completed' };
+  }
+
   for (const stageDef of APPLICATION_FLOW_STAGES) {
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;

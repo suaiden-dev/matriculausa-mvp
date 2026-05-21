@@ -27,14 +27,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
   const { user, userProfile } = useAuth();
 
   // Determine recipient based on current user role
-  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+  const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
     ? conversation.student_profile
     : conversation.admin_profile;
 
   const recipientName = recipient?.full_name || 'Unknown User';
 
   // Get global unread count for this student (if it's a student conversation)
-  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
     ? getGlobalUnreadCount(conversation.student_id)
     : 0;
 
@@ -84,10 +84,19 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between mb-1 min-w-0">
-          <h3 className={`text-sm font-medium text-slate-900 truncate pr-2 ${hasEffectiveUnread ? 'font-semibold' : ''}`}>
-            {recipientName}
-          </h3>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className={`font-semibold text-slate-900 truncate ${hasEffectiveUnread ? 'text-blue-600' : ''}`}>
+              {recipientName}
+            </h3>
+            {userProfile?.role === 'student' && recipient?.role && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
+                recipient.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {recipient.role === 'admin' ? 'Support' : 'University'}
+              </span>
+            )}
+          </div>
           <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
             {formatTime(conversation.last_message_at)}
           </span>
@@ -98,7 +107,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
             {/* Mostrar checks se a última mensagem foi enviada por um admin (no dashboard de admin) 
                 ou se foi enviada pelo próprio usuário logado */}
             {user && conversation.last_message && (
-              ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && conversation.last_message_sender_id !== conversation.student_id) ||
+              ((userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && conversation.last_message_sender_id !== conversation.student_id) ||
               (conversation.last_message_sender_id === user.id)
             ) && (
                 <MessageReadStatus
@@ -136,6 +145,32 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentSelector, setShowStudentSelector] = useState(false);
   const [studentEmails, setStudentEmails] = useState<{ [key: string]: string }>({});
+  const [activeTab, setActiveTab] = useState<'support' | 'universities'>('support');
+
+  // Auto-select the first conversation if there's only one and nothing is selected (especially for students)
+  useEffect(() => {
+    if (!selectedConversationId && conversations.length === 1 && !loading && !isInitialLoad) {
+      handleConversationClick(conversations[0]);
+    }
+  }, [conversations, selectedConversationId, loading, isInitialLoad]);
+
+  // Auto-switch tab if selectedConversationId changes to a conversation in a different tab
+  useEffect(() => {
+    if (selectedConversationId && conversations.length > 0) {
+      const selectedConv = conversations.find(c => c.id === selectedConversationId);
+      if (selectedConv && selectedConv.admin_profile?.role) {
+        const adminRole = selectedConv.admin_profile.role;
+        const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+        const isUniversity = adminRole === 'school';
+        
+        if (isSupport && activeTab !== 'support') {
+          setActiveTab('support');
+        } else if (isUniversity && activeTab !== 'universities') {
+          setActiveTab('universities');
+        }
+      }
+    }
+  }, [selectedConversationId, conversations]);
 
   // Função para verificar se deve filtrar (produção, staging ou local para testes)
   const shouldFilter = useMemo(() => {
@@ -170,6 +205,17 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
     if (!shouldFilter) return false; // Em desenvolvimento, não excluir
+
+    // Se o próprio usuário logado for um usuário de teste, ou se for Admin/School, permitir ver outros usuários de teste
+    if (
+      userProfile?.email?.toLowerCase().endsWith('@uorak.com') ||
+      userProfile?.role === 'admin' ||
+      userProfile?.role === 'school' ||
+      userProfile?.role === 'affiliate_admin'
+    ) {
+      return false;
+    }
+
     return email.toLowerCase().includes('@uorak.com');
   };
 
@@ -220,8 +266,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     if (!shouldFilter) return conversations;
 
     return conversations.filter(conversation => {
-      // Para admin/affiliate_admin, filtrar por email do estudante
-      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
+      // Para admin/affiliate_admin/post_sales/school, filtrar por email do estudante
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') {
         const studentEmail = studentEmails[conversation.student_id] || '';
         return !shouldExcludeEmail(studentEmail);
       }
@@ -230,14 +276,42 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     });
   }, [conversations, studentEmails, isDevelopment, userProfile?.role]);
 
-  // Filter conversations based on search term
-  const filteredConversations = filteredConversationsByEmail.filter(conversation => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
-      ? conversation.student_profile
-      : conversation.admin_profile;
-    const recipientName = recipient?.full_name || '';
-    return recipientName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  // Filter conversations based on active tab and search term
+  const filteredConversations = useMemo(() => {
+    return filteredConversationsByEmail.filter(conversation => {
+      const adminRole = conversation.admin_profile?.role;
+      
+      // Filter by tab (only for admin role)
+      if (userProfile?.role === 'admin') {
+        const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+        const isUniversity = adminRole === 'school';
+        
+        if (activeTab === 'support' && !isSupport) return false;
+        if (activeTab === 'universities' && !isUniversity) return false;
+      }
+
+      const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school'  || userProfile?.role === 'post_sales')
+        ? conversation.student_profile
+        : conversation.admin_profile;
+      const recipientName = recipient?.full_name || '';
+      return recipientName.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [filteredConversationsByEmail, activeTab, searchTerm, userProfile?.role]);
+
+  // Calculate unread counts for each tab
+  const tabUnreadCounts = useMemo(() => {
+    const counts = { support: 0, universities: 0 };
+    filteredConversationsByEmail.forEach(conversation => {
+      const adminRole = conversation.admin_profile?.role;
+      const isSupport = adminRole === 'admin' || adminRole === 'affiliate_admin';
+      const isUniversity = adminRole === 'school';
+      
+      const unreadCount = conversation.unread_count || 0;
+      if (isSupport) counts.support += unreadCount;
+      if (isUniversity) counts.universities += unreadCount;
+    });
+    return counts;
+  }, [filteredConversationsByEmail]);
 
   // Auto-refresh conversations every 30 seconds
   useEffect(() => {
@@ -249,16 +323,16 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   }, [refetchConversations]);
 
   const handleConversationClick = async (conversation: any) => {
-    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'school' || userProfile?.role === 'post_sales')
       ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || 'Unknown User';
-    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school')
       ? conversation.student_id
       : conversation.admin_id;
 
-    // ✅ NOVO: Se for admin/affiliate_admin, marcar mensagens como lidas quando visualiza
-    if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && user) {
+    // ✅ NOVO: Se for admin/affiliate_admin/post_sales/school, marcar mensagens como lidas quando visualiza
+    if ((userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') && user) {
       try {
         // Marcar mensagens não lidas como lidas quando admin visualiza a conversa
         await supabase
@@ -295,9 +369,9 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         .select('id, admin_id')
         .eq('student_id', studentId);
 
-      // For affiliate admins, only look for their own conversations
-      // For regular admins, look for any existing conversation with this student
-      if (userProfile?.role === 'affiliate_admin') {
+      // For affiliate admins and schools, only look for their own conversations
+      // For regular admins and post_sales, look for any existing conversation with this student
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') {
         query = query.eq('admin_id', user?.id);
       }
 
@@ -366,25 +440,15 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     <div className={`bg-white rounded-lg shadow-sm h-full flex flex-col ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-slate-200">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
-            <MessageSquare className="w-5 h-5 mr-2" />
-            {userProfile?.role === 'affiliate_admin' ? 'Student Conversations' : 'Support Chat'}
+            <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
+            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Messages'}
           </h2>
           <div className="flex items-center space-x-2">
-            {userProfile?.role === 'affiliate_admin' && (
-              <button
-                onClick={() => setShowStudentSelector(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md flex items-center transition-colors"
-                title="Start new conversation"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                New Chat
-              </button>
-            )}
             <button
               onClick={() => refetchConversations(false)}
-              className="text-slate-500 hover:text-slate-700 p-1 rounded"
+              className="text-slate-500 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-full transition-colors"
               title="Refresh conversations"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,11 +458,47 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
           </div>
         </div>
 
+        {/* Tabs - Only for admin */}
+        {(userProfile?.role === 'admin') && (
+          <div className="flex p-1 bg-slate-100 rounded-lg mb-4">
+            <button
+              onClick={() => setActiveTab('support')}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'support' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Support
+              {tabUnreadCounts.support > 0 && (
+                <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {tabUnreadCounts.support}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('universities')}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+                activeTab === 'universities' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Universities
+              {tabUnreadCounts.universities > 0 && (
+                <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {tabUnreadCounts.universities}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Search */}
         <div className="relative">
           <input
             type="text"
-            placeholder={userProfile?.role === 'affiliate_admin' ? 'Search students...' : 'Search conversations...'}
+            placeholder={(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Search students...' : 'Search conversations...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -441,8 +541,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         )}
       </div>
 
-      {/* Footer CTA - Start new conversation (admin/affiliate_admin) */}
-      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') && (
+      {/* Footer CTA - Start new conversation (admin/affiliate_admin/post_sales/school) */}
+      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin' || userProfile?.role === 'post_sales' || userProfile?.role === 'school') && (
         <div className="border-t border-slate-200 p-3 mt-auto sticky bottom-0 bg-white">
           <button
             onClick={() => setShowStudentSelector(true)}

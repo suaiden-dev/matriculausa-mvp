@@ -10,9 +10,11 @@ import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import DocumentHistoryAccordion from '../../components/DocumentHistoryAccordion';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign, Lock } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { PayerInfo } from '../../components/PayerAlternativeForm';
 import { ZelleCheckout } from '../../components/ZelleCheckout';
 import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
@@ -68,7 +70,8 @@ const ApplicationChatPage: React.FC = () => {
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
-  
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
+
   // Estados para controlar document requests (removidos - não mais utilizados)
 
   // useEffect também deve vir antes de qualquer return condicional
@@ -82,22 +85,23 @@ const ApplicationChatPage: React.FC = () => {
         .then(({ data }) => {
           console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
           console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
-          
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se o I-20 não foi pago
-          // Isso previne que o aluno veja a URL no Network tab do DevTools
-          // Mas mantém o status visível para que o aluno saiba que a carta foi enviada
+
+          // ✅ SEGURANÇA: Ocultar URLs originais se o I-20 não foi pago
+          // Usa um valor sentinela 'blocked' para manter i20DocumentAvailable = true
+          // mas sem expor a URL real no Network tab do DevTools
           if (data && !(userProfile as any)?.has_paid_i20_control_fee) {
-            data.acceptance_letter_url = null;
-            // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
-            // para que o aluno saiba que a carta foi enviada
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            // Manter i20_document_url como 'blocked' para que o tab apareça habilitado
+            // O componente usa !!i20_document_url para determinar se o doc foi enviado
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
 
-          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se há saldo devedor de Placement Fee
-          // (1ª parcela aprovada mas 2ª ainda não paga)
+          // ✅ SEGURANÇA: Ocultar URLs originais se há saldo devedor de Placement Fee
           if (data && ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0) {
-            data.acceptance_letter_url = null;
+            if (data.acceptance_letter_url) data.acceptance_letter_url = null;
+            if (data.i20_document_url) data.i20_document_url = 'blocked';
           }
-          
+
           setApplicationDetails(data);
         });
     }
@@ -115,14 +119,14 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     // Scroll imediato para o topo da página
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     // Garantir que chegou ao topo absoluto após um pequeno delay
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, [activeTab]);
 
@@ -155,7 +159,7 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     async function fetchScholarshipFeeDeadline() {
       if (!userProfile?.id) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('scholarship_applications')
@@ -164,13 +168,13 @@ const ApplicationChatPage: React.FC = () => {
           .or('is_scholarship_fee_paid.eq.true,is_placement_fee_paid.eq.true')
           .order('updated_at', { ascending: false })
           .limit(1);
-        
+
         if (error) {
           console.error('Erro ao buscar scholarship fee deadline:', error);
           setScholarshipFeeDeadline(null);
           return;
         }
-        
+
         // Verificar se há dados e pegar o primeiro resultado
         if (data && data.length > 0 && data[0]?.updated_at) {
           const paidDate = new Date(data[0].updated_at);
@@ -184,7 +188,7 @@ const ApplicationChatPage: React.FC = () => {
         setScholarshipFeeDeadline(null);
       }
     }
-    
+
     fetchScholarshipFeeDeadline();
   }, [userProfile]);
 
@@ -195,7 +199,7 @@ const ApplicationChatPage: React.FC = () => {
       const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
       const isLegacySystem = userProfile?.system_type === 'legacy';
       const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
-      
+
       if (!canUsePromotionalCoupon || !user?.id) {
         setI20PromotionalCoupon(null);
         return;
@@ -215,21 +219,21 @@ const ApplicationChatPage: React.FC = () => {
 
         if (!couponError && couponUsage) {
           // Verificar se é um registro de validação (não pagamento confirmado)
-          const isValidation = couponUsage.metadata?.is_validation === true || 
-                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
-          
+          const isValidation = couponUsage.metadata?.is_validation === true ||
+            (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
+
           if (isValidation) {
             const originalAmount = parseFloat(couponUsage.original_amount.toString());
             const finalAmount = parseFloat(couponUsage.final_amount.toString());
             const discountAmount = parseFloat(couponUsage.discount_amount.toString());
-            
+
             console.log('[ApplicationChatPage] Cupom promocional encontrado para i20_control:', {
               coupon: couponUsage.coupon_code,
               originalAmount,
               finalAmount,
               discountAmount
             });
-            
+
             setI20PromotionalCoupon({
               originalAmount,
               finalAmount,
@@ -238,7 +242,7 @@ const ApplicationChatPage: React.FC = () => {
             return;
           }
         }
-        
+
         // Se não encontrou no banco, limpar estado
         setI20PromotionalCoupon(null);
       } catch (error) {
@@ -248,7 +252,7 @@ const ApplicationChatPage: React.FC = () => {
     };
 
     checkI20PromotionalCoupon();
-    
+
     // ✅ CORREÇÃO: Removido intervalo de 5 segundos - verificar apenas quando necessário
     // O cupom promocional não muda com frequência, então não precisa verificar constantemente
     // return () => clearInterval(interval); // Removido - não há mais intervalo
@@ -274,16 +278,16 @@ const ApplicationChatPage: React.FC = () => {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        
+
         if (error) {
           console.error('[ApplicationChatPage] Erro ao buscar valor pago do I-20:', error);
           setRealI20PaidAmount(null);
           return;
         }
-        
+
         if (payments) {
           // Usar gross_amount_usd quando disponível, senão usar amount
-          const displayAmount = payments.gross_amount_usd 
+          const displayAmount = payments.gross_amount_usd
             ? parseFloat(payments.gross_amount_usd.toString())
             : parseFloat(payments.amount.toString());
           setRealI20PaidAmount(displayAmount);
@@ -334,14 +338,14 @@ const ApplicationChatPage: React.FC = () => {
     console.log('🔍 [ApplicationChatPage] handlePayI20 chamada');
     console.log('🔍 [ApplicationChatPage] Estado atual showI20ControlFeeModal:', showI20ControlFeeModal);
     console.log('🔍 [ApplicationChatPage] Estado atual selectedPaymentMethod:', selectedPaymentMethod);
-    
+
     // Resetar o estado antes de abrir o modal
     setSelectedPaymentMethod(null);
     setI20Error(null);
-    
+
     // Abrir o modal do I-20 Control Fee ao invés de redirecionar diretamente
     setShowI20ControlFeeModal(true);
-    
+
     console.log('🔍 [ApplicationChatPage] setShowI20ControlFeeModal(true) executado');
   };
 
@@ -349,9 +353,10 @@ const ApplicationChatPage: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number, payerInfoParam?: PayerInfo | null) => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
+    if (payerInfoParam) setPayerInfo(payerInfoParam);
     if (method === 'pix' && exchangeRateParam) {
       setExchangeRate(exchangeRateParam);
       console.log('🔍 [ApplicationChatPage] Taxa de câmbio armazenada:', exchangeRateParam);
@@ -370,30 +375,30 @@ const ApplicationChatPage: React.FC = () => {
   // Função para processar o pagamento
   const handleProceedPayment = useCallback(async () => {
     console.log('🔍 [ApplicationChatPage] handleProceedPayment chamado. selectedPaymentMethod:', selectedPaymentMethod);
-    
+
     if (!selectedPaymentMethod) {
       console.log('❌ [ApplicationChatPage] Nenhum método de pagamento selecionado. Abortando.');
       return;
     }
-    
+
     setI20Loading(true);
     setI20Error(null);
-    
+
     try {
       if (selectedPaymentMethod === 'stripe') {
         // Redirecionar para o Stripe
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
-        
+
         // Novo modelo: I-20 NÃO recebe adicionais por dependentes
         const baseAmount = getFeeAmount('i20_control_fee');
         const finalAmount = baseAmount;
-        
+
         // Verificar se há cupom promocional válido
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
         const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
-        
+
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -420,25 +425,25 @@ const ApplicationChatPage: React.FC = () => {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
-        
+
         // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type
         if (!i20ControlFee) {
           setI20Error('I-20 Control Fee ainda está carregando. Aguarde um momento e tente novamente.');
           return;
         }
         const finalAmount = parseFloat(i20ControlFee.replace('$', ''));
-        
+
         // Verificar se há cupom promocional válido
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
         const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
-        
+
         // Incluir taxa de câmbio no metadata se disponível (para garantir consistência entre frontend e backend)
         const metadata: any = {};
         if (exchangeRate && exchangeRate > 0) {
           metadata.exchange_rate = exchangeRate.toString();
           console.log('🔍 [ApplicationChatPage] Incluindo taxa de câmbio no metadata:', exchangeRate);
         }
-        
+
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -467,34 +472,34 @@ const ApplicationChatPage: React.FC = () => {
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
         const finalAmountWithDiscount = (window as any).__checkout_final_amount || getFeeAmount('i20_control_fee');
         const i20Amount = finalAmountWithDiscount.toString();
-        
+
         const params = new URLSearchParams({
           feeType: 'i20_control_fee',
           amount: i20Amount,
           scholarshipsIds: applicationDetails?.scholarships?.id || ''
         });
-        
+
         // Adicionar campo específico para I-20 Control Fee
         params.append('i20ControlFeeAmount', i20Amount);
-        
+
         // Adicionar cupom promocional se houver
         if (promotionalCoupon) {
           params.append('promotionalCoupon', promotionalCoupon);
         }
-        
+
         window.location.href = `/checkout/zelle?${params.toString()}`;
       } else if (selectedPaymentMethod === 'parcelow') {
         // Redirecionar para o Parcelow
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
-        
+
         // Obter valor final
         const finalAmount = (window as any).__checkout_final_amount || parseFloat(i20ControlFee?.replace('$', '') || '0');
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-        
+
         console.log('🔍 [ApplicationChatPage] Iniciando checkout Parcelow para I-20...', { finalAmount, promotionalCoupon });
-        
+
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -511,28 +516,27 @@ const ApplicationChatPage: React.FC = () => {
               promotional_coupon: promotionalCoupon
             },
             promotional_coupon: promotionalCoupon,
-            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : [],
+            ...(payerInfo && { payer_info: payerInfo }),
           }),
         });
-        
+
         if (!res.ok) {
           const errorData = await res.json();
           console.error('🔍 [ApplicationChatPage] Erro Parcelow:', errorData);
-          
-          if (errorData.error === 'document_number_required') {
-            setProfileErrorType('cpf_missing');
+
+          if (errorData.error === 'document_number_required' || errorData.error === 'User profile not found') {
+            // Se tivermos informações de titular de Cartão de Outra Pessoa, não deveríamos cair aqui,
+            // mas por segurança vamos verificar
+            if (payerInfo) {
+              throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+            }
+            setProfileErrorType(errorData.error === 'document_number_required' ? 'cpf_missing' : 'profile_incomplete');
             setShowProfileRequiredModal(true);
             setI20Loading(false);
             return;
           }
-          
-          if (errorData.error === 'User profile not found') {
-            setProfileErrorType('profile_incomplete');
-            setShowProfileRequiredModal(true);
-            setI20Loading(false);
-            return;
-          }
-          
+
           throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
         }
 
@@ -545,10 +549,10 @@ const ApplicationChatPage: React.FC = () => {
           throw new Error('URL de checkout Parcelow não encontrada');
         }
       }
-      
+
       // Se chegou até aqui sem erro, não fechar o modal ainda (redirecionamento está acontecendo)
       console.log('🔍 [ApplicationChatPage] Redirecionamento iniciado, mantendo modal aberto');
-      
+
     } catch (err) {
       console.error('🔍 [ApplicationChatPage] Erro no pagamento:', err);
       setI20Error(t('studentDashboard.applicationChatPage.errors.paymentRedirectError'));
@@ -565,7 +569,7 @@ const ApplicationChatPage: React.FC = () => {
       const timer = setTimeout(() => {
         handleProceedPayment();
       }, 50); // Reduzido para 50ms para ser mais responsivo
-      
+
       return () => clearTimeout(timer);
     }
   }, [selectedPaymentMethod, showI20ControlFeeModal, handleProceedPayment]);
@@ -575,12 +579,30 @@ const ApplicationChatPage: React.FC = () => {
     return <div className="text-center text-gray-500 py-10">{t('studentDashboard.applicationChatPage.hardcodedTexts.authenticating')}</div>;
   }
 
-  // Array de informações dos documentos
+  // Array de informações dos documentos (Dinâmico para incluir I-20 e Acceptance Letter)
   const DOCUMENTS_INFO: DocumentInfo[] = [
     { key: 'passport', label: t('studentDashboard.applicationChatPage.documentTypes.passport.label'), description: t('studentDashboard.applicationChatPage.documentTypes.passport.description') },
     { key: 'diploma', label: t('studentDashboard.applicationChatPage.documentTypes.diploma.label'), description: t('studentDashboard.applicationChatPage.documentTypes.diploma.description') },
     { key: 'funds_proof', label: t('studentDashboard.applicationChatPage.documentTypes.funds_proof.label'), description: t('studentDashboard.applicationChatPage.documentTypes.funds_proof.description') },
   ];
+
+  // Adicionar Acceptance Letter se disponível
+  if (applicationDetails?.acceptance_letter_url || applicationDetails?.acceptance_letter_status === 'approved') {
+    DOCUMENTS_INFO.push({
+      key: 'acceptance_letter',
+      label: t('studentDashboard.applicationChatPage.documentTypes.acceptance_letter.label') || 'Acceptance Letter',
+      description: t('studentDashboard.applicationChatPage.documentTypes.acceptance_letter.description') || 'Seu documento oficial de aceitação da universidade.'
+    });
+  }
+
+  // Adicionar I-20 se disponível (mesmo que bloqueado)
+  if (applicationDetails?.i20_document_url) {
+    DOCUMENTS_INFO.push({
+      key: 'i20_document',
+      label: 'Formulário I-20',
+      description: 'Documento essencial para sua entrevista de visto e entrada nos EUA.'
+    });
+  }
 
   // Função utilitária de download imediato
   const handleForceDownload = async (url: string, filename: string) => {
@@ -607,17 +629,17 @@ const ApplicationChatPage: React.FC = () => {
     { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
   ];
-  
+
   const tabIds: (typeof activeTab)[] = ['welcome', 'details'];
-  
+
   // I-20 agora aparece após scholarship fee ou placement fee ser paga
   const showI20TabInDashboard = applicationDetails && (applicationDetails.is_scholarship_fee_paid || applicationDetails.is_placement_fee_paid);
-  
+
   if (showI20TabInDashboard) {
     tabItems.push({ title: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck });
     tabIds.push('i20');
   }
-  
+
   tabItems.push({ title: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen });
   tabIds.push('documents');
 
@@ -666,10 +688,10 @@ const ApplicationChatPage: React.FC = () => {
     const isLegacy = userProfile.system_type === 'legacy';
     if (isLegacy) return base;
 
-    const dependentsCount = userProfile.dependents 
-      ? (Array.isArray(userProfile.dependents) ? userProfile.dependents.length : Number(userProfile.dependents)) 
+    const dependentsCount = userProfile.dependents
+      ? (Array.isArray(userProfile.dependents) ? userProfile.dependents.length : Number(userProfile.dependents))
       : 0;
-    
+
     return base + (dependentsCount * 100);
   };
 
@@ -700,21 +722,21 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
               </div>
-              
+
               <div className="relative z-10 p-6 sm:p-8 md:p-12">
                 <div className="flex flex-col items-center text-center space-y-4">
                   <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight text-center">
-                    {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', { 
-                      firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student' 
+                    {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', {
+                      firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student'
                     })}
                   </h1>
-                  
+
                   <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed text-center">
-                    {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', { 
-                      universityName: applicationDetails.scholarships?.universities?.name || 'your university' 
+                    {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', {
+                      universityName: applicationDetails.scholarships?.universities?.name || 'your university'
                     })}
                   </p>
-                  
+
                   {applicationDetails.scholarships?.title && (
                     <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 mt-6">
                       <Award className="w-5 h-5 text-white mr-2" />
@@ -738,7 +760,7 @@ const ApplicationChatPage: React.FC = () => {
                 {/* Step 1: Documents */}
                 <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 transform hover:-translate-y-1">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center">
-                    
+
                     <div className="flex-1 space-y-3">
                       <div className="flex items-center gap-3">
                         <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">1</span>
@@ -746,29 +768,29 @@ const ApplicationChatPage: React.FC = () => {
                           {t('studentDashboard.applicationChatPage.welcome.documentRequests.title')}
                         </h3>
                       </div>
-                      
+
                       <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
                         {t('studentDashboard.applicationChatPage.welcome.documentRequests.description')}
                       </p>
-                      
+
                       {/* Mostrar aviso sobre Acceptance Letter quando disponível */}
-                      {(applicationDetails.acceptance_letter_status === 'sent' || 
+                      {(applicationDetails.acceptance_letter_status === 'sent' ||
                         applicationDetails.acceptance_letter_status === 'approved' ||
                         applicationDetails.acceptance_letter_sent_at) && (
-                        <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-3 flex items-start gap-2">
-                          <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-blue-800 text-sm font-medium">
-                              {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterAvailable') || 'Carta de Aceitação disponível!'}
-                            </p>
-                            <p className="text-blue-700 text-xs mt-1">
-                              {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterDescription') || 'Sua carta de aceitação foi enviada pela universidade. Acesse a aba Documentos para visualizar.'}
-                            </p>
+                          <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-3 flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-blue-800 text-sm font-medium">
+                                {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterAvailable') || 'Carta de Aceitação disponível!'}
+                              </p>
+                              <p className="text-blue-700 text-xs mt-1">
+                                {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterDescription') || 'Sua carta de aceitação foi enviada pela universidade. Acesse a aba Documentos para visualizar.'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      
-                      <button 
+                        )}
+
+                      <button
                         onClick={() => setActiveTab('documents')}
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group outline outline-1 outline-slate-300"
                       >
@@ -792,12 +814,12 @@ const ApplicationChatPage: React.FC = () => {
                           {t('studentDashboard.applicationChatPage.welcome.applicationDetails.title')}
                         </h3>
                       </div>
-                      
+
                       <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
                         {t('studentDashboard.applicationChatPage.welcome.applicationDetails.description')}
                       </p>
-                      
-                      <button 
+
+                      <button
                         onClick={() => setActiveTab('details')}
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-[#05294E] to-[#0a4a7a] text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group outline outline-1 outline-slate-300"
                       >
@@ -817,7 +839,7 @@ const ApplicationChatPage: React.FC = () => {
                     {!hasPaid && (
                       <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 transform hover:-translate-y-1">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center ">
-                          
+
                           <div className="flex-1 space-y-3">
                             <div className="flex items-center gap-3">
                               <span className="inline-flex items-center justify-center w-8 h-8 bg-red-100 text-[#D0151C] rounded-full text-sm font-bold">3</span>
@@ -825,12 +847,12 @@ const ApplicationChatPage: React.FC = () => {
                                 {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}
                               </h3>
                             </div>
-                            
+
                             <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
                               {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}
                             </p>
-                            
-                            <button 
+
+                            <button
                               onClick={() => setActiveTab('i20')}
                               className="inline-flex items-center gap-2 bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
                             >
@@ -843,14 +865,14 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Card quando já foi pago - Design de sucesso */}
                     {hasPaid && (
                       <div className="group bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-green-200 hover:border-green-300 transform hover:-translate-y-1 relative overflow-hidden">
                         {/* Decorative background elements */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full -translate-y-16 translate-x-16 opacity-20"></div>
                         <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full translate-y-12 -translate-x-12 opacity-20"></div>
-                        
+
                         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center">
                           <div className="flex-1 space-y-4">
                             <div className="flex items-center gap-3">
@@ -870,7 +892,7 @@ const ApplicationChatPage: React.FC = () => {
                                 </h3>
                               </div>
                             </div>
-                            
+
                             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-green-200">
                               <p className="text-green-800 text-base sm:text-lg font-medium leading-relaxed mb-2">
                                 {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidMessage') || 'Parabéns! A Taxa de Controle I-20 foi paga com sucesso.'}
@@ -880,16 +902,16 @@ const ApplicationChatPage: React.FC = () => {
                               </p>
                               {paymentDate && (
                                 <p className="text-green-600 text-xs mt-3 pt-3 border-t border-green-200">
-                                  {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidDate') || 'Data do pagamento:'} {new Date(paymentDate).toLocaleDateString('pt-BR', { 
-                                    day: '2-digit', 
-                                    month: 'long', 
-                                    year: 'numeric' 
+                                  {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidDate') || 'Data do pagamento:'} {new Date(paymentDate).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric'
                                   })}
                                 </p>
                               )}
                             </div>
-                            
-                            <button 
+
+                            <button
                               onClick={() => setActiveTab('i20')}
                               className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
                             >
@@ -967,9 +989,9 @@ const ApplicationChatPage: React.FC = () => {
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</span>
                           <span className="text-base font-semibold text-gray-900">
                             {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
-                             applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
-                             applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
-                             applicationDetails.student_process_type || 'N/A'}
+                              applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                                applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
+                                  applicationDetails.student_process_type || 'N/A'}
                           </span>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
@@ -1029,7 +1051,7 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* University Information Card */}
               <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 overflow-hidden outline outline-1 outline-slate-300">
                 <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 p-6 sm:p-8">
@@ -1053,7 +1075,7 @@ const ApplicationChatPage: React.FC = () => {
                       </div>
                       <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
                     </div>
-                    
+
                     <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -1066,7 +1088,7 @@ const ApplicationChatPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Contact Information */}
                   <div className="mt-6 bg-gray-50 rounded-xl p-6 outline outline-1 outline-slate-300">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -1080,10 +1102,10 @@ const ApplicationChatPage: React.FC = () => {
                             <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
                             <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.website')}</span>
                           </div>
-                          <a 
-                            href={applicationDetails.scholarships.universities.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={applicationDetails.scholarships.universities.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 font-medium break-all sm:break-words sm:ml-auto"
                           >
                             {applicationDetails.scholarships.universities.website}
@@ -1137,7 +1159,7 @@ const ApplicationChatPage: React.FC = () => {
                         {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}
                       </div>
                     </div>
-                    
+
                     {/* Course */}
                     {applicationDetails.scholarships?.course && (
                       <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 outline outline-1 outline-slate-300">
@@ -1148,7 +1170,7 @@ const ApplicationChatPage: React.FC = () => {
                         <div className="text-base font-bold text-gray-900 leading-tight">{applicationDetails.scholarships.course}</div>
                       </div>
                     )}
-                    
+
                     {/* Description - Full width */}
                     {applicationDetails.scholarships?.description && (
                       <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 outline outline-1 outline-slate-300">
@@ -1171,15 +1193,15 @@ const ApplicationChatPage: React.FC = () => {
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-0.5">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
                             <span className="text-xs text-slate-500">
                               {applicationDetails.scholarships.application_fee_amount && Number(applicationDetails.scholarships.application_fee_amount) !== 350
-                                ? t('scholarshipsPage.scholarshipCard.customFee') 
+                                ? t('scholarshipsPage.scholarshipCard.customFee')
                                 : t('scholarshipsPage.scholarshipCard.standardFee')}
                             </span>
                           </div>
                         </div>
                         <div className="text-lg font-bold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm outline outline-1 outline-slate-300">
-                           {applicationDetails.scholarships.application_fee_amount 
-                              ? formatFeeAmount(getApplicationFeeWithDependents(Number(applicationDetails.scholarships.application_fee_amount)))
-                              : formatFeeAmount(getApplicationFeeWithDependents(350))}
+                          {applicationDetails.scholarships.application_fee_amount
+                            ? formatFeeAmount(getApplicationFeeWithDependents(Number(applicationDetails.scholarships.application_fee_amount)))
+                            : formatFeeAmount(getApplicationFeeWithDependents(350))}
                         </div>
                       </div>
                     )}
@@ -1194,11 +1216,26 @@ const ApplicationChatPage: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
                             <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm outline outline-1 outline-slate-300">
-                               <div className="min-w-0 mr-3">
-                                 <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
-                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">{fee.details || fee.frequency}</p>
-                               </div>
-                               <span className="font-bold text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
+                              <div className="min-w-0 mr-3">
+                                <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wide">
+                                  {(() => {
+                                    const rawVal = fee.details || fee.frequency;
+                                    if (!rawVal) return '';
+                                    const standardKeys: Record<string, string> = {
+                                      'One-time': 'scholarshipsPage.frequencies.oneTime',
+                                      'Per Semester': 'scholarshipsPage.frequencies.perSemester',
+                                      'Per Year': 'scholarshipsPage.frequencies.perYear',
+                                      'Per Credit': 'scholarshipsPage.frequencies.perCredit',
+                                      'Per Course': 'scholarshipsPage.frequencies.perCourse',
+                                      'Monthly': 'scholarshipsPage.frequencies.monthly'
+                                    };
+                                    const key = standardKeys[rawVal.trim()];
+                                    return key ? t(key, rawVal) : rawVal;
+                                  })()}
+                                </p>
+                              </div>
+                              <span className="font-bold text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
                             </div>
                           ))}
                         </div>
@@ -1219,14 +1256,34 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="p-6">
                   <div className="space-y-6">
                     {DOCUMENTS_INFO.map((doc) => {
-                      let docData = Array.isArray(applicationDetails.documents)
-                        ? applicationDetails.documents.find((d: any) => d.type === doc.key)
-                        : null;
-                      if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
-                        docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                      let docData = null;
+                      const isI20 = doc.key === 'i20_document';
+                      const isAcceptanceLetter = doc.key === 'acceptance_letter';
+
+                      if (isI20) {
+                        docData = applicationDetails.i20_document_url ? {
+                          url: applicationDetails.i20_document_url,
+                          status: 'approved',
+                          uploaded_at: applicationDetails.updated_at
+                        } : null;
+                      } else if (isAcceptanceLetter) {
+                        docData = applicationDetails.acceptance_letter_url ? {
+                          url: applicationDetails.acceptance_letter_url,
+                          status: applicationDetails.acceptance_letter_status || 'approved',
+                          uploaded_at: applicationDetails.updated_at
+                        } : null;
+                      } else {
+                        docData = Array.isArray(applicationDetails.documents)
+                          ? applicationDetails.documents.find((d: any) => d.type === doc.key)
+                          : null;
+                        if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
+                          docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                        }
                       }
+
                       const status = docData?.status || 'not_submitted';
-                      
+                      const isBlocked = isI20 && docData?.url === 'blocked';
+
                       return (
                         <div key={doc.key} className="border-b border-slate-200 last:border-0 pb-6 last:pb-0">
                           <div className="flex items-start justify-between">
@@ -1234,7 +1291,12 @@ const ApplicationChatPage: React.FC = () => {
                               <div className="flex items-center space-x-2">
                                 <h4 className="font-semibold text-slate-900">{doc.label}</h4>
                                 <div className="ml-auto">
-                                  {status === 'approved' && (
+                                  {isBlocked ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                      <Lock className="w-3 h-3 mr-1" />
+                                      {t('studentDashboard.applicationChatPage.status.waitingPayment') || 'Aguardando Pagamento'}
+                                    </span>
+                                  ) : status === 'approved' && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                       <CheckCircle className="w-3 h-3 mr-1" />
                                       {t('studentDashboard.applicationChatPage.status.approved')}
@@ -1250,7 +1312,7 @@ const ApplicationChatPage: React.FC = () => {
                                       {t('studentDashboard.applicationChatPage.status.underReview')}
                                     </span>
                                   )}
-                                  {status === 'not_submitted' && (
+                                  {status === 'not_submitted' && !isI20 && !isAcceptanceLetter && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                                       {t('studentDashboard.applicationChatPage.status.notSubmitted')}
                                     </span>
@@ -1260,10 +1322,10 @@ const ApplicationChatPage: React.FC = () => {
                               <p className="text-sm text-slate-600 mb-3">{doc.description}</p>
                               {docData && (
                                 <div className="text-xs text-slate-500 mb-3">
-                                {t('studentDashboard.applicationChatPage.details.studentDocuments.uploaded')} {new Date(docData.uploaded_at).toLocaleDateString()}
-                              </div>
+                                  {t('studentDashboard.applicationChatPage.details.studentDocuments.uploaded')} {new Date(docData.uploaded_at).toLocaleDateString()}
+                                </div>
                               )}
-                              
+
                               {/* Exibir motivo da rejeição se o documento foi rejeitado */}
                               {status === 'rejected' && docData?.rejection_reason && (
                                 <div className="mb-3 p-3 bg-red-50 outline outline-1 outline-slate-300 rounded-xl">
@@ -1277,9 +1339,19 @@ const ApplicationChatPage: React.FC = () => {
                                   />
                                 </div>
                               )}
-                              
+
+
+
                               <div className="flex gap-2">
-                                {docData ? (
+                                {isBlocked ? (
+                                  <button
+                                    className="px-3 py-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium transition-colors flex items-center gap-2"
+                                    onClick={() => setActiveTab('i20')}
+                                  >
+                                    <DollarSign className="w-4 h-4" />
+                                    {t('studentDashboard.applicationChatPage.i20ControlFee.button') || 'Pagar Taxa para Liberar'}
+                                  </button>
+                                ) : docData ? (
                                   <>
                                     <button
                                       className="px-3 py-1 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] text-sm font-medium transition-colors"
@@ -1294,13 +1366,27 @@ const ApplicationChatPage: React.FC = () => {
                                         await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
                                       }}
                                     >
-                                      {t('studentDashboard.applicationChatPage.details.studentDocuments.download')}
+                                      {t('common:labels.download')}
                                     </button>
                                   </>
                                 ) : (
                                   <span className="text-sm text-red-500 font-medium">{t('studentDashboard.applicationChatPage.details.studentDocuments.documentNotUploaded')}</span>
                                 )}
                               </div>
+
+                              {/* Histórico de Envios (JSONB Documents) */}
+                              {docData?.history && Array.isArray(docData.history) && docData.history.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-slate-100">
+                                  <DocumentHistoryAccordion
+                                    uploads={docData.history.map((h: any) => ({
+                                      ...h,
+                                      file_url: h.url
+                                    }))}
+                                    documentLabel={doc.label}
+                                    onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1382,8 +1468,8 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Timer and Button Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                      {/* Payment Button */}
-                      <div>
+                      {/* Payment Button and Preview */}
+                      <div className="space-y-4">
                         <button
                           onClick={handlePayI20}
                           disabled={i20Loading}
@@ -1403,16 +1489,37 @@ const ApplicationChatPage: React.FC = () => {
                             </>
                           )}
                         </button>
+
+                        {/* I-20 Preview Button */}
+                        {applicationDetails.i20_document_preview_url && (
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center gap-3">
+                            <p className="text-xs text-slate-500 font-medium text-center uppercase tracking-wider">
+                              Preview Available
+                            </p>
+                            <button
+                              onClick={() => setPreviewUrl(applicationDetails.i20_document_preview_url)}
+                              className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View I-20 Preview
+                            </button>
+                            <p className="text-[10px] text-slate-400 text-center leading-tight">
+                              Low-resolution preview for verification only. Official document released after payment.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Countdown Timer */}
                       {scholarshipFeeDeadline && (
                         <div>
-                          <div className={`rounded-xl p-4 text-center outline outline-1 outline-slate-300 border ${
-                            i20Countdown === 'Expired' 
-                              ? 'bg-red-50 border-red-200' 
+                          <div className={`rounded-xl p-4 text-center outline outline-1 outline-slate-300 border ${i20Countdown === 'Expired'
+                              ? 'bg-red-50 border-red-200'
                               : 'bg-blue-50 border-blue-200'
-                          }`}>
+                            }`}>
                             {i20Countdown === 'Expired' ? (
                               <div className="space-y-2">
                                 <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center mx-auto">
@@ -1445,7 +1552,7 @@ const ApplicationChatPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {i20Error && (
                     <div className="mt-4 p-3 bg-red-50 outline outline-1 outline-slate-300 rounded-xl">
                       <div className="flex items-center gap-2">
@@ -1473,13 +1580,13 @@ const ApplicationChatPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-6 sm:p-8">
                     <div className="space-y-6">
                       <p className="text-gray-700 text-base leading-relaxed">
                         {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.description')}
                       </p>
-                      
+
                       <div className="bg-green-50 outline outline-1 outline-slate-300 rounded-xl p-6">
                         <h4 className="font-bold text-green-800 mb-4 flex items-center gap-2">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1514,7 +1621,7 @@ const ApplicationChatPage: React.FC = () => {
                       <h3 className="text-xl sm:text-2xl font-bold text-white">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInformation')}</h3>
                     </div>
                   </div>
-                  
+
                   <div className="p-6 sm:p-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
@@ -1527,12 +1634,12 @@ const ApplicationChatPage: React.FC = () => {
                           <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</span>
                         </div>
                         <div className="text-lg font-bold text-gray-900">
-                          {realI20PaidAmount 
+                          {realI20PaidAmount
                             ? formatFeeAmount(realI20PaidAmount) // Valor real pago (já inclui desconto se aplicável)
                             : formatFeeAmount(getFeeAmount('i20_control_fee'))}
                         </div>
                       </div>
-                      
+
                       <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -1544,7 +1651,7 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                         <div className="text-lg font-bold text-gray-900">{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
                       </div>
-                      
+
                       <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -1564,7 +1671,7 @@ const ApplicationChatPage: React.FC = () => {
             )}
           </div>
         )}
-        
+
         {activeTab === 'documents' && applicationDetails && (
           <div className="bg-white rounded-xl sm:rounded-xl shadow-sm border border-slate-200 overflow-hidden outline outline-1 outline-slate-300">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-3 sm:px-6 sm:py-4">
@@ -1584,7 +1691,7 @@ const ApplicationChatPage: React.FC = () => {
                     <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Placement Fee — Installment Plan
+                    {t('studentDashboard.applicationChatPage.placementFee.installmentPlan')}
                   </h3>
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-sm">
@@ -1592,29 +1699,29 @@ const ApplicationChatPage: React.FC = () => {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        1st Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.firstInstallment')}
                       </span>
-                      <span className="text-green-700 font-semibold">Paid</span>
+                      <span className="text-green-700 font-semibold">{t('studentDashboard.applicationChatPage.placementFee.paid')}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 text-amber-800 font-medium">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        2nd Installment
+                        {t('studentDashboard.applicationChatPage.placementFee.secondInstallment')}
                       </span>
                       <span className="text-amber-800 font-bold">
-                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} pending
+                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} {t('studentDashboard.applicationChatPage.placementFee.pending')}
                       </span>
                     </div>
                     {(userProfile as any)?.placement_fee_due_date && (
                       <p className="text-xs text-amber-700 mt-1">
-                        Due: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {t('studentDashboard.applicationChatPage.placementFee.due')}: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
                     )}
                   </div>
                   <p className="text-xs text-amber-700 mb-4">
-                    Document downloads (Acceptance Letter &amp; I-20) will be released after the 2nd installment is approved.
+                    {t('studentDashboard.applicationChatPage.placementFee.unlockMessage')}
                   </p>
                   <ZelleCheckout
                     feeType="placement_fee"
@@ -1626,90 +1733,105 @@ const ApplicationChatPage: React.FC = () => {
 
               {/* Aviso sobre Acceptance Letter - Mostrar quando carta foi enviada mas I-20 ainda não foi pago */}
               {/* ✅ UX: Verificar status em vez de URL para mostrar aviso mesmo quando URL está oculta */}
-              {applicationDetails.is_scholarship_fee_paid && 
-               (applicationDetails.acceptance_letter_status === 'sent' || 
-                applicationDetails.acceptance_letter_status === 'approved' ||
-                applicationDetails.acceptance_letter_sent_at) && 
-               !(userProfile as any)?.has_paid_i20_control_fee && (
-                <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-blue-900 mb-2">
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
-                      </h3>
-                      <p className="text-blue-800 text-sm mb-3">
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
-                      </p>
-                      <button
-                        onClick={() => setActiveTab('i20')}
-                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
-                      </button>
+              {applicationDetails.is_scholarship_fee_paid &&
+                (applicationDetails.acceptance_letter_status === 'sent' ||
+                  applicationDetails.acceptance_letter_status === 'approved' ||
+                  applicationDetails.acceptance_letter_sent_at) &&
+                !(userProfile as any)?.has_paid_i20_control_fee && (
+                  <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-blue-900 mb-2">
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
+                        </h3>
+                        <p className="text-blue-800 text-sm mb-4">
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            onClick={() => setActiveTab('i20')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
+                          </button>
+
+                          {applicationDetails.acceptance_letter_preview_url && (
+                            <button
+                              onClick={() => setPreviewUrl(applicationDetails.acceptance_letter_preview_url)}
+                              className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewPreviewButton') || 'View Preview'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              
+                )}
+
               {/* Aviso: download bloqueado por saldo devedor de Placement Fee */}
               {applicationDetails.is_scholarship_fee_paid &&
-               (userProfile as any)?.has_paid_i20_control_fee &&
-               ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0 &&
-               (applicationDetails.acceptance_letter_status === 'sent' || applicationDetails.acceptance_letter_status === 'approved') && (
-                <div className="bg-amber-50 outline outline-1 outline-amber-300 rounded-xl p-4 sm:p-6 mb-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-amber-900 mb-2">
-                        Document Download Pending — 2nd Installment Required
-                      </h3>
-                      <p className="text-amber-800 text-sm">
-                        Your document is ready, but the download will be released after the 2nd installment of the Placement Fee (${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}) is paid and approved.
-                        {(userProfile as any)?.placement_fee_due_date && (
-                          <> Due date: <strong>{new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</>
-                        )}
-                      </p>
+                (userProfile as any)?.has_paid_i20_control_fee &&
+                ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0 &&
+                (applicationDetails.acceptance_letter_status === 'sent' || applicationDetails.acceptance_letter_status === 'approved') && (
+                  <div className="bg-amber-50 outline outline-1 outline-amber-300 rounded-xl p-4 sm:p-6 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-amber-900 mb-2">
+                          {t('studentDashboard.applicationChatPage.placementFee.downloadPendingTitle')}
+                        </h3>
+                        <p className="text-amber-800 text-sm">
+                          {t('studentDashboard.applicationChatPage.placementFee.downloadPendingDescription', { amount: `$${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}` })}
+                          {(userProfile as any)?.placement_fee_due_date && (
+                            <> {t('studentDashboard.applicationChatPage.placementFee.dueDate', { date: new Date((userProfile as any).placement_fee_due_date).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}.</>
+                          )}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Aviso sobre Acceptance Letter - Mostrar quando I-20 foi pago mas carta ainda não enviada */}
               {applicationDetails.is_scholarship_fee_paid &&
-               (userProfile as any)?.has_paid_i20_control_fee &&
-               !applicationDetails.acceptance_letter_url &&
-               ((userProfile as any)?.placement_fee_pending_balance ?? 0) === 0 && (
-                <div className="bg-yellow-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-yellow-900 mb-2">
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityTitle') || 'Acceptance Letter - Waiting for University'}
-                      </h3>
-                      <p className="text-yellow-800 text-sm mb-3">
-                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityDescription') || 'Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you.'}
-                      </p>
+                (userProfile as any)?.has_paid_i20_control_fee &&
+                !applicationDetails.acceptance_letter_url &&
+                ((userProfile as any)?.placement_fee_pending_balance ?? 0) === 0 && (
+                  <div className="bg-yellow-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityTitle') || 'Acceptance Letter - Waiting for University'}
+                        </h3>
+                        <p className="text-yellow-800 text-sm mb-3">
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityDescription') || 'Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              
+                )}
+
               {/* Seção de Document Requests */}
-              <DocumentRequestsCard 
-                applicationId={applicationId!} 
-                isSchool={false} 
-                currentUserId={user.id} 
+              <DocumentRequestsCard
+                applicationId={applicationId!}
+                isSchool={false}
+                currentUserId={user.id}
                 studentType={applicationDetails.student_process_type || 'initial'}
                 showAcceptanceLetter={false} // Não mostrar acceptance letter aqui, será controlado separadamente
                 onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean) => {
@@ -1733,129 +1855,129 @@ const ApplicationChatPage: React.FC = () => {
                   }
                 }}
               />
-               {/* Seção de Acceptance Letter - Mostrar apenas quando I-20 pago e enviado */}
-               {applicationDetails.acceptance_letter_url &&
-                 (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && 
-                 (userProfile as any)?.has_paid_i20_control_fee && (
-                 <div className="bg-white rounded-xl mb-3 max-w-3xl mx-auto p-4 sm:p-6 outline outline-1 outline-slate-300">
-                   {/* Header da seção */}
-                   <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
-                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                       <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.title')}</h3>
-                       <p className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.description')}</p>
-                          </div>
-                        </div>
+              {/* Seção de Acceptance Letter - Mostrar apenas quando I-20 pago e enviado */}
+              {applicationDetails.acceptance_letter_url &&
+                (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') &&
+                (userProfile as any)?.has_paid_i20_control_fee && (
+                  <div className="bg-white rounded-xl mb-3 max-w-3xl mx-auto p-4 sm:p-6 outline outline-1 outline-slate-300">
+                    {/* Header da seção */}
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.title')}</h3>
+                        <p className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.description')}</p>
+                      </div>
+                    </div>
 
-                   {/* Status de recebimento */}
-                   <div className="px-4 py-3 bg-green-50 outline outline-1 outline-slate-300 rounded-xl mb-4">
-                     <div className="flex items-center gap-2">
-                       <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                       </svg>
-                       <p className="text-green-800 font-semibold text-sm">
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.received')}
-                                </p>
-                     </div>
-                     <p className="text-green-700 text-sm mt-1 ml-7">
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.readyForDownload')}
-                                </p>
-                              </div>
-                   
-                   {/* Botões de ação */}
-                   <div className="flex flex-col sm:flex-row gap-3">
-                                <button
-                       className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
-                                  onClick={async () => {
-                                    try {
-                                      // Função utilitária para extrair caminho relativo
-                                      const getRelativePath = (fullUrl: string) => {
-                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-                                        if (fullUrl.startsWith(baseUrl)) {
-                                          return fullUrl.replace(baseUrl, '');
-                                        }
-                                        return fullUrl;
-                                      };
+                    {/* Status de recebimento */}
+                    <div className="px-4 py-3 bg-green-50 outline outline-1 outline-slate-300 rounded-xl mb-4">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-green-800 font-semibold text-sm">
+                          {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.received')}
+                        </p>
+                      </div>
+                      <p className="text-green-700 text-sm mt-1 ml-7">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.readyForDownload')}
+                      </p>
+                    </div>
 
-                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
-                                      const { data, error } = await supabase.storage
-                                        .from('document-attachments')
-                                        .createSignedUrl(filePath, 60 * 60);
-                                      
-                                      if (error) {
-                                        console.error('Erro ao gerar signed URL:', error);
-                                        alert('Erro ao baixar documento');
-                                        return;
-                                      }
-                                      
-                                      // Fazer download
-                                      const response = await fetch(data.signedUrl);
-                                      if (!response.ok) throw new Error('Failed to download document');
-                                      
-                                      const blob = await response.blob();
-                                      const url = URL.createObjectURL(blob);
-                                      const link = document.createElement('a');
-                                      link.href = url;
-                                      link.download = 'acceptance_letter.pdf';
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      URL.revokeObjectURL(url);
-                                    } catch (error) {
-                                      console.error('Erro no download:', error);
-                                      alert('Erro ao baixar documento');
-                                    }
-                                  }}
-                                >
-                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                       </svg>
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
-                                </button>
-                                <button
-                       className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
-                                  onClick={async () => {
-                                    try {
-                                      const getRelativePath = (fullUrl: string) => {
-                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-                                        if (fullUrl.startsWith(baseUrl)) {
-                                          return fullUrl.replace(baseUrl, '');
-                                        }
-                                        return fullUrl;
-                                      };
+                    {/* Botões de ação */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                        onClick={async () => {
+                          try {
+                            // Função utilitária para extrair caminho relativo
+                            const getRelativePath = (fullUrl: string) => {
+                              const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                              if (fullUrl.startsWith(baseUrl)) {
+                                return fullUrl.replace(baseUrl, '');
+                              }
+                              return fullUrl;
+                            };
 
-                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
-                                      const { data, error } = await supabase.storage
-                                        .from('document-attachments')
-                                        .createSignedUrl(filePath, 60 * 60);
-                                      
-                                      if (error) {
-                                        console.error('Erro ao gerar signed URL:', error);
-                                        alert('Erro ao visualizar documento');
-                                        return;
-                                      }
-                                      
-                                      setPreviewUrl(data.signedUrl);
-                                    } catch (error) {
-                                      console.error('Erro ao visualizar:', error);
-                                      alert('Erro ao visualizar documento');
-                                    }
-                                  }}
-                                >
-                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                       </svg>
-                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewButton')}
-                                </button>
-                              </div>
-                            </div>
-               )}
-              
+                            const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                            const { data, error } = await supabase.storage
+                              .from('document-attachments')
+                              .createSignedUrl(filePath, 60 * 60);
+
+                            if (error) {
+                              console.error('Erro ao gerar signed URL:', error);
+                              alert('Erro ao baixar documento');
+                              return;
+                            }
+
+                            // Fazer download
+                            const response = await fetch(data.signedUrl);
+                            if (!response.ok) throw new Error('Failed to download document');
+
+                            const blob = await response.blob();
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = 'acceptance_letter.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                          } catch (error) {
+                            console.error('Erro no download:', error);
+                            alert('Erro ao baixar documento');
+                          }
+                        }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {t('common:labels.download')}
+                      </button>
+                      <button
+                        className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
+                        onClick={async () => {
+                          try {
+                            const getRelativePath = (fullUrl: string) => {
+                              const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                              if (fullUrl.startsWith(baseUrl)) {
+                                return fullUrl.replace(baseUrl, '');
+                              }
+                              return fullUrl;
+                            };
+
+                            const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                            const { data, error } = await supabase.storage
+                              .from('document-attachments')
+                              .createSignedUrl(filePath, 60 * 60);
+
+                            if (error) {
+                              console.error('Erro ao gerar signed URL:', error);
+                              alert('Erro ao visualizar documento');
+                              return;
+                            }
+
+                            setPreviewUrl(data.signedUrl);
+                          } catch (error) {
+                            console.error('Erro ao visualizar:', error);
+                            alert('Erro ao visualizar documento');
+                          }
+                        }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewButton')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
             </div>
           </div>
         )}

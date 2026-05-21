@@ -38,10 +38,17 @@
     },
     "sidebar": {
       "title": "Resumen del Pago",
-      "selectionFee": "Tarifa del Proceso de Selección",
+      "selectionFee": "Proceso de Selección",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Ahora",
-      "feeExplanation": "La Tarifa del Proceso de Selección é o primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
+      "benefits": {
+        "title": "El Proceso de Selección te da acceso a:",
+        "item1": "Accede a más de 154 becas exclusivas en EE. UU.",
+        "item2": "Elige hasta 4 becas de estudios exclusivas alineadas a tu perfil.",
+        "item3": "Envía tus documentos para análisis y aprobación junto a las universidades asociadas.",
+        "item4": "Soporte especializado y continuo durante todo el proceso.",
+        "item5": "Concluye el proceso con tu carta de aceptación en mano, listo para estudiar."
+      },
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
@@ -49,7 +56,7 @@
       "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
       "couponApplied": "Cupón Aplicado",
       "refundAssuranceTitle": "Garantía de Reembolso",
-      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, la tarifa del proceso de selección será completamente reembolsada.",
+      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, el pago del Proceso de Selección será completamente reembolsado.",
       "alreadyPaidContinue": "Continuar en Onboarding"
     },
     "terms": {
@@ -99,7 +106,7 @@
       },
       "alreadyPaid": {
         "title": "¡Tarifa Ya Pagada!",
-        "description": "Ya ha realizado el pago de la tarifa del proceso de selección. Puede continuar con su inscripción.",
+        "description": "Ya ha realizado el pago del Proceso de Selección. Puede continuar con su inscripción.",
         "continue": "Continuar en Onboarding"
       }
     }
@@ -110,7 +117,7 @@
       "of": "de",
       "initiating": "Iniciando",
       "steps": {
-        "selectionFee": "Tarifa del Proceso de Selección",
+        "selectionFee": "Proceso de Selección",
         "selectionSurvey": "Cuestionario",
         "scholarshipSelection": "Selección de Becas",
         "processType": "Tipo de Proceso",
@@ -297,35 +304,16 @@
         "text": "WhatsApp (con código de país)",
         "placeholder": "+34 600 000 000"
       },
-      "3_1": {
-        "text": "¿Cuál es su curso o área de interés principal?",
-        "options": {
-          "engineering": "Ingeniería",
-          "business": "Negocios",
-          "computer-science": "Ciencias de la Computación",
-          "medicine": "Medicina",
-          "law": "Derecho",
-          "arts": "Artes y Humanidades",
-          "sciences": "Ciencias Naturales",
-          "other": "Otro"
-        }
-      },
-      "3_2": {
-        "text": "¿Cuál es su nivel académico actual?",
-        "options": {
-          "high-school": "Educación Secundaria",
-          "undergraduate": "Bachillerato / Grado",
-          "graduate": "Maestría / Posgrado",
-          "doctorate": "Doctorado"
-        }
-      },
-      "3_3": {
-        "text": "¿Cuál es su GPA aproximado?",
-        "placeholder": "Ej: 3.5"
-      },
       "4": {
-        "text": "¿Se encuentra actualmente en los EE. UU.?",
-        "extraLabel": "¿Estatus actual?"
+        "text": "¿Cuántos dependientes tiene? (cónyuge e hijos menores de 21 años)",
+        "options": {
+          "0": "0 Dependientes",
+          "1": "1 Dependiente",
+          "2": "2 Dependientes",
+          "3": "3 Dependientes",
+          "4": "4 Dependientes",
+          "5": "5 Dependientes"
+        }
       },
       "5": {
         "text": "¿Cuál es su perfil hoy?",
@@ -337,19 +325,6 @@
           "nao_sei": "No lo sé (necesito orientación)"
         },
         "errorNaoSei": "Por favor, selecciona tu perfil real (Initial, Transfer o COS) para continuar."
-      },
-      "5_1": {
-        "text": "¿Su estatus está activo?",
-        "options": {
-          "sim": "Sí",
-          "nao": "No (terminado/cancelado)"
-        }
-      },
-      "5_2": {
-        "text": "¿Cuál es el límite de su estatus (plazo)?"
-      },
-      "5_3": {
-        "text": "¿Ya ha realizado una extensión? Si es así, ¿cuál es su número de proceso?"
       },
       "6": {
         "text": "¿Cuál es su objetivo principal con el programa?",
@@ -700,6 +675,48 @@
         "text": "Declaración final",
         "placeholder": "Escriba su declaración...",
         "prompt": "\"Entiendo que mi resultado depende de mi disciplina. Si no sigo el plan, puedo perjudicar mi estatus y mi proyecto.\""
+      },
+      "3_1": {
+        "text": "¿Cuál es su curso o área de interés principal?",
+        "options": {
+          "engineering": "Ingeniería",
+          "business": "Negocios",
+          "computer-science": "Ciencias de la Computación",
+          "medicine": "Medicina",
+          "law": "Derecho",
+          "arts": "Artes y Humanidades",
+          "sciences": "Ciencias Naturales",
+          "other": "Otro"
+        }
+      },
+      "3_2": {
+        "text": "¿Cuál es su nivel académico actual?",
+        "options": {
+          "high-school": "Educación Secundaria",
+          "undergraduate": "Bachillerato / Grado",
+          "graduate": "Maestría / Posgrado",
+          "doctorate": "Doctorado"
+        }
+      },
+      "3_3": {
+        "text": "¿Cuál es su GPA aproximado?",
+        "placeholder": "Ej: 3.5"
+      },
+      "5_1": {
+        "text": "¿Su estatus está activo?",
+        "options": {
+          "sim": "Sí",
+          "nao": "No (terminado/cancelado)"
+        }
+      },
+      "5_2": {
+        "text": "¿Cuál es el límite de su estatus (plazo)?"
+      },
+      "5_3": {
+        "text": "¿Ya ha realizado una extensión? Si es así, ¿cuál es su número de proceso?"
+      },
+      "5_4": {
+        "text": "Fecha de vencimiento del estatus/I-94"
       }
     }
   },
@@ -762,5 +779,12 @@
     "annualTuition": "Valor anual de la beca: {{amount}}",
     "confirmedMessage": "Su tarifa de reintegración ha sido confirmada con éxito.",
     "paidSuccess": "Pago Confirmado"
+  },
+  "i20Preview": {
+    "title": "Control Fee I-20 Document",
+    "description": "Su vista previa (limitada) del I-20 está disponible para verificación. Efectue el pago de la tasa para liberar el documento original.",
+    "payButton": "Ir al Pago",
+    "viewPreview": "Ver I-20",
+    "watermark": "MATRÍCULA USA"
   }
 }

@@ -35,12 +35,14 @@ const AffiliateAdminDashboard = React.lazy(() => import('./pages/AffiliateAdminD
 const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard/index'));
 const SchoolDashboard = React.lazy(() => import('./pages/SchoolDashboard/index').then(m => ({ default: m.SchoolDashboard })));
 const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
+const ScholarshipDetail = React.lazy(() => import('./pages/ScholarshipDetail'));
 const Auth = React.lazy(() => import('./pages/Auth'));
 const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const AdminRegistration = React.lazy(() => import('./pages/AdminRegistration'));
 const SellerRegistration = React.lazy(() => import('./pages/SellerRegistration'));
 const AffiliateRegistration = React.lazy(() => import('./pages/AffiliateRegistration'));
 const AffiliateDashboard = React.lazy(() => import('./pages/AffiliateDashboard/index'));
+const AffiliateRewardsStore = React.lazy(() => import('./pages/StudentDashboard/RewardsStore'));
 const SellerStudentRegistration = React.lazy(() => import('./pages/SellerStudentRegistration'));
 const StudentOnboarding = React.lazy(() => import('./pages/StudentOnboarding/StudentOnboarding'));
 const QuickRegistration = React.lazy(() => import('./pages/QuickRegistration'));
@@ -129,8 +131,10 @@ const AppContent = () => {
           <Route path="/seller/register" element={<SellerRegistration />} />
           <Route path="/affiliate/register" element={<AffiliateRegistration />} />
           <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+          <Route path="/affiliate/dashboard/rewards/store" element={<AffiliateRewardsStore />} />
           <Route path="/student/register" element={<SellerStudentRegistration />} />
           <Route path="/scholarships" element={<Scholarships />} />
+          <Route path="/scholarships/:id" element={<ScholarshipDetail />} />
           <Route path="/selection-fee-registration" element={<QuickRegistration />} />
           <Route path="/webnar" element={<WebinárioRegistrationLanding />} />
           <Route path="/vsl-transfer" element={<VslTransferLanding />} />

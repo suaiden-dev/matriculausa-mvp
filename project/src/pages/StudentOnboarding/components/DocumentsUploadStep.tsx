@@ -30,7 +30,8 @@ import { compressImage } from '../../../utils/imageCompression';
 import TruncatedText from '../../../components/TruncatedText';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
-import { PencilLoader } from '../../../components/PencilLoader';
+import PencilLoader from '../../../components/PencilLoader';
+
 
 const DOCUMENT_TYPES = [
   { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport.' },
@@ -317,13 +318,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
       if (scholarshipIds.length > 0) {
         for (const scholarshipId of scholarshipIds) {
-          // Verificar se já existe aplicação
+          // Verificar se já existe aplicação e obter dados da bolsa
           const { data: existingApp } = await supabase
             .from('scholarship_applications')
-            .select('id')
+            .select('id, scholarships(title, university_id)')
             .eq('student_id', userProfile?.id || '')
             .eq('scholarship_id', scholarshipId)
             .maybeSingle();
+
 
           let applicationId = existingApp?.id;
 
@@ -342,13 +344,30 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           }
 
           if (applicationId) {
-            // Anexar documentos à aplicação
-            const appDocs = [
-              { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-              { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-              { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
-            ];
-            await supabase.from('scholarship_applications').update({ documents: appDocs }).eq('id', applicationId);
+            // Anexar documentos à aplicação (preservando histórico)
+            const { data: existingAppData } = await supabase
+              .from('scholarship_applications')
+              .select('documents')
+              .eq('id', applicationId)
+              .single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const newEntries = [
+              { type: 'passport', url: passportUrl },
+              { type: 'diploma', url: diplomaUrl },
+              { type: 'funds_proof', url: fundsUrl },
+            ].filter(d => d.url);
+            const now = new Date().toISOString();
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
+            await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', applicationId);
           }
         }
       } else if (userProfile?.id && scholarshipIds.length === 0) {
@@ -362,16 +381,33 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           .neq('status', 'rejected');
           
         if (existingApps && existingApps.length > 0) {
-          const appDocs = [
-            { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-            { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
-            { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
-          ];
-          
+          const now = new Date().toISOString();
+          const newEntries = [
+            { type: 'passport', url: passportUrl },
+            { type: 'diploma', url: diplomaUrl },
+            { type: 'funds_proof', url: fundsUrl },
+          ].filter(d => d.url);
+
           for (const app of existingApps) {
+            const { data: existingAppData } = await supabase
+              .from('scholarship_applications')
+              .select('documents')
+              .eq('id', app.id)
+              .single();
+            const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
+            const mergedDocs = [...currentDocs];
+            for (const nd of newEntries) {
+              const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
+              if (idx >= 0) {
+                const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+              } else {
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+              }
+            }
             await supabase
               .from('scholarship_applications')
-              .update({ documents: appDocs })
+              .update({ documents: mergedDocs })
               .eq('id', app.id);
           }
         }
@@ -466,18 +502,17 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       const normalized = parseApplicationDocuments(currentDocs);
       const idx = normalized.findIndex(d => d.type === type);
       
-      const newDoc = { 
-        type, 
-        url: publicUrl, 
-        status: 'under_review', 
-        uploaded_at: new Date().toISOString() 
-      };
-      
+      const now = new Date().toISOString();
+
       let newDocs: any[];
       if (idx >= 0) {
-        newDocs = currentDocs.map((d: any) => d.type === type ? { ...d, ...newDoc } : d);
+        newDocs = currentDocs.map((d: any) => {
+          if (d.type !== type) return d;
+          const { history: prevHistory = [], rejected_at: _ra, rejection_reason: _rr, ...oldDoc } = d;
+          return { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+        });
       } else {
-        newDocs = [...currentDocs, newDoc];
+        newDocs = [...currentDocs, { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [] }];
       }
       
       const { error: updateError } = await supabase
@@ -487,33 +522,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       
       if (updateError) throw updateError;
       
-      // Notificar universidade
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token && app.scholarships?.university_id) {
-          const notificationPayload = {
-            user_id: user.id,
-            application_id: applicationId,
-            document_type: type,
-            document_label: DOCUMENT_LABELS[type] || type,
-            university_id: app.scholarships.university_id,
-            scholarship_title: app.scholarships.title,
-            is_reupload: true
-          };
-          
-          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-reupload`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json', 
-              'Authorization': `Bearer ${session.access_token}` 
-            },
-            body: JSON.stringify(notificationPayload),
-          });
-        }
-      } catch (notifErr) {
-        console.error('Error notifying university:', notifErr);
-      }
-      
       // Atualizar lista local
       const { data: refreshedApps } = await supabase
         .from('scholarship_applications')
@@ -522,6 +530,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         .order('created_at', { ascending: false });
       
       if (refreshedApps) setApplications(refreshedApps);
+      
       
       // Limpar seleção
       setSelectedFiles(prev => {
@@ -630,7 +639,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             .eq('id', userProfile.id);
           await refetchUserProfile();
         }
-        
+
         setShowConfirmModal(false);
         onNext();
       } catch (err) {

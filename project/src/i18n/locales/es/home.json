@@ -112,7 +112,7 @@
         },
         "q8": {
           "question": "¿Es segura mi información de pago?",
-          "answer": "Sí. Todos los pagos son procesados por Stripe, un líder mundial en seguridad de pagos. MatriculaUSA no almacena los datos de su tarjeta y todas las transacciones están cifradas para su protección."
+          "answer": "Sí. MatriculaUSA utiliza procesadores de pago líderes en la industria y estándares de seguridad avanzados. Sus datos de pago nunca se almacenan en nuestros servidores, y todas las transacciones están completamente cifradas para su protección. Puede elegir entre los métodos de pago disponibles en la plataforma."
         },
         "q9": {
           "question": "¿Puedo obtener un reembolso?",
@@ -250,14 +250,13 @@
       },
       "placementFee": {
         "title": "Cuota de Colocación",
-        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado para su proceso de visa.",
+        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado.",
         "items": [
           "Análisis de su perfil académico y financiero",
           "Identificación de las mejores opciones de universidad para usted",
           "Negociación o garantía de oportunidades de beca",
           "Coordinación de documentación con la institución",
-          "Soporte al proceso de matrícula",
-          "Soporte completo al proceso de visa"
+          "Soporte al proceso de matrícula"
         ]
       }
     },
@@ -316,11 +315,6 @@
         "name": "Ana Chen",
         "major": "Ingeniería"
       },
-      "story2": {
-        "text": "\"Gracias a MatriculaUSA, recibí una beca completa y apoyo durante todo mi proceso de visa. ¡El equipo siempre estuvo ahí para mí!\"",
-        "name": "Lucas Silva",
-        "major": "Ciencias de la Computación"
-      },
       "story3": {
         "text": "\"El proceso de solicitud fue tan fácil y transparente. Me sentí apoyada en cada paso. ¡Muy recomendable!\"",
         "name": "Priya Patel",
@@ -369,7 +363,7 @@
       },
       "q8": {
         "question": "¿Es segura mi información de pago?",
-        "answer": "Sí. Todos los pagos son procesados por Stripe, líder global en seguridad de pagos. MatriculaUSA no almacena los detalles de tu tarjeta, y todas las transacciones están encriptadas para tu protección."
+        "answer": "Sí. MatriculaUSA utiliza procesadores de pago líderes en la industria y estándares de seguridad avanzados. Tus datos de pago nunca se almacenan en nuestros servidores, y todas las transacciones están completamente encriptadas para tu protección. Puedes elegir entre los métodos de pago disponibles en la plataforma."
       },
       "q9": {
         "question": "¿Puedo obtener un reembolso?",

@@ -24,7 +24,6 @@ const SellerStudentRegistration: React.FC = () => {
     sellerReferralCode: string;
     selectedPackage: string;
     desiredScholarshipRange: number | null; // ✅ Pode ser null ou number
-    dependents: number;
   }>({
     full_name: '',
     email: '',
@@ -34,7 +33,6 @@ const SellerStudentRegistration: React.FC = () => {
     sellerReferralCode: sellerCode,
     selectedPackage: '1', // Pacote padrão
     desiredScholarshipRange: 3800, // Valor padrão (Package 1)
-    dependents: 0
   });
   
   const [error, setError] = useState('');
@@ -124,7 +122,7 @@ const SellerStudentRegistration: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'dependents' ? Math.max(0, parseInt(value || '0', 10)) : value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   // Função para seleção de pacote
@@ -169,7 +167,7 @@ const SellerStudentRegistration: React.FC = () => {
         else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
-        if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
+
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -226,7 +224,6 @@ const SellerStudentRegistration: React.FC = () => {
         phone: formData.phone,
         role: 'student' as const,
         seller_referral_code: finalSellerCode,
-        dependents: formData.dependents,
         scholarship_package_number: finalPackageNumber,
         desired_scholarship_range: finalDesiredRange,
         // Como esta página é exclusiva do fluxo legacy, persistimos o system_type
@@ -460,33 +457,7 @@ const SellerStudentRegistration: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Dependents Input - moved to Step 1 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dependents <span className="text-xs font-normal text-gray-500">- Family members (spouse and/or children)</span>
-                    </label>
-                    <select
-                      name="dependents"
-                      value={formData.dependents}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.dependents ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value={0}>0 Dependents</option>
-                      <option value={1}>1 Dependent</option>
-                      <option value={2}>2 Dependents</option>
-                      <option value={3}>3 Dependents</option>
-                      <option value={4}>4 Dependents</option>
-                      <option value={5}>5 Dependents</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      $150 per dependent will be added to the Selection Process Fee and +$100 per dependent will be added to the Application Fee.
-                    </p>
-                    {errors.dependents && (
-                      <p className="mt-1 text-sm text-red-600">{errors.dependents}</p>
-                    )}
-                  </div>
+
 
                 </div>
 
@@ -655,9 +626,9 @@ const SellerStudentRegistration: React.FC = () => {
                   <h4 className="font-semibold text-blue-900 mb-2">Selected Package Summary</h4>
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
-                    <p><strong>Total Investment:</strong> ${(2200 + (formData.dependents * 150)).toFixed(2)}</p>
+                    <p><strong>Total Investment:</strong> ${(2200).toFixed(2)}</p>
                     <p><strong>Scholarships starting from:</strong> ${selectedPackage.scholarship_amount}</p>
-                    <p><strong>Net Savings:</strong> ${(selectedPackage.scholarship_amount - (2200 + (formData.dependents * 150))).toFixed(2)}</p>
+                    <p><strong>Net Savings:</strong> ${(selectedPackage.scholarship_amount - 2200).toFixed(2)}</p>
                   </div>
                 </div>
               )}

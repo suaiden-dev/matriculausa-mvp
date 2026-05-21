@@ -73,7 +73,8 @@ const Header: React.FC = () => {
     switch (user.role) {
       case 'student': return '/student/dashboard';
       case 'school': return '/school/dashboard';
-      case 'admin': return '/admin/dashboard';
+      case 'admin':
+      case 'post_sales': return '/admin/dashboard';
       case 'affiliate_admin': return '/affiliate-admin/dashboard';
       case 'seller': return '/seller/dashboard';
       case 'affiliate': return '/affiliate/dashboard';
@@ -86,7 +87,8 @@ const Header: React.FC = () => {
     switch (user.role) {
       case 'student': return t('nav.studentDashboard');
       case 'school': return t('nav.schoolDashboard');
-      case 'admin': return t('nav.adminDashboard');
+      case 'admin':
+      case 'post_sales': return t('nav.adminDashboard');
       case 'affiliate_admin': return t('nav.affiliateDashboard');
       case 'seller': return t('nav.sellerDashboard');
       case 'affiliate': return 'MatriculaRewards';

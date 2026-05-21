@@ -36,7 +36,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false) {
   try {
     const { data: adminProfiles } = await supabase.from("user_profiles").select(
       "user_id, email, full_name, phone",
-    ).eq("role", "admin");
+    ).in("role", ["admin", "post_sales"]);
     let admins = adminProfiles ? adminProfiles.filter((a) => a.email) : [];
     if (isDevelopment) {
       admins = admins.filter((a) => !devBlockedEmails.includes(a.email));
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: userProfile } = await supabase.from("user_profiles").select(
-      "id, user_id, full_name, email, phone, seller_referral_code",
+      "id, user_id, full_name, email, phone, seller_referral_code, placement_fee_installment_enabled",
     ).eq("user_id", userId).single();
     if (!userProfile) {
       return corsResponse({ error: "User profile not found" }, 404);
@@ -118,13 +118,6 @@ Deno.serve(async (req) => {
       }, 200);
     }
 
-    // Atualizar perfil
-    await supabase.from("user_profiles").update({
-      is_placement_fee_paid: true,
-      placement_fee_payment_method: session.metadata?.payment_method ||
-        "stripe",
-    }).eq("user_id", userId);
-
     // Registrar pagamento com net/gross/fee reais do Stripe
     const paymentIntentId = typeof session.payment_intent === "string"
       ? session.payment_intent
@@ -134,6 +127,18 @@ Deno.serve(async (req) => {
 
     const stripeInfo = await getStripeBalanceTransaction(stripe, paymentIntentId || '', amountRaw, currency);
     const amountPaid = stripeInfo.amount;
+
+    // Atualizar perfil
+    const updateData: Record<string, unknown> = {
+      is_placement_fee_paid: true,
+      placement_fee_payment_method: session.metadata?.payment_method ||
+        "stripe",
+    };
+    if (userProfile.placement_fee_installment_enabled) {
+      updateData.placement_fee_pending_balance = amountPaid;
+      updateData.placement_fee_installment_number = 1;
+    }
+    await supabase.from("user_profiles").update(updateData).eq("user_id", userId);
 
     await supabase.rpc("insert_individual_fee_payment", {
       p_user_id: userId,

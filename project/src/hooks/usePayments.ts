@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFeeConfig } from './useFeeConfig';
 
 export interface PaymentData {
   id: string;
@@ -44,6 +45,8 @@ export interface PaymentStats {
   pending_application_fees: number;
   paid_scholarship_fees: number;
   pending_scholarship_fees: number;
+  paid_reinstatement_fees: number;
+  reinstatement_revenue: number;
 }
 
 export interface PaymentFilters {
@@ -56,6 +59,7 @@ export interface PaymentFilters {
 }
 
 export const usePayments = (universityId: string | undefined) => {
+  const { getFeeAmount } = useFeeConfig();
   const [payments, setPayments] = useState<PaymentData[]>([]);
   const [stats, setStats] = useState<PaymentStats>({
     total_applications: 0,
@@ -64,6 +68,8 @@ export const usePayments = (universityId: string | undefined) => {
     pending_application_fees: 0,
     paid_scholarship_fees: 0,
     pending_scholarship_fees: 0,
+    paid_reinstatement_fees: 0,
+    reinstatement_revenue: 0,
   });
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,6 +119,8 @@ export const usePayments = (universityId: string | undefined) => {
           pending_application_fees: 0,
           paid_scholarship_fees: 0,
           pending_scholarship_fees: 0,
+          paid_reinstatement_fees: 0,
+          reinstatement_revenue: 0,
         });
         setTotalCount(0);
         return;
@@ -136,18 +144,9 @@ export const usePayments = (universityId: string | undefined) => {
         `)
         .in('scholarship_id', scholarshipIdList);
 
-      // Aplicar filtros
+      // Aplicar filtros básicos na query SQL
       if (filtersToUse.application_status_filter && filtersToUse.application_status_filter !== 'all') {
         applicationsQuery = applicationsQuery.eq('status', filtersToUse.application_status_filter);
-      }
-      if (filtersToUse.payment_type_filter && filtersToUse.payment_type_filter !== 'all') {
-        if (filtersToUse.payment_type_filter === 'application_fee') {
-          // Mostrar apenas aplicações com application fee não paga
-          applicationsQuery = applicationsQuery.eq('is_application_fee_paid', false);
-        } else if (filtersToUse.payment_type_filter === 'scholarship_fee') {
-          // Mostrar apenas aplicações com scholarship fee não paga
-          applicationsQuery = applicationsQuery.eq('is_scholarship_fee_paid', false);
-        }
       }
       if (filtersToUse.date_from) {
         applicationsQuery = applicationsQuery.gte('applied_at', filtersToUse.date_from);
@@ -156,43 +155,15 @@ export const usePayments = (universityId: string | undefined) => {
         applicationsQuery = applicationsQuery.lte('applied_at', filtersToUse.date_to);
       }
 
-      // 3. Buscar total count para paginação
-      let countQuery = supabase
-        .from('scholarship_applications')
-        .select('*', { count: 'exact', head: true })
-        .in('scholarship_id', scholarshipIdList);
-
-      // Aplicar os mesmos filtros na query de count
-      if (filtersToUse.application_status_filter && filtersToUse.application_status_filter !== 'all') {
-        countQuery = countQuery.eq('status', filtersToUse.application_status_filter);
-      }
-      if (filtersToUse.payment_type_filter && filtersToUse.payment_type_filter !== 'all') {
-        if (filtersToUse.payment_type_filter === 'application_fee') {
-          countQuery = countQuery.eq('is_application_fee_paid', false);
-        } else if (filtersToUse.payment_type_filter === 'scholarship_fee') {
-          countQuery = countQuery.eq('is_scholarship_fee_paid', false);
-        }
-      }
-      if (filtersToUse.date_from) {
-        countQuery = countQuery.gte('applied_at', filtersToUse.date_from);
-      }
-      if (filtersToUse.date_to) {
-        countQuery = countQuery.lte('applied_at', filtersToUse.date_to);
-      }
-
-      const { count: totalCount } = await countQuery;
-
-      // 4. Aplicar paginação e buscar dados
-      const offset = (page - 1) * pageSize;
+      // 3. Buscar dados de todas as aplicações (a paginação ocorre de forma flexível em memória)
       const { data: applications, error: applicationsError } = await applicationsQuery
-        .range(offset, offset + pageSize - 1)
         .order('applied_at', { ascending: false });
 
       if (applicationsError) {
         throw new Error(`Error fetching applications: ${applicationsError.message}`);
       }
 
-      // 5. Buscar dados adicionais para cada aplicação
+      // 4. Buscar dados adicionais para cada aplicação
       const transformedPayments: PaymentData[] = [];
       
       if (applications && applications.length > 0) {
@@ -203,7 +174,7 @@ export const usePayments = (universityId: string | undefined) => {
         // Buscar dados dos usuários em lote
         const { data: userProfiles } = await supabase
           .from('user_profiles')
-          .select('id, full_name, email, phone, country, dependents, system_type')
+          .select('id, full_name, email, phone, country, dependents, system_type, has_paid_reinstatement_package, reinstatement_package_payment_method, updated_at')
           .in('id', studentIds);
 
         // Buscar dados das bolsas em lote
@@ -240,6 +211,7 @@ export const usePayments = (universityId: string | undefined) => {
               ? applicationFeeAmount + deps * 100
               : applicationFeeAmount;
             
+            // 1. Registro da Application Fee tradicional
             transformedPayments.push({
               id: application.id,
               student_id: application.student_id,
@@ -260,7 +232,7 @@ export const usePayments = (universityId: string | undefined) => {
               scholarship_type: scholarship?.scholarship_type || 'Not specified',
               scholarship_field: scholarship?.field_of_study || 'Not specified',
               scholarship_level: scholarship?.level || 'Not specified',
-              // Informações do pagamento (simuladas para application fees)
+              // Informações do pagamento
               payment_type: 'application_fee',
               amount_charged: finalApplicationFee,
               currency: 'USD',
@@ -275,12 +247,53 @@ export const usePayments = (universityId: string | undefined) => {
               application_fee_amount: finalApplicationFee,
               scholarship_fee_amount: scholarshipAmount,
             });
+
+            // 2. Registro da Reinstatement Fee separada (se paga)
+            if ((userProfile as any)?.has_paid_reinstatement_package) {
+              const reinstatementFeeAmt = getFeeAmount('reinstatement_fee');
+              transformedPayments.push({
+                id: `${application.id}-reinstatement`,
+                student_id: application.student_id,
+                student_name: userProfile?.full_name || 'Unknown',
+                student_email: userProfile?.email || 'Unknown',
+                student_country: userProfile?.country || 'Unknown',
+                student_phone: userProfile?.phone || 'Unknown',
+                university_id: scholarship?.university_id || universityId,
+                university_name: (scholarship?.universities as any)?.name || 'Unknown',
+                // Informações da aplicação
+                application_id: application.id,
+                application_status: application.status,
+                applied_at: application.applied_at,
+                // Informações da bolsa
+                scholarship_id: scholarship?.id || 'Unknown',
+                scholarship_title: scholarship?.title || 'Unknown',
+                scholarship_amount: scholarshipAmount,
+                scholarship_type: scholarship?.scholarship_type || 'Not specified',
+                scholarship_field: scholarship?.field_of_study || 'Not specified',
+                scholarship_level: scholarship?.level || 'Not specified',
+                // Informações do pagamento
+                payment_type: 'reinstatement_fee',
+                amount_charged: reinstatementFeeAmt,
+                currency: 'USD',
+                status: 'succeeded',
+                created_at: (userProfile as any)?.updated_at || application.applied_at,
+                stripe_payment_intent_id: undefined,
+                transfer_status: 'pending',
+                transfer_method: (userProfile as any)?.reinstatement_package_payment_method || 'stripe',
+                // Campos específicos para Reinstatement Fee
+                is_application_fee_paid: true,
+                is_scholarship_fee_paid: application.is_scholarship_fee_paid || false,
+                application_fee_amount: reinstatementFeeAmt,
+                scholarship_fee_amount: scholarshipAmount,
+              });
+            }
           }
         }
 
-        // Aplicar filtro de busca após transformar os dados
+        // Aplicar filtros em memória
         let finalPayments = transformedPayments;
         
+        // Filtro de busca
         if (filtersToUse.search_query && filtersToUse.search_query.trim() !== '') {
           const searchLower = filtersToUse.search_query.toLowerCase().trim();
           finalPayments = transformedPayments.filter(payment => {
@@ -296,6 +309,16 @@ export const usePayments = (universityId: string | undefined) => {
           });
         }
 
+        // Filtro de tipo de pagamento
+        if (filtersToUse.payment_type_filter && filtersToUse.payment_type_filter !== 'all') {
+          finalPayments = finalPayments.filter(payment => payment.payment_type === filtersToUse.payment_type_filter);
+        }
+
+        // Filtro de status
+        if (filtersToUse.status_filter && filtersToUse.status_filter !== 'all') {
+          finalPayments = finalPayments.filter(payment => payment.status === filtersToUse.status_filter);
+        }
+
         // Aplicar paginação
         const startIndex = (page - 1) * pageSize;
         const endIndex = startIndex + pageSize;
@@ -309,15 +332,24 @@ export const usePayments = (universityId: string | undefined) => {
           pending_application_fees: 0,
           paid_scholarship_fees: 0,
           pending_scholarship_fees: 0,
+          paid_reinstatement_fees: 0,
+          reinstatement_revenue: 0,
         };
 
         for (const payment of finalPayments) {
-          if (payment.is_application_fee_paid) {
-            recalculatedStats.paid_application_fees++;
-            // Valores já estão em USD
-            recalculatedStats.total_revenue += payment.amount_charged;
-          } else {
-            recalculatedStats.pending_application_fees++;
+          if (payment.payment_type === 'application_fee') {
+            if (payment.is_application_fee_paid) {
+              recalculatedStats.paid_application_fees++;
+              recalculatedStats.total_revenue += payment.amount_charged;
+            } else {
+              recalculatedStats.pending_application_fees++;
+            }
+          } else if (payment.payment_type === 'reinstatement_fee') {
+            if (payment.status === 'succeeded') {
+              recalculatedStats.paid_reinstatement_fees++;
+              recalculatedStats.reinstatement_revenue += payment.amount_charged;
+              recalculatedStats.total_revenue += payment.amount_charged;
+            }
           }
           
           if (payment.is_scholarship_fee_paid) {
@@ -339,6 +371,8 @@ export const usePayments = (universityId: string | undefined) => {
           pending_application_fees: 0,
           paid_scholarship_fees: 0,
           pending_scholarship_fees: 0,
+          paid_reinstatement_fees: 0,
+          reinstatement_revenue: 0,
         });
         setTotalCount(0);
       }
@@ -459,7 +493,6 @@ export const usePayments = (universityId: string | undefined) => {
       const csvHeaders = [
         'Student Name',
         'Student Email',
-        'Student Country',
         'Scholarship Title',
         'Application Status',
         'Application Fee Paid',
@@ -476,7 +509,6 @@ export const usePayments = (universityId: string | undefined) => {
         return [
           `"${userProfile?.full_name || 'Unknown'}"`,
           `"${userProfile?.email || 'Unknown'}"`,
-          `"${userProfile?.country || 'Unknown'}"`,
           `"${scholarship?.title || 'Unknown'}"`,
           `"${application.status}"`,
           `"${application.is_application_fee_paid ? 'Yes' : 'No'}"`,

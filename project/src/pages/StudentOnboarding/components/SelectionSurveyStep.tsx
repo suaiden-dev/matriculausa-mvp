@@ -66,10 +66,9 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 next[3] = userProfile.phone;
                 hasChanged = true;
             }
-            // Q4: Nos EUA? (Verifica se o país é EUA)
-            if (!next[4] && userProfile?.country) {
-                const isUSA = ['usa', 'united states', 'eua', 'estados unidos'].includes(userProfile.country.toLowerCase());
-                next[4] = isUSA ? 'Sim' : 'Não';
+            // Q4: Dependentes
+            if (!next[4] && userProfile?.dependents !== undefined && userProfile?.dependents !== null) {
+                next[4] = String(userProfile.dependents);
                 hasChanged = true;
             }
 
@@ -122,7 +121,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         const sectionQuestions = questions.filter(
             (q) => q.id >= section.range[0] && q.id <= section.range[1]
         );
-        
+
         // Filtrar apenas questões que NÃO são dependentes de outra questão NA MESMA SEÇÃO
         // para que possam ser renderizadas "inline" pela questão pai.
         return sectionQuestions.filter(q => {
@@ -145,23 +144,19 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             }
 
             if (isVisible && q.required) {
-                if (!answers[q.id]) {
+                const answer = answers[q.id];
+                if (!answer || String(answer).trim() === '') {
                     newErrors[q.id] = 'selectionSurvey.required';
                     isValid = false;
-                } else if (q.id === 5 && answers[5] === 'nao_sei') {
+                } else if (q.id === 5 && answer === 'nao_sei') {
                     newErrors[5] = t('registration:selectionSurvey.questions.5.errorNaoSei');
                     isValid = false;
-                } else if (q.id === 4) {
-                    const answer = answers[q.id];
-                    if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
-                        if (!answers[-4]) {
-                            newErrors[-4] = 'selectionSurvey.required';
-                            isValid = false;
-                        }
-                        if (!answers[-41]) {
-                            newErrors[-41] = 'selectionSurvey.required';
-                            isValid = false;
-                        }
+                } else if (q.id === 3.3) {
+                    const gpaValue = parseFloat(String(answer).replace(',', '.'));
+                    if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+                        newErrors[q.id] = 'selectionSurvey.required'; // Pode ser melhor adicionar uma chave específica de erro, mas aproveitamos o existing por ora
+                        toast.error('GPA deve ser um valor entre 0.0 e 4.0');
+                        isValid = false;
                     }
                 }
             }
@@ -183,13 +178,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             if (!isVisible) return true;
             if (q.required && !answers[q.id]) return false;
             
-            // Lógica específica para a pergunta de graduação (id 4)
-            if (q.required && q.id === 4) {
-                const answer = answers[q.id];
-                if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
-                    if (!answers[-4] || !answers[-41]) return false;
-                }
-            }
             return true;
         });
     }, [answers, questions]);
@@ -247,6 +235,23 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             return;
         }
 
+        // Validação global do GPA antes de enviar ao backend para evitar crash
+        const gpaAnswer = currentAnswers[3.3];
+        if (gpaAnswer) {
+            const gpaValue = parseFloat(String(gpaAnswer).replace(',', '.'));
+            if (isNaN(gpaValue) || gpaValue < 0 || gpaValue > 4) {
+                toast.error('O seu GPA (Média) inserido no Passo 1 é inválido. Por favor, ajuste para um valor entre 0.0 e 4.0.', { duration: 6000 });
+                setCurrentSection(0); // Força retorno para a primeira seção
+                setTimeout(() => {
+                    const element = document.getElementById('survey-top');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+                return;
+            }
+        }
+
         setIsSaving(true);
         const { score, total, percentage } = calculateScore(currentAnswers);
         const passed = percentage >= 80;
@@ -284,7 +289,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             };
             const processType = processTypeMap[currentAnswers[5]] ?? null;
             const visaTransferActive = currentAnswers[5] === 'transfer'
-                ? currentAnswers[5.1] === 'sim'
+                ? (currentAnswers[5.1] || '').toLowerCase() === 'sim'
                 : true;
 
             const { error: profileError } = await supabase
@@ -294,6 +299,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                     field_of_interest: currentAnswers[3.1],
                     academic_level: currentAnswers[3.2],
                     gpa: currentAnswers[3.3] ? parseFloat(String(currentAnswers[3.3]).replace(',', '.')) : null,
+                    dependents: currentAnswers[4] !== undefined ? parseInt(String(currentAnswers[4])) : null,
                     english_proficiency: currentAnswers[8],
                     ...(processType && {
                         student_process_type: processType,

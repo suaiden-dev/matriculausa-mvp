@@ -44,7 +44,7 @@ async function getAllAdmins(
     const { data: adminProfiles, error: profileError } = await supabase
       .from("user_profiles")
       .select("user_id, email, full_name, phone")
-      .eq("role", "admin");
+      .in("role", ["admin", "post_sales"]);
 
     if (profileError) {
       console.error(
@@ -134,7 +134,7 @@ async function sendTermAcceptanceNotificationAfterPayment(
     // Buscar perfil do usuário
     const { data: userProfile, error: userError } = await supabase
       .from("user_profiles")
-      .select("email, full_name, country, seller_referral_code")
+      .select("email, full_name, country, seller_referral_code, placement_fee_installment_enabled")
       .eq("user_id", userId)
       .single();
 
@@ -1570,12 +1570,18 @@ Deno.serve(async (req: Request) => {
         case "placement":
           console.log("[parcelow-webhook] 🔄 Processando placement_fee...");
 
+          const placementUpdateFields: Record<string, unknown> = {
+            is_placement_fee_paid: true,
+            placement_fee_payment_method: "parcelow",
+          };
+          if (userProfile.placement_fee_installment_enabled) {
+            placementUpdateFields.placement_fee_pending_balance = netAmount;
+            placementUpdateFields.placement_fee_installment_number = 1;
+          }
+
           const { error: placementUpdateError } = await supabase
             .from("user_profiles")
-            .update({
-              is_placement_fee_paid: true,
-              placement_fee_payment_method: "parcelow",
-            })
+            .update(placementUpdateFields)
             .eq("user_id", userId);
 
           if (placementUpdateError) {

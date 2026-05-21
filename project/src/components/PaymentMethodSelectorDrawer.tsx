@@ -13,12 +13,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import PayerAlternativeForm, { PayerInfo } from './PayerAlternativeForm';
 
 interface PaymentMethodSelectorDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   selectedMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow' | null;
-  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number) => void;
+  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number, payerInfo?: PayerInfo | null) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
   isLoading?: boolean;
@@ -49,6 +50,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     originalAmount?: number;
   } | null>(null);
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
+  const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
   
   // ✅ Mostrar cupom promocional apenas se o usuário NÃO tiver usado o referral code do Matricula Rewards
@@ -242,10 +244,14 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             
             <PaymentMethodSelector
               selectedMethod={effectiveSelectedMethod}
-              onMethodSelect={onMethodSelect}
+              onMethodSelect={(method, rate) => onMethodSelect(method, rate, payerInfo)}
               feeType={feeType}
               amount={finalAmount}
             />
+
+            <div className="mt-4">
+              <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+            </div>
 
             {isLoading && (
               <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
@@ -338,10 +344,14 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
             <PaymentMethodSelector
               selectedMethod={effectiveSelectedMethod}
-              onMethodSelect={onMethodSelect}
+              onMethodSelect={(method, rate) => onMethodSelect(method, rate, payerInfo)}
               feeType={feeType}
               amount={finalAmount}
             />
+
+            <div className="mt-4">
+              <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+            </div>
 
             {isLoading && (
               <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">

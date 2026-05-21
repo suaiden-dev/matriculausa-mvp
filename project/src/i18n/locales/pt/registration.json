@@ -38,10 +38,17 @@
     },
     "sidebar": {
       "title": "Resumo do Pagamento",
-      "selectionFee": "Taxa do Processo Seletivo",
+      "selectionFee": "Processo Seletivo",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Agora",
-      "feeExplanation": "A Taxa do Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "benefits": {
+        "title": "O Processo Seletivo te dá acesso a:",
+        "item1": "Tenha acesso a mais de 154 bolsas exclusivas nos EUA.",
+        "item2": "Escolha de até 4 bolsas de estudos exclusivas alinhadas ao seu perfil.",
+        "item3": "Envie seus documentos para análise e aprovação junto às universidades parceiras.",
+        "item4": "Tenha suporte especializado e humanizado durante todo o processo.",
+        "item5": "Conclusão do processo com a sua carta de aceitação em mãos, pronto para estudar."
+      },
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa de Bolsa",
@@ -49,7 +56,7 @@
       "futureFeesNote": "As taxas futuras são estimativas e variam conforme a universidade.",
       "couponApplied": "Cupom Aplicado",
       "refundAssuranceTitle": "Garantia de Reembolso",
-      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, a taxa do processo seletivo será totalmente reembolsada.",
+      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, o pagamento do Processo Seletivo será totalmente reembolsado.",
       "alreadyPaidContinue": "Continuar no Onboarding"
     },
     "terms": {
@@ -80,6 +87,8 @@
       "notes": {
         "processingFees": "* Podem incluir taxas de processamento",
         "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+        "parcelowAddressNoticeTitle": "Atenção ao Endereço",
+        "parcelowAddressNoticeContent": "Para segurança da transação, o endereço de cobrança (Billing Address) deve ser o do titular do cartão e precisará ser preenchido diretamente na próxima tela (Checkout da Parcelow).",
         "zelleTime": "Processamento pode levar até 48 horas"
       },
       "payWith": "Continuar com {{method}}",
@@ -99,7 +108,7 @@
       },
       "alreadyPaid": {
         "title": "Taxa Já Paga!",
-        "description": "Você já realizou o pagamento da taxa do processo seletivo. Pode prosseguir com sua inscrição.",
+        "description": "Você já realizou o pagamento do Processo Seletivo. Pode prosseguir com sua inscrição.",
         "continue": "Continuar no Onboarding"
       }
     }
@@ -110,7 +119,7 @@
       "of": "de",
       "initiating": "Iniciando",
       "steps": {
-        "selectionFee": "Taxa do Processo Seletivo",
+        "selectionFee": "Processo Seletivo",
         "selectionSurvey": "Questionário",
         "scholarshipSelection": "Escolha de Bolsas",
         "processType": "Tipo de Processo",
@@ -244,6 +253,8 @@
     "securityNotice": "Seus dados estão protegidos e criptografados",
     "profilesIdentified": "Perfil Identificado",
     "identityVerifiedSuccess": "Você já enviou sua foto de identidade e ela está em análise.",
+    "identityRejectedTitle": "Documento Rejeitado",
+    "identityRejectedDefaultReason": "Sua foto de identidade foi recusada. Por favor, envie uma nova foto nítida.",
     "title": "Questionário",
     "subtitle": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo <0>80% de acerto</0> nas questões.",
     "mandatoryBadge": "Processo Seletivo Obrigatório",
@@ -297,36 +308,16 @@
         "text": "WhatsApp (com DDI)",
         "placeholder": "+55 11 99999-9999"
       },
-      "3_1": {
-        "text": "Qual o seu curso ou área de interesse principal?",
-        "options": {
-          "engineering": "Engenharia",
-          "business": "Negócios",
-          "computer-science": "Ciência da Computação",
-          "medicine": "Medicina",
-          "law": "Direito",
-          "arts": "Artes e Humanidades",
-          "sciences": "Ciências Naturais",
-          "other": "Outro"
-        }
-      },
-      "3_2": {
-        "text": "Qual o seu nível acadêmico atual?",
-        "options": {
-          "high-school": "Ensino Médio",
-          "undergraduate": "Bacharelado / Graduação",
-          "graduate": "Mestrado / Pós-graduação",
-          "doctorate": "Doutorado"
-        }
-      },
-      "3_3": {
-        "text": "Qual o seu GPA (Média de Notas) aproximado?",
-        "placeholder": "Ex: 3.5"
-      },
       "4": {
-        "text": "Você está atualmente nos EUA?",
-        "extraLabel": "Qual status atual?",
-        "placeholder": "Ex: B1/B2, F-1, etc."
+        "text": "Quantos dependentes você possui? (cônjuge e filhos menores de 21 anos)",
+        "options": {
+          "0": "0 Dependentes",
+          "1": "1 Dependente",
+          "2": "2 Dependentes",
+          "3": "3 Dependentes",
+          "4": "4 Dependentes",
+          "5": "5 Dependentes"
+        }
       },
       "5": {
         "text": "Qual é o seu perfil hoje?",
@@ -338,19 +329,6 @@
           "nao_sei": "Não sei (preciso de orientação)"
         },
         "errorNaoSei": "Por favor, selecione seu perfil real (Initial, Transfer ou COS) para continuar."
-      },
-      "5_1": {
-        "text": "O seu status está ativo?",
-        "options": {
-          "sim": "Sim",
-          "nao": "Não (terminado/cancelado)"
-        }
-      },
-      "5_2": {
-        "text": "Qual o limite do seu status (prazo)?"
-      },
-      "5_3": {
-        "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
       },
       "6": {
         "text": "Qual é o seu objetivo principal com o programa?",
@@ -701,6 +679,48 @@
         "text": "Declaração final",
         "placeholder": "Escreva sua declaração...",
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
+      },
+      "3_1": {
+        "text": "Qual o seu curso ou área de interesse principal?",
+        "options": {
+          "engineering": "Engenharia",
+          "business": "Negócios",
+          "computer-science": "Ciência da Computação",
+          "medicine": "Medicina",
+          "law": "Direito",
+          "arts": "Artes e Humanidades",
+          "sciences": "Ciências Naturais",
+          "other": "Outro"
+        }
+      },
+      "3_2": {
+        "text": "Qual o seu nível acadêmico atual?",
+        "options": {
+          "high-school": "Ensino Médio",
+          "undergraduate": "Bacharelado / Graduação",
+          "graduate": "Mestrado / Pós-graduação",
+          "doctorate": "Doutorado"
+        }
+      },
+      "3_3": {
+        "text": "Qual o seu GPA (Média de Notas) aproximado?",
+        "placeholder": "Ex: 3.5"
+      },
+      "5_1": {
+        "text": "O seu status está ativo?",
+        "options": {
+          "sim": "Sim",
+          "nao": "Não (terminado/cancelado)"
+        }
+      },
+      "5_2": {
+        "text": "Qual o limite do seu status (prazo)?"
+      },
+      "5_3": {
+        "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
+      },
+      "5_4": {
+        "text": "Data de expiração do status/I-94"
       }
     }
   },
@@ -763,5 +783,12 @@
     "annualTuition": "Valor anual da bolsa: {{amount}}",
     "confirmedMessage": "Sua taxa de reintegração foi confirmada com sucesso.",
     "paidSuccess": "Pagamento Confirmado"
+  },
+  "i20Preview": {
+    "title": "Control Fee I-20 Document",
+    "description": "Sua via prévia (limitada) do I-20 está disponível para verificação. Efetue o pagamento da taxa para liberar o documento original.",
+    "payButton": "Ir para Pagamento",
+    "viewPreview": "Ver I-20",
+    "watermark": "MATRÍCULA USA"
   }
 }

@@ -10,7 +10,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useStudentsQuery, useFilterDataQuery } from './hooks/useStudentApplicationsQueries';
+import { useStudentsQuery, useFilterDataQuery, StudentRecord } from './hooks/useStudentApplicationsQueries';
 import RefreshButton from '../RefreshButton';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -18,40 +18,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
-
-interface StudentRecord {
-  student_id: string;
-  user_id: string;
-  student_name: string;
-  student_email: string;
-  student_created_at: string;
-  has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee: boolean;
-  seller_referral_code: string | null;
-  application_id: string | null;
-  scholarship_id: string | null;
-  status: string | null;
-  application_status: string | null;
-  applied_at: string | null;
-  is_application_fee_paid: boolean;
-  is_scholarship_fee_paid: boolean;
-  acceptance_letter_status: string | null;
-  payment_status: string | null;
-  student_process_type: string | null;
-  transfer_form_status: string | null;
-  scholarship_title: string | null;
-  university_name: string | null;
-  reviewed_at: string | null;
-  reviewed_by: string | null;
-  is_locked: boolean;
-  total_applications: number;
-  all_applications: any[];
-  most_recent_activity?: Date;
-  completed_at?: string;
-  is_archived: boolean;
-  assigned_to_admin_id: string | null;
-  assigned_to_admin_name: string | null;
-}
 
 const CompletedApplicationsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,7 +35,6 @@ const CompletedApplicationsView: React.FC = () => {
   const [completionEndDate, setCompletionEndDate] = useState<dayjs.Dayjs | null>(null);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
-  const [assignedAdminFilter, setAssignedAdminFilter] = useState('all');
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
 
   // Estados para geração em massa de documentos
@@ -87,7 +52,6 @@ const CompletedApplicationsView: React.FC = () => {
   const affiliates = filterDataQuery.data?.affiliates || [];
   const scholarships = filterDataQuery.data?.scholarships || [];
   const universities = filterDataQuery.data?.universities || [];
-  const internalAdmins = filterDataQuery.data?.internalAdmins || [];
 
   // Filtrar apenas estudantes completados (enrolled)
   const completedStudents = allStudents.filter((student: StudentRecord) => {
@@ -177,7 +141,6 @@ const CompletedApplicationsView: React.FC = () => {
       completionEndDate: completionEndDate?.toISOString() || null,
       onlyBlackCouponUsers,
       showCurrentStudents,
-      assignedAdminFilter,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -199,7 +162,6 @@ const CompletedApplicationsView: React.FC = () => {
         setCompletionEndDate(filters.completionEndDate ? dayjs(filters.completionEndDate) : null);
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
-        setAssignedAdminFilter(filters.assignedAdminFilter || 'all');
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -220,7 +182,6 @@ const CompletedApplicationsView: React.FC = () => {
     setCompletionEndDate(null);
     setOnlyBlackCouponUsers(false);
     setShowCurrentStudents(false);
-    setAssignedAdminFilter('all');
     setCurrentPage(1);
   };
 
@@ -242,7 +203,6 @@ const CompletedApplicationsView: React.FC = () => {
     completionEndDate,
     onlyBlackCouponUsers,
     showCurrentStudents,
-    assignedAdminFilter,
     currentPage
   ]);
 
@@ -338,13 +298,8 @@ const CompletedApplicationsView: React.FC = () => {
     // Filtro para mostrar apenas usuários que usaram cupom BLACK
     const matchesBlackCoupon = !onlyBlackCouponUsers || blackCouponUsers.has(student.user_id);
 
-    const matchesAssignedAdmin = assignedAdminFilter === 'all' ||
-      (assignedAdminFilter === 'unassigned'
-        ? !student.assigned_to_admin_id
-        : student.assigned_to_admin_id === assignedAdminFilter);
-
     return matchesSearch && matchesScholarship && matchesUniversity &&
-           matchesAffiliate && matchesStartDate && matchesCompletionDate && matchesBlackCoupon && matchesAssignedAdmin;
+           matchesAffiliate && matchesStartDate && matchesCompletionDate && matchesBlackCoupon;
   });
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -544,25 +499,7 @@ const CompletedApplicationsView: React.FC = () => {
               </select>
             </div>
 
-            {/* Filtro por Atribuído (admin interno) */}
-            {internalAdmins.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Atribuído</label>
-                <select
-                  value={assignedAdminFilter}
-                  onChange={(e) => setAssignedAdminFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
-                >
-                  <option value="all">Todos</option>
-                  <option value="unassigned">Sem responsável</option>
-                  {internalAdmins.map((admin) => (
-                    <option key={admin.id} value={admin.id}>
-                      {admin.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+
           </div>
           
           {/* Terceira linha - Filtros de data */}

@@ -34,6 +34,7 @@ interface PaymentStatusCardProps {
   onEnableInstallment?: () => Promise<void>;
   onDisableInstallment?: () => Promise<void>;
   onToggleVisaStatus?: () => Promise<void>;
+  hideSelectionFee?: boolean;
 }
 
 /**
@@ -70,6 +71,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     formatFeeAmount,
     getFeeAmount,
     overridesRefreshKey = 0,
+    hideSelectionFee = false,
   } = props;
 
   const [savingInstallment, setSavingInstallment] = useState(false);
@@ -164,22 +166,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com"
   const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
 
-  // ✅ Debug: Log quando editingFees mudar
-  React.useEffect(() => {
-    console.log('🔍 [PaymentStatusCard] editingFees mudou:', editingFees);
-    if (editingFees) {
-      console.log('✅ [PaymentStatusCard] Valores de editingFees:', {
-        selection_process: editingFees.selection_process,
-        scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control,
-        placement: editingFees.placement,
-        ds160_package: editingFees.ds160_package,
-        i539_cos_package: editingFees.i539_cos_package
-      });
-    } else {
-      console.log('ℹ️ [PaymentStatusCard] editingFees é null/undefined');
-    }
-  }, [editingFees]);
+
 
   // This is a simplified version - full implementation would include all fee types
   return (
@@ -234,165 +221,165 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
       </div>
       <div className="p-6 space-y-4">
         {/* Selection Process Fee */}
-        <div className="bg-slate-50 rounded-xl p-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex-1">
-              <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
-              <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
-              {editingFees ? (
-                <div className="mt-2">
-                  <input
-                    type="number"
-                    value={editingFees.selection_process ?? ''}
-                    onChange={(e) =>
-                      onEditFeesChange({ ...editingFees, selection_process: Number(e.target.value) })
-                    }
-                    className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              ) : (
-                <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                  {(() => {
-                    // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
-                    if (loadingPaidAmounts?.selection_process || loadingAffiliateCheck || loadingOverrides) {
-                      return (
-                        <div className="animate-pulse flex items-center gap-2">
-                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
-                        </div>
-                      );
-                    }
-
-                    // ✅ CORREÇÃO: Se o pagamento já foi feito, SEMPRE tentar mostrar o valor REAL pago
-                    // Priorizar realPaidAmounts mesmo que seja 0 (pode ser um pagamento de valor zero)
-                    if (student?.has_paid_selection_process_fee) {
-                      if (realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
-                        console.log('[PaymentStatusCard] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
-                        return formatFeeAmount(realPaidAmounts.selection_process);
-                      } else {
-                        // Se está marcado como pago mas não temos realPaidAmounts, mostrar skeleton
+        {!hideSelectionFee && (
+          <div className="bg-slate-50 rounded-xl p-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex-1">
+                <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
+                {editingFees ? (
+                  <div className="mt-2">
+                    <input
+                      type="number"
+                      value={editingFees.selection_process ?? ''}
+                      onChange={(e) =>
+                        onEditFeesChange({ ...editingFees, selection_process: Number(e.target.value) })
+                      }
+                      className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                ) : (
+                  <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                    {(() => {
+                      // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
+                      if (loadingPaidAmounts?.selection_process || loadingAffiliateCheck || loadingOverrides) {
                         return (
                           <div className="animate-pulse flex items-center gap-2">
                             <div className="h-4 w-20 bg-slate-200 rounded"></div>
                           </div>
                         );
                       }
-                    }
 
-                    // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
-                    // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
-                    if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
-                      // Se tem override, usar o valor do override diretamente
-                      return formatFeeAmount(currentOverrides.selection_process_fee);
-                    }
+                      // ✅ CORREÇÃO: Se o pagamento já foi feito, SEMPRE tentar mostrar o valor REAL pago
+                      // Priorizar realPaidAmounts mesmo que seja 0 (pode ser um pagamento de valor zero)
+                      if (student?.has_paid_selection_process_fee) {
+                        if (realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
+                          console.log('[PaymentStatusCard] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
+                          return formatFeeAmount(realPaidAmounts.selection_process);
+                        } else {
+                          // Fallback se estiver pago mas sem registro individual
+                          const base = (userSystemType || 'legacy') === 'simplified' ? 350 : 400;
+                          const amount = (userSystemType || 'legacy') === 'simplified' ? base : base + (dependents * 150);
+                          return formatFeeAmount(currentOverrides?.selection_process_fee || amount);
+                        }
+                      }
 
-                    // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
-                    if (isBrantImmigrationAffiliate) {
-                      // Selection Process: $400 base + $150 por dependente
-                      const selectionProcessAmount = 400 + (dependents * 150);
-                      return formatFeeAmount(selectionProcessAmount);
-                    }
+                      // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
+                      // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
+                      if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
+                        // Se tem override, usar o valor do override diretamente
+                        return formatFeeAmount(currentOverrides.selection_process_fee);
+                      }
 
-                    // Caso contrário, calcular normalmente
-                    const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-                    const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+                      // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
+                      if (isBrantImmigrationAffiliate) {
+                        // Selection Process: $400 base + $150 por dependente
+                        const selectionProcessAmount = 400 + (dependents * 150);
+                        return formatFeeAmount(selectionProcessAmount);
+                      }
 
-                    let base: number;
-                    const systemType = userSystemType || 'legacy';
-                    const isNewProcess = student?.student_process_type === 'initial' || 
-                                        student?.student_process_type === 'change_of_status' || 
-                                        student?.student_process_type === 'transfer' || 
-                                        student?.student_process_type === 'resident';
+                      // Caso contrário, calcular normalmente
+                      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+                      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
 
-                    if (hasMatrDiscount) {
-                      base = 350; // $400 - $50 desconto
-                    } else if (isNewProcess) {
-                      base = 400; // Novos processos sempre 400
-                    } else {
-                      base = systemType === 'simplified' ? 350 : 400;
-                    }
+                      let base: number;
+                      const systemType = userSystemType || 'legacy';
+                      const isNewProcess = student?.student_process_type === 'initial' || 
+                                          student?.student_process_type === 'change_of_status' || 
+                                          student?.student_process_type === 'transfer' || 
+                                          student?.student_process_type === 'resident';
 
-                    return formatFeeAmount(base);
-                  })()}
-                  {currentOverrides?.selection_process_fee !== undefined && <span className="ml-2 text-xs text-blue-500">(custom)</span>}
-                </dd>
-              )}
-            </div>
-            <div className="flex flex-col gap-3">
-              {student.has_paid_selection_process_fee ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium text-green-600">Paid</span>
-                  </div>
-                  {isPlatformAdmin && (
-                    <div className="flex flex-col gap-3">
-                      {editingPaymentMethod === 'selection_process' ? (
-                        <div className="flex flex-col gap-3">
-                          <select
-                            value={newPaymentMethod}
-                            onChange={(e) => onPaymentMethodChange(e.target.value)}
-                            className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
-                            disabled={savingPaymentMethod}
-                          >
-                            <option value="stripe">Stripe</option>
-                            <option value="zelle">Zelle</option>
-                            <option value="parcelow">Parcelow</option>
-                          </select>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => onUpdatePaymentMethod('selection_process')}
-                              disabled={savingPaymentMethod}
-                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                            >
-                              <Save className="w-4 h-4" />
-                              <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
-                            </button>
-                            <button
-                              onClick={onCancelPaymentMethod}
-                              className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                            >
-                              <X className="w-4 h-4" />
-                              <span>Cancel</span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            onEditPaymentMethod('selection_process');
-                            onPaymentMethodChange((student.selection_process_fee_payment_method as string) || 'manual');
-                          }}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span>Edit Method</span>
-                        </button>
-                      )}
+                      if (hasMatrDiscount) {
+                        base = 350; // $400 - $50 desconto
+                      } else if (isNewProcess) {
+                        base = 400; // Novos processos sempre 400
+                      } else {
+                        base = systemType === 'simplified' ? 350 : 400;
+                      }
+
+                      return formatFeeAmount(base);
+                    })()}
+                    {currentOverrides?.selection_process_fee !== undefined && <span className="ml-2 text-xs text-blue-500">(custom)</span>}
+                  </dd>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                {student.has_paid_selection_process_fee ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">Paid</span>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center space-x-2">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                    <span className="text-sm font-medium text-red-600">Not Paid</span>
+                    {isPlatformAdmin && (
+                      <div className="flex flex-col gap-3">
+                        {editingPaymentMethod === 'selection_process' ? (
+                          <div className="flex flex-col gap-3">
+                            <select
+                              value={newPaymentMethod}
+                              onChange={(e) => onPaymentMethodChange(e.target.value)}
+                              className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                              disabled={savingPaymentMethod}
+                            >
+                              <option value="stripe">Stripe</option>
+                              <option value="zelle">Zelle</option>
+                              <option value="parcelow">Parcelow</option>
+                            </select>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => onUpdatePaymentMethod('selection_process')}
+                                disabled={savingPaymentMethod}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                              >
+                                <Save className="w-4 h-4" />
+                                <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                              </button>
+                              <button
+                                onClick={onCancelPaymentMethod}
+                                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                              >
+                                <X className="w-4 h-4" />
+                                <span>Cancel</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              onEditPaymentMethod('selection_process');
+                              onPaymentMethodChange((student.selection_process_fee_payment_method as string) || 'manual');
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            <span>Edit Method</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {isPlatformAdmin && (
-                    <button
-                      onClick={() => onMarkAsPaid('selection_process')}
-                      className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Mark as Paid</span>
-                    </button>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <span className="text-sm font-medium text-red-600">Not Paid</span>
+                    </div>
+                    {isPlatformAdmin && (
+                      <button
+                        onClick={() => onMarkAsPaid('selection_process')}
+                        className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Mark as Paid</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Application Fee */}
         <div className="bg-slate-50 rounded-xl p-4">
@@ -415,11 +402,16 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       return formatFeeAmount(realPaidAmounts.application, true);
                     }
 
-                    return (
-                      <div className="animate-pulse flex items-center gap-2">
-                        <div className="h-4 w-20 bg-slate-200 rounded"></div>
-                      </div>
-                    );
+                    // Fallback se estiver pago mas não tivermos o registro individual (comum em pagamentos antigos)
+                    const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
+                    const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
+                    const expectedAmount = scholarship?.application_fee_amount || (student as any).application_fee_amount || 100;
+                    let finalExpected = Number(expectedAmount);
+                    if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                      finalExpected += dependents * 100;
+                    }
+                    
+                    return formatFeeAmount(finalExpected, true);
                   })()}
                 </dd>
               ) : (
@@ -566,6 +558,12 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             if (currentOverrides?.placement_fee != null) {
                               return Number(currentOverrides.placement_fee);
                             }
+                            
+                            // Try direct value from student object first (common in Seller Dashboard)
+                            if ((student as any).placement_fee_amount) {
+                              return Number((student as any).placement_fee_amount);
+                            }
+
                             const apps = student.all_applications || [];
                             const app = apps.find((a: any) => a.status === 'enrolled') ||
                                         apps.find((a: any) => a.status === 'approved') ||
@@ -573,6 +571,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             const sch = app?.scholarships
                               ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships)
                               : null;
+                            
+                            if (sch?.placement_fee_amount) {
+                              return Number(sch.placement_fee_amount);
+                            }
+
                             if (sch?.annual_value_with_scholarship) {
                               const customAmt = sch.placement_fee_amount ? Number(sch.placement_fee_amount) : null;
                               return getPlacementFee(Number(sch.annual_value_with_scholarship), customAmt);
@@ -585,7 +588,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             if (isInstallmentPartial) {
                               const paid = (realPaidAmounts?.placement && realPaidAmounts.placement > 0)
                                 ? realPaidAmounts.placement
-                                : (calcTotalFee() ?? 0) / 2;
+                                : (calcTotalFee() || 2100) / 2;
                               const total = paid + pendingBalance;
                               return formatFeeAmount(total, true);
                             }
@@ -595,13 +598,18 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             }
                             // Fallback for old manual payments with no individual_fee_payments record
                             const total = calcTotalFee();
-                            if (total != null) return formatFeeAmount(total, true);
-                            return formatFeeAmount(0, true);
+                            if (total != null && total > 0) return formatFeeAmount(total, true);
+                            
+                            // Reasonable fallback based on flow
+                            return formatFeeAmount(2100, true);
                           }
 
-                          // Not paid: always show the expected total fee
+                          // Not paid: show half if installment enabled (representing the 1st installment due), otherwise total
                           const total = calcTotalFee();
-                          if (total != null) return formatFeeAmount(total, true);
+                          if (total != null) {
+                            const displayAmount = student?.placement_fee_installment_enabled ? total / 2 : total;
+                            return formatFeeAmount(displayAmount, true);
+                          }
                           return 'N/A';
                         })()}
                         {currentOverrides?.placement_fee !== undefined && (
@@ -780,11 +788,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             if (realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
                               return formatFeeAmount(realPaidAmounts.scholarship, true);
                             } else {
-                              return (
-                                <div className="animate-pulse flex items-center gap-2">
-                                  <div className="h-4 w-20 bg-slate-200 rounded"></div>
-                                </div>
-                              );
+                              // Fallback se estiver pago mas sem registro individual
+                              const expectedScholarshipFee = (student as any).scholarship_fee_amount || 900;
+                              return formatFeeAmount(expectedScholarshipFee, true);
                             }
                           }
 
@@ -928,11 +934,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             if (realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
                               return formatFeeAmount(realPaidAmounts.i20_control, true);
                             } else {
-                              return (
-                                <div className="animate-pulse flex items-center gap-2">
-                                  <div className="h-4 w-20 bg-slate-200 rounded"></div>
-                                </div>
-                              );
+                              // Fallback se estiver pago mas sem registro individual
+                              const expectedI20Fee = currentOverrides?.i20_control_fee || 900;
+                              return formatFeeAmount(expectedI20Fee, true);
                             }
                           }
 
@@ -1131,7 +1135,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-539 Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for transfer students with inactive visa</dd>
                   <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                     {isPaid && realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null
@@ -1194,7 +1198,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">DS-160 Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for initial F-1 visa students</dd>
                   {editingFees ? (
                     <div className="mt-2">
@@ -1319,7 +1323,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-539 COS Package</dt>
+                  <dt className="text-sm font-medium text-slate-600">Control Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for change of status students</dd>
                   {editingFees ? (
                     <div className="mt-2">

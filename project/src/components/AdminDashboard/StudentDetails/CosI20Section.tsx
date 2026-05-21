@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 
 interface CosI20SectionProps {
@@ -61,22 +62,27 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
     setUploading(true);
     try {
       const sanitized = sanitizeFileName(i20File.name);
-      const storagePath = `${student.user_id}/i20-documents/${Date.now()}_${sanitized}`;
+      const timestamp = Date.now();
+      const storagePath = `${student.user_id}/i20-documents/${timestamp}_${sanitized}`;
 
+      // Upload do arquivo original
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(storagePath, i20File, { upsert: true });
 
       if (uploadError) throw uploadError;
 
+      // Obter URL pública do original
       const { data: { publicUrl } } = supabase.storage
         .from('document-attachments')
         .getPublicUrl(uploadData?.path || storagePath);
 
+      // Atualizar a aplicação com URL original (preview será gerado pelo backend)
       const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update({
           i20_document_url: publicUrl,
+          i20_document_preview_url: null, // será preenchido pela Edge Function
           i20_document_status: 'sent',
           i20_document_sent_at: new Date().toISOString(),
         })
@@ -84,16 +90,41 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
 
       if (updateError) throw updateError;
 
+      // Gerar preview via Edge Function (backend seguro)
+      let previewUrl: string | null = null;
+      if (i20File.type === 'application/pdf') {
+        console.log('[CosI20Section] Requesting backend preview generation...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+
+        const res = await supabase.functions.invoke('generate-document-preview', {
+          body: {
+            storagePath: uploadData?.path || storagePath,
+            applicationId: cosApp.id,
+            documentType: 'i20',
+          },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (res.error) {
+          console.error('[CosI20Section] Preview generation failed:', res.error);
+        } else {
+          previewUrl = res.data?.previewUrl ?? null;
+          console.log('[CosI20Section] Preview generated:', previewUrl);
+        }
+      }
+
       setCosAppData((prev: any) => ({
         ...prev,
         i20_document_url: publicUrl,
+        i20_document_preview_url: previewUrl,
         i20_document_status: 'sent',
         i20_document_sent_at: new Date().toISOString(),
       }));
       setI20File(null);
       onRefresh?.();
     } catch (err: any) {
-      alert('Failed to upload I-20: ' + err.message);
+      toast.error('Failed to upload I-20: ' + err.message);
     } finally {
       setUploading(false);
     }

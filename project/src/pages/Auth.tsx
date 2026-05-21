@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -29,8 +29,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     country: '',
     fieldOfInterest: '',
     englishLevel: '',
-    dependents: null as number | null, // Dependents field for SUAIDEN code - initialized as null
-    // University specific fields
+    // Referral code field - unified
     universityName: '',
     position: '',
     website: '',
@@ -57,7 +56,22 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const referralCodeProcessedRef = useRef(false);
 
   
-  const { login, register } = useAuth();
+  const { user, loading: authLoading, login, register } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionamento imediato se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      const role = user.role || 'student';
+      const dashboardPath =
+        role === 'affiliate' ? '/affiliate/dashboard' :
+        role === 'seller' ? '/seller/dashboard' :
+        role === 'admin' || role === 'post_sales' ? '/admin/dashboard' :
+        '/student/dashboard';
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
   const { captureLead, markAsConverted } = useLeadCapture();
 
@@ -504,15 +518,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          const directSalesCodes = ['SUAIDEN', 'BRANT'];
          const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
          
-          // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
-          if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
-            setError(t('authPage.messages.invalidDependents'));
-            setLoading(false);
-            return;
-          }
-          
-          // Como a validação acima garante que não é null, usamos o valor diretamente
-          const finalDependents = formData.dependents;
+
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
@@ -542,8 +548,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                scholarship_package_number: 3,
                desired_scholarship_range: 4500
              }),
-              // ✅ Dependents: Sempre salvar para todos os estudantes
-              dependents: finalDependents
+
            })
         };
 
@@ -637,6 +642,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setActiveTab(tab);
   };
 
+  if (!authLoading && user) return null;
 
   if (mode === 'login') {
     return (
@@ -1221,13 +1227,46 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Feedback de tipo detectado */}
+                    {formData.referralCode && (
+                      <div className="mt-1 text-xs">
+                        {referralCodeValid === true && (
+                          <p className="text-green-600 flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Detected: {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.title') : t('authPage.register.referralCode.title')}
+                          </p>
+                        )}
+                        {referralCodeValid === false && (
+                          <p className="text-red-600 flex items-center">
+                            <X className="h-3 w-3 mr-1" />
+                            {t('authPage.register.referralCode.invalid')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </>
-              ) : (
-                <>
-                  {/* University Name */}
-                  <div className="sm:col-span-2">
-                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+
+
+
+                </div>
+              </>
+            )}
+
+            {/* University Form */}
+            {activeTab === 'university' && (
+              <>
+                <div className="text-center mb-6 sm:mb-8">
+                  <div className="bg-[#D0151C] w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                    <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">{t('authPage.register.universityRegistration')}</h2>
+                  <p className="text-sm sm:text-base text-slate-600 px-4">{t('authPage.register.universitySubtitle')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="lg:col-span-1">
+                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-900 mb-2">
                       {t('authPage.register.universityName')}
                     </label>
                     <div className="relative group">

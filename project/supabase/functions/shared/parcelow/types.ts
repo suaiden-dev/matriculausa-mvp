@@ -47,4 +47,22 @@ export interface ParcelowWebhookEvent {
 /**
  * Tipos de fee suportados
  */
-export type FeeType = 'selection_process' | 'application_fee' | 'scholarship_fee' | 'i20_control';
+export type FeeType = 'selection_process' | 'application_fee' | 'scholarship_fee' | 'i20_control' | 'placement_fee' | 'package_fee' | 'reinstatement_fee';
+
+/**
+ * Dados do titular do cartão (quando diferente do aluno)
+ */
+export interface PayerInfo {
+  name: string;
+  cpf: string;
+  email: string;
+  phone: string;
+  postal_code: string;
+  address_street: string;
+  address_number: string;
+  address_neighborhood: string;
+  address_city: string;
+  address_state: string;
+  address_complement?: string;
+}
+

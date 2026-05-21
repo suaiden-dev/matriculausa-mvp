@@ -409,7 +409,12 @@ Deno.serve(async (req) => {
 
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
     // NOTA: Se houver cupom promocional, o frontend já envia o valor com desconto aplicado
-    if (amount && typeof amount === "number" && amount > 0) {
+    if (typeof amount === "number") {
+      if (amount === 0) {
+        console.log("[stripe-checkout-selection-process-fee] 🎁 Amount is 0 - Stripe does not support 0 amount checkouts");
+        return corsResponse({ error: "Stripe does not support $0.00 payments. Please use the 'Free' option or Zelle." }, 400);
+      }
+      
       // Valor base (sem markup) - usado para comissões
       // Usar o amount do frontend diretamente (já vem com desconto se houver cupom)
       const baseAmount = amount;
@@ -656,9 +661,9 @@ Deno.serve(async (req) => {
       console.log(
         "[stripe-checkout-selection-process-fee] ✅ Informações do cupom promocional adicionadas ao metadata!",
       );
-    } // Aplica desconto de código de referência se houver (e não houver cupom promocional)
-    // ✅ CORREÇÃO: Verificar se o desconto já foi aplicado no frontend antes de aplicar novamente
-    else if (activeDiscount && activeDiscount.stripe_coupon_id) {
+    } // Aplica desconto de indicação se o referenciador for aluno (role='student', discount_amount=50).
+    // Afiliados profissionais têm discount_amount=0 e este bloco é ignorado automaticamente.
+    else if (activeDiscount && Number(activeDiscount.discount_amount) > 0) {
       // Verificar se o desconto já foi aplicado no frontend
       const discountAlreadyApplied =
         metadata?.discount_already_applied === "true" ||

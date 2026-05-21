@@ -16,6 +16,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { PromotionalCoupon } from '../../types/coupon';
 import { toast } from 'react-hot-toast';
+import { useConfirmation } from '../../contexts/AdminConfirmationContext';
 
 interface CouponUsage {
   id: string;
@@ -34,6 +35,7 @@ interface CouponUsage {
 }
 
 const CouponManagement: React.FC = () => {
+  const { confirm } = useConfirmation();
   const [activeTab, setActiveTab] = useState<'coupons' | 'usage'>('coupons');
   const [coupons, setCoupons] = useState<PromotionalCoupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,12 +72,9 @@ const CouponManagement: React.FC = () => {
   const feeTypes = [
     { id: 'selection_process', label: 'Selection Process Fee' },
     { id: 'application_fee', label: 'Application Fee' },
-    { id: 'scholarship_fee', label: 'Scholarship Fee' },
-    { id: 'i20_control', label: 'I-20 Control Fee' },
     { id: 'placement_fee', label: 'Placement Fee' },
     { id: 'reinstatement_package', label: 'Reinstatement Package' },
-    { id: 'ds160_package', label: 'DS-160 Package' },
-    { id: 'i539_package', label: 'I-539 Package' }
+    { id: 'control_fee', label: 'Control Fee' }
   ];
 
   useEffect(() => {
@@ -201,7 +200,15 @@ const CouponManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this coupon?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Coupon',
+      message: 'Are you sure you want to delete this coupon? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -438,8 +445,9 @@ const CouponManagement: React.FC = () => {
       'i20_control_fee': 'I-20 Control',
       'placement_fee': 'Placement Fee',
       'reinstatement_package': 'Reinstatement Package',
-      'ds160_package': 'DS-160 Package',
-      'i539_package': 'I-539 Package'
+      'ds160_package': 'Control Fee',
+      'i539_package': 'Control Fee',
+      'control_fee': 'Control Fee'
     };
     return feeTypeMap[feeType] || feeType;
   };

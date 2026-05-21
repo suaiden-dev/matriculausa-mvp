@@ -43,7 +43,7 @@ export const AdminNotificationsProvider: React.FC<{ children: ReactNode }> = ({ 
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user || user.role !== 'admin') return;
+    if (!user || (user.role !== 'admin' && user.role !== 'post_sales')) return;
 
     setLoading(true);
     setError(null);
@@ -207,7 +207,7 @@ export const AdminNotificationsProvider: React.FC<{ children: ReactNode }> = ({ 
 
   // Initial fetch
   useEffect(() => {
-    if (user?.id && user?.role === 'admin') {
+    if (user?.id && (user?.role === 'admin' || user?.role === 'post_sales')) {
       fetchNotifications();
     }
   }, [user?.id, user?.role, fetchNotifications]);
@@ -220,7 +220,7 @@ export const AdminNotificationsProvider: React.FC<{ children: ReactNode }> = ({ 
 
   // Realtime subscription
   useEffect(() => {
-    if (!user || user.role !== 'admin') return;
+    if (!user || (user.role !== 'admin' && user.role !== 'post_sales')) return;
 
     const channelName = `admin-merged-notifications-ctx-${user.id}`;
     channelManager.subscribe(

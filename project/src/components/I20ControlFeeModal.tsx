@@ -1,5 +1,6 @@
 import React from 'react';
 import { PaymentMethodSelectorDrawer } from './PaymentMethodSelectorDrawer';
+import { PayerInfo } from './PayerAlternativeForm';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useAuth } from '../hooks/useAuth';
@@ -8,7 +9,7 @@ interface I20ControlFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPaymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow' | null;
-  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number) => void;
+  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number, payerInfo?: PayerInfo | null) => void;
   isLoading?: boolean;
 }
 

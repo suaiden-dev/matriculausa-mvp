@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { handleDownloadDocument as centralizedDownloadDocument } from '../components/EnhancedStudentTracking/utils/documentUtils';
+import { toast } from 'react-hot-toast';
 
 interface StudentRecord {
   user_id: string;
+  all_applications?: any[];
 }
 
 export const useDocumentRequestHandlers = (
@@ -48,19 +50,31 @@ export const useDocumentRequestHandlers = (
         .insert({
           document_request_id: requestId,
           file_url: publicUrl,
-          uploaded_by: userId,
-          status: 'under_review',
+          uploaded_by: student.user_id, // Always associate with student for visibility
+          is_admin_upload: true, // Flag this as an admin upload
+          status: 'approved',
+          reviewed_by: userId,
+          reviewed_at: new Date().toISOString(),
           uploaded_at: new Date().toISOString()
         });
 
       if (recordError) throw recordError;
+
+      // Buscar título do request para a notificação
+      const { data: requestData } = await supabase
+        .from('document_requests')
+        .select('title')
+        .eq('id', requestId)
+        .single();
+
+      const documentTitle = requestData?.title || 'Document';
 
       // Log da ação
       if (logAction && userId) {
         try {
           await logAction(
             'document_request_upload',
-            `Document uploaded for document request by platform admin`,
+            `Document uploaded for document request "${documentTitle}" by platform admin`,
             userId,
             'admin',
             {
@@ -78,27 +92,121 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      alert('Document uploaded successfully!');
+      // ✅ ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        if (accessToken) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              user_id: student.user_id,
+              title: 'Document Uploaded by Admin',
+              message: `The administrator has uploaded a document for your request: "${documentTitle}".`,
+              link: '/student/dashboard/applications?tab=documents',
+            }),
+          });
+          console.log('✅ [handleUploadDocumentRequest] Notificação enviada para o aluno');
+        }
+      } catch (notifError) {
+        console.warn('⚠️ [handleUploadDocumentRequest] Erro ao enviar notificação (não crítico):', notifError);
+      }
+
+      toast.success('Document uploaded successfully!');
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
-        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
-        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
-        const { data } = await supabase
-          .from('document_requests')
-          .select(fields)
-          .eq('user_id', student.user_id)
-          .order('created_at', { ascending: false });
+        // ✅ CORREÇÃO: Lógica de recarregamento deve ser consistente com AdminStudentDetails
+        const applicationIds = student.all_applications?.map((app: any) => app.id).filter(Boolean) || [];
+        
+        // Incluir document_request_uploads(*) para visibilidade imediata
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,applicable_student_types,created_at,updated_at,attachment_url,document_request_uploads(*)';
+        
+        const [specificResult, globalResult] = await Promise.all([
+          supabase
+            .from('document_requests')
+            .select(fields)
+            .in('scholarship_application_id', applicationIds)
+            .order('created_at', { ascending: false }),
+          
+          (() => {
+            const universityIds = (student.all_applications || [])
+              .filter((app: any) => app.status !== 'rejected' && app.status !== 'cancelled')
+              .map((app: any) => app.scholarships?.university_id || app.university_id)
+              .filter(Boolean);
+            const uniqueUniversityIds = [...new Set(universityIds)];
 
-        if (data) setDocumentRequests(data);
+            let globalQuery = supabase
+              .from('document_requests')
+              .select(fields)
+              .eq('is_global', true);
+
+            if (uniqueUniversityIds.length > 0) {
+              globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+            } else {
+              globalQuery = globalQuery.is('university_id', null);
+            }
+
+            return globalQuery.order('created_at', { ascending: false });
+          })()
+        ]);
+
+        // Filtrar uploads dos global requests para mostrar apenas os deste aluno
+        const globalWithFilteredUploads = (globalResult.data || []).map((req: any) => ({
+          ...req,
+          document_request_uploads: (req.document_request_uploads || []).filter(
+            (u: any) => u.uploaded_by === student.user_id
+          )
+        }));
+
+        const allRequests = [
+          ...(specificResult.data || []),
+          ...globalWithFilteredUploads
+        ];
+
+        // ✅ DESDUPLICAÇÃO AVANÇADA: Unificar por TÍTULO (removendo espaços extras e normalizando)
+        const requestByTitle = new Map();
+
+        allRequests.forEach((req: any) => {
+          const normalizedTitle = (req.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          const existing = requestByTitle.get(normalizedTitle);
+
+          if (!existing) {
+            requestByTitle.set(normalizedTitle, req);
+          } else {
+            const hasUpload = req.document_request_uploads && req.document_request_uploads.length > 0;
+            const existingHasUpload = existing.document_request_uploads && existing.document_request_uploads.length > 0;
+
+            if (hasUpload && !existingHasUpload) {
+              requestByTitle.set(normalizedTitle, req);
+            } else if (hasUpload === existingHasUpload) {
+              const currentAt = new Date(req.created_at || 0).getTime();
+              const existingAt = new Date(existing.created_at || 0).getTime();
+              if (currentAt > existingAt) {
+                requestByTitle.set(normalizedTitle, req);
+              }
+            }
+          }
+        });
+
+        const uniqueRequests = Array.from(requestByTitle.values());
+
+        setDocumentRequests(uniqueRequests);
       }
+
+      if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Error uploading document:', error);
-      alert('Failed to upload document: ' + error.message);
+      toast.error('Failed to upload document: ' + error.message);
     } finally {
       setUploadingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }
-  }, [student, userId, setDocumentRequests, logAction, studentId]);
+  }, [student, userId, setDocumentRequests, logAction, studentId, onSuccess]);
 
   // Handler para aprovar documento
   const handleApproveDocumentRequest = useCallback(async (uploadId: string) => {
@@ -301,7 +409,7 @@ export const useDocumentRequestHandlers = (
       onSuccess?.();
     } catch (error: any) {
       console.error('Error approving document:', error);
-      alert('Failed to approve document: ' + error.message);
+      toast.error('Failed to approve document: ' + error.message);
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
@@ -312,22 +420,20 @@ export const useDocumentRequestHandlers = (
     setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: true }));
     try {
       // Buscar informações do upload antes de atualizar
+      // Usa joins opcionais (sem !inner) para suportar global requests onde
+      // scholarship_application_id é null
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
         .select(`
           id,
           document_request_id,
           file_url,
+          uploaded_by,
           document_requests!inner(
             title,
             scholarship_application_id,
-            scholarship_applications!inner(
-              student_id,
-              user_profiles!inner(
-                user_id,
-                email,
-                full_name
-              )
+            scholarship_applications(
+              student_id
             )
           )
         `)
@@ -340,7 +446,7 @@ export const useDocumentRequestHandlers = (
 
       const { error } = await supabase
         .from('document_request_uploads')
-        .update({ 
+        .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
           reviewed_by: userId,
@@ -350,11 +456,33 @@ export const useDocumentRequestHandlers = (
 
       if (error) throw error;
 
-      // Extrair studentProfile do uploadData
+      // Buscar student profile via uploaded_by (funciona para requests globais e específicos)
+      // Mesmo padrão do handleApproveDocumentRequest
+      let studentProfile: { user_id?: string; email?: string; full_name?: string } | null = null;
+      if (uploadData?.uploaded_by) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('user_id, email, full_name')
+          .eq('id', uploadData.uploaded_by)
+          .maybeSingle();
+        if (profile) studentProfile = profile;
+      }
+
+      // Fallback: tentar extrair pelo scholarship_application quando uploaded_by não resolve
+      if (!studentProfile) {
+        const docReqFallback: any = Array.isArray(uploadData?.document_requests) ? (uploadData as any).document_requests[0] : uploadData?.document_requests;
+        const scholarshipApp = Array.isArray(docReqFallback?.scholarship_applications) ? docReqFallback.scholarship_applications[0] : docReqFallback?.scholarship_applications;
+        if (scholarshipApp?.student_id) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_id, email, full_name')
+            .eq('id', scholarshipApp.student_id)
+            .maybeSingle();
+          if (profile) studentProfile = profile;
+        }
+      }
+
       const docRequest: any = Array.isArray(uploadData?.document_requests) ? (uploadData as any).document_requests[0] : uploadData?.document_requests;
-      const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
-      const userProfiles = Array.isArray(scholarshipApp?.user_profiles) ? scholarshipApp.user_profiles[0] : scholarshipApp?.user_profiles;
-      const studentProfile = userProfiles || null;
 
       // Log da ação
       if (logAction && userId) {
@@ -425,11 +553,12 @@ export const useDocumentRequestHandlers = (
           const accessToken = session?.access_token;
           
           if (accessToken) {
-            const documentTitle = uploadData.document_requests.title || 'Document';
-            const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
+            const documentTitle = docRequest?.title || 'Document';
+            const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
+            const studentProfileId = scholarshipApp?.student_id;
 
             // uploaded_by já é user_profiles.id — usar diretamente como fallback
-            const finalStudentId = studentProfileId || uploadData.uploaded_by;
+            const finalStudentId = studentProfileId || uploadData?.uploaded_by;
 
             const notificationPayload = {
               student_id: finalStudentId,
@@ -482,7 +611,7 @@ export const useDocumentRequestHandlers = (
       onSuccess?.();
     } catch (error: any) {
       console.error('Error rejecting document:', error);
-      alert('Failed to reject document: ' + error.message);
+      toast.error('Failed to reject document: ' + error.message);
     } finally {
       setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
@@ -520,19 +649,14 @@ export const useDocumentRequestHandlers = (
 
   // Handler para deletar document request
   const handleDeleteDocumentRequest = useCallback(async (requestId: string) => {
-    if (!window.confirm('Delete this document request?') || !student) return;
+    if (!student) return;
     
     setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
     try {
-      // First delete all uploads
-      const { error: deleteUploadsError } = await supabase
-        .from('document_request_uploads')
-        .delete()
-        .eq('document_request_id', requestId);
+      // Uploads são preservados intencionalmente para manter histórico de auditoria.
+      // Apenas a request em si é deletada.
 
-      if (deleteUploadsError) throw deleteUploadsError;
-
-      // Then delete the request
+      // Delete the request
       const { error: deleteRequestError } = await supabase
         .from('document_requests')
         .delete()
@@ -561,7 +685,7 @@ export const useDocumentRequestHandlers = (
         }
       }
 
-      alert('Document request deleted successfully!');
+      toast.success('Document request deleted successfully!');
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
@@ -577,7 +701,7 @@ export const useDocumentRequestHandlers = (
       }
     } catch (error: any) {
       console.error('Error deleting document request:', error);
-      alert('Failed to delete document request: ' + error.message);
+      toast.error('Failed to delete document request: ' + error.message);
     } finally {
       setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }

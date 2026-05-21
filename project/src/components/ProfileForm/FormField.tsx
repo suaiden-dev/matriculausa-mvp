@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { LucideIcon, Phone, Mail, Globe, MapPin, Building, Eye, EyeOff, Camera } from 'lucide-react';
+import { LucideIcon, Phone, Mail, Globe, MapPin, Building, Camera } from 'lucide-react';
 import { FieldConfig } from '../../types/profileConfig';
 import { maskSensitiveValue } from '../../config/profileFields';
 
@@ -44,7 +44,7 @@ const FormField = forwardRef<HTMLInputElement | HTMLTextAreaElement, FormFieldPr
                 {value ? (
                   <img src={value} alt={isBanner ? "University Banner" : "University Logo"} className={`w-full h-full object-cover ${previewClass}`} />
                 ) : (
-                  <Building className={isBanner ? "h-16 w-16" : "h-8 w-8"} text-slate-400 />
+                  <Building className={`${isBanner ? "h-16 w-16" : "h-8 w-8"} text-slate-400`} />
                 )}
               </div>
               {isEditing && (

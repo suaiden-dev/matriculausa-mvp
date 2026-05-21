@@ -7,29 +7,22 @@ import {
   getStepStatus,
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
-import { StudentRecord } from './StudentApplicationsView';
-import { useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+import { StudentRecord, useStudentDocsStats } from './hooks/useStudentApplicationsQueries';
+
 import { queryKeys } from '../../lib/queryKeys';
 import { UserX, UserPlus, RefreshCw } from 'lucide-react';
 
-interface InternalAdmin {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
   getUnreadCount: (studentId: string) => number;
   getGlobalUnreadCount: (studentId: string) => number;
-  internalAdmins?: InternalAdmin[];
 }
 
 const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({
   students,
   getUnreadCount,
   getGlobalUnreadCount,
-  internalAdmins = [],
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -70,7 +63,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return studentsWithDocs.filter(s =>
       !s.is_dropped &&
       !s.has_paid_selection_process_fee &&
-      s.status !== 'enrolled' &&
+      s.application_status !== 'enrolled' &&
       s.source !== 'migma'
     );
   }, [studentsWithDocs]);
@@ -79,7 +72,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   const displayStudents = useMemo(() => {
     return studentsWithDocs.filter(s =>
       !s.is_dropped &&
-      (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')
+      (s.has_paid_selection_process_fee || s.application_status === 'enrolled' || s.source === 'migma')
     );
   }, [studentsWithDocs]);
 
@@ -100,8 +93,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     });
 
     displayStudents.forEach(student => {
-      // Alunos legados (enrolados antes da plataforma) → vão direto para Enrollment
-      if (student.student_process_type === 'enrolled' && stageMap.has('enrollment')) {
+      // Alunos já matriculados → vão direto para Enrollment
+      if (student.application_status === 'enrolled' && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }
@@ -149,7 +142,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       {/* Summary Stats + Color Legend */}
       <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
-          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')).length} students in pipeline
+          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.application_status === 'enrolled' || s.source === 'migma')).length} students in pipeline
           {registeredStudents.length > 0 && (
             <span className="ml-2 text-blue-400">· {registeredStudents.length} registered</span>
           )}
@@ -196,12 +189,12 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Registered',
                 icon: UserPlus,
                 description: 'Students registered but haven\'t paid the Selection Process Fee yet',
+                team: 'Closer',
                 actor: 'student',
               } as any}
               students={registeredStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
-              internalAdmins={internalAdmins}
             />
           </div>
 
@@ -219,7 +212,6 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   students={studentsInStage}
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
-                  internalAdmins={internalAdmins}
                   showSelectionTags={stage.key === 'selection_fee'}
                 />
               </div>
@@ -235,12 +227,12 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                 shortLabel: 'Dropped',
                 icon: UserX,
                 description: 'Students who dropped out of the process',
+                team: 'Admin',
                 actor: 'admin',
               } as any}
               students={droppedStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
-              internalAdmins={internalAdmins}
               isDropped
             />
           </div>

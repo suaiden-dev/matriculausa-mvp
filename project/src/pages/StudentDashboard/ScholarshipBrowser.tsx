@@ -507,7 +507,7 @@ const ScholarshipBrowser: React.FC = () => {
     const filtered = scholarships.filter(scholarship => {
       // Filtro de bolsas de teste (is_test)
       const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || userProfile?.email?.toLowerCase().endsWith('@uorak.com');
-      const isAdmin = user?.role === 'admin';
+      const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
       if (scholarship.is_test && !isUorakUser && !isAdmin) {
         return false;
       }
@@ -697,12 +697,12 @@ const ScholarshipBrowser: React.FC = () => {
 
 
   // Função para lidar com seleção de método de pagamento
-  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
-    console.log('🔍 [ScholarshipBrowser] Método de pagamento selecionado:', method);
+  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number, payerInfo?: any) => {
+    console.log('🔍 [ScholarshipBrowser] Método de pagamento selecionado:', method, 'Payer Info:', payerInfo);
     setSelectedPaymentMethod(method);
 
     try {
-      await handleCheckout(method);
+      await handleCheckout(method, payerInfo);
     } catch (error) {
       console.error('Error processing payment:', error);
       // Em caso de erro, fechar modal e redirecionar para página de erro
@@ -713,7 +713,7 @@ const ScholarshipBrowser: React.FC = () => {
   };
 
   // ✅ ÚNICA função handleCheckout (igual ao StripeCheckout) para os 3 métodos
-  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
+  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow', payerInfo?: any) => {
     setIsOpeningStripe(true);
 
     try {
@@ -767,17 +767,18 @@ const ScholarshipBrowser: React.FC = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            amount: finalAmountToUse,
-            fee_type: 'selection_process',
-            metadata: {
-              source: 'ScholarshipBrowser',
+            body: JSON.stringify({
+              amount: finalAmountToUse,
+              fee_type: 'selection_process',
+              metadata: {
+                source: 'ScholarshipBrowser',
+                promotional_coupon: (window as any).__checkout_promotional_coupon || null,
+                referral_code: discountCode || null
+              },
               promotional_coupon: (window as any).__checkout_promotional_coupon || null,
-              referral_code: discountCode || null
-            },
-            promotional_coupon: (window as any).__checkout_promotional_coupon || null
-          })
-        });
+              ...(payerInfo && { payer_info: payerInfo })
+            })
+          });
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -1282,7 +1283,7 @@ const ScholarshipBrowser: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredFeaturedScholarships.map((scholarship) => {
                 const layoutId = `featured-scholarship-${scholarship.id}`;
-                const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin';
+                const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin' || userProfile?.role === 'post_sales';
                 const scholarshipValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
                 const originalValue = Number(scholarship.original_annual_value || scholarship.amount || 0);
                 const savingsPercentage = originalValue > scholarshipValue && originalValue > 0
@@ -1558,7 +1559,7 @@ const ScholarshipBrowser: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {paginatedScholarships.map((scholarship) => {
           const layoutId = `scholarship-card-${scholarship.id}`;
-          const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin';
+          const canViewSensitive = userProfile?.has_paid_selection_process_fee || userProfile?.role === 'admin' || userProfile?.role === 'post_sales';
           const scholarshipValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
           const originalValue = Number(scholarship.original_annual_value || scholarship.amount || 0);
           const savingsPercentage = originalValue > scholarshipValue && originalValue > 0

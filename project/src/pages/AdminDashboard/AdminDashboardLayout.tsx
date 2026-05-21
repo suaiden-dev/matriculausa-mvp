@@ -57,6 +57,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
     if (path.includes('/affiliate-management')) return 'affiliate-management';
+    if (path.includes('/referral-affiliates')) return 'referral-affiliates';
     if (path.includes('/coupons')) return 'coupons';
     if (path.includes('/newsletter')) return 'newsletter';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
@@ -83,8 +84,11 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     return <AdminDashboardSkeleton />;
   }
 
-  // Check if user is admin
-  if (!user || user.role !== 'admin') {
+  // Check if user is admin or post_sales
+  const isAdmin = user?.role === 'admin';
+  const isPostSales = user?.role === 'post_sales';
+
+  if (!user || (!isAdmin && !isPostSales)) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -96,7 +100,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     );
   }
 
-  const sidebarItems = [
+  const allSidebarItems = [
     { id: 'overview', label: 'Overview', icon: Home, path: '/admin/dashboard', badge: null },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
@@ -106,9 +110,19 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'coupons', label: 'Coupons', icon: Tag, path: '/admin/dashboard/coupons', badge: null },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, path: '/admin/dashboard/newsletter', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
+    { id: 'referral-affiliates', label: 'Affiliate Program', icon: Users, path: '/admin/dashboard/referral-affiliates', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'settings', label: 'Content Management', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
+
+  const sidebarItems = allSidebarItems.filter(item => {
+    if (isPostSales) {
+      // Pós-Vendas: overview, users, scholarships, universities e payments
+      const allowedItems = ['overview', 'users', 'scholarships', 'universities', 'payments'];
+      return allowedItems.includes(item.id);
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -141,17 +155,23 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 truncate">Admin Panel</h3>
-                <p className="text-sm text-slate-500 truncate">System Administrator</p>
+                <h3 className="font-semibold text-slate-900 truncate">
+                  {isPostSales ? 'Pós-Vendas Panel' : 'Admin Panel'}
+                </h3>
+                <p className="text-sm text-slate-500 truncate">
+                  {isPostSales ? 'Operational Support' : 'System Administrator'}
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-center mt-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
-                <Shield className="h-3 w-3 mr-1" />
-                Full Access
-              </span>
-            </div>
+            {!isPostSales && (
+              <div className="flex items-center justify-center mt-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Full Access
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -286,7 +306,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{user?.name}</p>
-                    <p className="text-xs text-slate-500">System Administrator</p>
+                    <p className="text-xs text-slate-500">
+                      {isPostSales ? 'Pós-Vendas Team' : 'System Administrator'}
+                    </p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>

@@ -47,6 +47,7 @@ interface PaymentsTabProps {
   pageNumbers: number[];
   onItemsPerPageChange: (n: number) => void;
   isLoading?: boolean; // ✅ NOVO: Estado de loading para mostrar skeletons nos valores
+  isPostSales?: boolean;
 }
 
 export function PaymentsTab(props: PaymentsTabProps) {
@@ -92,7 +93,7 @@ export function PaymentsTab(props: PaymentsTabProps) {
 
   return (
     <>
-      <StatsHeader stats={stats} payments={payments} />
+      {!props.isPostSales && <StatsHeader stats={stats} payments={payments} />}
 
       {selectedPayments.size > 0 && (
         <BulkActionsBar selectedTotals={calculateSelectedTotals()} onClearSelection={() => {}} />
@@ -116,6 +117,7 @@ export function PaymentsTab(props: PaymentsTabProps) {
         currentPage={currentPage}
         totalPages={totalPages}
         backendTotalCount={backendTotalCount}
+        isPostSales={props.isPostSales}
       />
 
       {viewMode === 'list' ? (

@@ -5,11 +5,13 @@ import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import AdminDashboardLayout from './AdminDashboardLayout';
+import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
+import { ConfirmationProvider } from '../../contexts/AdminConfirmationContext';
 // ✅ OTIMIZAÇÃO: Lazy loading de sub-módulos administrativos
 import Overview from './Overview'; // Manter Overview estático por ser a "Home" do dash
 const UniversityManagement = lazy(() => import('./UniversityManagement'));
 const UniversityDetails = lazy(() => import('./UniversityDetails'));
-const UsersHub = lazy(() => import('./UsersHub'));
+import UsersHub from './UsersHub';
 const ScholarshipManagement = lazy(() => import('./ScholarshipManagement'));
 const AdminScholarshipEdit = lazy(() => import('./AdminScholarshipEdit'));
 const PaymentManagement = lazy(() => import('./PaymentManagement'));
@@ -27,6 +29,8 @@ const TermsManagement = lazy(() => import('./TermsManagement'));
 const CouponManagement = lazy(() => import('./CouponManagement'));
 const NewsletterManagement = lazy(() => import('./NewsletterManagement'));
 const AffiliateManagement = lazy(() => import('./AffiliateManagement'));
+const ReferralAffiliatesManagement = lazy(() => import('./ReferralAffiliatesManagement'));
+const AffiliateDetails = lazy(() => import('./AffiliateDetails'));
 const AdminStudentDetailsRefactored = lazy(() => import('./AdminStudentDetails.refactored'));
 const SystemSettings = lazy(() => import('./SystemSettings'));
 
@@ -76,7 +80,6 @@ interface Application {
   notes?: string;
   source?: string;
 }
-import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
 
 const AdminDashboard: React.FC = () => {
   const location = useLocation();
@@ -89,8 +92,11 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins
-  if (user && user.role !== 'admin') {
+  // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins (exceto post_sales)
+  const isAdmin = user?.role === 'admin';
+  const isPostSales = user?.role === 'post_sales';
+
+  if (user && !isAdmin && !isPostSales) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
@@ -164,7 +170,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const path = location.pathname;
 
-    if (!user || user.role !== 'admin') return;
+    if (!user || (!isAdmin && !isPostSales)) return;
 
     if (path.includes('/payments')) {
       // Rota de payments: PaymentManagement carrega seus próprios dados
@@ -224,7 +230,7 @@ const AdminDashboard: React.FC = () => {
       // PARALELIZAÇÃO: Disparar todas as queries independentes de uma vez
       // Reduzimos de 8 queries sequenciais para 5 paralelas
       // Reduzimos de 8 queries sequenciais para 5 paralelas
-      const isDev = window.location.hostname === 'localhost';
+      const isDev = window.location.hostname === 'localhost' || window.location.hostname === 'devmatriculausa.netlify.app';
 
       const [
         universitiesRes,
@@ -242,7 +248,7 @@ const AdminDashboard: React.FC = () => {
         supabase.rpc('get_admin_dashboard_stats_v2'),
         // Busca consolidada de solicitações de pagamento (university e affiliate)
         supabase.from('university_payout_requests').select('status, amount_usd, request_type').eq('status', 'pending').in('request_type', ['university_payment', 'affiliate_payout']),
-        supabase.from('zelle_payments').select('amount').eq('status', 'pending_verification').gt('amount', 0)
+        supabase.from('zelle_payments').select('amount, user_id').eq('status', 'pending_verification').gt('amount', 0)
       ]);
 
 
@@ -301,11 +307,13 @@ const AdminDashboard: React.FC = () => {
           user_profile: userProfilesMap[university.user_id] || null
         }));
 
-      const processedScholarships = scholarshipsData.map((scholarship: any) => ({
-        ...scholarship,
-        application_count: applicationCounts[scholarship.id] || 0,
-        cart_count: cartCounts[scholarship.id] || 0
-      }));
+      const processedScholarships = scholarshipsData
+        .filter((s: any) => !s.title?.includes('(Migma)'))
+        .map((scholarship: any) => ({
+          ...scholarship,
+          application_count: applicationCounts[scholarship.id] || 0,
+          cart_count: cartCounts[scholarship.id] || 0
+        }));
 
       const finalUsersData = adminUsersData
         .filter((u: any) => {
@@ -329,9 +337,13 @@ const AdminDashboard: React.FC = () => {
 
       const processedApplications = applicationsData
         .filter((app: any) => {
-          if (!shouldFilterTestEmails) return true;
-          const email = userEmails[app.student_id] || '';
-          return !email.toLowerCase().includes('@uorak.com');
+          // Filtrar por email de teste
+          if (shouldFilterTestEmails) {
+            const email = userEmails[app.student_id] || '';
+            if (email.toLowerCase().includes('@uorak.com')) return false;
+          }
+          // Filtrar bolsas Migma
+          return !app.scholarships?.title?.includes('(Migma)');
         })
         .map((app: any) => ({
           id: app.id,
@@ -360,7 +372,13 @@ const AdminDashboard: React.FC = () => {
       const allPayoutRequests = universityPayoutsRes.data || [];
       const pendingUni = allPayoutRequests.filter(r => r.request_type === 'university_payment');
       const pendingAff = allPayoutRequests.filter(r => r.request_type === 'affiliate_payout');
-      const pendingZelle = zellePaymentsRes.data || [];
+      const allPendingZelle = zellePaymentsRes.data || [];
+      const pendingZelle = shouldFilterTestEmails
+        ? allPendingZelle.filter((p: any) => {
+            const email = userEmails[p.user_id] || '';
+            return !email.toLowerCase().includes('@uorak.com');
+          })
+        : allPendingZelle;
 
       setPendingStats({
         universityRequestsCount: pendingUni.length,
@@ -581,7 +599,8 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <AdminNotificationsProvider>
-      <AdminDashboardLayout user={user} loading={loading}>
+      <ConfirmationProvider>
+        <AdminDashboardLayout user={user} loading={loading}>
         <Suspense fallback={<AdminContentSkeleton />}>
           <Routes>
             <Route 
@@ -602,26 +621,40 @@ const AdminDashboard: React.FC = () => {
             <Route path="universities" element={<UniversityManagement universities={universities} stats={componentStats.universities} onApprove={handleApproveUniversity} onReject={handleRejectUniversity} />} />
             <Route path="universities/:universityId" element={<UniversityDetails />} />
             <Route path="users" element={<UsersHub />} />
+            <Route path="payments" element={<PaymentManagement />} />
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
-            <Route path="payments" element={<PaymentManagement />} />
-            <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
-            <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
-            <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
+            
+            {/* Rotas restritas para Pós-Vendas (Se houver alguma que precise ser estritamente admin) */}
+            {!isPostSales ? (
+              <>
+                <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
+                <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
+                <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
+                <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
+                <Route path="/payout-requests" element={<AdminPayoutRequests />} />
+                <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
+                <Route path="affiliate-management" element={<AffiliateManagement />} />
+                <Route path="referral-affiliates" element={<ReferralAffiliatesManagement />} />
+                <Route path="referral-affiliates/:affiliateId" element={<AffiliateDetails />} />
+                <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
+                <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
+                <Route path="/transfer-management" element={<AdminTransferManagement />} />
+                <Route path="/transfer-settings" element={<AutoTransferSettings />} />
+                <Route path="/financial-analytics" element={<FinancialAnalytics />} />
+                <Route path="/coupons" element={<CouponManagement />} />
+                <Route path="/newsletter" element={<NewsletterManagement />} />
+                <Route path="/terms" element={<TermsManagement />} />
+              </>
+            ) : (
+              <>
+                {/* Opcional: Adicionar rotas específicas para post_sales se necessário */}
+              </>
+            )}
+
+            {/* Rotas permitidas para todos os admins (incluindo Pós-Vendas) */}
             <Route path="/students/:profileId" element={<AdminStudentDetailsRefactored />} />
-            <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
-            <Route path="/payout-requests" element={<AdminPayoutRequests />} />
-            <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
-            <Route path="affiliate-management" element={<AffiliateManagement />} />
-            <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
-            <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
-            <Route path="/transfer-management" element={<AdminTransferManagement />} />
-            <Route path="/transfer-settings" element={<AutoTransferSettings />} />
-            <Route path="/financial-analytics" element={<FinancialAnalytics />} />
-            <Route path="/coupons" element={<CouponManagement />} />
-            <Route path="/newsletter" element={<NewsletterManagement />} />
-            <Route path="/terms" element={<TermsManagement />} />
           </Routes>
         </Suspense>
 
@@ -733,6 +766,7 @@ const AdminDashboard: React.FC = () => {
           </Dialog>
         )}
       </AdminDashboardLayout>
+      </ConfirmationProvider>
     </AdminNotificationsProvider>
   );
 };

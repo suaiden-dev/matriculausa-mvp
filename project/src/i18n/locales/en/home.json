@@ -250,14 +250,13 @@
       },
       "placementFee": {
         "title": "Placement Fee",
-        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support for your visa process.",
+        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support.",
         "items": [
           "Analysis of your academic and financial profile",
           "Identification of the best university options for you",
           "Negotiation or guarantee of scholarship opportunities",
           "Documentation coordination with the institution",
-          "Enrollment process support",
-          "Full visa process support"
+          "Enrollment process support"
         ]
       }
     },
@@ -316,11 +315,6 @@
         "name": "Ana Chen",
         "major": "Engineering"
       },
-      "story2": {
-        "text": "\"Thanks to MatriculaUSA, I received a full scholarship and support throughout my visa process. The team was always there for me!\"",
-        "name": "Lucas Silva",
-        "major": "Computer Science"
-      },
       "story3": {
         "text": "\"The application process was so easy and transparent. I felt supported at every step. Highly recommended!\"",
         "name": "Priya Patel",
@@ -369,7 +363,7 @@
       },
       "q8": {
         "question": "Is my payment information secure?",
-        "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+        "answer": "Yes. MatriculaUSA uses industry-leading payment processors and security standards. Your payment details are never stored on our servers, and all transactions are fully encrypted for your protection. You can choose from the available payment methods on the platform."
       },
       "q9": {
         "question": "Can I get a refund?",

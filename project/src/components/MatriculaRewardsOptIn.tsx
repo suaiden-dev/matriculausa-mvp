@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { 
   Coins, 
   ArrowRight,
-  Zap
+  Zap,
+  CheckCircle,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useUniversity } from '../context/UniversityContext';
@@ -11,10 +14,13 @@ import UniversityProgramOptInModal from './ForUniversities/UniversityProgramOptI
 
 // Shadcn Card components
 function Card({ className, ...props }: React.ComponentProps<"div">) {
+  const hasCustomBg = className?.includes('bg-');
+  const hasCustomText = className?.includes('text-');
+  
   return (
     <div
       data-slot="card"
-      className={`bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm ${className}`}
+      className={`flex flex-col gap-6 rounded-xl border py-6 shadow-sm ${!hasCustomBg ? 'bg-card' : ''} ${!hasCustomText ? 'text-card-foreground' : ''} ${className}`}
       {...props}
     />
   )
@@ -41,24 +47,17 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+  const hasCustomText = className?.includes('text-');
+  
   return (
     <div
       data-slot="card-description"
-      className={`text-muted-foreground text-sm ${className}`}
+      className={`text-sm ${!hasCustomText ? 'text-muted-foreground' : ''} ${className}`}
       {...props}
     />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="card-content"
-      className={`px-6 ${className}`}
-      {...props}
-    />
-  )
-}
 
 interface MatriculaRewardsOptInProps {
   onOptInSuccess: () => void;
@@ -67,7 +66,6 @@ interface MatriculaRewardsOptInProps {
 const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSuccess }) => {
   const { user } = useAuth();
   const { university } = useUniversity();
-  const [isOptingIn, setIsOptingIn] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,7 +76,6 @@ const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSu
       return;
     }
 
-    setIsOptingIn(true);
     setError(null);
 
     try {
@@ -102,8 +99,6 @@ const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSu
     } catch (error: any) {
       console.error('Error opting into Matricula Rewards:', error);
       setError(error.message || 'Failed to opt into Matricula Rewards program');
-    } finally {
-      setIsOptingIn(false);
     }
   };
 
@@ -174,43 +169,43 @@ const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSu
           
           {/* Referral Process and Coin System */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <Card className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold mb-4">Referral Process</CardTitle>
-                <CardDescription className="text-white">
+            <Card className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
+              <CardHeader className="p-0">
+                <CardTitle className="text-xl font-bold mb-4 text-slate-900">Referral Process</CardTitle>
+                <CardDescription className="text-slate-600">
                   <ul className="space-y-3">
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
                       <span>Students invite other students to register on the platform</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
                       <span>Each invitation uses a unique and traceable referral code</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
-                      <span>Inviting students automatically earn <strong>Matricula Coins</strong></span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
+                      <span>Inviting students automatically earn <strong className="text-slate-900">Matricula Coins</strong></span>
                     </li>
                   </ul>
                 </CardDescription>
               </CardHeader>
             </Card>
             
-            <Card className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold mb-4">Coin System</CardTitle>
-                <CardDescription className="text-white">
+            <Card className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
+              <CardHeader className="p-0">
+                <CardTitle className="text-xl font-bold mb-4 text-slate-900">Coin System</CardTitle>
+                <CardDescription className="text-slate-600">
                   <ul className="space-y-3">
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
-                      <span><strong>1 Matricula Coin = $1 USD</strong> (fixed value)</span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
+                      <span><strong className="text-slate-900">1 Matricula Coin = $1 USD</strong> (fixed value)</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
                       <span>Coins can be redeemed as direct tuition discount</span>
                     </li>
                     <li className="flex items-start">
-                      <span className="text-white mr-2">•</span>
+                      <span className="text-[#05294E] mr-2 font-bold">•</span>
                       <span>Student chooses their university for coin redemption</span>
                     </li>
                   </ul>
@@ -226,54 +221,59 @@ const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSu
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-              <Card className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Card className="text-center bg-white border-slate-200 shadow-md hover:shadow-lg transition-all hover:-translate-y-1">
+                <div className="w-20 h-20 bg-[#05294E]/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#05294E]/10">
                   <span className="text-3xl font-bold text-[#05294E]">1</span>
                 </div>
-                <CardTitle className="text-lg font-semibold text-gray-900 mb-3">Student Requests</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-lg font-bold text-slate-900 mb-3">Student Requests</CardTitle>
+                <CardDescription className="text-slate-600 leading-relaxed px-2">
                   Student requests discount through the platform using their accumulated Matricula Coins.
                 </CardDescription>
               </Card>
 
-              <Card className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Card className="text-center bg-white border-slate-200 shadow-md hover:shadow-lg transition-all hover:-translate-y-1">
+                <div className="w-20 h-20 bg-[#05294E]/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#05294E]/10">
                   <span className="text-3xl font-bold text-[#05294E]">2</span>
                 </div>
-                <CardTitle className="text-lg font-semibold text-gray-900 mb-3">University Applies</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-lg font-bold text-slate-900 mb-3">University Applies</CardTitle>
+                <CardDescription className="text-slate-600 leading-relaxed px-2">
                   University applies the discount to the student's tuition and confirms the application.
                 </CardDescription>
               </Card>
 
-              <Card className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Card className="text-center bg-white border-slate-200 shadow-md hover:shadow-lg transition-all hover:-translate-y-1">
+                <div className="w-20 h-20 bg-[#05294E]/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#05294E]/10">
                   <span className="text-3xl font-bold text-[#05294E]">3</span>
                 </div>
-                <CardTitle className="text-lg font-semibold text-gray-900 mb-3">MatriculaUSA Pays</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-lg font-bold text-slate-900 mb-3">MatriculaUSA Pays</CardTitle>
+                <CardDescription className="text-slate-600 leading-relaxed px-2">
                   MatriculaUSA pays the discount amount directly to the university.
                 </CardDescription>
               </Card>
             </div>
             
             {/* Practical Example */}
-            <Card className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <CardHeader>
-                <CardTitle className="font-semibold text-white mb-4 text-center text-lg">Practical Example</CardTitle>
-                <CardDescription className="text-white">
-                  <div className="text-center space-y-2">
-                    <p>
-                      <strong>Student requests $50 discount</strong>
-                    </p>
-                    <p className="text-white/80">↓</p>
-                    <p>
-                      <strong>University applies $50 to tuition</strong>
-                    </p>
-                    <p className="text-white/80">↓</p>
-                    <p>
-                      <strong>MatriculaUSA pays $50 to the university</strong>
-                    </p>
+            <Card className="bg-white rounded-xl p-6 border border-slate-200 shadow-md">
+              <CardHeader className="p-0 text-center">
+                <CardTitle className="font-bold text-slate-900 mb-6 text-xl">Practical Example</CardTitle>
+                <CardDescription>
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+                    <div className="flex flex-col items-center">
+                      <p className="font-bold text-lg text-slate-900">$50</p>
+                      <p className="text-slate-500 text-xs uppercase tracking-wider">Student requests</p>
+                    </div>
+                    <div className="hidden md:block text-slate-300 text-2xl">→</div>
+                    <div className="md:hidden text-slate-300">↓</div>
+                    <div className="flex flex-col items-center">
+                      <p className="font-bold text-lg text-slate-900">$50</p>
+                      <p className="text-slate-500 text-xs uppercase tracking-wider">University applies</p>
+                    </div>
+                    <div className="hidden md:block text-slate-300 text-2xl">→</div>
+                    <div className="md:hidden text-slate-300">↓</div>
+                    <div className="flex flex-col items-center">
+                      <p className="font-bold text-lg text-slate-900">$50</p>
+                      <p className="text-slate-500 text-xs uppercase tracking-wider">MatriculaUSA pays</p>
+                    </div>
                   </div>
                 </CardDescription>
               </CardHeader>
@@ -287,30 +287,42 @@ const MatriculaRewardsOptIn: React.FC<MatriculaRewardsOptInProps> = ({ onOptInSu
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <CardTitle className="font-semibold text-white mb-2">Direct Payment</CardTitle>
-                <CardDescription className="text-white text-sm">
+              <Card className="p-6 bg-white rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition-all">
+                <CardTitle className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Direct Payment
+                </CardTitle>
+                <CardDescription className="text-slate-600 text-sm">
                   Receive direct payment for each discount applied, without intermediaries.
                 </CardDescription>
               </Card>
 
-              <Card className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <CardTitle className="font-semibold text-white mb-2">Dedicated Dashboard</CardTitle>
-                <CardDescription className="text-white text-sm">
+              <Card className="p-6 bg-white rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition-all">
+                <CardTitle className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  Dedicated Dashboard
+                </CardTitle>
+                <CardDescription className="text-slate-600 text-sm">
                   Exclusive dashboard to manage balance and request payments.
                 </CardDescription>
               </Card>
 
-              <Card className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <CardTitle className="font-semibold text-white mb-2">Increases Attractiveness</CardTitle>
-                <CardDescription className="text-white text-sm">
+              <Card className="p-6 bg-white rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition-all">
+                <CardTitle className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  Increases Attractiveness
+                </CardTitle>
+                <CardDescription className="text-slate-600 text-sm">
                   Available discounts attract more qualified students.
                 </CardDescription>
               </Card>
 
-              <Card className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <CardTitle className="font-semibold text-white mb-2">Automated Process</CardTitle>
-                <CardDescription className="text-white text-sm">
+              <Card className="p-6 bg-white rounded-xl border border-slate-200 shadow-md hover:shadow-lg transition-all">
+                <CardTitle className="font-bold text-slate-900 mb-2 flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-slate-500" />
+                  Automated Process
+                </CardTitle>
+                <CardDescription className="text-slate-600 text-sm">
                   Everything works transparently and automatically.
                 </CardDescription>
               </Card>

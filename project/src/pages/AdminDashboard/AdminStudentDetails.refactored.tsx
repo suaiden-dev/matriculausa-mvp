@@ -1,8 +1,9 @@
-import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
+import React, { useState, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useConfirmation } from '../../contexts/AdminConfirmationContext';
 import { useStudentDetailsQuery, useStudentSecondaryDataQuery, usePendingZellePaymentsQuery } from '../../hooks/useStudentDetailsQueries';
 import { useAdminStudentActions } from '../../hooks/useAdminStudentActions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,11 +24,9 @@ import { toast } from 'react-hot-toast';
 // Componentes de UI Base
 import {
   Clock,
-  ExternalLink,
-  UserCheck,
-  Loader2
+  ExternalLink
 } from 'lucide-react';
-import { useFilterDataQuery, useAssignAdminMutation } from '../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
+import { useFilterDataQuery } from '../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
 
@@ -81,6 +80,7 @@ const TabLoadingSkeleton: React.FC = () => (
 
 const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
+  const { confirm } = useConfirmation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
@@ -91,24 +91,8 @@ const AdminStudentDetails: React.FC = () => {
   const student = studentDetailsQuery.data || null;
   const loading = studentDetailsQuery.isLoading;
 
-  // Hooks para Atribuição de Admin
+  // Hooks para Dados de Filtro (se necessário em outras partes)
   const filterDataQuery = useFilterDataQuery();
-  const internalAdmins = filterDataQuery.data?.internalAdmins || [];
-  const assignAdminMutation = useAssignAdminMutation();
-
-  const handleAssignAdmin = async (adminId: string | null) => {
-    if (!student?.student_id) return;
-    try {
-      await assignAdminMutation.mutateAsync({
-        studentId: student.student_id,
-        adminId
-      });
-      toast.success('Responsável atualizado com sucesso!');
-    } catch (error) {
-      console.error('Error assigning admin:', error);
-      toast.error('Erro ao atualizar responsável');
-    }
-  };
 
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
@@ -289,6 +273,7 @@ const AdminStudentDetails: React.FC = () => {
         has_paid_i20: boolean;
         has_paid_placement: boolean;
         has_paid_reinstatement?: boolean;
+        selection_process_fee_payment_method?: string;
       },
       applications?: any[]
     ): Record<string, number> => {
@@ -297,14 +282,17 @@ const AdminStudentDetails: React.FC = () => {
       const dependentCost = sysType === 'simplified' ? 0 : dependents * 150;
 
       // Selection Process Fee
-      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process !== null) {
         normalized.selection_process = realPaidAmounts.selection_process;
         console.log(`[AdminStudentDetails] ✅ Usando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
+      } else if (paymentFlags?.selection_process_fee_payment_method === 'coupon' && paymentFlags?.has_paid_selection) {
+        // Cupom 100% OFF — nenhum valor real pago, exibir $0
+        normalized.selection_process = 0;
       } else if (paymentFlags?.has_paid_selection) {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
         const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
         let expectedSelectionProcess = hasMatrDiscount ? 350 : (sysType === 'simplified' ? 350 : 400);
-        
+
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
         } else {
@@ -378,7 +366,7 @@ const AdminStudentDetails: React.FC = () => {
 
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
-  const isPlatformAdmin = user?.role === 'admin';
+  const isPlatformAdmin = user?.role === 'admin' || user?.role === 'post_sales';
 
   // Hooks para Transfer Form
   const {
@@ -454,6 +442,16 @@ const AdminStudentDetails: React.FC = () => {
       setActiveTab(tabParam as TabId);
     }
   }, [searchParams]);
+
+  // Scroll para seção específica após a aba renderizar
+  useEffect(() => {
+    const sectionParam = searchParams.get('section');
+    if (!sectionParam || activeTab !== 'documents') return;
+    const timer = setTimeout(() => {
+      document.getElementById(sectionParam)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [activeTab, searchParams]);
   const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
 
@@ -499,6 +497,12 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, configSystemType, userSystemType, realPaidAmounts]);
   const [referralInfo, setReferralInfo] = useState<any>(null);
+  const [affiliateProgramReferral, setAffiliateProgramReferral] = useState<{
+    code: string;
+    affiliateId: string;
+    name: string | null;
+    email: string | null;
+  } | null>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
     name: string | null;
@@ -528,6 +532,8 @@ const AdminStudentDetails: React.FC = () => {
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
   const [editingProcessType, setEditingProcessType] = useState('');
   const [savingProcessType, setSavingProcessType] = useState(false);
+  const [isEditingEnrollmentStatus, setIsEditingEnrollmentStatus] = useState(false);
+  const [savingEnrollmentStatus, setSavingEnrollmentStatus] = useState(false);
   const [editingFees, setEditingFees] = useState<any>(null);
   const [savingFees, setSavingFees] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
@@ -715,7 +721,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_scholarship: student.is_scholarship_fee_paid,
             has_paid_i20: !!student.has_paid_i20_control_fee,
             has_paid_placement: !!student.is_placement_fee_paid,
-            has_paid_reinstatement: !!student.has_paid_reinstatement_package
+            has_paid_reinstatement: !!student.has_paid_reinstatement_package,
+            selection_process_fee_payment_method: student.selection_process_fee_payment_method
           },
           student.all_applications
         );
@@ -797,7 +804,8 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_application: !!student.is_application_fee_paid,
           has_paid_scholarship: !!student.is_scholarship_fee_paid,
           has_paid_i20: !!student.has_paid_i20_control_fee,
-          has_paid_placement: !!student.is_placement_fee_paid
+          has_paid_placement: !!student.is_placement_fee_paid,
+          selection_process_fee_payment_method: student.selection_process_fee_payment_method
         }
       );
 
@@ -840,6 +848,33 @@ const AdminStudentDetails: React.FC = () => {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
+
+  // Carregar info do Affiliate Program (tabela affiliate_referrals) pelo referred_id do aluno
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    const fetchAffiliateProgramReferral = async () => {
+      const { data: referral } = await supabase
+        .from('affiliate_referrals')
+        .select('affiliate_code, referrer_id')
+        .eq('referred_id', student.user_id)
+        .limit(1)
+        .maybeSingle();
+      if (!referral?.referrer_id) { setAffiliateProgramReferral(null); return; }
+
+      const [{ data: profile }, { data: codeData }] = await Promise.all([
+        supabase.from('user_profiles').select('full_name, email').eq('user_id', referral.referrer_id).maybeSingle(),
+        supabase.from('affiliate_codes').select('id').eq('code', referral.affiliate_code).maybeSingle(),
+      ]);
+
+      setAffiliateProgramReferral({
+        code: referral.affiliate_code,
+        affiliateId: codeData?.id || referral.referrer_id,
+        name: profile?.full_name || null,
+        email: profile?.email || null,
+      });
+    };
+    fetchAffiliateProgramReferral();
+  }, [student?.user_id]);
 
   // Carregar informações do Matricula Rewards (quem indicou este aluno usando código MATR)
   // Usa os dados do secondaryDataQuery que já carrega via RPC (contorna RLS)
@@ -935,6 +970,7 @@ const AdminStudentDetails: React.FC = () => {
           (() => {
             // ✅ MELHORIA: Incluir university_id do perfil do estudante além dos das aplicações
             const universityIds = (student?.all_applications || [])
+              .filter((app: any) => app.status !== 'rejected' && app.status !== 'cancelled')
               .map((app: any) => app.scholarships?.university_id || app.university_id)
               .filter(Boolean);
             
@@ -944,16 +980,20 @@ const AdminStudentDetails: React.FC = () => {
             
             const uniqueUniversityIds = [...new Set(universityIds)];
 
-            if (uniqueUniversityIds.length === 0) {
-              return Promise.resolve({ data: [], error: null });
-            }
-
-            return supabase
+            let globalQuery = supabase
               .from('document_requests')
               .select(fieldsWithUploads)
-              .eq('is_global', true)
-              .in('university_id', uniqueUniversityIds)
-              .order('created_at', { ascending: false });
+              .eq('is_global', true);
+
+            if (uniqueUniversityIds.length > 0) {
+              // Buscar requests globais das universidades envolvidas OU truly global (null)
+              globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+            } else {
+              // Buscar apenas truly global
+              globalQuery = globalQuery.is('university_id', null);
+            }
+
+            return globalQuery.order('created_at', { ascending: false });
           })()
         ]);
 
@@ -972,10 +1012,39 @@ const AdminStudentDetails: React.FC = () => {
           ...globalWithFilteredUploads
         ];
 
-        // Remover duplicatas
-        const uniqueRequests = Array.from(
-          new Map(allRequests.map(req => [req.id, req])).values()
-        );
+        // ✅ DESDUPLICAÇÃO AVANÇADA: Unificar por TÍTULO (removendo espaços extras e normalizando)
+        // Isso resolve o problema de duplicação quando o mesmo documento é pedido globalmente 
+        // em múltiplas universidades ou quando há solicitações específicas com nomes idênticos.
+        const requestByTitle = new Map();
+
+        allRequests.forEach((req: any) => {
+          // Normalização agressiva: remove múltiplos espaços, trim e lowercase
+          const normalizedTitle = (req.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          const existing = requestByTitle.get(normalizedTitle);
+
+          if (!existing) {
+            requestByTitle.set(normalizedTitle, req);
+          } else {
+            // Critérios de prioridade para decidir qual instância manter:
+            const hasUpload = req.document_request_uploads && req.document_request_uploads.length > 0;
+            const existingHasUpload = existing.document_request_uploads && existing.document_request_uploads.length > 0;
+
+            // 1. Priorizar o que tem upload do aluno
+            if (hasUpload && !existingHasUpload) {
+              requestByTitle.set(normalizedTitle, req);
+            } 
+            // 2. Se ambos têm ou ambos não têm, priorizar o mais recente (pela data de criação do request)
+            else if (hasUpload === existingHasUpload) {
+              const currentAt = new Date(req.created_at || 0).getTime();
+              const existingAt = new Date(existing.created_at || 0).getTime();
+              if (currentAt > existingAt) {
+                requestByTitle.set(normalizedTitle, req);
+              }
+            }
+          }
+        });
+
+        const uniqueRequests = Array.from(requestByTitle.values());
 
         // ✅ FILTRAGEM: Filtrar solicitações globais baseadas no tipo de processo do estudante
         // Se a solicitação tem applicable_student_types, o tipo do estudante deve estar na lista
@@ -1208,9 +1277,9 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Failed to log profile update:', logError);
       }
 
-      alert('Profile saved successfully!');
+      toast.success('Profile saved successfully!');
     } else {
-      alert('Error saving profile: ' + result.error);
+      toast.error('Error saving profile: ' + result.error);
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
@@ -1234,7 +1303,14 @@ const AdminStudentDetails: React.FC = () => {
       return;
     }
 
-    const confirmChange = window.confirm(`Confirm change of dependents from ${student.dependents} to ${dependents}?`);
+    const confirmChange = await confirm({
+      title: 'Alterar Dependentes',
+      message: `Confirm change of dependents from ${student.dependents} to ${dependents}?`,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      type: 'warning'
+    });
+
     if (!confirmChange) return;
 
     setSavingDependents(true);
@@ -1365,7 +1441,7 @@ const AdminStudentDetails: React.FC = () => {
         if (!fetchError && applications && applications.length > 0) {
           applicationId = applications[0].id;
         } else {
-          alert(`No application found for this student. ${feeType === 'application' ? 'Application' : 'Scholarship'} fee requires an application.`);
+          toast.error(`No application found for this student. ${feeType === 'application' ? 'Application' : 'Scholarship'} fee requires an application.`);
           return;
         }
       }
@@ -1391,7 +1467,7 @@ const AdminStudentDetails: React.FC = () => {
 
     // Validar que applicationId está presente quando necessário
     if ((feeType === 'application' || feeType === 'scholarship' || feeType === 'placement') && !applicationId) {
-      alert(`Application ID is required for ${feeType} fees. Please ensure the student has an approved application.`);
+      toast.error(`Application ID is required for ${feeType} fees. Please ensure the student has an approved application.`);
       return;
     }
 
@@ -1417,7 +1493,7 @@ const AdminStudentDetails: React.FC = () => {
         }
 
         if (!zelleProofFile) {
-          alert('Para registrar como Zelle, é obrigatório anexar o comprovante para análise da inteligência artificial.');
+          toast.error('Para registrar como Zelle, é obrigatório anexar o comprovante para análise da inteligência artificial.');
           setIsUploadingZelle(false);
           return;
         }
@@ -1452,7 +1528,7 @@ const AdminStudentDetails: React.FC = () => {
 
         if (functionError) throw functionError;
 
-        alert('Comprovante Zelle submetido com sucesso! O pagamento está sendo analisado pela inteligência artificial n8n.');
+        toast.success('Comprovante Zelle submetido com sucesso! O pagamento está sendo analisado pela inteligência artificial n8n.');
         
         setShowPaymentModal(false);
         setPendingPayment(null);
@@ -1467,7 +1543,7 @@ const AdminStudentDetails: React.FC = () => {
         return;
       } catch (e: any) {
         console.error('Error in zelle manual flow:', e);
-        alert('Error uploading manual zelle proof: ' + e.message);
+        toast.error('Error uploading manual zelle proof: ' + e.message);
         return;
       } finally {
         setIsUploadingZelle(false);
@@ -1504,7 +1580,7 @@ const AdminStudentDetails: React.FC = () => {
       if (!recordResult.success) {
         console.error('[PaymentStatusCard] ❌ Failed to record individual fee payment:', recordResult.error);
         // Mostrar alerta ao admin sobre o erro, mas continuar o fluxo
-        alert(`Warning: Payment was marked as paid, but failed to record in individual_fee_payments table. Error: ${recordResult.error}`);
+        toast.error(`Warning: Payment was marked as paid, but failed to record in individual_fee_payments table. Error: ${recordResult.error}`);
       } else {
         console.log('[PaymentStatusCard] ✅ Individual fee payment recorded successfully:', {
           payment_id: recordResult.paymentId,
@@ -1518,7 +1594,7 @@ const AdminStudentDetails: React.FC = () => {
         fee_type: feeType
       });
       // Mostrar alerta ao admin sobre a exceção
-      alert(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
+      toast.error(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
     }
 
     // Calculate remaining placement fee balance to pass to markFeeAsPaid
@@ -1627,7 +1703,7 @@ const AdminStudentDetails: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } else {
       console.error('Error recording payment:', result.error);
-      alert(`Error marking fee as paid: ${result.error || 'Unknown error'}`);
+      toast.error(`Error marking fee as paid: ${result.error || 'Unknown error'}`);
     }
   }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount, user, logAction, profileId, queryClient, validateAndNormalizePaidAmounts]);
 
@@ -1842,7 +1918,7 @@ const AdminStudentDetails: React.FC = () => {
   const handleApproveIdentityPhoto = useCallback(async (acceptanceId: string) => {
     if (!student || !user) {
       console.error('❌ [handleApproveIdentityPhoto] Student ou user não encontrado');
-      alert('Error: Student or user not found');
+      toast.error('Error: Student or user not found');
       return;
     }
 
@@ -1930,7 +2006,7 @@ const AdminStudentDetails: React.FC = () => {
       console.log('✅ [handleApproveIdentityPhoto] Aprovação concluída com sucesso');
     } catch (err: any) {
       console.error('❌ [handleApproveIdentityPhoto] Erro ao aprovar foto:', err);
-      alert('Error approving identity photo: ' + (err?.message || String(err)));
+      toast.error('Error approving identity photo: ' + (err?.message || String(err)));
     } finally {
       setProcessingIdentityPhoto(false);
     }
@@ -1939,13 +2015,13 @@ const AdminStudentDetails: React.FC = () => {
   const handleRejectIdentityPhoto = useCallback(async (acceptanceId: string, reason: string) => {
     if (!student || !user) {
       console.error('❌ [handleRejectIdentityPhoto] Student ou user não encontrado');
-      alert('Error: Student or user not found');
+      toast.error('Error: Student or user not found');
       return;
     }
 
     if (!reason || reason.trim() === '') {
       console.error('❌ [handleRejectIdentityPhoto] Motivo de rejeição não fornecido');
-      alert('Error: Rejection reason is required');
+      toast.error('Error: Rejection reason is required');
       return;
     }
 
@@ -2180,7 +2256,7 @@ const AdminStudentDetails: React.FC = () => {
       console.log('✅ [handleRejectIdentityPhoto] Rejeição concluída com sucesso');
     } catch (err: any) {
       console.error('❌ [handleRejectIdentityPhoto] Erro ao rejeitar foto:', err);
-      alert('Error rejecting identity photo: ' + (err?.message || String(err)));
+      toast.error('Error rejecting identity photo: ' + (err?.message || String(err)));
     } finally {
       setProcessingIdentityPhoto(false);
     }
@@ -2254,7 +2330,7 @@ const AdminStudentDetails: React.FC = () => {
       console.log('✅ [handleUpdateRejectionReason] Motivo atualizado com sucesso');
     } catch (err: any) {
       console.error('❌ [handleUpdateRejectionReason] Erro ao atualizar motivo:', err);
-      alert('Error updating rejection reason: ' + (err?.message || String(err)));
+      toast.error('Error updating rejection reason: ' + (err?.message || String(err)));
     } finally {
       setProcessingIdentityPhoto(false);
     }
@@ -2294,7 +2370,7 @@ const AdminStudentDetails: React.FC = () => {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        alert('Error uploading document: ' + uploadError.message);
+        toast.error('Error uploading document: ' + uploadError.message);
         return;
       }
 
@@ -2314,11 +2390,15 @@ const AdminStudentDetails: React.FC = () => {
       const updatedDocs = currentDocs.map((d: any) => {
         if (d?.type === docType) {
           found = true;
+          // Preservar versão anterior no histórico antes de sobrescrever
+          const { history: prevHistory = [], ...oldDoc } = d;
+          const historyEntry = { ...oldDoc, saved_at: new Date().toISOString() };
           return {
-            ...d,
+            type: docType,
             url: publicUrl,
             status: 'under_review',
-            uploaded_at: new Date().toISOString()
+            uploaded_at: new Date().toISOString(),
+            history: [...prevHistory, historyEntry]
           };
         }
         return d;
@@ -2326,7 +2406,7 @@ const AdminStudentDetails: React.FC = () => {
 
       const finalDocs = found
         ? updatedDocs
-        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString() }];
+        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString(), history: [] }];
 
       const { data, error } = await supabase
         .from('scholarship_applications')
@@ -2337,7 +2417,7 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) {
         console.error('Update documents error:', error);
-        alert('Error updating document: ' + error.message);
+        toast.error('Error updating document: ' + error.message);
         return;
       }
 
@@ -2353,38 +2433,168 @@ const AdminStudentDetails: React.FC = () => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
 
-      // Log the action
+      // Log da ação
       try {
         await logAction(
-          'document_upload',
-          `Document ${docType} replaced/uploaded`,
+          'document_replaced',
+          `Admin replaced student document: ${docType}`,
           user?.id || '',
           'admin',
           {
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
             application_id: appId,
             document_type: docType,
-            file_url: publicUrl
+            new_file_url: publicUrl,
+            replaced_by: user?.email || 'Platform Admin',
+            replaced_at: new Date().toISOString(),
           }
         );
       } catch (logError) {
-        console.error('Failed to log action:', logError);
+        console.error('⚠️ [handleUploadDocument] Erro ao logar ação (não crítico):', logError);
       }
+
+      // Notificação in-app para o aluno
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        const docLabel = docType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        if (accessToken) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              user_id: student.user_id,
+              title: 'Document updated',
+              message: `Your ${docLabel} document was updated by the admin and is now under review.`,
+              link: '/student/dashboard/applications',
+            }),
+          });
+        }
+      } catch (notifError) {
+        console.warn('⚠️ [handleUploadDocument] Erro ao enviar notificação (não crítico):', notifError);
+      }
+
+      toast.success('Document uploaded successfully!');
     } catch (error: any) {
       console.error('Error uploading document:', error);
-      alert('Error uploading document: ' + (error.message || 'Unknown error'));
+      toast.error('Error uploading document: ' + error.message);
     } finally {
+      const k = `${appId}:${docType}`;
       setUploadingDocs(prev => ({ ...prev, [k]: false }));
     }
-  }, [student, canUniversityManage, setStudent, user, logAction, profileId, queryClient]);
+  }, [student, profileId, queryClient, canUniversityManage, user, logAction]);
+
+  const handleUploadGlobalAdminAttachment = useCallback(async (title: string, file: File) => {
+    if (!student || !user) return;
+    
+    console.log('📤 [GLOBAL ADMIN ATTACHMENT] Iniciando upload:', { title, fileName: file.name });
+    
+    try {
+      // 1. Upload para o bucket student-documents
+      const timestamp = Date.now();
+      const storagePath = `${student.student_id}/global/admin_uploads/${timestamp}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('student-documents')
+        .upload(storagePath, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) {
+        console.error('❌ [GLOBAL ADMIN ATTACHMENT] Erro no storage:', uploadError);
+        throw uploadError;
+      }
+
+      // 2. Obter URL pública
+      const { data: pub } = supabase.storage.from('student-documents').getPublicUrl(storagePath);
+      const publicUrl = pub?.publicUrl || storagePath;
+
+      // 3. Atualizar o perfil do aluno no banco (JSONB documents)
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('documents')
+        .eq('id', student.student_id)
+        .single();
+
+      const currentDocs = Array.isArray(profile?.documents) ? profile.documents : [];
+      
+      const newAdminDoc = {
+        type: `admin_attachment_${timestamp}`,
+        title: title,
+        url: publicUrl,
+        source: 'admin',
+        status: 'approved',
+        uploaded_at: new Date().toISOString()
+      };
+
+      const finalDocs = [...currentDocs, newAdminDoc];
+
+      const { error: dbError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          documents: finalDocs,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (dbError) {
+        console.error('❌ [GLOBAL ADMIN ATTACHMENT] Erro ao atualizar banco:', dbError);
+        throw dbError;
+      }
+
+      console.log('✅ [GLOBAL ADMIN ATTACHMENT] Upload concluído com sucesso');
+
+      // 4. Log da ação
+      await logAction(
+        'admin_global_document_upload',
+        `Admin uploaded global attachment "${title}"`,
+        user.id,
+        'admin',
+        { student_id: student.student_id, document_title: title, file_url: publicUrl }
+      );
+
+      // 5. Enviar notificação in-app para o aluno
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        if (accessToken) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              user_id: student.user_id,
+              title: 'Novo documento global disponível',
+              message: `O administrador enviou um novo documento global: "${title}".`,
+              link: '/student/dashboard/overview',
+            }),
+          });
+        }
+      } catch (notifError) {
+        console.warn('⚠️ [GLOBAL ADMIN ATTACHMENT] Erro ao enviar notificação (não crítico):', notifError);
+      }
+
+      // 6. Atualizar estado local e cache
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      toast.success(`Global document "${title}" uploaded successfully!`);
+
+    } catch (error: any) {
+      console.error('❌ [GLOBAL ADMIN ATTACHMENT] Erro geral:', error);
+      toast.error('Error uploading global attachment: ' + (error.message || 'Unknown error'));
+    }
+  }, [student, user, logAction, profileId, queryClient]);
 
   // Funções para aprovar/rejeitar aplicação
   const approveApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
 
-    // Validar se todos os documentos estão aprovados
     const currentApp = (student.all_applications || []).find((a: any) => a.id === applicationId);
     if (!currentApp) {
-      alert('Application not found.');
+      toast.error('Application not found.');
       return;
     }
 
@@ -2396,7 +2606,7 @@ const AdminStudentDetails: React.FC = () => {
     const missingRequired = requiredTypes.filter(type => !presentTypes.includes(type));
 
     if (missingRequired.length > 0) {
-      alert(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
+      toast.error(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
       return;
     }
 
@@ -2405,7 +2615,7 @@ const AdminStudentDetails: React.FC = () => {
 
     // Se não tiver documentos legacy, ou se tiver e algum não estiver aprovado
     if (appDocuments.length > 0 && !allDocsApproved) {
-      alert('Cannot approve: All documents in the application must be approved first.');
+      toast.error('Cannot approve: All documents in the application must be approved first.');
       return;
     }
 
@@ -2418,7 +2628,7 @@ const AdminStudentDetails: React.FC = () => {
 
     if (reqError) {
       console.error('Error checking document requests:', reqError);
-      alert('Error validating documents. Please try again.');
+      toast.error('Error validating documents. Please try again.');
       return;
     }
 
@@ -2432,7 +2642,7 @@ const AdminStudentDetails: React.FC = () => {
 
       if (pendingOrRejectedRequests.length > 0) {
         const titles = pendingOrRejectedRequests.map(r => r.title).join(', ');
-        alert(`Cannot approve: The following document requests need approval: ${titles}`);
+        toast.error(`Cannot approve: The following document requests need approval: ${titles}`);
         return;
       }
     }
@@ -2707,23 +2917,23 @@ const AdminStudentDetails: React.FC = () => {
   // Funções de Document Request Handlers agora vêm do useDocumentRequestHandlers hook
 
   // Application Progress Functions
-  const allSteps = [
+  const allSteps = useMemo(() => [
     { key: 'selection_fee', label: 'Selection Fee' },
     { key: 'apply', label: 'Application' },
     { key: 'review', label: 'Review' },
     { key: 'application_fee', label: 'App Fee' },
     { key: 'placement_fee', label: 'Placement Fee' },
     { key: 'reinstatement_fee', label: 'Reinstatement Fee' },
-    { key: 'ds160_package', label: 'DS-160 Package' },
-    { key: 'i539_cos_package', label: 'I-539 Package' },
+    { key: 'ds160_package', label: 'Control Fee' },
+    { key: 'i539_cos_package', label: 'Control Fee' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
     { key: 'i20_fee', label: 'I-20 Fee' },
     { key: 'acceptance_letter', label: 'Acceptance' },
     { key: 'transfer_form', label: 'Transfer Form' },
     { key: 'enrollment', label: 'Enrollment' }
-  ];
+  ], []);
 
-  const steps = allSteps.filter(step => {
+  const steps = useMemo(() => allSteps.filter(step => {
     // 1. Regras para tipos de processo
     if (step.key === 'transfer_form') return student?.student_process_type === 'transfer';
     if (step.key === 'ds160_package') return student?.student_process_type === 'initial';
@@ -2746,7 +2956,7 @@ const AdminStudentDetails: React.FC = () => {
       // No fluxo normal, removemos a placement_fee
       return step.key !== 'placement_fee';
     }
-  });
+  }), [allSteps, student?.student_process_type, student?.visa_transfer_active, student?.placement_fee_flow]);
 
   // LOG DE DEPURAÇÃO
   useEffect(() => {
@@ -2859,7 +3069,7 @@ const AdminStudentDetails: React.FC = () => {
       await generateTermAcceptancePDF(pdfData);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+      toast.error('Error generating PDF. Please try again.');
     }
   }, [student]);
 
@@ -2944,7 +3154,7 @@ const AdminStudentDetails: React.FC = () => {
       setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error saving fee overrides:', error);
-      alert('Erro ao salvar as taxas personalizadas: ' + error.message);
+      toast.error('Erro ao salvar as taxas personalizadas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
@@ -2996,7 +3206,7 @@ const AdminStudentDetails: React.FC = () => {
       setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error resetting fees:', error);
-      alert('Erro ao resetar as taxas: ' + error.message);
+      toast.error('Erro ao resetar as taxas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
@@ -3321,10 +3531,10 @@ const AdminStudentDetails: React.FC = () => {
       setEditingPaymentMethod(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-      alert('Payment method updated successfully!');
+      toast.success('Payment method updated successfully!');
     } catch (error: any) {
       console.error('Error updating payment method:', error);
-      alert('Error updating payment method: ' + error.message);
+      toast.error('Error updating payment method: ' + error.message);
     } finally {
       setSavingPaymentMethod(false);
     }
@@ -3350,33 +3560,7 @@ const AdminStudentDetails: React.FC = () => {
           </div>
           <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Admin Assignment Selector */}
-          {internalAdmins.length > 0 && (
-            <div className="relative hidden md:flex items-center">
-              <div className={`flex items-center px-3 py-2 bg-white border ${assignAdminMutation.isPending ? 'border-indigo-300 ring-2 ring-indigo-50' : 'border-slate-200'} rounded-lg transition-all duration-200 hover:border-slate-300 focus-within:ring-2 focus-within:ring-slate-200 shadow-sm`}>
-                {assignAdminMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />
-                ) : (
-                  <UserCheck className="w-4 h-4 text-slate-400 mr-2" />
-                )}
-                <select
-                  value={student?.assigned_to_admin_id || ''}
-                  disabled={assignAdminMutation.isPending}
-                  onChange={(e) => handleAssignAdmin(e.target.value || null)}
-                  className="bg-transparent border-none p-0 pr-8 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer disabled:cursor-not-allowed"
-                  title="Atribuir responsável"
-                >
-                  <option value="">Sem responsável</option>
-                  {internalAdmins.map((admin) => (
-                    <option key={admin.id} value={admin.id}>
-                      {admin.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
+
 
           <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
             <button
@@ -3405,8 +3589,7 @@ const AdminStudentDetails: React.FC = () => {
             />
           </div>
         </div>
-      </div>
-
+      
       {/* Tab Navigation */}
       <StudentDetailsTabNavigation
         activeTab={activeTab}
@@ -3469,7 +3652,7 @@ const AdminStudentDetails: React.FC = () => {
                     student.visa_transfer_active
                   );
                   // Garantir que o valor é válido (está nas opções do select)
-                  const validValues = ['initial', 'transfer_active', 'transfer_reinstatement', 'change_of_status', 'resident', 'enrolled'];
+                  const validValues = ['initial', 'transfer_active', 'transfer_reinstatement', 'change_of_status', 'resident'];
                   const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : '';
                   
                   console.log('🔍 [AdminStudentDetails] Editando Process Type (granular):', { currentDisplayValue, validValue });
@@ -3569,7 +3752,7 @@ const AdminStudentDetails: React.FC = () => {
                     setIsEditingProcessType(false);
                   } catch (error: any) {
                     console.error('❌ [onSaveProcessType] Erro ao atualizar process type:', error);
-                    alert('Error updating process type: ' + (error?.message || 'Unknown error'));
+                    toast.error('Error updating process type: ' + (error?.message || 'Unknown error'));
                   } finally {
                     setSavingProcessType(false);
                   }
@@ -3587,20 +3770,77 @@ const AdminStudentDetails: React.FC = () => {
                 onSaveDependents={handleSaveDependents}
                 onCancelEditDependents={handleCancelEditDependents}
                 savingDependents={savingDependents}
+                isEditingEnrollmentStatus={isEditingEnrollmentStatus}
+                savingEnrollmentStatus={savingEnrollmentStatus}
+                onEditEnrollmentStatus={() => setIsEditingEnrollmentStatus(true)}
+                onSaveEnrollmentStatus={async (newStatus: string) => {
+                  setSavingEnrollmentStatus(true);
+                  try {
+                    const applications = student.all_applications || [];
+                    const activeApp = applications.find((app: any) =>
+                      app.status === 'enrolled' || app.status === 'approved'
+                    ) || applications[0];
+
+                    if (!activeApp?.id) throw new Error('No active application found');
+
+                    const { error } = await supabase
+                      .from('scholarship_applications')
+                      .update({ status: newStatus })
+                      .eq('id', activeApp.id);
+
+                    if (error) throw error;
+
+                    setStudent((prev: any) => prev ? { ...prev, application_status: newStatus } : null);
+                    setIsEditingEnrollmentStatus(false);
+                    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+
+                    try {
+                      await logAction(
+                        'enrollment_status_update',
+                        `Student enrollment status updated to: ${newStatus}`,
+                        user?.id || '',
+                        'admin',
+                        {
+                          student_id: student.student_id,
+                          student_name: student.student_name || 'N/A',
+                          new_status: newStatus,
+                          updated_by: user?.email || 'Platform Admin',
+                          updated_at: new Date().toISOString(),
+                          application_id: activeApp.id
+                        }
+                      );
+                    } catch (logError) {
+                      console.error('⚠️ [onSaveEnrollmentStatus] Erro ao logar ação (não crítico):', logError);
+                    }
+                  } catch (error: any) {
+                    console.error('❌ [onSaveEnrollmentStatus] Erro:', error);
+                    toast.error('Error updating enrollment status: ' + (error?.message || 'Unknown error'));
+                  } finally {
+                    setSavingEnrollmentStatus(false);
+                  }
+                }}
+                onCancelEnrollmentStatus={() => setIsEditingEnrollmentStatus(false)}
               />
 
 
-              {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
-              {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
+              {/* Referral Info Card - mostra seller referral, Matricula Rewards OU Affiliate Program */}
+              {(student.seller_referral_code || matriculaRewardsInfo?.code || affiliateProgramReferral) && student.all_applications && (
                 <ReferralInfoCard
-                  referralCode={matriculaRewardsInfo?.code || student.seller_referral_code || null}
+                  referralCode={matriculaRewardsInfo?.code || affiliateProgramReferral?.code || student.seller_referral_code || null}
                   referralInfo={
                     matriculaRewardsInfo
                       ? {
                         type: 'student',
                         name: matriculaRewardsInfo.name || 'Unknown',
                         email: matriculaRewardsInfo.email || 'No email',
-                        isRewards: true, // ✅ Indica que é Matricula Rewards
+                        isRewards: true,
+                      }
+                      : affiliateProgramReferral
+                      ? {
+                        type: 'affiliate_program',
+                        name: affiliateProgramReferral.name || 'Unknown',
+                        email: affiliateProgramReferral.email || 'No email',
+                        affiliateId: affiliateProgramReferral.affiliateId,
                       }
                       : referralInfo
                   }
@@ -3649,11 +3889,11 @@ const AdminStudentDetails: React.FC = () => {
                 onApproveDocument={handleApproveDocument}
                 onRejectDocument={handleRejectDocument}
                 onApproveApplication={approveApplication}
-                onRejectApplication={(appId) => {
-                  setPendingRejectAppId(appId);
-                  setShowRejectStudentModal(true);
-                }}
-              />
+                  onRejectApplication={(appId) => {
+                    setPendingRejectAppId(appId);
+                    setShowRejectStudentModal(true);
+                  }}
+                />
             </Suspense>
           </div>
 
@@ -3723,15 +3963,13 @@ const AdminStudentDetails: React.FC = () => {
 
 
 
-            {termAcceptances.length > 0 && (
-              <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
-                <TermAcceptancesCard
-                  termAcceptances={termAcceptances}
-                  loading={false}
-                  onDownloadPDF={handleDownloadTermPDF}
-                />
-              </Suspense>
-            )}
+            <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+              <TermAcceptancesCard
+                termAcceptances={termAcceptances}
+                loading={false}
+                onDownloadPDF={handleDownloadTermPDF}
+              />
+            </Suspense>
 
             {/* Identity Photo Verification Card — dados vêm de user_profiles */}
             {(() => {
@@ -3811,6 +4049,7 @@ const AdminStudentDetails: React.FC = () => {
           {/* Versão antiga removida - Transfer Form agora usa o componente TransferFormSection */}
 
           {/* Global Document Requests — seção dedicada */}
+          <div id="global-documents">
           <GlobalDocumentRequestsSection
             globalRequests={documentRequests.filter((r: any) => r.is_global)}
             studentUserId={student?.user_id || ''}
@@ -3818,11 +4057,15 @@ const AdminStudentDetails: React.FC = () => {
             onApproveDocument={handleApproveDocumentRequest}
             onRejectDocument={handleRejectDocumentRequest}
             onDeleteDocumentRequest={handleDeleteDocumentRequest}
+            onUploadGlobalAttachment={handleUploadGlobalAdminAttachment}
+            onUploadDocument={handleUploadDocumentRequest}
             onViewDocument={handleOnViewDocument}
+            uploadingStates={uploadingDocumentRequest}
             approvingStates={approvingDocumentRequest}
             rejectingStates={rejectingDocumentRequest}
             deletingStates={deletingDocumentRequest}
           />
+          </div>
 
           <Suspense fallback={<TabLoadingSkeleton />}>
             <DocumentsView

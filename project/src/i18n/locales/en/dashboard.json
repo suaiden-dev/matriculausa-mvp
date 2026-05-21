@@ -260,8 +260,8 @@
         "studyMode": "Course Modality",
         "workAuthorization": "Work Authorization",
         "financialOverview": "Financial Overview",
-        "originalPrice": "Original Price:",
-        "withScholarship": "With Scholarship:",
+        "originalPrice": "Original Price per year:",
+        "withScholarship": "With Scholarship per year:",
         "perCredit": "Per Credit:",
         "level": "Level",
         "deadline": "Deadline",
@@ -791,6 +791,18 @@
         "downloadFailed": "Failed to download file.",
         "paymentSessionError": "Error creating payment session.",
         "paymentRedirectError": "Error redirecting to payment."
+      },
+      "placementFee": {
+        "installmentPlan": "Placement Fee — Installment Plan",
+        "firstInstallment": "1st Installment",
+        "secondInstallment": "2nd Installment",
+        "paid": "Paid",
+        "pending": "pending",
+        "due": "Due",
+        "unlockMessage": "Document downloads (Acceptance Letter & I-20) will be released after the 2nd installment is approved.",
+        "downloadPendingTitle": "Document Download Pending — 2nd Installment Required",
+        "downloadPendingDescription": "Your document is ready, but the download will be released after the 2nd installment of the Placement Fee ({{amount}}) is paid and approved.",
+        "dueDate": "Due date: {{date}}"
       }
     },
     "myApplicationStep": {
@@ -898,7 +910,7 @@
           "view": "View",
           "download": "Download",
           "finance": {
-            "originalAnnualCost": "Original Annual Cost",
+            "originalAnnualCost": "Original Annual Investment",
             "withExclusiveScholarship": "With Exclusive Scholarship",
             "perYear": "/year",
             "perCredit": "Per Credit",
@@ -1366,13 +1378,13 @@
       "step2Title": "They pay the selection process fee",
       "step2Description": "When they use your code and pay the selection process fee, you earn coins",
       "step3Title": "Redeem your rewards",
-      "step3Description": "When referred pays the I-20 Control Fee, you earn 100 coins.",
+      "step3Description": "When your referred completes the full process and pays all fees, you earn 100 coins.",
       "notificationSent": "Notification sent successfully!",
       "stages": {
         "selection": "Selection Process",
         "application": "Application Fee",
-        "scholarship": "Scholarship Fee",
-        "i20": "I-20 Control"
+        "scholarship": "Placement Fee",
+        "i20": "Control Fee"
       },
       "referralProgress": "Referral Progress",
       "notifyFriend": "Notify Friend",

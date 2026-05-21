@@ -15,7 +15,8 @@ import {
   getLevelIcon,
   getDeliveryModeLabel,
   getLevelLabel,
-  getFieldOfStudyLabel
+  getFieldOfStudyLabel,
+  getDaysUntilDeadline
 } from '../../../utils/scholarshipHelpers.tsx';
 import { formatCurrency } from '../../../utils/currency';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
@@ -41,7 +42,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   isLimitReached = false
 }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
-  const isBlocked = is3800ScholarshipBlocked(scholarship);
+  const isExpired = scholarship.deadline ? getDaysUntilDeadline(scholarship.deadline) < 0 : false;
+  const isBlocked = is3800ScholarshipBlocked(scholarship) || isExpired;
   
   // Deadline calculation
   const deadline = scholarship.deadline ? new Date(scholarship.deadline) : null;
@@ -240,7 +242,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                   {formatCurrency(originalValue)}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.withScholarship')}</span>
                 <span className="text-green-700 font-extrabold text-base">

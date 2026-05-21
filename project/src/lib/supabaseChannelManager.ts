@@ -26,27 +26,16 @@ class SupabaseChannelManager {
     this.referenceCounts.set(channelName, count + 1);
 
     const channel = this.getChannel(channelName, config);
-
-    if (count === 0) {
-      if (setup) {
-        setup(channel);
-      }
-      
+    // Defer subscribe so callers can chain .on() handlers before the actual subscribe call
+    setTimeout(() => {
       channel.subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === "SUBSCRIBED") {
           // console.log(`[ChannelManager] ✅ Subscribed to ${channelName}`);
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
           // console.warn(`[ChannelManager] ⚠️ Subscription ${status} for ${channelName}`);
         }
       });
-    } else {
-      // If already subscribed and setup is provided, it might be a bug in the caller 
-      // because Supabase doesn't allow adding listeners after subscribe.
-      if (setup) {
-        // console.warn(`[ChannelManager] Warning: setup callback provided for already subscribed channel ${channelName}. Listeners might not be added.`);
-      }
-    }
-    
+    }, 0);
     return channel;
   }
 
@@ -80,7 +69,6 @@ class SupabaseChannelManager {
     this.channels.delete(channelName);
     this.referenceCounts.delete(channelName);
   }
-
 
   /**
    * Unsubscribe from all channels

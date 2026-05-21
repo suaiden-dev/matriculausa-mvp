@@ -1,69 +1,179 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
-import { StudentRecord } from './StudentApplicationsView';
-import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
+import React from 'react';
+import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
+import { StudentRecord } from './hooks/useStudentApplicationsQueries';
+import { ApplicationFlowStageKey, APPLICATION_FLOW_STAGES } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
-import { useAssignAdminMutation, useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
+import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
+import DropStudentModal from './DropStudentModal';
+import RestoreStudentModal from './RestoreStudentModal';
 
-interface InternalAdmin {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface StudentCardProps {
   student: StudentRecord;
   onClick: () => void;
   unreadMessages?: number;
-  internalAdmins?: InternalAdmin[];
   showSelectionTags?: boolean;
   currentStageKey?: ApplicationFlowStageKey;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [], showSelectionTags = false, currentStageKey }) => {
-  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const assignAdminMutation = useAssignAdminMutation();
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
-  const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
-
-  // Atribuído a outro admin: restringe se o atual for restrito
-  const assignedToOther = student.assigned_to_admin_id &&
-    student.assigned_to_admin_id !== currentAdminProfileId;
+  const { logAction } = useStudentLogs(student.student_id);
+  const currentAdminProfileId = (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') ? userProfile.id : null;
   
-  // Pode editar se: não for admin (super), se o admin não for restrito, se não houver atribuição, ou se for pra ele mesmo
-  const canEdit = !currentAdminProfileId ||
-    userProfile?.is_restricted_admin === false ||
-    !student.assigned_to_admin_id ||
-    student.assigned_to_admin_id === currentAdminProfileId;
-
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAdminDropdown(false);
-      }
-    };
-    if (showAdminDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showAdminDropdown]);
-
-  const handleToggleDrop = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newDropped = !student.is_dropped;
+  // Lógica de Débito Proativa
+  const totalDebt = React.useMemo(() => {
     try {
-      await dropStudentMutation.mutateAsync({ studentId: student.student_id, isDropped: newDropped });
-      toast.success(newDropped ? 'Aluno marcado como dropped' : 'Aluno restaurado');
+      let total = 0;
+      
+      // 1. Balanço pendente direto do banco (Placement Fee parcial ou outras)
+      const pendingBalance = Number(student.placement_fee_pending_balance || 0);
+      total += pendingBalance;
+
+      // Se não sabemos o estágio, retornamos apenas o balanço pendente
+      if (!propCurrentStageKey) return total;
+
+      const stages = APPLICATION_FLOW_STAGES.map(s => s.key);
+      const currentIndex = stages.indexOf(propCurrentStageKey);
+      
+      // 2. Verificação Proativa de Taxas (Baseado em estágios passados)
+      
+      // A. Selection Fee ($400)
+      const selectionPaid = student.has_paid_selection_process_fee || (student as any).source === 'migma';
+      const selectionIndex = stages.indexOf('selection_fee');
+      if (!selectionPaid && currentIndex > selectionIndex && selectionIndex !== -1) {
+        total += 400;
+      }
+
+      // B. Application Fee ($350) - Cobrada após aprovação da bolsa
+      const appFeeIndex = stages.indexOf('application_fee');
+      if (!student.is_application_fee_paid && currentIndex > appFeeIndex && appFeeIndex !== -1) {
+        total += 350;
+      }
+
+      // C. Placement Fee / Scholarship Fee
+      if (student.placement_fee_flow) {
+        const placementIndex = stages.indexOf('placement_fee');
+        if (!student.is_placement_fee_paid && currentIndex > placementIndex && placementIndex !== -1) {
+          if (pendingBalance === 0) {
+            // Prioridade: override > placement_fee_amount da scholarship > $550 padrão
+            const overrideAmt = student.fee_override_placement_fee != null ? Number(student.fee_override_placement_fee) : null;
+            const scholarshipAmt = student.placement_fee_amount ? Number(student.placement_fee_amount) : null;
+            total += overrideAmt ?? scholarshipAmt ?? 550;
+          }
+        }
+      } else {
+        // Fluxo Antigo (Scholarship Fee $1600)
+        const scholarshipIndex = stages.indexOf('scholarship_fee');
+        if (!student.is_scholarship_fee_paid && currentIndex > scholarshipIndex && scholarshipIndex !== -1) {
+          total += 1600;
+        }
+      }
+
+      // D. I-20 Control Fee
+      const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+      const isI20Applicable =
+          student.student_process_type === 'initial' ||
+          student.student_process_type === 'change_of_status' ||
+          (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
+
+      const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+      const i20Index = stages.indexOf('i20_fee');
+      if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
+        total += i20Amount;
+      }
+
+      return total;
+    } catch (err) {
+      console.error('[StudentCard] Erro no cálculo de débito:', err);
+      return 0;
+    }
+  }, [student, propCurrentStageKey]);
+  
+  // Pode editar se: não for admin (super) ou se o admin não for restrito
+  // Post Sales sempre pode editar (parity)
+  const canEdit = !currentAdminProfileId ||
+    userProfile?.role === 'post_sales' ||
+    userProfile?.is_restricted_admin === false;
+
+  const currentStageKey = propCurrentStageKey;
+
+  const [showDropModal, setShowDropModal] = React.useState(false);
+  const [showRestoreModal, setShowRestoreModal] = React.useState(false);
+
+  const handleToggleDrop = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Se estiver marcando como dropped, abrir o modal de drop
+    if (!student.is_dropped) {
+      setShowDropModal(true);
+      return;
+    }
+    
+    // Se estiver restaurando, abrir o modal de restauração
+    if (student.is_dropped) {
+      setShowRestoreModal(true);
+      return;
+    }
+  };
+
+  const handleConfirmRestore = async () => {
+    try {
+      await dropStudentMutation.mutateAsync({ 
+        studentId: student.student_id, 
+        isDropped: false 
+      });
+      
+      await logAction(
+        'student_restored',
+        'Student was restored to the process',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          admin_name: userProfile?.full_name 
+        }
+      );
+      
+      toast.success('Aluno restaurado');
     } catch {
-      toast.error('Erro ao atualizar status');
+      toast.error('Erro ao restaurar aluno');
+    }
+  };
+
+  const handleConfirmDrop = async (reason: string) => {
+    try {
+      await dropStudentMutation.mutateAsync({ 
+        studentId: student.student_id, 
+        isDropped: true,
+        reason,
+        adminId: userProfile?.user_id,
+        adminName: userProfile?.full_name
+      });
+      
+      await logAction(
+        'student_dropped',
+        `Student was marked as dropped: ${reason}`,
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          reason,
+          admin_name: userProfile?.full_name 
+        }
+      );
+      
+      toast.success('Aluno marcado como dropped');
+    } catch (error) {
+      console.error('Error in handleConfirmDrop:', error);
+      throw error; // Repassar para o modal tratar
     }
   };
 
@@ -72,6 +182,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markSentDocsMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'docs_sent_to_university',
+        'Documents were marked as sent to the university',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('Docs marcados como enviados para a universidade');
     } catch {
       toast.error('Erro ao atualizar');
@@ -83,6 +206,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markSevisMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'sevis_transfer_completed',
+        'SEVIS transfer was marked as completed',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('SEVIS transfer marcado como concluído');
     } catch {
       toast.error('Erro ao atualizar');
@@ -95,6 +231,19 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (!student.application_id) return;
     try {
       await markVisaMutation.mutateAsync(student.application_id);
+      
+      await logAction(
+        'visa_approved',
+        'Visa was marked as approved',
+        userProfile?.user_id || '',
+        'admin',
+        { 
+          source: 'kanban_card',
+          application_id: student.application_id,
+          admin_name: userProfile?.full_name 
+        }
+      );
+
       toast.success('Visto marcado como aprovado');
     } catch {
       toast.error('Erro ao atualizar');
@@ -102,27 +251,8 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   };
 
 
-  const handleAssignAdmin = async (adminId: string | null) => {
-    setShowAdminDropdown(false);
-    try {
-      await assignAdminMutation.mutateAsync({ studentId: student.student_id, adminId });
-      toast.success(adminId ? 'Aluno atribuído' : 'Atribuição removida');
-    } catch {
-      toast.error('Erro ao atribuir responsável');
-    }
-  };
-
-  const getAdminInitials = (name: string) => {
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
-  };
-  // Get initials from name
   const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/).filter(p => p.length > 0);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
+    const parts = name.split(' ');
     return (parts[0] || name).substring(0, 2).toUpperCase();
   };
 
@@ -165,6 +295,18 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} meses atrás`;
     return `${Math.floor(diffDays / 365)} anos atrás`;
+  };
+
+  const renderDocNames = (names?: string[]) => {
+    if (!names || names.length === 0) return null;
+    // Mostrar no máximo 3 nomes para não quebrar o layout do card
+    const displayNames = names.slice(0, 3);
+    const hasMore = names.length > 3;
+    return (
+      <div className="mt-0.5 ml-4.5 text-[9px] text-gray-500 opacity-80 leading-tight italic truncate" title={names.join(', ')}>
+        {displayNames.join(', ')}{hasMore ? ` +${names.length - 3}` : ''}
+      </div>
+    );
   };
 
   return (
@@ -230,22 +372,32 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         </button>
       </div>
 
-      {/* Scholarship info */}
-      {student.scholarship_title && (
+      {/* Course / Scholarship info */}
+      {(student.course_name || student.scholarship_title) && (
         <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
           <GraduationCap className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate" title={student.scholarship_title}>{student.scholarship_title}</span>
+          <span className="truncate" title={student.course_name || student.scholarship_title || ''}>
+            {student.course_name || student.scholarship_title}
+          </span>
         </div>
       )}
 
       {/* Photo + Form tags — específico da coluna Selection Process Payment */}
       {showSelectionTags && (
         <div className="flex flex-col gap-1 mb-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border ${
+            student.has_uploaded_photo 
+              ? 'border-green-200 bg-green-50 text-green-700' 
+              : 'border-amber-200 bg-amber-50 text-amber-700'
+          }`}>
             <Camera className="w-3 h-3 flex-shrink-0" />
             {student.has_uploaded_photo ? 'Photo uploaded' : 'Pending: photo upload'}
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border ${
+            student.has_submitted_form 
+              ? 'border-green-200 bg-green-50 text-green-700' 
+              : 'border-amber-200 bg-amber-50 text-amber-700'
+          }`}>
             <FileText className="w-3 h-3 flex-shrink-0" />
             {student.has_submitted_form ? 'Form submitted' : 'Pending: fill & submit form'}
           </div>
@@ -256,9 +408,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       {currentStageKey === 'university_docs' && (
         <div className="flex flex-col gap-1 mb-2">
           {(student.docs_total_rejected ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
-              <XCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_rejected} doc(s) recusado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
+              </div>
+              {renderDocNames(student.docs_rejected_names)}
             </div>
           )}
           {(() => {
@@ -266,14 +421,17 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} doc(s) pendente(s)
+                {pending} documento(s) pendente(s)
               </div>
             ) : null;
           })()}
           {(student.docs_total_under_review ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
-              <Clock className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_under_review} doc(s) em revisão
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.docs_under_review_names)}
             </div>
           )}
         </div>
@@ -283,21 +441,30 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       {currentStageKey === 'docs_approval' && (
         <div className="flex flex-col gap-1 mb-2">
           {(student.docs_total_under_review ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
-              <Clock className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_under_review} em revisão
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.docs_under_review_names)}
             </div>
           )}
           {(student.docs_total_rejected ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
-              <XCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_rejected} recusado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
+              </div>
+              {renderDocNames(student.docs_rejected_names)}
             </div>
           )}
           {(student.docs_total_approved ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
-              <CheckCircle className="w-3 h-3 flex-shrink-0" />
-              {student.docs_total_approved}/{student.docs_total_required} aprovado(s)
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+                <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                {student.docs_total_approved}/{student.docs_total_required} documento(s) aprovado(s)
+              </div>
+              {renderDocNames(student.docs_approved_names)}
             </div>
           )}
           {(() => {
@@ -305,7 +472,49 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} ainda pendente(s) de upload
+                {pending} documento(s) pendente(s) de upload
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
+
+      {/* Basic Doc status tags — Scholarship Eligibility (review) */}
+      {currentStageKey === 'review' && (
+        <div className="flex flex-col gap-1 mb-2">
+          {(student.basic_docs_total_under_review ?? 0) > 0 && (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_under_review} documento(s) em revisão
+              </div>
+              {renderDocNames(student.basic_docs_under_review_names)}
+            </div>
+          )}
+          {(student.basic_docs_total_rejected ?? 0) > 0 && (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_rejected} documento(s) recusado(s)
+              </div>
+              {renderDocNames(student.basic_docs_rejected_names)}
+            </div>
+          )}
+          {(student.basic_docs_total_approved ?? 0) > 0 && (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+                <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                {student.basic_docs_total_approved}/{student.basic_docs_total_required} documento(s) aprovado(s)
+              </div>
+              {renderDocNames(student.basic_docs_approved_names)}
+            </div>
+          )}
+          {(() => {
+            const pending = (student.basic_docs_total_required ?? 0) - (student.basic_docs_total_uploaded ?? 0);
+            return pending > 0 ? (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
+                <Clock className="w-3 h-3 flex-shrink-0" />
+                {pending} documento(s) pendente(s)
               </div>
             ) : null;
           })()}
@@ -391,80 +600,31 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
               {student.total_applications} app{student.total_applications > 1 ? 's' : ''}
             </span>
           )}
-          {(student.placement_fee_pending_balance ?? 0) > 0 && (
+          {totalDebt > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
               <AlertCircle className="w-3 h-3" />
-              Debt: ${(student.placement_fee_pending_balance ?? 0).toFixed(0)}
+              Debt: ${totalDebt.toFixed(0)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Assigned admin row */}
-      {internalAdmins.length > 0 && (
-        <div className="pt-2 border-t border-gray-100 mt-1" ref={dropdownRef}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (canEdit) setShowAdminDropdown((v) => !v);
-            }}
-            disabled={!canEdit}
-            className={`flex items-center justify-between gap-1.5 w-full text-left rounded-md border px-2 py-1 transition-colors text-xs
-              ${assignedToOther && userProfile?.is_restricted_admin
-                ? 'border-gray-100 bg-gray-50 cursor-default text-gray-600'
-                : student.assigned_to_admin_name
-                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer'
-                  : 'border-dashed border-gray-300 bg-white text-gray-500 hover:border-indigo-300 hover:text-indigo-600 cursor-pointer'
-              }`}
-            title={assignedToOther && userProfile?.is_restricted_admin ? 'Atribuído a outro admin' : 'Clique para atribuir'}
-          >
-            <span className="flex items-center gap-1.5 truncate">
-              <UserCheck className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">
-                {student.assigned_to_admin_name || 
-                 internalAdmins.find(a => a.id === student.assigned_to_admin_id)?.name || 
-                 'Atribuir responsável'}
-              </span>
-            </span>
-            {canEdit && <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60" />}
-          </button>
 
-          {showAdminDropdown && canEdit && (
-            <div className="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-              {(student.assigned_to_admin_id === currentAdminProfileId || userProfile?.is_restricted_admin === false) && (
-                <>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAssignAdmin(null); }}
-                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
-                  >
-                    Remover atribuição
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                </>
-              )}
-              {/* Admin restrito só vê a si mesmo; sem restrição vê todos */}
-              {(userProfile?.is_restricted_admin === true
-                ? internalAdmins.filter(a => a.id === currentAdminProfileId)
-                : internalAdmins
-              ).map((admin) => (
-                <button
-                  key={admin.id}
-                  onClick={(e) => { e.stopPropagation(); handleAssignAdmin(admin.id); }}
-                  className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 ${
-                    student.assigned_to_admin_id === admin.id ? 'text-indigo-700 font-semibold' : 'text-gray-700'
-                  }`}
-                >
-                  <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold flex-shrink-0 text-[10px]">
-                    {getAdminInitials(admin.name)}
-                  </span>
-                  <span className="truncate">{admin.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Modal de confirmação de Drop */}
+      <DropStudentModal
+        isOpen={showDropModal}
+        onClose={() => setShowDropModal(false)}
+        onConfirm={handleConfirmDrop}
+        studentName={student.student_name}
+      />
 
+      {/* Modal de confirmação de Restore */}
+      <RestoreStudentModal
+        isOpen={showRestoreModal}
+        onClose={() => setShowRestoreModal(false)}
+        onConfirm={handleConfirmRestore}
+        studentName={student.student_name}
+      />
     </div>
   );
 };

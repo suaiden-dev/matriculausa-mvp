@@ -54,7 +54,7 @@ const StudentOnboarding: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const processingPaymentRef = React.useRef<string | null>(null);
   // Controle de progresso do onboarding
-  const { state, loading, goToStep } = useOnboardingProgress();
+  const { state, loading, goToStep, checkProgress } = useOnboardingProgress();
   const { t } = useTranslation(['common', 'registration', 'payment', 'dashboard']);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(() => {
@@ -102,13 +102,25 @@ const StudentOnboarding: React.FC = () => {
     return base;
   }, [isNewFlowUser, userProfile]);
 
-  const handleNext = useCallback(() => {
-    const steps = getOrderedSteps();
-    const currentIndex = steps.indexOf(state.currentStep);
-    if (currentIndex < steps.length - 1) {
-      goToStep(steps[currentIndex + 1]);
+  const handleNext = useCallback(async () => {
+    const previousStep = state.currentStep;
+    
+    // 🎯 SMART JUMP: Pedimos ao sistema para re-avaliar o progresso atual no banco.
+    // Se o aluno já passou por etapas futuras (ex: após corrigir uma selfie rejeitada),
+    // o checkProgress(true) retornará o passo mais avançado permitido.
+    const systemDecidedStep = await checkProgress(true);
+    
+    // Se o sistema decidiu nos mover para um novo passo, o useEffect do hook já cuidará disso.
+    // Mas se o sistema nos manteve no mesmo passo (ex: passos que não tem flag automática no banco),
+    // forçamos o avanço lógico para o próximo.
+    if (!systemDecidedStep || systemDecidedStep === previousStep) {
+      const steps = getOrderedSteps();
+      const currentIndex = steps.indexOf(state.currentStep);
+      if (currentIndex < steps.length - 1) {
+        goToStep(steps[currentIndex + 1]);
+      }
     }
-  }, [state.currentStep, goToStep, getOrderedSteps]);
+  }, [state.currentStep, checkProgress, getOrderedSteps, goToStep]);
 
   const handleBack = useCallback(() => {
     const steps = getOrderedSteps();
@@ -202,25 +214,24 @@ const StudentOnboarding: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [goToStep, isVerifyingPayment, showPaymentAnimation]); // Removemos searchParams para evitar loop reativo
 
-  // 2. Sincronizar Estado -> URL (A única fonte de verdade durante a navegação interna)
   useEffect(() => {
     if (isVerifyingPayment || showPaymentAnimation || isInitialMount.current || loading) return;
 
     const currentStepUrl = searchParams.get('step');
 
-    // 🎯 PROTEÇÃO: Se o estado interno recuou mas a URL é identity_verification (um passo especial),
-    // não forçamos a volta para a URL a menos que o estado esteja MUITO inconsistente.
-    // Isso evita o loop de redirecionamento em erros 406.
+    // ✅ Sincronização Estado -> URL
     if (state.currentStep && state.currentStep !== currentStepUrl) {
       if (currentStepUrl === 'identity_verification' && state.currentStep === 'selection_fee') {
         console.warn('[Onboarding] 🚧 Bloqueando redirecionamento circular de identity_verification -> selection_fee');
         return;
       }
 
-      console.log(`[Onboarding] 🔄 Sincronizando URL com Estado: ${state.currentStep}`);
       const newParams = new URLSearchParams(searchParams);
-      newParams.set('step', state.currentStep);
-      navigate(`?${newParams.toString()}`, { replace: true });
+      if (newParams.get('step') !== state.currentStep) {
+        console.log(`[Onboarding] 🔄 Sincronizando URL: ${currentStepUrl} -> ${state.currentStep}`);
+        newParams.set('step', state.currentStep);
+        navigate(`?${newParams.toString()}`, { replace: true });
+      }
     }
   }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation, loading]);
 
@@ -403,7 +414,7 @@ const StudentOnboarding: React.FC = () => {
             } else if (stepParam === 'my_applications') {
               // Detectar se é uma taxa de pacote (ds160 ou i539) ou i20 padrão
               const feeTypeParam = searchParams.get('fee_type');
-              if (feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package') {
+              if (feeTypeParam === 'control_fee' || feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package') {
                 edgeFunctionName = 'verify-stripe-session-package-fee';
               } else {
                 edgeFunctionName = 'verify-stripe-session-i20-control-fee';
@@ -455,7 +466,7 @@ const StudentOnboarding: React.FC = () => {
                 // Package fees (ds160/i539) within my_applications don't advance the
                 // onboarding step — they are sub-payments that don't complete the step.
                 const feeTypeParam = searchParams.get('fee_type');
-                const isPackageFee = feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package';
+                const isPackageFee = feeTypeParam === 'control_fee' || feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package';
                 if (stepParam === 'my_applications' && isPackageFee) {
                   console.log(`[Onboarding] 💳 Package fee (${feeTypeParam}) confirmado. Permanecendo em my_applications.`);
                   goToStep('my_applications');
@@ -510,7 +521,7 @@ const StudentOnboarding: React.FC = () => {
         verifyStripeSession();
       }
     }
-  }, [searchParams, handleNext, isNewFlowUser, goToStep]);
+  }, [searchParams, isNewFlowUser, goToStep]); // Removido handleNext das dependências pois ele muda a cada render de state.currentStep
 
   useEffect(() => {
     if (!authLoading && user && user.role !== 'student') {

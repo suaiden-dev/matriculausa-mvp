@@ -61,10 +61,12 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    
-    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // ✅ PRIORIDADE: Valor real pago (Auditável)
+    if (realPaid?.selection_process !== undefined && realPaid?.selection_process !== null) {
+      // ✅ PRIORIDADE: Valor real pago (inclui $0 registrado pelo admin)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
+    } else if (student.selection_process_fee_payment_method === 'coupon') {
+      // Cupom 100% OFF — nenhum valor real pago
+      selectionProcessFee = 0;
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -237,7 +239,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
         field_of_study: scholarship?.field_of_study || null,
-        fee_type: 'ds160_package',
+        fee_type: 'control_fee',
         amount: ds160PackageFeeAmount,
         status: 'paid',
         payment_date: individualPaymentDates.get(student.user_id)?.get('ds160_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -271,7 +273,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
         field_of_study: scholarship?.field_of_study || null,
-        fee_type: 'i539_cos_package',
+        fee_type: 'control_fee',
         amount: i539CosPackageFeeAmount,
         status: 'paid',
         payment_date: individualPaymentDates.get(student.user_id)?.get('i539_cos_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -343,7 +345,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
         field_of_study: scholarship?.field_of_study || null,
-        fee_type: 'ds160_package',
+        fee_type: 'control_fee',
         amount: ds160Amount,
         status: 'paid',
         payment_date: individualPaymentDates.get(student.user_id)?.get('ds160_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -352,7 +354,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      
+
       if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].ds160_package = true;
     }
@@ -376,7 +378,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
         field_of_study: scholarship?.field_of_study || null,
-        fee_type: 'i539_cos_package',
+        fee_type: 'control_fee',
         amount: i539Amount,
         status: 'paid',
         payment_date: individualPaymentDates.get(student.user_id)?.get('i539_cos_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -601,7 +603,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'ds160_package',
+        fee_type: 'control_fee',
         amount: Math.round(parseFloat(ds160Payment.amount) * 100),
         status: 'paid',
         payment_date: individualPaymentDates.get(ds160Payment.user_id)?.get('ds160_package') || ds160Payment.admin_approved_at || ds160Payment.created_at,
@@ -629,7 +631,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'i539_cos_package',
+        fee_type: 'control_fee',
         amount: Math.round(parseFloat(i539Payment.amount) * 100),
         status: 'paid',
         payment_date: individualPaymentDates.get(i539Payment.user_id)?.get('i539_cos_package') || i539Payment.admin_approved_at || i539Payment.created_at,
@@ -672,10 +674,12 @@ export function transformPaymentsToRecordsAndStats({
     let selectionProcessFee: number;
     const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
 
-    
-    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      // ✅ PRIORIDADE: Valor real pago (Auditável)
+    if (realPaid?.selection_process !== undefined && realPaid?.selection_process !== null) {
+      // ✅ PRIORIDADE: Valor real pago (inclui $0 registrado pelo admin)
       selectionProcessFee = Math.round(realPaid.selection_process * 100);
+    } else if (stripeUser.selection_process_fee_payment_method === 'coupon') {
+      // Cupom 100% OFF — nenhum valor real pago
+      selectionProcessFee = 0;
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -876,7 +880,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'ds160_package',
+        fee_type: 'control_fee',
         amount: ds160PackageAmount,
         status: 'paid',
         payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('ds160_package') || stripeUser.last_payment_date || stripeUser.created_at,
@@ -898,7 +902,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'i539_cos_package',
+        fee_type: 'control_fee',
         amount: i539CosPackageAmount,
         status: 'paid',
         payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i539_cos_package') || stripeUser.last_payment_date || stripeUser.created_at,

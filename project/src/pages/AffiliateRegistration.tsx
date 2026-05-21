@@ -4,6 +4,7 @@ import { Mail, Lock, User, Share2, Coins, GraduationCap, Sparkles, Eye, EyeOff, 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 const getPasswordStrength = (password: string) => {
   let strength = 0;
@@ -27,7 +28,13 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
   const handleResend = async () => {
     setResending(true);
     try {
-      await supabase.auth.resend({ type: 'signup', email });
+      await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/affiliate/dashboard`,
+        },
+      });
       setResent(true);
     } finally {
       setResending(false);
@@ -110,6 +117,7 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
 };
 
 const AffiliateRegistration: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -124,6 +132,13 @@ const AffiliateRegistration: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+
+  const isLoggedIn = !authLoading && !!user;
+  const dashboardPath = !user ? '/student/dashboard' :
+    user.role === 'affiliate' ? '/affiliate/dashboard' :
+    user.role === 'seller' ? '/seller/dashboard' :
+    user.role === 'admin' ? '/admin/dashboard' :
+    '/student/dashboard';
 
   const passwordStrength = getPasswordStrength(formData.password);
 
@@ -158,7 +173,7 @@ const AffiliateRegistration: React.FC = () => {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/affiliate/dashboard`,
           data: {
             full_name: formData.full_name,
             role: 'affiliate',
@@ -214,7 +229,8 @@ const AffiliateRegistration: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#05294E] via-[#083a6e] to-[#0a4a8a]">
+    <div className="min-h-screen bg-gradient-to-br from-[#05294E] via-[#083a6e] to-[#0a4a8a] relative">
+
 
       <div className="flex items-start justify-center px-4 pt-16 pb-12">
         <div className="w-full max-w-5xl">
@@ -283,7 +299,7 @@ const AffiliateRegistration: React.FC = () => {
             </div>
 
             {/* Formulário */}
-            <div className="bg-white rounded-3xl p-8 shadow-2xl">
+            <div className={`bg-white rounded-3xl p-8 shadow-2xl transition-all duration-300 ${isLoggedIn ? 'blur-sm pointer-events-none select-none opacity-60' : ''}`}>
               <div className="mb-6">
                 <h2 className="text-xl font-black text-slate-900">Crie sua conta gratuita</h2>
                 <p className="text-slate-500 text-sm mt-1">Comece a indicar e acumular coins hoje mesmo.</p>

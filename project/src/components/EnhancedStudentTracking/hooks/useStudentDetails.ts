@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import { StudentInfo, ScholarshipApplication, FeePayment } from '../types';
@@ -17,7 +17,7 @@ export const useStudentDetails = () => {
 
 
   // Usar o contexto de autenticação
-  const { user, supabaseUser, isAuthenticated } = useAuth();
+  const { supabaseUser, isAuthenticated } = useAuth();
 
   // Carregar detalhes de um estudante específico
   const loadStudentDetails = useCallback(async (studentId: string, profile_id: string) => {
@@ -34,8 +34,6 @@ export const useStudentDetails = () => {
 
       // Primeiro, tentar usar as funções SQL criadas para obter detalhes do estudante
       let studentData = null;
-      let studentError = null;
-      
       try {
         const { data: sqlData, error: sqlError } = await supabase.rpc(
           'get_student_detailed_info',
@@ -121,11 +119,9 @@ export const useStudentDetails = () => {
             };
           }
           
-        } else {
-          studentError = sqlError;
         }
       } catch (sqlException) {
-        studentError = sqlException;
+        console.warn('⚠️ [useStudentDetails] SQL RPC failed, will use fallback:', sqlException);
       }
 
       // Se a função SQL falhou ou retornou dados vazios, usar fallback robusto
@@ -143,7 +139,7 @@ export const useStudentDetails = () => {
         }
 
         // ✅ CORREÇÃO: Buscar TODAS as aplicações para verificar se QUALQUER uma foi paga
-        const { data: allApplications, error: applicationError } = await supabase
+        const { data: allApplications } = await supabase
           .from('scholarship_applications')
           .select(`
             *,
@@ -191,7 +187,7 @@ export const useStudentDetails = () => {
         }
 
         // Buscar histórico de taxas (usando user_id do profileData)
-        const { data: feesData, error: feesError } = await supabase
+        const { data: feesData } = await supabase
           .from('stripe_connect_transfers')
           .select('*')
           .eq('user_id', profileData.user_id)
@@ -283,6 +279,13 @@ export const useStudentDetails = () => {
           selection_process_fee_amount: selectionProcessFeeAmount, // ✅ Adicionar campo da taxa calculada
           i20_control_fee_amount: i20ControlFeeAmount, // ✅ Adicionar campo I-20 Control Fee
           scholarship_fee_amount: scholarshipFeeAmount, // ✅ Adicionar campo Scholarship Fee
+          is_placement_fee_paid: (profileData as any).is_placement_fee_paid || false,
+          placement_fee_flow: (profileData as any).placement_fee_flow || false,
+          placement_fee_pending_balance: (profileData as any).placement_fee_pending_balance || 0,
+          placement_fee_installment_enabled: (profileData as any).placement_fee_installment_enabled || false,
+          placement_fee_installment_number: (profileData as any).placement_fee_installment_number || 0,
+          placement_fee_due_date: (profileData as any).placement_fee_due_date || null,
+          has_paid_ds160_package: (profileData as any).has_paid_ds160_package || false,
           scholarship: applicationData?.scholarships ? {
             application_fee_amount: applicationData.scholarships?.application_fee_amount,
             scholarship_fee_amount: applicationData.scholarships?.scholarship_fee_amount
@@ -294,7 +297,7 @@ export const useStudentDetails = () => {
       
       if (studentData) {
         // ✅ CORREÇÃO: Buscar TODAS as aplicações para verificar se QUALQUER uma foi paga
-        const { data: allApplications, error: applicationError } = await supabase
+        const { data: allApplications } = await supabase
           .from('scholarship_applications')
           .select(`
             *,
@@ -338,6 +341,35 @@ export const useStudentDetails = () => {
           if (appWithAcceptanceLetter) {
             applicationData = appWithAcceptanceLetter;
             console.log('✅ [ACCEPTANCE_LETTER] Found application with acceptance letter:', applicationData.id);
+          }
+        }
+
+        if (studentData) {
+          // 🔄 Complementar dados que ainda não estão na RPC (compatibilidade)
+          try {
+            const { data: extraProfile, error: extraError } = await supabase
+              .from('user_profiles')
+              .select('placement_fee_flow, is_placement_fee_paid, placement_fee_pending_balance, placement_fee_installment_enabled, placement_fee_installment_number, placement_fee_due_date, has_paid_ds160_package, has_paid_i539_cos_package, has_paid_reinstatement_package, visa_transfer_active')
+              .eq('id', profile_id)
+              .single();
+
+            if (!extraError && extraProfile) {
+              studentData = {
+                ...studentData,
+                placement_fee_flow: extraProfile.placement_fee_flow || false,
+                is_placement_fee_paid: extraProfile.is_placement_fee_paid || false,
+                placement_fee_pending_balance: extraProfile.placement_fee_pending_balance || 0,
+                placement_fee_installment_enabled: extraProfile.placement_fee_installment_enabled || false,
+                placement_fee_installment_number: extraProfile.placement_fee_installment_number || 0,
+                placement_fee_due_date: extraProfile.placement_fee_due_date || null,
+                has_paid_ds160_package: extraProfile.has_paid_ds160_package || false,
+                has_paid_i539_cos_package: extraProfile.has_paid_i539_cos_package || false,
+                has_paid_reinstatement_package: extraProfile.has_paid_reinstatement_package || false,
+                visa_transfer_active: extraProfile.visa_transfer_active || false
+              };
+            }
+          } catch (extraErr) {
+            console.warn('⚠️ [useStudentDetails] Failed to complement RPC data:', extraErr);
           }
         }
 
@@ -391,7 +423,7 @@ export const useStudentDetails = () => {
                 .from('document_requests')
                 .select('*')
                 .eq('is_global', true)
-                .in('university_id', universityIds);
+                .or(`university_id.in.(${universityIds.join(',')}),university_id.is.null`);
               
               if (globalError) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching global requests:', globalError);
@@ -477,7 +509,7 @@ export const useStudentDetails = () => {
               
               
               // Teste 1: Buscar apenas document_request_uploads
-              let { data: simpleUploads, error: simpleError } = await supabase
+              let { data: simpleUploads } = await supabase
                 .from('document_request_uploads')
                 .select('*')
                 .in('uploaded_by', searchIds);

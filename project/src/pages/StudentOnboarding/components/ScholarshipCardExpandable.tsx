@@ -19,7 +19,8 @@ import {
   getDeadlineStatus,
   getApplicationFeeWithDependents,
   getLevelLabel,
-  getFieldOfStudyLabel
+  getFieldOfStudyLabel,
+  getDaysUntilDeadline
 } from '../../../utils/scholarshipHelpers.tsx';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -42,7 +43,8 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
 }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const [isExpanded, setIsExpanded] = useState(false);
-  const isBlocked = is3800ScholarshipBlocked(scholarship);
+  const isExpired = scholarship.deadline ? getDaysUntilDeadline(scholarship.deadline) < 0 : false;
+  const isBlocked = is3800ScholarshipBlocked(scholarship) || isExpired;
   const systemType = (userProfile?.system_type as any) || 'legacy';
   const dependents = Number(userProfile?.dependents) || 0;
   const applicationFee = getApplicationFeeWithDependents(
