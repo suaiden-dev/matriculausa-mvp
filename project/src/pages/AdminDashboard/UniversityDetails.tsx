@@ -36,6 +36,7 @@ interface DocumentRequest {
   created_at: string;
   created_by?: string;
   applicable_student_types?: string[];
+  applicable_scholarship_levels?: string[];
 }
 
 interface University {
@@ -96,7 +97,8 @@ const UniversityDetails: React.FC = () => {
     title: '',
     description: '',
     attachment: null as File | null,
-    applicable_student_types: [] as string[]
+    applicable_student_types: [] as string[],
+    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[]
   });
 
   // Estado para edição de document request
@@ -104,7 +106,8 @@ const UniversityDetails: React.FC = () => {
     title: '',
     description: '',
     attachment: null as File | null,
-    applicable_student_types: [] as string[]
+    applicable_student_types: [] as string[],
+    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[]
   });
 
   const STUDENT_TYPE_OPTIONS = [
@@ -112,6 +115,13 @@ const UniversityDetails: React.FC = () => {
     { value: 'change_of_status', label: 'Change of Status (From Other Visa)' },
     { value: 'transfer', label: 'Transfer (Current F-1 Student)' },
     { value: 'all', label: 'All Student Types' },
+  ];
+
+  const SCHOLARSHIP_LEVEL_OPTIONS = [
+    { value: 'undergraduate', label: 'Undergraduate' },
+    { value: 'graduate',      label: 'Graduate' },
+    { value: 'doctorate',     label: 'Doctorate' },
+    { value: 'all',           label: 'All Levels' },
   ];
 
   useEffect(() => {
@@ -266,6 +276,7 @@ const UniversityDetails: React.FC = () => {
         created_by: university.user_id, // Admin criando em nome da universidade
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types,
+        applicable_scholarship_levels: newRequest.applicable_scholarship_levels,
         attachment_url
       };
 
@@ -301,7 +312,8 @@ const UniversityDetails: React.FC = () => {
         title: '',
         description: '',
         attachment: null,
-        applicable_student_types: []
+        applicable_student_types: [],
+        applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate']
       });
       fetchDocumentRequests(); // Recarregar lista
 
@@ -344,7 +356,8 @@ const UniversityDetails: React.FC = () => {
           title: editRequest.title,
           description: editRequest.description,
           attachment_url,
-          applicable_student_types: editRequest.applicable_student_types
+          applicable_student_types: editRequest.applicable_student_types,
+          applicable_scholarship_levels: editRequest.applicable_scholarship_levels
         })
         .eq('id', editingRequest.id);
 
@@ -356,7 +369,7 @@ const UniversityDetails: React.FC = () => {
 
       setShowEditRequestModal(false);
       setEditingRequest(null);
-      setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+      setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
       fetchDocumentRequests(); // Recarregar lista
 
     } catch (e: any) {
@@ -419,7 +432,10 @@ const UniversityDetails: React.FC = () => {
       title: request.title || '',
       description: request.description || '',
       attachment: null,
-      applicable_student_types: sanitizedTypes
+      applicable_student_types: sanitizedTypes,
+      applicable_scholarship_levels: request.applicable_scholarship_levels?.length
+        ? request.applicable_scholarship_levels
+        : ['undergraduate', 'graduate', 'doctorate']
     });
     setShowEditRequestModal(true);
   };
@@ -937,8 +953,8 @@ const UniversityDetails: React.FC = () => {
                               <span className="flex items-center gap-1">
                                 <Users className="h-4 w-4" />
                                 Applies to: {
-                                  request.applicable_student_types.includes('all') || request.applicable_student_types.length === 3 
-                                    ? 'All students' 
+                                  request.applicable_student_types.includes('all') || request.applicable_student_types.length === 3
+                                    ? 'All students'
                                     : request.applicable_student_types.map(type => {
                                         switch(type) {
                                           case 'initial': return 'Initial';
@@ -948,6 +964,11 @@ const UniversityDetails: React.FC = () => {
                                         }
                                       }).join(', ')
                                 }
+                              </span>
+                            )}
+                            {request.applicable_scholarship_levels && request.applicable_scholarship_levels.length > 0 && request.applicable_scholarship_levels.length < 3 && (
+                              <span className="flex items-center gap-1">
+                                Levels: {request.applicable_scholarship_levels.map(l => l.charAt(0).toUpperCase() + l.slice(1)).join(', ')}
                               </span>
                             )}
                           </div>
@@ -1061,13 +1082,52 @@ const UniversityDetails: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Scholarship Level <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-col gap-2">
+                  {SCHOLARSHIP_LEVEL_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? newRequest.applicable_scholarship_levels.length === SCHOLARSHIP_LEVEL_OPTIONS.length - 1
+                            : newRequest.applicable_scholarship_levels.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setNewRequest(r => ({ ...r, applicable_scholarship_levels: SCHOLARSHIP_LEVEL_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
+                            } else {
+                              setNewRequest(r => ({ ...r, applicable_scholarship_levels: [] }));
+                            }
+                          } else {
+                            setNewRequest(r => {
+                              const updated = r.applicable_scholarship_levels.includes(opt.value)
+                                ? r.applicable_scholarship_levels.filter(v => v !== opt.value)
+                                : [...r.applicable_scholarship_levels, opt.value];
+                              return { ...r, applicable_scholarship_levels: updated };
+                            });
+                          }
+                        }}
+                        disabled={creating}
+                        className="accent-blue-600"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
-            
+
             <div className="flex gap-3 mt-8 justify-center">
-              <button 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2" 
-                onClick={handleNewRequest} 
-                disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0}
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleNewRequest}
+                disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0 || newRequest.applicable_scholarship_levels.length === 0}
               >
                 {creating ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -1193,13 +1253,52 @@ const UniversityDetails: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Scholarship Level <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-col gap-2">
+                  {SCHOLARSHIP_LEVEL_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? editRequest.applicable_scholarship_levels.length === SCHOLARSHIP_LEVEL_OPTIONS.length - 1
+                            : editRequest.applicable_scholarship_levels.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setEditRequest(r => ({ ...r, applicable_scholarship_levels: SCHOLARSHIP_LEVEL_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
+                            } else {
+                              setEditRequest(r => ({ ...r, applicable_scholarship_levels: [] }));
+                            }
+                          } else {
+                            setEditRequest(r => {
+                              const updated = r.applicable_scholarship_levels.includes(opt.value)
+                                ? r.applicable_scholarship_levels.filter(v => v !== opt.value)
+                                : [...r.applicable_scholarship_levels, opt.value];
+                              return { ...r, applicable_scholarship_levels: updated };
+                            });
+                          }
+                        }}
+                        disabled={editing}
+                        className="accent-blue-600"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
-            
+
             <div className="flex gap-3 mt-8 justify-center">
-              <button 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2" 
-                onClick={handleEditRequest} 
-                disabled={editing || !editRequest.title || editRequest.applicable_student_types.length === 0}
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleEditRequest}
+                disabled={editing || !editRequest.title || editRequest.applicable_student_types.length === 0 || editRequest.applicable_scholarship_levels.length === 0}
               >
                 {editing ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -1214,7 +1313,7 @@ const UniversityDetails: React.FC = () => {
                 onClick={() => {
                   setShowEditRequestModal(false);
                   setEditingRequest(null);
-                  setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+                  setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
                 }} 
                 disabled={editing}
               >

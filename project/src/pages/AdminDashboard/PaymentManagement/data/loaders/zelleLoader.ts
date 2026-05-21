@@ -8,12 +8,11 @@ export async function loadZellePaymentsLoader(
   signal?: AbortSignal
 ): Promise<ZelleLoadResult> {
   // Detectar ambiente para aplicar filtro de @uorak.com apenas em produção
-  // ✅ Filtro aplicado no servidor: em produção, exclui @uorak.com; em localhost, mostra tudo
+  // ✅ Usar lista explícita de hostnames não-produtivos em vez de includes('dev'),
+  // que era amplo demais e coincidia com o staging (devmatriculausa.netlify.app)
   const isDevelopment = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
-    window.location.hostname === '127.0.0.1' || 
-    window.location.hostname.includes('localhost') || 
-    window.location.hostname.includes('dev')
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === 'devmatriculausa.netlify.app'
   );
 
   // ✅ BUSCAR TODOS OS REGISTROS: Sem paginação, buscar todos os pagamentos Zelle válidos (com screenshot_url)

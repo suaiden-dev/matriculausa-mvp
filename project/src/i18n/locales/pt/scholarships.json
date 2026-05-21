@@ -216,6 +216,14 @@
       "withScholarship": "Com Bolsa",
       "perYear": "/ano",
       "annualSavings": "Economia Anual"
+    },
+    "frequencies": {
+      "oneTime": "Única",
+      "perSemester": "Por Semestre",
+      "perYear": "Por Ano",
+      "perCredit": "Por Crédito",
+      "perCourse": "Por Curso",
+      "monthly": "Mensal"
     }
   },
   "scholarshipSelection": {

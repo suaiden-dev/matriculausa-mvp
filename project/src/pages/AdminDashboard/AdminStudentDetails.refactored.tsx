@@ -427,7 +427,9 @@ const AdminStudentDetails: React.FC = () => {
     handleRejectDocumentRequest,
     handleDownloadDocument,
     handleEditTemplate,
-    handleDeleteDocumentRequest
+    handleDeleteDocumentRequest,
+    handleHideDocumentRequest,
+    handleRestoreDocumentRequest
   } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests, logAction, student?.student_id);
 
   // Outros estados locais
@@ -956,8 +958,15 @@ const AdminStudentDetails: React.FC = () => {
         }
 
         // ✅ CORREÇÃO: Incluir uploads na query para garantir que apareçam no DocumentsView
-        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,applicable_student_types,created_at,updated_at,attachment_url';
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,applicable_student_types,applicable_scholarship_levels,hidden_for_students,created_at,updated_at,attachment_url';
         const fieldsWithUploads = `${fields},document_request_uploads(*)`;
+
+        // Determinar a bolsa escolhida (enrolled > approved > primeira) para usar como referência
+        const chosenAppForQuery = (student?.all_applications || []).find((app: any) => app.id === student?.application_id)
+          || (student?.all_applications || []).find((app: any) => app.status === 'enrolled')
+          || (student?.all_applications || []).find((app: any) => app.status === 'approved')
+          || (student?.all_applications || [])[0];
+        const chosenUniversityId: string | undefined = chosenAppForQuery?.scholarships?.university_id || student?.university_id || undefined;
 
         // ✅ OTIMIZAÇÃO: Executar queries em paralelo
         const [specificResult, globalResult] = await Promise.all([
@@ -968,28 +977,15 @@ const AdminStudentDetails: React.FC = () => {
             .order('created_at', { ascending: false }),
 
           (() => {
-            // ✅ MELHORIA: Incluir university_id do perfil do estudante além dos das aplicações
-            const universityIds = (student?.all_applications || [])
-              .filter((app: any) => app.status !== 'rejected' && app.status !== 'cancelled')
-              .map((app: any) => app.scholarships?.university_id || app.university_id)
-              .filter(Boolean);
-            
-            if (student.university_id) {
-              universityIds.push(student.university_id);
-            }
-            
-            const uniqueUniversityIds = [...new Set(universityIds)];
-
+            // Usar apenas a universidade da bolsa escolhida para evitar requests de outras universidades
             let globalQuery = supabase
               .from('document_requests')
               .select(fieldsWithUploads)
               .eq('is_global', true);
 
-            if (uniqueUniversityIds.length > 0) {
-              // Buscar requests globais das universidades envolvidas OU truly global (null)
-              globalQuery = globalQuery.or(`university_id.in.(${uniqueUniversityIds.join(',')}),university_id.is.null`);
+            if (chosenUniversityId) {
+              globalQuery = globalQuery.or(`university_id.eq.${chosenUniversityId},university_id.is.null`);
             } else {
-              // Buscar apenas truly global
               globalQuery = globalQuery.is('university_id', null);
             }
 
@@ -1046,15 +1042,23 @@ const AdminStudentDetails: React.FC = () => {
 
         const uniqueRequests = Array.from(requestByTitle.values());
 
-        // ✅ FILTRAGEM: Filtrar solicitações globais baseadas no tipo de processo do estudante
-        // Se a solicitação tem applicable_student_types, o tipo do estudante deve estar na lista
+        // ✅ FILTRAGEM: Filtrar solicitações globais baseadas no tipo de processo e nível de bolsa
+        const chosenScholarshipLevel: string | undefined = chosenAppForQuery?.scholarships?.level;
+
         const filteredRequests = uniqueRequests.filter((req: any) => {
           if (!req.is_global) return true; // específicos sempre aparecem
-          
+
+          // Filtro por student type
           const applicableTypes = req.applicable_student_types || [];
-          if (applicableTypes.length === 0 || applicableTypes.includes('all')) return true;
-          
-          return applicableTypes.includes(student?.student_process_type);
+          if (applicableTypes.length > 0 && !applicableTypes.includes('all') && !applicableTypes.includes(student?.student_process_type)) return false;
+
+          // Filtro por nível de bolsa — usa o nível da bolsa escolhida pelo aluno
+          const levels: string[] = req.applicable_scholarship_levels || [];
+          if (levels.length > 0 && chosenScholarshipLevel) {
+            if (!levels.includes(chosenScholarshipLevel)) return false;
+          }
+
+          return true;
         });
 
         console.log('🔍 [AdminStudentDetails] Final filtered requests:', filteredRequests.map(r => ({ id: r.id, title: r.title, is_global: r.is_global, types: r.applicable_student_types })));
@@ -4043,7 +4047,8 @@ const AdminStudentDetails: React.FC = () => {
             isAdmin={isPlatformAdmin}
             onApproveDocument={handleApproveDocumentRequest}
             onRejectDocument={handleRejectDocumentRequest}
-            onDeleteDocumentRequest={handleDeleteDocumentRequest}
+            onHideDocumentRequest={handleHideDocumentRequest}
+            onRestoreDocumentRequest={handleRestoreDocumentRequest}
             onUploadGlobalAttachment={handleUploadGlobalAdminAttachment}
             onUploadDocument={handleUploadDocumentRequest}
             onViewDocument={handleOnViewDocument}

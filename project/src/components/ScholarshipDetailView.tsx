@@ -405,7 +405,22 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                           <td className="py-4 px-6">
                             <div className="flex flex-col">
                               <span className="text-slate-700 font-bold text-sm tracking-tight">{fee.category || fee.name}</span>
-                              {fee.details && <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 leading-relaxed">{fee.details}</span>}
+                              {fee.details && (
+                                <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 leading-relaxed">
+                                  {(() => {
+                                    const standardKeys: Record<string, string> = {
+                                      'One-time': 'scholarshipsPage.frequencies.oneTime',
+                                      'Per Semester': 'scholarshipsPage.frequencies.perSemester',
+                                      'Per Year': 'scholarshipsPage.frequencies.perYear',
+                                      'Per Credit': 'scholarshipsPage.frequencies.perCredit',
+                                      'Per Course': 'scholarshipsPage.frequencies.perCourse',
+                                      'Monthly': 'scholarshipsPage.frequencies.monthly'
+                                    };
+                                    const key = standardKeys[fee.details.trim()];
+                                    return key ? t(key, fee.details) : fee.details;
+                                  })()}
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-6 text-right text-slate-900 font-black text-base">

@@ -192,6 +192,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               scholarships (
                 title,
                 university_id,
+                level,
                 field_of_study,
                 annual_value_with_scholarship,
                 application_fee_amount,
