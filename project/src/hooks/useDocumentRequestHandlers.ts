@@ -647,65 +647,96 @@ export const useDocumentRequestHandlers = (
     // Implementation would go here - placeholder for future functionality
   }, [logAction, userId, studentId, student]);
 
-  // Handler para deletar document request
+  // Handler para deletar document request individual (não-global)
   const handleDeleteDocumentRequest = useCallback(async (requestId: string) => {
-    if (!student) return;
-    
     setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
     try {
-      // Uploads são preservados intencionalmente para manter histórico de auditoria.
-      // Apenas a request em si é deletada.
-
-      // Delete the request
-      const { error: deleteRequestError } = await supabase
+      const { error } = await supabase
         .from('document_requests')
         .delete()
         .eq('id', requestId);
-
-      if (deleteRequestError) throw deleteRequestError;
-
-      // Log da ação
-      if (logAction && userId) {
-        try {
-          await logAction(
-            'document_request_deletion',
-            `Document request deleted by platform admin`,
-            userId,
-            'admin',
-            {
-              request_id: requestId,
-              student_id: studentId || student?.user_id || '',
-              deleted_by: userId,
-              deleted_at: new Date().toISOString()
-            }
-          );
-          console.log('✅ [handleDeleteDocumentRequest] Ação logada com sucesso');
-        } catch (logError) {
-          console.error('⚠️ [handleDeleteDocumentRequest] Erro ao logar ação (não crítico):', logError);
-        }
-      }
-
-      toast.success('Document request deleted successfully!');
-      
-      // Reload document requests if callback provided
-      if (setDocumentRequests) {
-        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
-        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
-        const { data } = await supabase
-          .from('document_requests')
-          .select(fields)
-          .eq('user_id', student.user_id)
-          .order('created_at', { ascending: false });
-
-        if (data) setDocumentRequests(data);
-      }
+      if (error) throw error;
+      setDocumentRequests(prev => prev.filter(r => r.id !== requestId));
+      toast.success('Document request deleted successfully');
     } catch (error: any) {
       console.error('Error deleting document request:', error);
       toast.error('Failed to delete document request: ' + error.message);
     } finally {
       setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }
-  }, [student, setDocumentRequests, logAction, userId, studentId]);
+  }, [setDocumentRequests]);
+
+  // Handler para ocultar document request para este aluno específico
+  const handleHideDocumentRequest = useCallback(async (requestId: string) => {
+    if (!student?.user_id) return;
+
+    setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
+    try {
+      const { data: current } = await supabase
+        .from('document_requests')
+        .select('hidden_for_students')
+        .eq('id', requestId)
+        .single();
+
+      const updated = [...new Set([...(current?.hidden_for_students || []), student.user_id])];
+
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ hidden_for_students: updated })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      if (setDocumentRequests) {
+        setDocumentRequests((prev: any[]) =>
+          prev.map(r => r.id === requestId ? { ...r, hidden_for_students: updated } : r)
+        );
+      }
+
+      toast.success('Request hidden for this student.');
+    } catch (error: any) {
+      console.error('Error hiding document request:', error);
+      toast.error('Failed to hide document request: ' + error.message);
+    } finally {
+      setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
+    }
+  }, [student, setDocumentRequests]);
+
+  // Handler para restaurar document request oculto
+  const handleRestoreDocumentRequest = useCallback(async (requestId: string) => {
+    if (!student?.user_id) return;
+
+    setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: true }));
+    try {
+      const { data: current } = await supabase
+        .from('document_requests')
+        .select('hidden_for_students')
+        .eq('id', requestId)
+        .single();
+
+      const updated = (current?.hidden_for_students || []).filter((id: string) => id !== student.user_id);
+
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ hidden_for_students: updated })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      if (setDocumentRequests) {
+        setDocumentRequests((prev: any[]) =>
+          prev.map(r => r.id === requestId ? { ...r, hidden_for_students: updated } : r)
+        );
+      }
+
+      toast.success('Request restored for this student.');
+    } catch (error: any) {
+      console.error('Error restoring document request:', error);
+      toast.error('Failed to restore document request: ' + error.message);
+    } finally {
+      setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
+    }
+  }, [student, setDocumentRequests]);
 
   return {
     uploadingDocumentRequest,
@@ -717,7 +748,9 @@ export const useDocumentRequestHandlers = (
     handleRejectDocumentRequest,
     handleDownloadDocument,
     handleEditTemplate,
-    handleDeleteDocumentRequest
+    handleDeleteDocumentRequest,
+    handleHideDocumentRequest,
+    handleRestoreDocumentRequest
   };
 };
 
