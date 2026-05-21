@@ -11,12 +11,10 @@ interface DocumentUploadProps {
 
 const DOCUMENT_TYPES = [
   { key: 'passport', label: 'Passport' },
-  { key: 'diploma', label: 'High School Diploma' },
-  { key: 'funds_proof', label: 'Proof of Funds' },
 ];
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
-  const [files, setFiles] = useState<Record<string, File | null>>({ passport: null, diploma: null, funds_proof: null });
+  const [files, setFiles] = useState<Record<string, File | null>>({ passport: null });
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,15 +80,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
         uploadedDocs.push({ name: file.name, url: file_url, type: doc.key, uploaded_at: new Date().toISOString() });
       }
 
-      // Enviar para o webhook de análise (agora com os 3 documentos)
+      // Enviar para o webhook de análise
       setUploading(false);
       setAnalyzing(true);
       const webhookBody = {
         user_id: user.id,
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user.email || '',
         passport_url: getN8nProxyUrl(docUrls['passport']),
-        diploma_url: getN8nProxyUrl(docUrls['diploma']),
-        funds_proof_url: getN8nProxyUrl(docUrls['funds_proof']),
       };
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
       const { data: { session } } = await supabase.auth.getSession();

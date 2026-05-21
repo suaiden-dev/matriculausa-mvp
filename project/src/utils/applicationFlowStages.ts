@@ -120,10 +120,10 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
   },
   {
     key: 'bdp_collection',
-    label: 'BDP Collection',
-    shortLabel: 'BDP',
+    label: 'Passport Collection',
+    shortLabel: 'Passport',
     icon: FileText,
-    description: 'Pending: Bank Statement, Diploma & Passport upload',
+    description: 'Pending: Passport upload',
     actor: 'student',
     team: 'Document Specialist'
   },

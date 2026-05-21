@@ -273,7 +273,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
     setIsModalOpen(true);
   };
 
-  const handleUploadAppDocument = async (applicationId: string, docType: 'passport' | 'diploma' | 'funds_proof', file: File) => {
+  const handleUploadAppDocument = async (applicationId: string, docType: 'passport', file: File) => {
     if (!canMutate) return;
     try {
       const safeDocType = docType.replace(/[^a-z0-9_\-]/gi, '').toLowerCase();
@@ -718,7 +718,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                   <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                     <div className="text-xs font-semibold text-slate-700 mb-2">Submit required documents</div>
                     <div className="grid grid-cols-1 gap-2">
-                      {(['passport','diploma','funds_proof'] as const).map((docType) => {
+                      {(['passport'] as const).map((docType) => {
                         const d = (Array.isArray(a.documents) ? a.documents : []).find((x: any) => x.type === docType);
                         return (
                           <div key={`${a.id}-${docType}`} className="flex items-center justify-between gap-3">

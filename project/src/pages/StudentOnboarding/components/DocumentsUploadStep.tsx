@@ -35,8 +35,6 @@ import PencilLoader from '../../../components/PencilLoader';
 
 const DOCUMENT_TYPES = [
   { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport.' },
-  { key: 'diploma', label: 'High School Diploma', description: 'Upload your high school diploma or equivalent.' },
-  { key: 'funds_proof', label: 'Proof of Funds', description: 'Upload bank statements or financial documents. Minimum of $22,000 USD is required, plus $5,000 USD for each dependent.' },
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
@@ -45,12 +43,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
     passport: null,
-    diploma: null,
-    funds_proof: [], // Array para múltiplos arquivos
   });
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [mergingPdfs, setMergingPdfs] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLocked, setIsLocked] = useState(false);
@@ -77,8 +72,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   const DOCUMENT_LABELS: Record<string, string> = {
     passport: t('studentDashboard.documentsAndScholarshipChoice.passport') || 'Passport',
-    diploma: t('studentDashboard.documentsAndScholarshipChoice.diploma') || 'High School Diploma',
-    funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProof') || 'Proof of Funds',
     ds160: 'Control Fee',
     i539: 'Control Fee',
     reinstatement: 'Control Fee',
@@ -86,8 +79,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   const DOCUMENT_DESCRIPTIONS: Record<string, string> = {
     passport: t('studentDashboard.documentsAndScholarshipChoice.passportDescription') || 'Faça upload de uma foto ou digitalização nítida do seu passaporte.',
-    diploma: t('studentDashboard.documentsAndScholarshipChoice.diplomaDescription') || 'Upload your high school diploma or equivalent.',
-    funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') || 'Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.',
   };
 
   // Obter process type do banco (com localStorage como fallback)
@@ -158,33 +149,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     return fileName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
   };
 
-  const mergeFundsDocuments = async (filePaths: string[]): Promise<string> => {
-    setMergingPdfs(true);
-    try {
-      const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      
-      const mergeResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/merge-funds-documents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ file_paths: filePaths, user_id: user?.id })
-      });
-
-      if (!mergeResponse.ok) throw new Error('Failed to merge documents');
-      const { merged_file_path } = await mergeResponse.json();
-      return merged_file_path;
-    } catch (error) {
-      console.error('Error merging documents:', error);
-      throw error;
-    } finally {
-      setMergingPdfs(false);
-    }
-  };
-
   const handleFileChange = async (key: string, file: File | null) => {
     if (isLocked) return;
     if (file && !validateFileSize(file)) {
@@ -204,108 +168,28 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     setFiles(prev => ({ ...prev, [key]: fileToStore }));
   };
 
-  const handleFundsFileAdd = (newFiles: File[]) => {
-    if (isLocked) return;
-    const currentFiles = files.funds_proof as File[];
-    const maxLimit = getDocumentLimit();
-    if (currentFiles.length + newFiles.length > maxLimit) {
-      setFieldErrors(prev => ({ ...prev, funds_proof: `Maximum limit is ${maxLimit} documents` }));
-      // Limpar erro após 4 segundos
-      setTimeout(() => {
-        setFieldErrors(prev => {
-          const next = { ...prev };
-          delete next.funds_proof;
-          return next;
-        });
-      }, 4000);
-      return;
-    }
-    const oversizedFiles = newFiles.filter(f => !validateFileSize(f));
-    if (oversizedFiles.length > 0) {
-      setFieldErrors(prev => ({ ...prev, funds_proof: 'Each file must be under 20MB' }));
-      // Limpar erro após 4 segundos
-      setTimeout(() => {
-        setFieldErrors(prev => {
-          const next = { ...prev };
-          delete next.funds_proof;
-          return next;
-        });
-      }, 4000);
-      return;
-    }
-    const combinedFiles = [...currentFiles, ...newFiles];
-    if (!validateTotalSize(combinedFiles)) {
-      setFieldErrors(prev => ({ ...prev, funds_proof: 'Total file size exceeds 20MB' }));
-      // Limpar erro após 4 segundos
-      setTimeout(() => {
-        setFieldErrors(prev => {
-          const next = { ...prev };
-          delete next.funds_proof;
-          return next;
-        });
-      }, 4000);
-      return;
-    }
-    setFieldErrors(prev => { const next = { ...prev }; delete next.funds_proof; return next; });
-    setFiles(prev => ({ ...prev, funds_proof: combinedFiles }));
-  };
-
-  const handleFundsFileRemove = (index: number) => {
-    if (isLocked) return;
-    setFieldErrors(prev => {
-      const next = { ...prev };
-      delete next.funds_proof;
-      return next;
-    });
-    setFiles(prev => {
-      const currentFiles = [...(prev.funds_proof as File[])];
-      currentFiles.splice(index, 1);
-      return { ...prev, funds_proof: currentFiles };
-    });
-  };
-
   const handleUpload = async () => {
     if (!user?.id) { setError('User not authenticated'); return; }
     setUploading(true);
     setError(null);
     try {
       const uploadedPaths: Record<string, string> = {};
-      
-      // Upload Passport and Diploma
-      for (const key of ['passport', 'diploma']) {
-        const file = files[key] as File;
-        const sanitizedName = sanitizeFileName(file.name);
-        const fileName = `${user.id}/${key}_${Date.now()}_${sanitizedName}`;
-        const { error: uploadError } = await supabase.storage.from('student-documents').upload(fileName, file);
-        if (uploadError) throw uploadError;
-        uploadedPaths[key] = fileName;
-      }
 
-      // Upload and Merge Funds Proofs
-      const groupFundsFiles = files.funds_proof as File[];
-      const uploadedFundsPaths: string[] = [];
-      for (const [index, file] of groupFundsFiles.entries()) {
-        const sanitizedName = sanitizeFileName(file.name);
-        const fileName = `${user.id}/temp_funds/${Date.now()}_${index}_${sanitizedName}`;
-        const { error: uploadError } = await supabase.storage.from('student-documents').upload(fileName, file);
-        if (uploadError) throw uploadError;
-        uploadedFundsPaths.push(fileName);
-      }
-      
-      const mergedFilePath = await mergeFundsDocuments(uploadedFundsPaths);
-      uploadedPaths.funds_proof = mergedFilePath;
+      // Upload Passport
+      const passportFile = files.passport as File;
+      const sanitizedName = sanitizeFileName(passportFile.name);
+      const passportFileName = `${user.id}/passport_${Date.now()}_${sanitizedName}`;
+      const { error: uploadError } = await supabase.storage.from('student-documents').upload(passportFileName, passportFile);
+      if (uploadError) throw uploadError;
+      uploadedPaths.passport = passportFileName;
 
-      // Obter URLs públicas para salvar no banco e enviar para análise
+      // Obter URL pública para salvar no banco e enviar para análise
       const getUrl = (path: string) => supabase.storage.from('student-documents').getPublicUrl(path).data.publicUrl;
       const passportUrl = getUrl(uploadedPaths.passport);
-      const diplomaUrl = getUrl(uploadedPaths.diploma);
-      const fundsUrl = getUrl(uploadedPaths.funds_proof);
 
       // 1. Inserir no histórico de documentos (student_documents)
       const docInserts = [
         { user_id: user.id, type: 'passport', file_url: passportUrl, status: 'pending' },
-        { user_id: user.id, type: 'diploma', file_url: diplomaUrl, status: 'pending' },
-        { user_id: user.id, type: 'funds_proof', file_url: fundsUrl, status: 'pending' }
       ];
       await supabase.from('student_documents').insert(docInserts);
 
@@ -353,8 +237,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
             const newEntries = [
               { type: 'passport', url: passportUrl },
-              { type: 'diploma', url: diplomaUrl },
-              { type: 'funds_proof', url: fundsUrl },
             ].filter(d => d.url);
             const now = new Date().toISOString();
             const mergedDocs = [...currentDocs];
@@ -384,8 +266,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           const now = new Date().toISOString();
           const newEntries = [
             { type: 'passport', url: passportUrl },
-            { type: 'diploma', url: diplomaUrl },
-            { type: 'funds_proof', url: fundsUrl },
           ].filter(d => d.url);
 
           for (const app of existingApps) {
@@ -434,8 +314,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         user_id: user.id,
         student_name: userProfile?.full_name || user.email || '',
         passport_url: getN8nProxyUrl(passportUrl),
-        diploma_url: getN8nProxyUrl(diplomaUrl),
-        funds_proof_url: getN8nProxyUrl(fundsUrl),
       };
 
       const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/analyze-student-documents`, {
@@ -575,7 +453,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     }));
   };
 
-  const allFilesSelected = files.passport && files.diploma && (files.funds_proof as File[]).length > 0;
+  const allFilesSelected = !!files.passport;
 
   if (isLocked) {
     const isApproved = userProfile?.documents_status === 'approved';
@@ -670,6 +548,15 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? t('studentOnboarding.documentsUpload.approvedApps.title') : t('studentOnboarding.documentsUpload.review.title')}
               </h2>
+              {!isApproved && (
+                <button
+                  onClick={() => setIsLocked(false)}
+                  className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  {t('studentDashboard.documentsUploadStep.reuploadPassport', 'Re-upload Passport')}
+                </button>
+              )}
             </div>
 
             {/* Main Standard White Container */}
@@ -958,8 +845,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                       {(() => {
                                         const baseDocs = [
                                           { type: 'passport', label: DOCUMENT_LABELS.passport },
-                                          { type: 'diploma', label: DOCUMENT_LABELS.diploma },
-                                          { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
                                         ];
 
                                         return baseDocs;
@@ -1162,21 +1047,15 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   }
 
   return (
-    <div className="space-y-10 pb-24 sm:pb-12 w-full">
-      <div className="text-center sm:text-left space-y-4 px-4">
-        <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+    <div className="space-y-8 sm:space-y-10 pb-12">
+      <div className="mb-10 text-left">
+        <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
           {t('studentDashboard.documentsUploadStep.title')}
-        </h2>
-        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2 mx-auto sm:mx-0">
-          {t('studentDashboard.documentsUploadStep.subtitle')}
-        </p>
+        </h1>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-12 shadow-2xl relative overflow-hidden mx-4">
-        {/* Background Decoration */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
-        
-        <div className="relative z-10 space-y-10">
+      <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="relative z-10 space-y-6">
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -1184,75 +1063,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             </div>
           )}
 
-          <div className="relative overflow-hidden mb-6">
-            <div className="relative z-10">
-              <h4 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
-                {t('studentOnboarding.documentsUpload.instructions.title')}
-              </h4>
-              <div className="text-gray-700 md:text-gray-800 font-medium text-sm md:text-base leading-relaxed relative z-[20] text-justify">
-                {t('studentOnboarding.documentsUpload.instructions.descriptionPre')}
-                <strong>{t('studentOnboarding.documentsUpload.instructions.descriptionStrong')}</strong>
-                {t('studentOnboarding.documentsUpload.instructions.descriptionMid')}
-                <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]">{t('studentOnboarding.documentsUpload.instructions.descriptionLink')}</a>
-                {t('studentOnboarding.documentsUpload.instructions.descriptionPost')}
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 gap-8">
             {DOCUMENT_TYPES.map((doc) => {
               const hasError = fieldErrors[doc.key];
-              
-              if (doc.key === 'funds_proof') {
-                const fundsFiles = files.funds_proof as File[];
-                const documentLimit = getDocumentLimit();
-                
-                return (
-                  <div key={doc.key} className={`p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : fundsFiles.length > 0 ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
-                    <div className="flex flex-col md:flex-row gap-6">
-
-                      <div className="flex-1 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 md:gap-3">
-                            <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-tight whitespace-nowrap">{DOCUMENT_LABELS[doc.key]}</h3>
-                            {fundsFiles.length > 0 && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />}
-                          </div>
-                          <span className="w-fit px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full tracking-widest border border-blue-100">{fundsFiles.length}/{documentLimit} {t('common.files', 'Arquivos')}</span>
-                        </div>
-                        <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
-                        
-                        <div className="space-y-4">
-                          <div className="relative group/upload">
-                            <input type="file" accept="application/pdf" multiple onChange={(e) => handleFundsFileAdd(Array.from(e.target.files || []))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" disabled={isLocked || uploading || analyzing} />
-                            <div className={`border-2 border-dashed rounded-2xl p-6 md:p-8 text-center transition-all bg-white group-hover/upload:bg-blue-50/30 ${hasError ? 'border-red-300' : 'border-blue-200 group-hover/upload:border-blue-400'}`}>
-                              <Upload className={`w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 group-hover/upload:scale-110 transition-transform ${hasError ? 'text-red-400' : 'text-blue-400'}`} />
-                              <p className={`text-xs md:text-sm font-black uppercase tracking-widest ${hasError ? 'text-red-700' : 'text-blue-700'}`}>
-                                {hasError ? fieldErrors[doc.key] : t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}
-                              </p>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 20MB Total)</p>
-                            </div>
-                          </div>
-
-                          {fundsFiles.length > 0 && (
-                            <div className="grid grid-cols-1 gap-2">
-                              {fundsFiles.map((file, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
-                                  <div className="flex items-center gap-3">
-                                    <FileText className="w-4 h-4 text-red-500" />
-                                    <span className="text-xs font-bold text-gray-700 uppercase tracking-tight truncate max-w-[200px]">{file.name}</span>
-                                  </div>
-                                  <button onClick={() => handleFundsFileRemove(idx)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><X className="w-4 h-4" /></button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
               const hasFile = files[doc.key] as File;
               return (
                 <div key={doc.key} className={`p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : hasFile ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
@@ -1284,26 +1097,20 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             })}
           </div>
 
-          <div className="pt-8 border-t border-gray-50 space-y-6">
+          <div className="flex justify-end gap-3 mt-6">
             <button
               onClick={handleUpload}
-              disabled={!allFilesSelected || uploading || analyzing || mergingPdfs}
-              className="w-full bg-blue-600 text-white py-4 sm:py-6 px-4 rounded-2xl hover:bg-blue-700 transition-all font-black uppercase tracking-widest sm:tracking-[0.3em] text-[10px] sm:text-xs shadow-xl shadow-blue-500/20 disabled:opacity-50 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 hover:scale-[1.01] active:scale-95"
+              disabled={!allFilesSelected || uploading || analyzing}
+              className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-blue-200 ${
+                !allFilesSelected ? 'opacity-40 cursor-not-allowed grayscale-[0.5]' : 'hover:scale-[1.02] active:scale-[0.98]'
+              }`}
             >
-              {(uploading || mergingPdfs) ? (
-                <>
-                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin flex-shrink-0" />
-                  <span className="text-center">{t('studentDashboard.documentsUploadStep.uploadingDocuments')}</span>
-                </>
+              {uploading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /><span>{t('studentDashboard.documentsUploadStep.uploadingDocuments')}</span></>
               ) : analyzing ? (
-                <>
-                  <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin flex-shrink-0" />
-                  <span className="text-center">{t('studentDashboard.documentsUploadStep.aiAnalysisInProgress')}</span>
-                </>
+                <><RefreshCw className="w-4 h-4 animate-spin" /><span>{t('studentDashboard.documentsUploadStep.aiAnalysisInProgress')}</span></>
               ) : (
-                <>
-                  <span className="text-center">{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>
-                </>
+                t('studentDashboard.documentsUploadStep.uploadAndContinue')
               )}
             </button>
           </div>
@@ -1314,16 +1121,31 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-      {/* Analysis Overlay */}
-      {analyzing && (
-        <div 
+      {/* Upload Overlay */}
+      {uploading && (
+        <div
           className="fixed top-0 left-0 w-screen h-screen z-[9999] flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-500"
           style={{ margin: 0, padding: 0 }}
         >
-          <div className="bg-white rounded-[2.5rem] p-12 max-w-sm w-full shadow-2xl text-center space-y-10 border border-white/20 relative mx-auto my-auto">
-            <PencilLoader 
-              title={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayTitle')} 
-              description={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayDescription')} 
+          <div className="bg-white rounded-[2.5rem] p-12 max-w-sm w-full shadow-2xl text-center space-y-6 border border-white/20 relative mx-auto my-auto">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+            <p className="text-lg font-black text-gray-900 uppercase tracking-tight">
+              {t('studentDashboard.documentsUploadStep.uploadingDocuments')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Analysis Overlay */}
+      {analyzing && (
+        <div
+          className="fixed top-0 left-0 w-screen h-screen z-[9999] flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-500"
+          style={{ margin: 0, padding: 0 }}
+        >
+          <div className="bg-white rounded-[2.5rem] p-12 max-w-sm w-full shadow-2xl text-center border border-white/20 relative mx-auto my-auto">
+            <PencilLoader
+              title={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayTitle')}
+              description={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayDescription')}
             />
           </div>
         </div>

@@ -1,6 +1,23 @@
 import React from 'react';
 
-const PencilLoader: React.FC = () => {
+interface PencilLoaderProps {
+  title?: string;
+  description?: string;
+  className?: string;
+  showIcon?: boolean;
+}
+
+/**
+ * Componente reutilizável de animação de busca (lupa) para análise de documentos
+ * Substitui a animação de spinner padrão por uma animação mais visual e atrativa
+ * Cores azuis alinhadas com o tema do site
+ */
+export const PencilLoader: React.FC<PencilLoaderProps> = ({ 
+  title = 'Analisando seus documentos...',
+  description = 'Isso pode levar até 40 segundos. Por favor, não feche esta janela.',
+  className = '',
+  showIcon = true
+  }) => {
   return (
     <div className="flex justify-center items-center">
       <style>{`

@@ -217,8 +217,8 @@ export function useStudentsQuery() {
 
         const mostRecentActivity = getMostRecentActivity();
 
-        // Calculate basic documents statistics (passport, diploma, funds_proof)
-        let basicDocsRequired = 3; // Basic docs are always 3 (passport, diploma, funds_proof)
+        // Calculate basic documents statistics (passport only)
+        let basicDocsRequired = 1; // Only passport remains in onboarding
         let basicDocsUploaded = 0;
         let basicDocsApproved = 0;
         let basicDocsRejected = 0;
@@ -234,7 +234,7 @@ export function useStudentsQuery() {
         };
 
         if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
-          const requiredBasicTypes = ['passport', 'diploma', 'funds_proof'];
+          const requiredBasicTypes = ['passport'];
           const latestStatusMap = new Map<string, string>();
           
           lockedApplication.documents.forEach((doc: any) => {
