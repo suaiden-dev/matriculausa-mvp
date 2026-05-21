@@ -252,7 +252,12 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                             {currentGroup.length > 0 ? (
                               /* PENDING SUBMISSION — one card per file */
                               <div className="space-y-3">
-                                  {currentGroup.map((upload: any, idx: number) => (
+                                  {currentGroup.map((upload: any, idx: number) => {
+                                    const uploadStatus = upload.status || 'under_review';
+                                    const cfg = STATUS_CONFIG[uploadStatus] || STATUS_CONFIG['under_review'];
+                                    const StatusIcon = cfg.icon;
+                                    const isPending = uploadStatus === 'under_review';
+                                    return (
                                     <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                       <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
                                         <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -269,9 +274,9 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                       </div>
 
                                       <div className="flex flex-wrap gap-2 items-center">
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium bg-yellow-100 text-yellow-800">
-                                          <Clock className="h-4 w-4" />
-                                          Under Review
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium ${cfg.className}`}>
+                                          <StatusIcon className="h-4 w-4" />
+                                          {cfg.label}
                                         </span>
 
                                         {upload.file_url && (
@@ -287,7 +292,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                           </button>
                                         )}
 
-                                        {isAdmin && (
+                                        {isAdmin && isPending && (
                                           <div className="flex items-center gap-2">
                                             <button
                                               onClick={() => onApproveDocument && onApproveDocument(upload.id)}
@@ -307,7 +312,8 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                         )}
                                       </div>
                                     </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 /* LAST CLOSED GROUP — all files, approved or rejected */

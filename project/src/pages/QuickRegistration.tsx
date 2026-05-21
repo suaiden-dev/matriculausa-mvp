@@ -894,6 +894,19 @@ const QuickRegistration: React.FC = () => {
             // Continue anyway, registration was successful
           }
         }
+
+        // Persist discount to user_fee_overrides so onboarding Step 1 and admin show the correct fee
+        if (validationResult?.discountAmount && validationResult.discountAmount > 0 && currentFee > 0) {
+          try {
+            await (supabase.rpc as any)('set_selection_process_fee_override', {
+              p_user_id: result.user.id,
+              p_discounted_amount: currentFee,
+            });
+          } catch (overrideErr) {
+            console.error('Failed to persist fee override:', overrideErr);
+            // Non-blocking: checkout continues normally
+          }
+        }
       }
 
       setIsRegistered(true);

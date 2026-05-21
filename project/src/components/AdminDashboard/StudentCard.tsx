@@ -411,7 +411,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_rejected} documento(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>
@@ -453,7 +453,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_rejected} documento(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>

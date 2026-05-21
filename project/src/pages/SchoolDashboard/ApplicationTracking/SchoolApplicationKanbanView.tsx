@@ -66,6 +66,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     'reinstatement_fee',
     'docs_approval',
     'send_acceptance_letter',
+    'i20_fee',
     'student_sends_letter',
     'sevis_transfer',
     'visa_approval',
