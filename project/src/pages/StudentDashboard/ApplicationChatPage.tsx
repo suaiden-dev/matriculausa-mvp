@@ -1218,7 +1218,22 @@ const ApplicationChatPage: React.FC = () => {
                             <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm outline outline-1 outline-slate-300">
                               <div className="min-w-0 mr-3">
                                 <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wide">{fee.details || fee.frequency}</p>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wide">
+                                  {(() => {
+                                    const rawVal = fee.details || fee.frequency;
+                                    if (!rawVal) return '';
+                                    const standardKeys: Record<string, string> = {
+                                      'One-time': 'scholarshipsPage.frequencies.oneTime',
+                                      'Per Semester': 'scholarshipsPage.frequencies.perSemester',
+                                      'Per Year': 'scholarshipsPage.frequencies.perYear',
+                                      'Per Credit': 'scholarshipsPage.frequencies.perCredit',
+                                      'Per Course': 'scholarshipsPage.frequencies.perCourse',
+                                      'Monthly': 'scholarshipsPage.frequencies.monthly'
+                                    };
+                                    const key = standardKeys[rawVal.trim()];
+                                    return key ? t(key, rawVal) : rawVal;
+                                  })()}
+                                </p>
                               </div>
                               <span className="font-bold text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
                             </div>

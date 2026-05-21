@@ -214,6 +214,14 @@
       "withScholarship": "With Scholarship",
       "perYear": "/year",
       "annualSavings": "Annual Savings"
+    },
+    "frequencies": {
+      "oneTime": "One-time",
+      "perSemester": "Per Semester",
+      "perYear": "Per Year",
+      "perCredit": "Per Credit",
+      "perCourse": "Per Course",
+      "monthly": "Monthly"
     }
   },
   "scholarshipSelection": {

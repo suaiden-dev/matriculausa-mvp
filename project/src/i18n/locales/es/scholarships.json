@@ -211,6 +211,14 @@
       "withScholarship": "Con Beca",
       "perYear": "/año",
       "annualSavings": "Ahorro Anual"
+    },
+    "frequencies": {
+      "oneTime": "Pago único",
+      "perSemester": "Por semestre",
+      "perYear": "Por año",
+      "perCredit": "Por crédito",
+      "perCourse": "Por curso",
+      "monthly": "Mensual"
     }
   },
   "scholarshipSelection": {
