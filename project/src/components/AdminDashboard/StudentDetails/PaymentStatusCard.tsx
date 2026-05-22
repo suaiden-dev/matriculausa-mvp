@@ -576,21 +576,19 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                               return Number(sch.placement_fee_amount);
                             }
 
-                            if (sch?.annual_value_with_scholarship) {
-                              const customAmt = sch.placement_fee_amount ? Number(sch.placement_fee_amount) : null;
-                              return getPlacementFee(Number(sch.annual_value_with_scholarship), customAmt);
-                            }
                             return null;
                           };
 
                           if (student?.is_placement_fee_paid) {
-                            // When installment partial: show total = paid so far + pending balance
+                            // When installment partial: show the full scholarship placement fee as total
                             if (isInstallmentPartial) {
+                              const total = calcTotalFee();
+                              if (total != null && total > 0) return formatFeeAmount(total, true);
+                              // fallback: paid so far + pending balance
                               const paid = (realPaidAmounts?.placement && realPaidAmounts.placement > 0)
                                 ? realPaidAmounts.placement
-                                : (calcTotalFee() || 2100) / 2;
-                              const total = paid + pendingBalance;
-                              return formatFeeAmount(total, true);
+                                : 0;
+                              return formatFeeAmount(paid + pendingBalance, true);
                             }
                             // Fully paid: show what was paid
                             if (realPaidAmounts?.placement != null && realPaidAmounts.placement > 0) {
