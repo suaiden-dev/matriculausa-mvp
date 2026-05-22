@@ -695,3 +695,24 @@ select:focus,
   opacity: inherit !important;
   transition: none !important;
 }
+
+/* ======================================================
+   Carrossel Infinito Suave (Marquee) para Logos
+   ====================================================== */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 100s linear infinite;
+  will-change: transform;
+}
+
+

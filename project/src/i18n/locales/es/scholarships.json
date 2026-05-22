@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Scholarships",
-    "subtitle": "Find the perfect scholarship for your academic journey",
+    "title": "Tu futuro en EE. UU. no tiene que parecer distante",
+    "subtitle": "Conoce becas que te acercan a universidades estadounidenses.",
     "searchPlaceholder": "Search scholarships...",
     "filterBy": "Filter by",
     "amount": "Amount",
@@ -311,8 +311,8 @@
   },
   "universitiesPage": {
     "header": {
-      "title": "Universidades Americanas",
-      "subtitle": "Descubra instituciones de clase mundial que ofrecen educación excepcional y oportunidades de becas."
+      "title": "Tu próximo capítulo comienza en un campus estadounidense",
+      "subtitle": "Encuentra oportunidades para estudiar, crecer y vivir una experiencia internacional."
     },
     "loginRequired": {
       "title": "Inicio de Sesión Requerido",

@@ -104,17 +104,21 @@ const Scholarships: React.FC = () => {
     setMaxPrice(maxScholarshipValue);
   }, [maxScholarshipValue]); */
 
-  // Salvar filtros no localStorage quando mudarem
+  // Salvar filtros no localStorage quando mudarem (otimizado com debounce leve para evitar gargalos síncronos de I/O)
   useEffect(() => {
-    const filters = {
-      searchTerm,
-      selectedLevel,
-      selectedField,
-      selectedStudyMode,
-      selectedWorkAuth,
-      maxPrice
-    };
-    localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
+    const handler = setTimeout(() => {
+      const filters = {
+        searchTerm,
+        selectedLevel,
+        selectedField,
+        selectedStudyMode,
+        selectedWorkAuth,
+        maxPrice
+      };
+      localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
+    }, 200);
+
+    return () => clearTimeout(handler);
   }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, maxPrice]);
 
   // Restaurar filtros do localStorage ao carregar
@@ -195,29 +199,29 @@ const Scholarships: React.FC = () => {
     loadApprovedUniversities();
   }, []);
 
-  const levelOptions = [
+  const levelOptions = useMemo(() => [
     { value: 'all', label: t('scholarshipsPage.filters.levels.all') },
     { value: 'graduate', label: t('scholarshipsPage.filters.levels.graduate') },
     { value: 'doctorate', label: t('scholarshipsPage.filters.levels.doctorate') },
     { value: 'undergraduate', label: t('scholarshipsPage.filters.levels.undergraduate') },
-  ];
+  ], [t]);
 
-  const fieldOptions = [
+  const fieldOptions = useMemo(() => [
     { value: 'all', label: t('scholarshipsPage.filters.allFields') },
     { value: 'stem', label: t('scholarshipsPage.filters.stem') },
     { value: 'business', label: t('scholarshipsPage.filters.business') },
     { value: 'engineering', label: t('scholarshipsPage.filters.engineering') },
     { value: 'any', label: t('scholarshipsPage.filters.anyField') },
-  ];
+  ], [t]);
 
-  const workOptions = [
+  const workOptions = useMemo(() => [
     { value: 'all', label: t('scholarshipsPage.filters.allPermissions') },
     { value: 'OPT', label: t('scholarshipsPage.filters.opt') },
     { value: 'CPT', label: t('scholarshipsPage.filters.cpt') },
-  ];
+  ], [t]);
 
-  const currentFieldLabel = fieldOptions.find(opt => opt.value === selectedField)?.label || t('scholarshipsPage.filters.allFields');
-  const currentWorkLabel = workOptions.find(opt => opt.value === selectedWorkAuth)?.label || t('scholarshipsPage.filters.allPermissions');
+  const currentFieldLabel = useMemo(() => fieldOptions.find(opt => opt.value === selectedField)?.label || t('scholarshipsPage.filters.allFields'), [fieldOptions, selectedField, t]);
+  const currentWorkLabel = useMemo(() => workOptions.find(opt => opt.value === selectedWorkAuth)?.label || t('scholarshipsPage.filters.allPermissions'), [workOptions, selectedWorkAuth, t]);
 
   const { refetchUserProfile } = useAuth();
   const navigate = useNavigate();
@@ -230,89 +234,118 @@ const Scholarships: React.FC = () => {
   // }
 
 
-  const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
-    // Exclude featured scholarships from the general list to avoid duplication
-    if (scholarship.is_highlighted) {
-      return false;
-    }
-    // Exclude scholarships whose university is not approved (if we have the approved list)
-    if (approvedUniversityIds.size > 0) {
-      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
-      if (uniId && !approvedUniversityIds.has(uniId)) return false;
-    }
+  const filteredScholarships = useMemo(() => {
+    return scholarships.filter((scholarship: Scholarship) => {
+      // Exclude featured scholarships from the general list to avoid duplication
+      if (scholarship.is_highlighted) {
+        return false;
+      }
+      // Exclude scholarships whose university is not approved (if we have the approved list)
+      if (approvedUniversityIds.size > 0) {
+        const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+        if (uniId && !approvedUniversityIds.has(uniId)) return false;
+      }
 
-    const allowUniSearch = isAuthenticated
-      ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
-      : false;
-    const term = (searchTerm || '').toLowerCase().trim();
-    const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
-    const matchesSearch =
-      term.length === 0 ||
-      scholarship.title.toLowerCase().includes(term) ||
-      (allowUniSearch && uniName.includes(term));
-    const value = scholarship.annual_value_with_scholarship ?? 0;
-    const matchesRange = (maxPrice === 0 || value <= maxPrice);
-    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
-    const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
-    const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
-    
-    // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
-    // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-    const matchesDesiredRange = desiredScholarshipRange !== null
-      ? (value >= desiredScholarshipRange)
-      : (minScholarshipValue === null || (value >= minScholarshipValue));
-    
-    // Filtro de bolsas de teste (is_test)
-    const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
-    const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
-    if (scholarship.is_test && !isUorakUser && !isAdmin) {
-      return false;
-    }
-    
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
-  });
+      const allowUniSearch = isAuthenticated
+        ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
+        : false;
+      const term = (searchTerm || '').toLowerCase().trim();
+      const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
+      const matchesSearch =
+        term.length === 0 ||
+        scholarship.title.toLowerCase().includes(term) ||
+        (allowUniSearch && uniName.includes(term));
+      const value = scholarship.annual_value_with_scholarship ?? 0;
+      const matchesRange = (maxPrice === 0 || value <= maxPrice);
+      const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
+      const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
+      const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
+      const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
+      
+      // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
+      // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+      const matchesDesiredRange = desiredScholarshipRange !== null
+        ? (value >= desiredScholarshipRange)
+        : (minScholarshipValue === null || (value >= minScholarshipValue));
+      
+      // Filtro de bolsas de teste (is_test)
+      const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+      const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
+      if (scholarship.is_test && !isUorakUser && !isAdmin) {
+        return false;
+      }
+      
+      return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
+    });
+  }, [
+    scholarships,
+    approvedUniversityIds,
+    isAuthenticated,
+    user,
+    userProfile,
+    searchTerm,
+    maxPrice,
+    selectedLevel,
+    selectedField,
+    selectedStudyMode,
+    selectedWorkAuth,
+    desiredScholarshipRange,
+    minScholarshipValue
+  ]);
 
-  // Apply the same filter logic to featured scholarships so the featureds respect the page filters
-  const matchesFilters = (scholarship: Scholarship) => {
-    // Exclude scholarships from unapproved universities if we have the approved list
-    if (approvedUniversityIds.size > 0) {
-      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
-      if (uniId && !approvedUniversityIds.has(uniId)) return false;
-    }
-    const allowUniSearch = isAuthenticated
-      ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
-      : false;
-    const term = (searchTerm || '').toLowerCase().trim();
-    const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
-    const matchesSearch =
-      term.length === 0 ||
-      scholarship.title.toLowerCase().includes(term) ||
-      (allowUniSearch && uniName.includes(term));
-    const value = scholarship.annual_value_with_scholarship ?? 0;
-    const matchesRange = (maxPrice === 0 || value <= maxPrice);
-    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
-    const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
-    const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
-    
-    // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
-    // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-    const matchesDesiredRange = desiredScholarshipRange !== null
-      ? (value >= desiredScholarshipRange)
-      : (minScholarshipValue === null || (value >= minScholarshipValue));
-    
-    // Filtro de bolsas de teste (is_test)
-    const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
-    const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
-    if (scholarship.is_test && !isUorakUser && !isAdmin) {
-      return false;
-    }
-    
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
-  };
-
-  const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
+  const filteredFeaturedScholarships = useMemo(() => {
+    return featuredScholarships.filter((scholarship: Scholarship) => {
+      // Exclude scholarships from unapproved universities if we have the approved list
+      if (approvedUniversityIds.size > 0) {
+        const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+        if (uniId && !approvedUniversityIds.has(uniId)) return false;
+      }
+      const allowUniSearch = isAuthenticated
+        ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
+        : false;
+      const term = (searchTerm || '').toLowerCase().trim();
+      const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
+      const matchesSearch =
+        term.length === 0 ||
+        scholarship.title.toLowerCase().includes(term) ||
+        (allowUniSearch && uniName.includes(term));
+      const value = scholarship.annual_value_with_scholarship ?? 0;
+      const matchesRange = (maxPrice === 0 || value <= maxPrice);
+      const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
+      const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
+      const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
+      const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
+      
+      // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
+      // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+      const matchesDesiredRange = desiredScholarshipRange !== null
+        ? (value >= desiredScholarshipRange)
+        : (minScholarshipValue === null || (value >= minScholarshipValue));
+      
+      // Filtro de bolsas de teste (is_test)
+      const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+      const isAdmin = user?.role === 'admin' || user?.role === 'post_sales';
+      if (scholarship.is_test && !isUorakUser && !isAdmin) {
+        return false;
+      }
+      
+      return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
+    });
+  }, [
+    featuredScholarships,
+    approvedUniversityIds,
+    isAuthenticated,
+    user,
+    userProfile,
+    searchTerm,
+    maxPrice,
+    selectedLevel,
+    selectedField,
+    selectedStudyMode,
+    selectedWorkAuth,
+    desiredScholarshipRange,
+    minScholarshipValue
+  ]);
 
   // Regras de visibilidade (canViewSensitive já declarada no topo do componente)
   const shouldApplyBlur = !canViewSensitive;
@@ -482,7 +515,7 @@ const Scholarships: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
+      <section className="relative pt-24 pb-24 lg:py-32 overflow-hidden bg-[#05294E] min-h-[550px] lg:min-h-[700px] flex items-center">
         {/* Background Image Layer */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 lg:right-0 lg:left-auto lg:w-[65%]">
@@ -506,283 +539,279 @@ const Scholarships: React.FC = () => {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-4xl lg:mr-auto">
+          <div className="max-w-full">
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
+              className="text-center lg:text-left flex flex-col items-center lg:items-start w-full"
             >
-              <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-tight lg:pr-6">
+              <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-tight lg:pr-6 max-w-3xl">
                 <span className="block mb-1">{t('scholarships.title').split(' ').slice(0, -1).join(' ')}</span>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
                   {t('scholarships.title').split(' ').slice(-1)[0]}
                 </span>
               </h1>
               
-              <p className="text-lg lg:text-xl text-white mb-6 max-w-md mx-auto lg:mr-auto lg:ml-0 leading-relaxed font-medium drop-shadow-lg">
+              <p className="text-lg lg:text-xl text-white mb-6 max-w-2xl leading-relaxed font-medium drop-shadow-lg">
                 {t('scholarships.subtitle')}
               </p>
 
-            </motion.div>
-          </div>
-        </div>
-      </section>
+              {/* Seção de Filtros Premium Unificada Embutida no Hero */}
+              <div id="scholarships-filters" className="w-full mt-8 relative z-25 text-left">
+                <div className="bg-transparent relative overflow-visible">
+                  <div className="relative z-10">
+                    {/* Camada 2: Barra Branca Unificada Integrada */}
+                    <div className="bg-white rounded-[28px] lg:rounded-full p-2.5 flex flex-col lg:flex-row items-center gap-3 lg:gap-4 shadow-2xl border border-slate-100 w-full">
+                      
+                      {/* Coluna 1: Busca Textual */}
+                      <div className="flex flex-col flex-1 min-w-[200px] w-full px-4 py-1.5 justify-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                          {t('scholarshipsPage.filters.studySearchLabel')}
+                        </span>
+                        <div className="flex items-center">
+                          <Search className="h-4 w-4 text-slate-400 mr-2 shrink-0" />
+                          <input
+                            type="text"
+                            placeholder={t('scholarships.searchPlaceholder')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-transparent outline-none border-none text-sm font-bold text-slate-800 placeholder-slate-400"
+                            disabled={scholarshipsLoading}
+                          />
+                        </div>
+                      </div>
 
-      {/* Seção de Filtros Premium Unificada */}
-      <section id="scholarships-filters" className="relative -mt-10 lg:-mt-16 z-25 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] rounded-[32px] p-6 lg:p-8 shadow-2xl relative overflow-hidden border border-white/10">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-5 left-10 w-56 h-56 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-5 right-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
-          </div>
+                      {/* Coluna 3: Preço Máximo */}
+                      <div className="flex flex-col w-full lg:w-36 px-4 py-1.5 justify-center">
+                        <label htmlFor="max-price-input" className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                          {t('scholarshipsPage.filters.maxPriceLabel')}
+                        </label>
+                        <div className="flex items-center">
+                          <span className="text-sm font-bold text-slate-400 mr-0.5">$</span>
+                          <input
+                            id="max-price-input"
+                            type="number"
+                            min={0}
+                            max={maxScholarshipValue}
+                            value={maxPrice || ''}
+                            onChange={e => setMaxPrice(Number(e.target.value))}
+                            className="w-full bg-transparent outline-none border-none text-sm font-bold text-slate-700"
+                            placeholder={formatAmount(maxScholarshipValue)}
+                            disabled={scholarshipsLoading}
+                          />
+                        </div>
+                      </div>
 
-          <div className="relative z-10">
-            {/* Camada 1: Abas de Seleção Superior (Nível Acadêmico) */}
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-md p-2 sm:inline-flex sm:items-center sm:gap-2">
-              <div className="flex items-center px-2 pb-2 sm:pb-0 sm:pr-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                  {t('scholarshipsPage.filters.academicLevelLabel')}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-900/30 p-1 sm:inline-grid sm:grid-cols-3">
-                {levelOptions.filter((level) => level.value !== 'all').map((level) => {
-                  const isActive = selectedLevel === level.value;
-                  return (
-                    <button
-                      key={level.value}
-                      type="button"
-                      onClick={() => setSelectedLevel(isActive && level.value !== 'all' ? 'all' : level.value)}
-                      disabled={scholarshipsLoading}
-                      className={`flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
-                        isActive
-                          ? 'bg-white text-[#D0151C] shadow-sm'
-                          : 'text-slate-200 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {level.value === 'undergraduate' && <GraduationCap className="h-3.5 w-3.5 shrink-0" />}
-                      {level.value === 'graduate' && <Users className="h-3.5 w-3.5 shrink-0" />}
-                      {level.value === 'doctorate' && <Award className="h-3.5 w-3.5 shrink-0" />}
-                      <span className="truncate">{level.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Camada 2: Barra Branca Unificada Integrada */}
-            <div className="bg-white rounded-[28px] lg:rounded-full p-2.5 flex flex-col lg:flex-row items-center gap-3 lg:gap-4 shadow-2xl">
-              
-              {/* Coluna 1: Busca Textual */}
-              <div className="flex flex-col flex-1 min-w-[200px] w-full px-4 py-1.5 justify-center">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                  {t('scholarshipsPage.filters.studySearchLabel')}
-                </span>
-                <div className="flex items-center">
-                  <Search className="h-4 w-4 text-slate-400 mr-2 shrink-0" />
-                  <input
-                    type="text"
-                    placeholder={t('scholarships.searchPlaceholder')}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-transparent outline-none border-none text-sm font-bold text-slate-800 placeholder-slate-400"
-                    disabled={scholarshipsLoading}
-                  />
-                </div>
-              </div>
-
-              {/* Coluna 3: Preço Máximo */}
-              <div className="flex flex-col w-full lg:w-36 px-4 py-1.5 justify-center">
-                <label htmlFor="max-price-input" className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                  {t('scholarshipsPage.filters.maxPriceLabel')}
-                </label>
-                <div className="flex items-center">
-                  <span className="text-sm font-bold text-slate-400 mr-0.5">$</span>
-                  <input
-                    id="max-price-input"
-                    type="number"
-                    min={0}
-                    max={maxScholarshipValue}
-                    value={maxPrice || ''}
-                    onChange={e => setMaxPrice(Number(e.target.value))}
-                    className="w-full bg-transparent outline-none border-none text-sm font-bold text-slate-700"
-                    placeholder={formatAmount(maxScholarshipValue)}
-                    disabled={scholarshipsLoading}
-                  />
-                </div>
-              </div>
-
-              {/* Coluna 4: Área de Estudo */}
-              <div ref={fieldRef} className="flex flex-col w-full lg:w-52 px-4 py-1 justify-center relative">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 select-none">
-                  {t('scholarshipsPage.filters.fieldOfInterestLabel')}
-                </span>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFieldDropdownOpen(!fieldDropdownOpen);
-                      setWorkDropdownOpen(false);
-                    }}
-                    disabled={scholarshipsLoading}
-                    className="w-full flex items-center justify-between bg-transparent outline-none border-none text-sm font-bold text-slate-700 cursor-pointer pr-1 py-0.5 hover:text-slate-900 transition-colors text-left"
-                  >
-                    <span className="truncate">{currentFieldLabel}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${fieldDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {fieldDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                      {fieldOptions.map((opt) => {
-                        const isSelected = selectedField === opt.value;
-                        return (
+                      {/* Coluna 4: Área de Estudo */}
+                      <div ref={fieldRef} className="flex flex-col w-full lg:w-52 px-4 py-1 justify-center relative">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 select-none">
+                          {t('scholarshipsPage.filters.fieldOfInterestLabel')}
+                        </span>
+                        <div className="relative">
                           <button
-                            key={opt.value}
                             type="button"
                             onClick={() => {
-                              setSelectedField(opt.value);
-                              setFieldDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 text-xs font-bold transition-all duration-200 flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-[#05294E]/5 text-[#05294E] font-black'
-                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                            }`}
-                          >
-                            <span>{opt.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Coluna 5: Permissão de Trabalho */}
-              <div ref={workRef} className="flex flex-col w-full lg:w-52 px-4 py-1 justify-center relative">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 select-none">
-                  {t('scholarshipsPage.filters.visaPermissionLabel')}
-                </span>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWorkDropdownOpen(!workDropdownOpen);
-                      setFieldDropdownOpen(false);
-                    }}
-                    disabled={scholarshipsLoading}
-                    className="w-full flex items-center justify-between bg-transparent outline-none border-none text-sm font-bold text-slate-700 cursor-pointer pr-1 py-0.5 hover:text-slate-900 transition-colors text-left"
-                  >
-                    <span className="truncate">{currentWorkLabel}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${workDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {workDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                      {workOptions.map((opt) => {
-                        const isSelected = selectedWorkAuth === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => {
-                              setSelectedWorkAuth(opt.value);
+                              setFieldDropdownOpen(!fieldDropdownOpen);
                               setWorkDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-4 py-2 text-xs font-bold transition-all duration-200 flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-[#05294E]/5 text-[#05294E] font-black'
-                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                            }`}
+                            disabled={scholarshipsLoading}
+                            className="w-full flex items-center justify-between bg-transparent outline-none border-none text-sm font-bold text-slate-700 cursor-pointer pr-1 py-0.5 hover:text-slate-900 transition-colors text-left"
                           >
-                            <span>{opt.label}</span>
+                            <span className="truncate">{currentFieldLabel}</span>
+                            <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${fieldDropdownOpen ? 'rotate-180' : ''}`} />
                           </button>
-                        );
-                      })}
+
+                          {fieldDropdownOpen && (
+                            <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                              {fieldOptions.map((opt) => {
+                                const isSelected = selectedField === opt.value;
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedField(opt.value);
+                                      setFieldDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-all duration-200 flex items-center justify-between ${
+                                      isSelected
+                                        ? 'bg-[#05294E]/5 text-[#05294E] font-black'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    }`}
+                                  >
+                                    <span>{opt.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Coluna 5: Permissão de Trabalho */}
+                      <div ref={workRef} className="flex flex-col w-full lg:w-52 px-4 py-1 justify-center relative">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 select-none">
+                          {t('scholarshipsPage.filters.visaPermissionLabel')}
+                        </span>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWorkDropdownOpen(!workDropdownOpen);
+                              setFieldDropdownOpen(false);
+                            }}
+                            disabled={scholarshipsLoading}
+                            className="w-full flex items-center justify-between bg-transparent outline-none border-none text-sm font-bold text-slate-700 cursor-pointer pr-1 py-0.5 hover:text-slate-900 transition-colors text-left"
+                          >
+                            <span className="truncate">{currentWorkLabel}</span>
+                            <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-300 ${workDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {workDropdownOpen && (
+                            <div className="absolute left-0 right-0 mt-2 w-full bg-white shadow-2xl rounded-2xl border border-slate-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                              {workOptions.map((opt) => {
+                                const isSelected = selectedWorkAuth === opt.value;
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedWorkAuth(opt.value);
+                                      setWorkDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-all duration-200 flex items-center justify-between ${
+                                      isSelected
+                                        ? 'bg-[#05294E]/5 text-[#05294E] font-black'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                    }`}
+                                  >
+                                    <span>{opt.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Botão Buscar Integrado na Extremidade Direita */}
+                      <div className="w-full lg:w-auto p-1 shrink-0 self-stretch lg:self-auto flex items-center">
+                        <button
+                          type="button"
+                          className="w-full lg:w-auto bg-[#D0151C] hover:bg-[#D0151C]/90 text-white font-black px-8 py-4 rounded-[22px] lg:rounded-full flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-95 shadow-md shadow-[#D0151C]/25 text-sm shrink-0"
+                          disabled={scholarshipsLoading}
+                        >
+                          <Search className="h-4.5 w-4.5" />
+                          <span>{t('scholarshipsPage.filters.searchButton')}</span>
+                        </button>
+                      </div>
                     </div>
-                  )}
+
+                    {/* Camada 3: Atalhos Rápidos de Modalidades, Nível Acadêmico e Ações Inferiores */}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mt-6 px-2 sm:px-4">
+                      <div className="flex flex-col md:flex-row md:items-center gap-6 lg:gap-8 flex-wrap">
+                        {/* Bloco de Modalidades */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <span className="text-[10px] font-black text-white/80 uppercase tracking-widest shrink-0">
+                            {t('scholarshipsPage.filters.modalitiesLabel')}
+                          </span>
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            {[
+                              { value: 'online', label: t('scholarshipsPage.filters.online') },
+                              { value: 'in_person', label: t('scholarshipsPage.filters.inPerson') },
+                              { value: 'hybrid', label: t('scholarshipsPage.filters.hybrid') },
+                            ].map((mode) => {
+                              const isActive = selectedStudyMode === mode.value;
+                              return (
+                                <button
+                                  key={mode.value}
+                                  type="button"
+                                  onClick={() => setSelectedStudyMode(isActive && mode.value !== 'all' ? 'all' : mode.value)}
+                                  disabled={scholarshipsLoading}
+                                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors duration-150 border ${
+                                    isActive
+                                      ? 'bg-white text-[#05294E] border-white shadow-lg'
+                                      : 'bg-white/10 hover:bg-white/20 text-white border-white/10 backdrop-blur-sm'
+                                  }`}
+                                >
+                                  {mode.value === 'online' && <Laptop className="h-3 w-3" />}
+                                  {mode.value === 'in_person' && <Building className="h-3 w-3" />}
+                                  {mode.value === 'hybrid' && <Globe className="h-3 w-3" />}
+                                  <span>{mode.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Bloco de Nível Acadêmico */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <span className="text-[10px] font-black text-white/80 uppercase tracking-widest shrink-0">
+                            {t('scholarshipsPage.filters.academicLevelLabel')}
+                          </span>
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            {levelOptions.filter((level) => level.value !== 'all').map((level) => {
+                              const isActive = selectedLevel === level.value;
+                              return (
+                                <button
+                                  key={level.value}
+                                  type="button"
+                                  onClick={() => setSelectedLevel(isActive && level.value !== 'all' ? 'all' : level.value)}
+                                  disabled={scholarshipsLoading}
+                                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors duration-150 border ${
+                                    isActive
+                                      ? 'bg-white text-[#05294E] border-white shadow-lg'
+                                      : 'bg-white/10 hover:bg-white/20 text-white border-white/10 backdrop-blur-sm'
+                                  }`}
+                                >
+                                  {level.value === 'undergraduate' && <GraduationCap className="h-3 w-3" />}
+                                  {level.value === 'graduate' && <Users className="h-3 w-3" />}
+                                  {level.value === 'doctorate' && <Award className="h-3 w-3" />}
+                                  <span>{level.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botão de Limpar e Resultados */}
+                      <div className="flex items-center gap-3 self-end lg:self-auto shrink-0">
+                        {/* Botão Limpar Filtros */}
+                        {(searchTerm !== '' ||
+                          selectedLevel !== 'all' ||
+                          selectedField !== 'all' ||
+                          selectedStudyMode !== 'all' ||
+                          selectedWorkAuth !== 'all' ||
+                          maxPrice !== 0) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchTerm('');
+                              setSelectedLevel('all');
+                              setSelectedField('all');
+                              setSelectedStudyMode('all');
+                              setSelectedWorkAuth('all');
+                              setMaxPrice(0);
+                              setFieldDropdownOpen(false);
+                              setWorkDropdownOpen(false);
+                              localStorage.removeItem('scholarshipsPageFilters');
+                            }}
+                            disabled={scholarshipsLoading}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors shadow-sm cursor-pointer border border-red-500/20"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            <span>{t('scholarshipsPage.filters.clearButton')}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Botão Buscar Integrado na Extremidade Direita */}
-              <div className="w-full lg:w-auto p-1 shrink-0 self-stretch lg:self-auto flex items-center">
-                <button
-                  type="button"
-                  className="w-full lg:w-auto bg-[#D0151C] hover:bg-[#D0151C]/90 text-white font-black px-8 py-4 rounded-[22px] lg:rounded-full flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-95 shadow-md shadow-[#D0151C]/25 text-sm shrink-0"
-                  disabled={scholarshipsLoading}
-                >
-                  <Search className="h-4.5 w-4.5" />
-                  <span>{t('scholarshipsPage.filters.searchButton')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Camada 3: Atalhos Rápidos de Modalidades e Ações Inferiores */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 px-2 sm:px-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest shrink-0">
-                  {t('scholarshipsPage.filters.modalitiesLabel')}
-                </span>
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  {[
-                    { value: 'online', label: t('scholarshipsPage.filters.online') },
-                    { value: 'in_person', label: t('scholarshipsPage.filters.inPerson') },
-                    { value: 'hybrid', label: t('scholarshipsPage.filters.hybrid') },
-                  ].map((mode) => {
-                    const isActive = selectedStudyMode === mode.value;
-                    return (
-                      <button
-                        key={mode.value}
-                        type="button"
-                        onClick={() => setSelectedStudyMode(isActive && mode.value !== 'all' ? 'all' : mode.value)}
-                        disabled={scholarshipsLoading}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 border ${
-                          isActive
-                            ? 'bg-white text-[#05294E] border-white/20 shadow-md font-extrabold'
-                            : 'bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white border-white/10 shadow-sm'
-                        }`}
-                      >
-                        {mode.value === 'online' && <Laptop className="h-3 w-3" />}
-                        {mode.value === 'in_person' && <Building className="h-3 w-3" />}
-                        {mode.value === 'hybrid' && <Globe className="h-3 w-3" />}
-                        <span>{mode.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Botão de Limpar e Resultados */}
-              <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
-                {/* Botão Limpar Filtros */}
-                {(searchTerm !== '' ||
-                  selectedLevel !== 'all' ||
-                  selectedField !== 'all' ||
-                  selectedStudyMode !== 'all' ||
-                  selectedWorkAuth !== 'all' ||
-                  maxPrice !== 0) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setSelectedLevel('all');
-                      setSelectedField('all');
-                      setSelectedStudyMode('all');
-                      setSelectedWorkAuth('all');
-                      setMaxPrice(0);
-                      setFieldDropdownOpen(false);
-                      setWorkDropdownOpen(false);
-                      localStorage.removeItem('scholarshipsPageFilters');
-                    }}
-                    disabled={scholarshipsLoading}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-red-200 hover:text-red-100 bg-red-500/10 hover:bg-red-500/20 transition-colors shadow-sm cursor-pointer border border-red-500/20"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    <span>{t('scholarshipsPage.filters.clearButton')}</span>
-                  </button>
-                )}
-              </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -817,7 +846,7 @@ const Scholarships: React.FC = () => {
           <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">{t('scholarshipsPage.featuredSection.subtitle')}</span>
+                <span className="text-slate-900">{t('scholarshipsPage.featuredSection.subtitle')}</span>
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                 {t('scholarshipsPage.featuredSection.description')}
@@ -1082,7 +1111,7 @@ const Scholarships: React.FC = () => {
           {filteredScholarships.length > 0 && (
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">{t('scholarshipsPage.allScholarships.title')}</span>
+                <span className="text-slate-900">{t('scholarshipsPage.allScholarships.title')}</span>
               </h2>
 
             </div>
@@ -1161,7 +1190,7 @@ const Scholarships: React.FC = () => {
                       
                       {/* Full Background Image */}
                       <div className="absolute inset-0 z-0">
-                        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
+                        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) ? (
                           <img
                             src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                             alt={scholarship.title}

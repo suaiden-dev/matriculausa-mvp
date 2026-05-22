@@ -16,6 +16,14 @@ const Footer: React.FC = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Legal Disclaimer */}
+        <div className="mb-12 pb-8 border-b border-white/10 text-slate-300 text-xs sm:text-sm leading-relaxed">
+          <h4 className="text-white font-bold text-sm sm:text-base mb-2">Legal Disclaimer</h4>
+          <p>
+            MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 
           {/* Coluna 1: A Plataforma */}

@@ -36,25 +36,25 @@
     },
     "features": {
       "whyChoose": "Why Choose MatriculaUSA?",
-      "title": "We are the complete platform for your American journey",
-      "titleMain": "We are the complete platform for your",
-      "titleHighlight": "American journey",
+      "title": "Your future in the U.S. might be closer than you think",
+      "titleMain": "Your future in the U.S. might be",
+      "titleHighlight": "closer than you think",
       "subtitle": "Everything you need to succeed in your American education journey",
-      "successRate": {
-        "title": "95% Success Rate",
-        "description": "Our methodology and specialized support ensure one of the highest approval rates in the market for international students."
+      "opportunities": {
+        "title": "Opportunities that open doors",
+        "description": "Discover programs and scholarships that can make your international journey much more possible."
       },
-      "exclusiveScholarships": {
-        "title": "Exclusive Scholarships",
-        "description": "Access scholarships not available anywhere else, with exclusive values for international students."
+      "universities": {
+        "title": "Universities for your next chapter",
+        "description": "We connect you to institutions in the U.S. that match your dreams, goals, and history."
       },
-      "personalSupport": {
-        "title": "Personal Support",
-        "description": "Every question, every step, every decision — our team is available to support you in everything you need throughout the process."
+      "confidence": {
+        "title": "A journey with more confidence",
+        "description": "You don't have to carry this dream alone. Matricula USA walks with you to turn doubt into direction."
       },
-      "fastProcess": {
-        "title": "Simple Process",
-        "description": "Simple application process, designed for you to handle everything with transparency and peace of mind — from start to finish, without complications."
+      "moreThanStudy": {
+        "title": "More than studying abroad",
+        "description": "It's about living a new culture, broadening your worldview, and building a future with more possibilities."
       }
     },
     "stats": {
@@ -129,19 +129,23 @@
       }
     },
     "threeSteps": {
-      "title": "A New Chapter in Your U.S. Journey Starts Now",
-      "subtitle": "Simple Process",
+      "title": "An experience that can change your life",
+      "subtitle": "Benefits",
       "step1": {
-        "title": "Start Your Selection Process",
-        "description": "Complete your initial application to join the official program. This step validates your eligibility and opens the path to exclusive spots and benefits at educational institutions in the United States."
+        "title": "Experience a new culture",
+        "description": "Studying in the U.S. means immersing yourself in an international environment, where every experience outside the classroom also teaches."
       },
       "step2": {
-        "title": "Select Your Universities",
-        "description": "Define your academic priorities and choose the institutions that best meet your career goals. Gain access to detailed information to decide where you want to build your future."
+        "title": "Build global connections",
+        "description": "Meet people from different countries, cultures, and backgrounds — connections that can stay with you for a lifetime."
       },
-      "step3": {
-        "title": "University Enrollment",
-        "description": "Complete your admission and secure your official spot at the chosen university. With the confirmation letter in hand, you finalize the process to start your international academic journey."
+      "step4": {
+        "title": "Gain confidence to go further",
+        "description": "When you realize this dream is possible, you start seeing your life through different eyes."
+      },
+      "step5": {
+        "title": "Turn distance into possibility",
+        "description": "What once seemed far away can become the beginning of a new journey."
       }
     },
     "successWall": {
@@ -199,8 +203,8 @@
     }
   },
   "howItWorks": {
-    "title": "How It Works",
-    "subtitle": "Your path to a US university, step by step",
+    "title": "Between the dream and the campus, there is a possible path",
+    "subtitle": "Clarity to turn willingness into action.",
     "journey": "Your Journey",
     "cta": {
       "start": "Start Process Now"
@@ -262,7 +266,6 @@
     },
     "whyUs": {
       "mainTitle": "Why Choose MatriculaUSA?",
-      "placeholderPhoto": "Campus Photo Here",
       "title": "Why MatriculaUSA?",
       "smartDiscovery": {
         "title": "Exclusive Scholarships (+154 options)",
@@ -332,14 +335,14 @@
       }
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "Everything you need to know",
       "q1": {
         "question": "What fees or payments are required to use MatriculaUSA?",
         "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
       },
       "q2": {
-        "question": "What is the Selection Process?",
-        "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "question": "Who can I contact if I have questions about fees or payments?",
+        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
       },
       "q3": {
         "question": "What is the Placement Fee?",
@@ -374,8 +377,8 @@
         "answer": "No. The fees are separate and paid in stages. You pay the Selection Process first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship. All are mandatory but paid at different times."
       },
       "q11": {
-        "question": "Who can I contact if I have questions about fees or payments?",
-        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+        "question": "What is the Selection Process?",
+        "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       }
     }
   },

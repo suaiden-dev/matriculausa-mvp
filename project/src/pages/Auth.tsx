@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -390,8 +390,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         !formData.email?.trim() || 
         !formData.phone?.trim() || 
         !formData.password?.trim() || 
-        !formData.confirmPassword?.trim() || 
-        formData.dependents === null
+        !formData.confirmPassword?.trim()
       );
 
       const isUniversityMissing = activeTab === 'university' && (
@@ -993,9 +992,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Form Fields Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {activeTab === 'student' ? (
-                <>
+            {activeTab === 'student' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {/* Full Name */}
                   <div className="sm:col-span-2">
                     <label htmlFor="full_name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
@@ -1073,40 +1071,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <span>{error}</span>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Dependents */}
-                  <div className="sm:col-span-2">
-                    <label htmlFor="dependents" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.dependentsLabel')}
-                    </label>
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] pointer-events-none transition-colors z-10" />
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none transition-colors z-10" />
-                      <select
-                        id="dependents"
-                        name="dependents"
-                        value={formData.dependents ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? null : parseInt(e.target.value);
-                          setFormData(prev => ({ ...prev, dependents: val }));
-                        }}
-                        className={`appearance-none relative block w-full pl-12 pr-12 py-4 bg-slate-50 border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base cursor-pointer ${
-                          error === t('authPage.messages.invalidDependents')
-                            ? 'border-red-500 focus:ring-red-500/20'
-                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
-                        }`}
-                        onBlur={() => trackFieldFilled('dependents')}
-                      >
-                        <option value="" disabled>{t('authPage.register.selectDependents')}</option>
-                        <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
-                        <option value={1}>1 {t('authPage.register.dependentsLabel').slice(0, -1)}</option>
-                        <option value={2}>2 {t('authPage.register.dependentsLabel')}</option>
-                        <option value={3}>3 {t('authPage.register.dependentsLabel')}</option>
-                        <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
-                        <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
-                      </select>
                     </div>
                   </div>
 
@@ -1249,8 +1213,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
 
-                </div>
-              </>
+              </div>
             )}
 
             {/* University Form */}
@@ -1423,9 +1386,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       </button>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
             {/* Checkboxes Area */}
             <div className="space-y-4 pt-2">

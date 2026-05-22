@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Scholarships",
-    "subtitle": "Find the perfect scholarship for your academic journey",
+    "title": "Your future in the US does not have to feel distant",
+    "subtitle": "Discover scholarships that bring you closer to American universities.",
     "searchPlaceholder": "Search scholarships...",
     "filterBy": "Filter by",
     "amount": "Amount",
@@ -314,8 +314,8 @@
   },
   "universitiesPage": {
     "header": {
-      "title": "American Universities",
-      "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+      "title": "Your next chapter begins on an American campus",
+      "subtitle": "Find opportunities to study, grow, and live an international experience."
     },
     "loginRequired": {
       "title": "Login Required",

@@ -4,7 +4,9 @@ import {
   ChevronDown,
   ArrowRight,
   CheckCircle,
-  Globe
+  Globe,
+  Compass,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
@@ -194,7 +196,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
            }}
            className="text-center mb-16"
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-6">
             {texts.title}
           </h2>
           <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
@@ -294,19 +296,13 @@ const JourneySection: React.FC<{
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative py-16 md:py-24 overflow-hidden bg-[#05294E]">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-1/4 -left-24 w-[500px] h-[500px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
-      </div>
-
+    <section ref={ref} className="relative py-16 md:py-24 overflow-hidden bg-white">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
             {t('howItWorks.journey')}
           </h2>
-          <div className="w-24 h-2 bg-[#D0151C] mx-auto rounded-full shadow-[0_0_20px_rgba(208,21,28,0.5)]"></div>
+          <div className="w-24 h-1 bg-[#D0151C] mx-auto rounded-full"></div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
@@ -314,7 +310,7 @@ const JourneySection: React.FC<{
             
             {/* Step 1 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-1/2 h-[calc(50%+2.5rem)] lg:h-[calc(50%+3rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-1/2 h-[calc(50%+2.5rem)] lg:h-[calc(50%+3rem)] bg-slate-200"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -322,16 +318,16 @@ const JourneySection: React.FC<{
                  transition={{ duration: 0.6, delay: 0.1 }}
                  className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
                   <span className="font-black text-2xl">01</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
-                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
+                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
                 <ul className="space-y-3">
                   {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
@@ -342,7 +338,7 @@ const JourneySection: React.FC<{
 
             {/* Step 2 (Fee) */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -350,31 +346,31 @@ const JourneySection: React.FC<{
                  transition={{ duration: 0.6, delay: 0.2 }}
                  className="relative flex items-center justify-between md:justify-normal w-full"
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D0151C] text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
                   <span className="font-black text-2xl">02</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight flex flex-wrap items-center gap-3">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight flex flex-wrap items-center gap-3">
                   {isLoadingFee ? (
-                    <span className="inline-block h-8 w-40 bg-white/10 rounded-lg animate-pulse"></span>
+                    <span className="inline-block h-8 w-40 bg-slate-200 rounded-lg animate-pulse"></span>
                   ) : (
                     <>
                       {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee }).replace(/\(\$[\d.]+\)/g, '').replace(/\$[\d.]+/g, '').trim()}
                     </>
                   )}
                   {hasSellerPackage && (
-                    <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
+                    <span className="text-[10px] bg-red-50 text-red-600 border border-red-100 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
                       {packageName}
                     </span>
                   )}
                 </h3>
-                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">
+                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">
                   {t('howItWorks.steps.selectionFee.description')}
                 </p>
                 <ul className="space-y-3">
                   {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#D0151C] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
@@ -385,7 +381,7 @@ const JourneySection: React.FC<{
 
             {/* Step 3 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -393,16 +389,16 @@ const JourneySection: React.FC<{
                  transition={{ duration: 0.6, delay: 0.3 }}
                  className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
                   <span className="font-black text-2xl">03</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
-                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
+                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
                 <ul className="space-y-3">
                   {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
@@ -413,7 +409,7 @@ const JourneySection: React.FC<{
 
             {/* Step 4 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -421,16 +417,16 @@ const JourneySection: React.FC<{
                  transition={{ duration: 0.6, delay: 0.4 }}
                  className="relative flex items-center justify-between md:justify-normal w-full"
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D0151C] text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
                   <span className="font-black text-2xl">04</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
-                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
+                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
                 <ul className="space-y-3">
                   {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#D0151C] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
@@ -441,7 +437,7 @@ const JourneySection: React.FC<{
 
             {/* Step 5 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-1/2 bg-gradient-to-b from-blue-500/50 to-blue-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-1/2 bg-slate-200"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -449,16 +445,16 @@ const JourneySection: React.FC<{
                  transition={{ duration: 0.6, delay: 0.5 }}
                  className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
               >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
                   <span className="font-black text-2xl">05</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
-                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
+                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
                 <ul className="space-y-3">
                   {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
@@ -502,94 +498,68 @@ const WhyUsSection: React.FC<{ t: any }> = ({ t }) => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-28">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.8 } } }}
-          >
-            <h2 className="text-5xl md:text-7xl font-black text-[#05294E] mb-8 tracking-tighter leading-[0.9] pr-6">
-              {t('howItWorks.whyUs.mainTitle').split(' ').slice(0, -1).join(' ')} <br className="md:hidden" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#05294E] via-[#D0151C] to-[#05294E]">
-                {t('howItWorks.whyUs.mainTitle').split(' ').slice(-1)}
-              </span>
-            </h2>
-            <div className="w-24 h-2.5 bg-gradient-to-r from-[#D0151C] to-red-400 mx-auto rounded-full shadow-lg shadow-red-500/20"></div>
-          </motion.div>
-        </div>
-
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
           {/* Featured Image with Premium Frame */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             animate={controls}
             variants={{ visible: { opacity: 1, x: 0, transition: { duration: 0.8, delay: 0.2 } } }}
-            className="w-full lg:w-[45%] relative"
+            className="w-full lg:w-[45%]"
           >
-            <div className="relative z-10 rounded-[4rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border-[12px] border-white bg-slate-100 flex items-center justify-center h-[500px] lg:h-[650px]">
-                <span className="text-2xl font-black text-slate-400 uppercase tracking-tighter text-center px-10">
-                  {t('howItWorks.whyUs.placeholderPhoto')}
-                </span>
+            <div className="rounded-3xl overflow-hidden shadow-lg bg-slate-100 h-[500px] lg:h-[600px]">
+              <img 
+                src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?q=80&w=1200&auto=format&fit=crop"
+                alt="MatriculaUSA Mentorship"
+                className="w-full h-full object-cover"
+              />
             </div>
-            
-            {/* Decorative Geometric Accents */}
-            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-[#D0151C] rounded-[3.5rem] -z-0 opacity-10 animate-pulse"></div>
-            <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl -z-10"></div>
           </motion.div>
 
-          {/* Advantages Grid */}
-          <div className="w-full lg:w-[55%] grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-            {[
-              { 
-                title: t('howItWorks.whyUs.smartDiscovery.title'), 
-                desc: t('howItWorks.whyUs.smartDiscovery.description'),
-                gradient: "from-blue-600 to-indigo-700"
-              },
-              { 
-                title: t('howItWorks.whyUs.documentManagement.title'), 
-                desc: t('howItWorks.whyUs.documentManagement.description'),
-                gradient: "from-red-600 to-rose-700"
-              },
-              { 
-                title: t('howItWorks.whyUs.personalSupport.title'), 
-                desc: t('howItWorks.whyUs.personalSupport.description'),
-                gradient: "from-amber-500 to-orange-700"
-              },
-              { 
-                title: t('howItWorks.whyUs.successTracking.title'), 
-                desc: t('howItWorks.whyUs.successTracking.description'),
-                gradient: "from-emerald-600 to-teal-700"
-              }
-            ].map((item, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                animate={controls}
-                variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.4 + (idx * 0.1) } } }}
-                className="relative group"
-              >
-                {/* Floating index number */}
-                <span className="absolute -top-6 -right-2 text-7xl font-black text-slate-100/60 select-none z-0 transition-colors duration-500 group-hover:text-blue-50/50 leading-none">
-                  0{idx + 1}
-                </span>
+          {/* Lado Direito: Titulo e Descrição Integrados */}
+          <div className="w-full lg:w-[55%]">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={controls}
+              variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.8 } } }}
+              className="text-left"
+            >
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-8 tracking-tighter leading-[0.95]">
+                {t('howItWorks.whyUs.mainTitle')}
+              </h2>
+              
+              <p className="text-slate-600 text-lg md:text-xl lg:text-2xl leading-relaxed font-medium">
+                {t('howItWorks.whyUs.documentManagement.description')}
+              </p>
 
-                <div className="relative z-10 bg-white/90 backdrop-blur-md p-8 lg:p-10 rounded-[2.5rem] border border-white shadow-[0_20px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-500 h-full flex flex-col overflow-hidden">
-                  <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${item.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-700`}></div>
-                  
-                  <h3 className="text-xl lg:text-2xl font-black text-[#05294E] mb-4 leading-tight group-hover:text-blue-900 transition-colors duration-300">
-                    {item.title}
-                  </h3>
-                  <p className="text-slate-500 text-base lg:text-lg leading-relaxed font-medium flex-grow">
-                    {item.desc}
-                  </p>
-                  
-                  <div className="mt-8 flex items-center gap-2">
-                     <div className={`w-6 h-1 rounded-full bg-gradient-to-r ${item.gradient}`}></div>
-                     <div className="w-1.5 h-1 rounded-full bg-slate-200"></div>
+              {/* Cards de Benefícios Pequenos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-12">
+                {/* Benefício 1: Clareza para escolher melhor */}
+                <div className="bg-slate-50/40 backdrop-blur-sm border border-slate-100 p-6 rounded-3xl hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shadow-sm">
+                    <Compass className="w-6 h-6" />
                   </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2 leading-tight">
+                    {t('howItWorks.whyUs.benefits.clarity.title')}
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                    {t('howItWorks.whyUs.benefits.clarity.description')}
+                  </p>
                 </div>
-              </motion.div>
-            ))}
+
+                {/* Benefício 2: Acompanhamento humano */}
+                <div className="bg-slate-50/40 backdrop-blur-sm border border-slate-100 p-6 rounded-3xl hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(0,0,0,0.02)] transition-all duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#D0151C] flex items-center justify-center mb-4 shadow-sm">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2 leading-tight">
+                    {t('howItWorks.whyUs.benefits.support.title')}
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                    {t('howItWorks.whyUs.benefits.support.description')}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -609,61 +579,113 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
     if (inView) controls.start('visible');
   }, [controls, inView]);
 
+  const leftFaqs = [1, 3, 5, 7, 9, 11];
+  const rightFaqs = [2, 4, 6, 8, 10];
+
   return (
-    <section ref={ref} className="py-24 bg-white">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={ref} className="py-12 sm:py-16 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
            initial={{ opacity: 0, y: 20 }}
            animate={controls}
            variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
         >
-          <h2 className="text-3xl md:text-4xl font-black mb-12 text-center text-[#05294E]">{t('howItWorks.faq.title')}</h2>
-          <div className="flex flex-col gap-5 max-w-3xl mx-auto">
-            {Array.from({ length: 11 }, (_, i) => i + 1).map((num) => (
-              <div 
-                key={num} 
-                className={`group rounded-3xl transition-all duration-500 border ${
-                  openFaq === num 
-                    ? 'bg-gradient-to-br from-white to-blue-50/30 border-blue-300 shadow-xl shadow-blue-900/5' 
-                    : 'bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5'
-                }`}
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === num ? null : num)}
-                  className="w-full text-left p-6 sm:p-7 flex items-center gap-5 group"
+          <h2 className="text-3xl md:text-4xl font-black mb-8 text-center text-slate-900">{t('howItWorks.faq.title')}</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* Coluna Esquerda */}
+            <div className="flex flex-col gap-1">
+              {leftFaqs.map((num) => (
+                <div 
+                  key={num} 
+                  className={`group transition-all duration-300 border-b border-slate-200 ${
+                    openFaq === num 
+                      ? 'bg-gradient-to-br from-white to-slate-50/30' 
+                      : ''
+                  }`}
                 >
-                  <div className="flex-1">
-                    <h3 className={`text-base sm:text-lg font-bold leading-tight transition-colors duration-500 ${
-                      openFaq === num ? 'text-blue-900' : 'text-[#05294E]'
+                  <button
+                    onClick={() => setOpenFaq(openFaq === num ? null : num)}
+                    className="w-full text-left p-4 sm:p-5 flex items-center gap-4 group focus:outline-none"
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-sm sm:text-base font-bold leading-tight text-slate-900 transition-colors duration-500">
+                        {t(`howItWorks.faq.q${num}.question`, { selectionProcessFee, scholarshipFee, i20ControlFee })}
+                      </h3>
+                    </div>
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-500 ${
+                      openFaq === num ? 'bg-slate-100 text-slate-600 rotate-180' : 'bg-slate-50 text-slate-300 group-hover:text-slate-400'
                     }`}>
-                      {t(`howItWorks.faq.q${num}.question`, { selectionProcessFee, scholarshipFee, i20ControlFee })}
-                    </h3>
-                  </div>
-                  <div className={`mt-1 flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-500 ${
-                    openFaq === num ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-50 text-slate-300 group-hover:text-slate-400'
-                  }`}>
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
-                </button>
-                <AnimatePresence>
-                  {openFaq === num && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
-                    >
-                      <div className="px-6 sm:px-7 pb-7 pt-0">
-                        <div 
-                          className="text-slate-600 text-base sm:text-lg leading-relaxed border-t border-slate-100 pt-5 pr-4 sm:pr-8 space-y-4"
-                          dangerouslySetInnerHTML={{ __html: t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee }) }} 
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {openFaq === num && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+                      >
+                        <div className="px-4 sm:px-5 pb-5 pt-0">
+                          <div 
+                            className="text-slate-600 text-sm sm:text-base leading-relaxed border-t border-slate-100 pt-3 pr-2 sm:pr-4 space-y-3"
+                            dangerouslySetInnerHTML={{ __html: t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee }) }} 
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+
+            {/* Coluna Direita */}
+            <div className="flex flex-col gap-1">
+              {rightFaqs.map((num) => (
+                <div 
+                  key={num} 
+                  className={`group transition-all duration-300 border-b border-slate-200 ${
+                    openFaq === num 
+                      ? 'bg-gradient-to-br from-white to-slate-50/30' 
+                      : ''
+                  }`}
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === num ? null : num)}
+                    className="w-full text-left p-4 sm:p-5 flex items-center gap-4 group focus:outline-none"
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-sm sm:text-base font-bold leading-tight text-slate-900 transition-colors duration-500">
+                        {t(`howItWorks.faq.q${num}.question`, { selectionProcessFee, scholarshipFee, i20ControlFee })}
+                      </h3>
+                    </div>
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-500 ${
+                      openFaq === num ? 'bg-slate-100 text-slate-600 rotate-180' : 'bg-slate-50 text-slate-300 group-hover:text-slate-400'
+                    }`}>
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {openFaq === num && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+                      >
+                        <div className="px-4 sm:px-5 pb-5 pt-0">
+                          <div 
+                            className="text-slate-600 text-sm sm:text-base leading-relaxed border-t border-slate-100 pt-3 pr-2 sm:pr-4 space-y-3"
+                            dangerouslySetInnerHTML={{ __html: t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee }) }} 
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
           </div>
         </motion.div>
       </div>

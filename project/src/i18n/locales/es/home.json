@@ -36,25 +36,25 @@
     },
     "features": {
       "whyChoose": "¿Por qué elegir MatriculaUSA?",
-      "title": "Somos la plataforma completa para su jornada americana",
-      "titleMain": "Somos la plataforma completa para su",
-      "titleHighlight": "jornada americana",
+      "title": "Tu futuro en los EE. UU. puede estar más cerca de lo que imaginas",
+      "titleMain": "Tu futuro en los EE. UU. puede estar",
+      "titleHighlight": "más cerca de lo que imaginas",
       "subtitle": "Todo lo que necesitas para tener éxito en tu camino educativo americano",
-      "successRate": {
-        "title": "95% de Tasa de Éxito",
-        "description": "Nuestra metodología y soporte especializado garantizan una de las tasas de aprobación más altas del mercado para estudiantes internacionales."
+      "opportunities": {
+        "title": "Oportunidades que abren puertas",
+        "description": "Descubre programas y becas que pueden hacer tu viaje internacional mucho más posible."
       },
-      "exclusiveScholarships": {
-        "title": "Becas Exclusivas",
-        "description": "Acceda a becas no disponibles en ningún otro lugar, con valores exclusivos para estudiantes internacionales."
+      "universities": {
+        "title": "Universidades para tu próximo capítulo",
+        "description": "Te conectamos con instituciones en los EE. UU. que coinciden con tus sueños, tus metas y tu historia."
       },
-      "personalSupport": {
-        "title": "Soporte Personal",
-        "description": "Cada duda, cada etapa, cada decisión — nuestro equipo está disponible para apoyarte en todo lo que necesites a lo largo del proceso."
+      "confidence": {
+        "title": "Un viaje con más confianza",
+        "description": "No tienes que cargar con este sueño solo. Matrícula USA camina contigo para transformar la duda en dirección."
       },
-      "fastProcess": {
-        "title": "Proceso Sencillo",
-        "description": "Proceso de solicitud sencillo, pensado para que lo gestiones todo con transparencia y tranquilidad — de principio a fin, sin complicaciones."
+      "moreThanStudy": {
+        "title": "Más que estudiar en el extranjero",
+        "description": "Se trata de vivir una nueva cultura, ampliar tu visión del mundo y construir un futuro con más posibilidades."
       }
     },
     "stats": {
@@ -129,19 +129,23 @@
       }
     },
     "threeSteps": {
-      "title": "Tu Nueva Etapa en USA Empieza Aquí",
-      "subtitle": "Proceso Simple",
+      "title": "Una experiencia que puede cambiar tu vida",
+      "subtitle": "Beneficios",
       "step1": {
-        "title": "Inicie su Proceso de Selección",
-        "description": "Realice su inscription inicial para ingresar al programa oficial. Este paso valida su elegibilidad y abre el camino a las vacantes y beneficios exclusivos en instituciones de enseñanza en los Estados Unidos."
+        "title": "Vive una nueva cultura",
+        "description": "Estudar en EE. UU. es sumergirse en un entorno internacional, donde cada experiencia fuera del aula también enseña."
       },
       "step2": {
-        "title": "Seleccione sus Universidades",
-        "description": "Defina sus prioridades académicas y elija las instituciones que mejor se adaptan a sus objetivos profesionales. Tenga acceso a información detallada para decidir dónde quiere construir su futuro."
+        "title": "Construye conexiones globales",
+        "description": "Conoce a personas de diferentes países, culturas e historias — conexiones que pueden acompañarte durante toda la vida."
       },
-      "step3": {
-        "title": "Matrícula en la Universidad",
-        "description": "Complete su admisión y asegure su cupo oficial en la universidad elegida. Con la carta de aceptación confirmada, usted finaliza el processo para iniciar su trayectoria académica internacional."
+      "step4": {
+        "title": "Gana confianza para ir más allá",
+        "description": "Cuando te das cuenta de que este sueño es posible, empiezas a ver tu vida con otros ojos."
+      },
+      "step5": {
+        "title": "Transforma la distancia en posibilidad",
+        "description": "Lo que antes parecía lejano puede convertirse en el comienzo de un nuevo viaje."
       }
     },
     "successWall": {
@@ -199,8 +203,8 @@
     }
   },
   "howItWorks": {
-    "title": "Cómo Funciona",
-    "subtitle": "Tu camino a una universidad de EE. UU., paso a paso",
+    "title": "Entre el sueño y el campus, existe un camino posible",
+    "subtitle": "Claridad para transformar el deseo en movimiento.",
     "journey": "Tu Jornada",
     "cta": {
       "start": "Comenzar Proceso Ahora"
@@ -262,7 +266,6 @@
     },
     "whyUs": {
       "mainTitle": "¿Por qué elegir MatriculaUSA?",
-      "placeholderPhoto": "Foto del Campus Aquí",
       "title": "¿Por Qué MatriculaUSA?",
       "smartDiscovery": {
         "title": "Especialistas en Transfer & COS",
@@ -332,14 +335,14 @@
       }
     },
     "faq": {
-      "title": "Preguntas Frecuentes",
+      "title": "Todo lo que necesitas saber",
       "q1": {
         "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
         "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
       },
       "q2": {
-        "question": "¿Qué es el Proceso de Selección?",
-        "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
       },
       "q3": {
         "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
@@ -374,8 +377,8 @@
         "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero el Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
       },
       "q11": {
-        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
-        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
+        "question": "¿Qué es el Proceso de Selección?",
+        "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acesso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       }
     }
   },

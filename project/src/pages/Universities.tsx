@@ -288,7 +288,7 @@ const Universities: React.FC = () => {
           <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">{t('universitiesPage.featured.subtitle')}</span>
+                <span className="text-slate-900">{t('universitiesPage.featured.subtitle')}</span>
               </h2>
             </div>
             
@@ -439,7 +439,7 @@ const Universities: React.FC = () => {
           {!isLoadingUniversities && filteredSchools.length > 0 && (
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">{t('scholarships:scholarshipsPage.allScholarships.title')}</span>
+                <span className="text-slate-900">{t('scholarships:scholarshipsPage.allScholarships.title')}</span>
               </h2>
             </div>
           )}

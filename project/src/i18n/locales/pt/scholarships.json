@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Bolsas de Estudo",
-    "subtitle": "Encontre a bolsa perfeita para sua jornada acadêmica",
+    "title": "Seu futuro nos EUA não precisa parecer distante",
+    "subtitle": "Conheça bolsas que aproximam você de universidades americanas.",
     "searchPlaceholder": "Buscar bolsas...",
     "filterBy": "Filtrar por",
     "amount": "Valor",
@@ -316,8 +316,8 @@
   },
   "universitiesPage": {
     "header": {
-      "title": "Universidades Americanas",
-      "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
+      "title": "Seu próximo capítulo começa em um campus americano",
+      "subtitle": "Encontre oportunidades para estudar, crescer e viver uma experiência internacional."
     },
     "loginRequired": {
       "title": "Login Necessário",
