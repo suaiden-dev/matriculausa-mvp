@@ -19,6 +19,7 @@ import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
+import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType } from '../../config/installmentConfig';
 import { toast } from 'react-hot-toast';
 
 // Componentes de UI Base
@@ -1415,6 +1416,76 @@ const AdminStudentDetails: React.FC = () => {
     toast.success('Parcelamento desabilitado.');
     queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
   }, [student?.user_id, profileId, queryClient]);
+
+  // Fetch active installment plans for this student (all supported fee types)
+  const [installmentPlans, setInstallmentPlans] = React.useState<Record<string, InstallmentPlan | null>>({});
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', student.user_id)
+      .eq('status', 'active')
+      .then(({ data }) => {
+        const map: Record<string, InstallmentPlan | null> = {};
+        (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
+        (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+        setInstallmentPlans(map);
+      });
+  }, [student?.user_id]);
+
+  const handleSetInstallmentPlan = useCallback(async (feeType: SupportedInstallmentFeeType, totalInstallments: number | null) => {
+    if (!student?.user_id) return;
+
+    if (totalInstallments === null) {
+      // Cancel active plan
+      const { error } = await supabase
+        .from('fee_installment_plans')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('user_id', student.user_id)
+        .eq('fee_type', feeType)
+        .eq('status', 'active');
+      if (error) throw error;
+      // Mirror: disable legacy placement_fee fields
+      if (feeType === 'placement_fee') {
+        await supabase.from('user_profiles').update({ placement_fee_installment_enabled: false }).eq('user_id', student.user_id);
+      }
+      toast.success('Installment plan cancelled.');
+    } else {
+      // Create new plan
+      const totalAmount = getFeeAmount(feeType === 'placement_fee' ? 'placement' : feeType);
+      const { error } = await supabase
+        .from('fee_installment_plans')
+        .insert({
+          user_id: student.user_id,
+          fee_type: feeType,
+          total_amount: totalAmount,
+          total_installments: totalInstallments,
+          installments_paid: 0,
+          amount_paid: 0,
+          status: 'active',
+        });
+      if (error) throw error;
+      // Mirror: enable legacy placement_fee fields for backward compat
+      if (feeType === 'placement_fee') {
+        await supabase.from('user_profiles').update({ placement_fee_installment_enabled: true }).eq('user_id', student.user_id);
+      }
+      toast.success(`${totalInstallments}× installment plan created.`);
+    }
+
+    // Refresh installment plans
+    const { data } = await supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', student.user_id)
+      .eq('status', 'active');
+    const map: Record<string, InstallmentPlan | null> = {};
+    (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
+    (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+    setInstallmentPlans(map);
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+  }, [student?.user_id, profileId, queryClient, getFeeAmount]);
 
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
@@ -3930,6 +4001,8 @@ const AdminStudentDetails: React.FC = () => {
                 overridesRefreshKey={overridesRefreshKey}
                 onEnableInstallment={handleEnableInstallment}
                 onDisableInstallment={handleDisableInstallment}
+                onSetInstallmentPlan={handleSetInstallmentPlan}
+                installmentPlans={installmentPlans}
                 onToggleVisaStatus={async () => {
                   if (!student) return;
                   const newValue = !student.visa_transfer_active;

@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
 
 const supabase = createClient(
 // @ts-ignore
@@ -1570,22 +1571,43 @@ Deno.serve(async (req: Request) => {
         case "placement":
           console.log("[parcelow-webhook] 🔄 Processando placement_fee...");
 
+          // Resolver installment plan (novo sistema dinâmico)
+          // Parcelow não retorna metadata → metadataNum = null → usa installments_paid do plano
+          const placementPaymentDate = new Date().toISOString();
+          const { installmentNumber: placementInstallmentNum, plan: placementPlan } =
+            await resolveInstallmentNumber(supabase, userId, "placement_fee", null);
+
+          let placementIsFullyPaid = true;
+          let placementRemainingAmount = 0;
+
+          if (placementPlan) {
+            const placementResult = await recordInstallmentPayment(
+              supabase, placementPlan, netAmount, placementPaymentDate,
+            );
+            placementIsFullyPaid = placementResult.isFullyPaid;
+            placementRemainingAmount = placementResult.remainingAmount;
+            console.log(
+              `[parcelow-webhook] 📦 Installment ${placementInstallmentNum} of ${placementPlan.total_installments}`,
+              placementIsFullyPaid ? "— Plan COMPLETED" : `— $${placementRemainingAmount} remaining`,
+            );
+
+            // Linkar individual_fee_payment ao plano
+            if (payment?.id) {
+              await linkPaymentToPlan(supabase, payment.id, placementPlan.id);
+            }
+          }
+
           const placementUpdateFields: Record<string, unknown> = {
             is_placement_fee_paid: true,
             placement_fee_payment_method: "parcelow",
+            ...buildLegacyProfileMirror(
+              "placement_fee",
+              placementInstallmentNum,
+              placementPlan?.total_installments ?? 1,
+              placementRemainingAmount,
+              placementIsFullyPaid,
+            ),
           };
-          if (userProfile.placement_fee_installment_enabled) {
-            // Se installment_number já é 1, este pagamento é a 2ª parcela
-            const isSecondInstallment = (userProfile as any).placement_fee_installment_number === 1;
-            if (isSecondInstallment) {
-              placementUpdateFields.placement_fee_pending_balance = 0;
-              placementUpdateFields.placement_fee_installment_number = 2;
-              console.log("[parcelow-webhook] 📦 2ª parcela do placement fee detectada — zerando saldo pendente");
-            } else {
-              placementUpdateFields.placement_fee_pending_balance = netAmount;
-              placementUpdateFields.placement_fee_installment_number = 1;
-            }
-          }
 
           const { error: placementUpdateError } = await supabase
             .from("user_profiles")

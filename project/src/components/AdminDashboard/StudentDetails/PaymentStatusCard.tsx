@@ -3,6 +3,7 @@ import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle } from 'l
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
+import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType } from '../../../config/installmentConfig';
 
 interface PaymentStatusCardProps {
   student: StudentRecord;
@@ -31,8 +32,12 @@ interface PaymentStatusCardProps {
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
   overridesRefreshKey?: number;
+  /** @deprecated use onSetInstallmentPlan */
   onEnableInstallment?: () => Promise<void>;
+  /** @deprecated use onSetInstallmentPlan */
   onDisableInstallment?: () => Promise<void>;
+  onSetInstallmentPlan?: (feeType: SupportedInstallmentFeeType, totalInstallments: number | null) => Promise<void>;
+  installmentPlans?: Record<string, InstallmentPlan | null>;
   onToggleVisaStatus?: () => Promise<void>;
   hideSelectionFee?: boolean;
 }
@@ -64,6 +69,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onMarkAsPaid,
     onEnableInstallment,
     onDisableInstallment,
+    onSetInstallmentPlan,
+    installmentPlans = {},
     onEditPaymentMethod,
     onUpdatePaymentMethod,
     onCancelPaymentMethod,
@@ -715,40 +722,66 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   <span>Mark as Paid</span>
                                 </button>
                               )}
-                              {/* Toggle de parcelamento */}
-                              {onEnableInstallment && onDisableInstallment && (
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-semibold text-slate-600">Split in 2× installments</span>
-                                  <button
-                                    onClick={async () => {
-                                      setSavingInstallment(true);
-                                      try {
-                                        if (installmentEnabled) {
-                                          await onDisableInstallment();
-                                        } else {
-                                          await onEnableInstallment();
-                                        }
-                                      } finally {
-                                        setSavingInstallment(false);
-                                      }
-                                    }}
-                                    disabled={savingInstallment}
-                                    title={installmentEnabled ? 'Disable installment split' : 'Enable installment split — student pays 50% now and 50% later'}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
-                                      installmentEnabled ? 'bg-amber-500' : 'bg-slate-300'
-                                    }`}
-                                  >
-                                    <span
-                                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                                        installmentEnabled ? 'translate-x-6' : 'translate-x-1'
-                                      }`}
-                                    />
-                                  </button>
-                                  <span className={`text-xs font-bold ${installmentEnabled ? 'text-amber-600' : 'text-slate-400'}`}>
-                                    {savingInstallment ? '...' : installmentEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </div>
-                              )}
+                              {/* Seletor de parcelamento dinâmico */}
+                              {onSetInstallmentPlan && (() => {
+                                const activePlan = installmentPlans?.['placement_fee'] ?? null;
+                                const options = INSTALLMENT_CONFIG.INSTALLMENT_OPTIONS.placement_fee;
+                                return (
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-xs font-semibold text-slate-600">Installment plan</span>
+                                    {activePlan && activePlan.status === 'active' ? (
+                                      <div className="flex flex-col gap-1">
+                                        {/* Progresso do plano ativo */}
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                            {activePlan.installments_paid}/{activePlan.total_installments} paid
+                                          </span>
+                                          <span className="text-xs text-slate-500">
+                                            ${Math.max(0, activePlan.total_amount - activePlan.amount_paid).toFixed(0)} remaining
+                                          </span>
+                                        </div>
+                                        {/* Barra de progresso */}
+                                        <div className="w-32 bg-slate-200 rounded-full h-1.5">
+                                          <div
+                                            className="bg-amber-500 h-1.5 rounded-full transition-all"
+                                            style={{ width: `${(activePlan.installments_paid / activePlan.total_installments) * 100}%` }}
+                                          />
+                                        </div>
+                                        <button
+                                          onClick={async () => {
+                                            if (!confirm('Cancel this installment plan? The student will need a new plan to continue paying in installments.')) return;
+                                            setSavingInstallment(true);
+                                            try { await onSetInstallmentPlan('placement_fee', null); }
+                                            finally { setSavingInstallment(false); }
+                                          }}
+                                          disabled={savingInstallment}
+                                          className="text-xs text-red-500 hover:text-red-700 underline w-fit disabled:opacity-50"
+                                        >
+                                          {savingInstallment ? 'Saving...' : 'Cancel plan'}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-slate-400 italic">No plan</span>
+                                        {options.map((n) => (
+                                          <button
+                                            key={n}
+                                            onClick={async () => {
+                                              setSavingInstallment(true);
+                                              try { await onSetInstallmentPlan('placement_fee', n); }
+                                              finally { setSavingInstallment(false); }
+                                            }}
+                                            disabled={savingInstallment}
+                                            className="text-xs px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md font-semibold disabled:opacity-50 transition-colors"
+                                          >
+                                            {savingInstallment ? '...' : `${n}×`}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })()}

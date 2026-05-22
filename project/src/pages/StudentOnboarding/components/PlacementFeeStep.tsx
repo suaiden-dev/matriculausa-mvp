@@ -18,6 +18,7 @@ import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { getPlacementFee, formatPlacementFee } from '../../../utils/placementFeeCalculator';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
+import { computeInstallmentAmounts, InstallmentPlan } from '../../../config/installmentConfig';
 
 interface ApplicationWithScholarship {
     id: string;
@@ -108,8 +109,22 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
     const isAlreadyPaid = !!(userProfile as any)?.is_placement_fee_paid;
 
-    // Parcelamento habilitado pelo admin
-    const installmentEnabled = !!(userProfile as any)?.placement_fee_installment_enabled;
+    // Plano de parcelamento ativo (novo sistema dinâmico)
+    const [activePlan, setActivePlan] = useState<InstallmentPlan | null>(null);
+    useEffect(() => {
+        if (!userProfile?.user_id) return;
+        supabase
+            .from('fee_installment_plans')
+            .select('*')
+            .eq('user_id', userProfile.user_id)
+            .eq('fee_type', 'placement_fee')
+            .eq('status', 'active')
+            .maybeSingle()
+            .then(({ data }) => setActivePlan(data ?? null));
+    }, [userProfile?.user_id]);
+
+    // Backward compat: also accept legacy flag if no plan found yet
+    const installmentEnabled = !!activePlan || !!(userProfile as any)?.placement_fee_installment_enabled;
 
     const fetchApplications = useCallback(async () => {
         if (!userProfile?.id) return;
@@ -258,8 +273,11 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 : (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                     ? couponValidation.finalAmount
                     : fullAmount;
-            // Se installment ativo, cobrar apenas 50% agora
-            const finalAmount = installmentEnabled ? Math.ceil(baseFinalAmount / 2 * 100) / 100 : baseFinalAmount;
+            // Se installment ativo, cobrar a 1ª parcela (dividir igualmente entre N parcelas)
+            const totalInstallments = activePlan?.total_installments ?? 2;
+            const finalAmount = installmentEnabled
+                ? computeInstallmentAmounts(baseFinalAmount, totalInstallments)[0]
+                : baseFinalAmount;
 
             const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
                 ? promotionalCoupon.trim().toUpperCase()
@@ -291,7 +309,13 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         exchange_rate: exchangeRate.toString(),
                         // final_amount = valor com desconto do cupom (ou valor cheio se sem cupom)
                         final_amount: finalAmount.toString(),
-                        promotional_coupon: appliedCoupon
+                        promotional_coupon: appliedCoupon,
+                        // Installment metadata (empty string = no plan = single payment)
+                        ...(installmentEnabled ? {
+                            installment_number: '1',
+                            total_installments: String(totalInstallments),
+                            is_installment: 'true',
+                        } : {}),
                     },
                     ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
                     payment_type: 'placement_fee',
