@@ -620,9 +620,14 @@ export async function getRealPaidAmounts(
           : null;
 
       if (feeTypeKey) {
-        // Usar o primeiro registro por fee_type (query já ordena por mais recente primeiro)
-        if (!(feeTypeKey in amounts)) {
-          amounts[feeTypeKey] = amountUSD;
+        if (feeTypeKey === 'placement') {
+          // Placement fee pode ter 2 parcelas — somar todos os registros
+          amounts[feeTypeKey] = (amounts[feeTypeKey] || 0) + amountUSD;
+        } else {
+          // Outras taxas: usar apenas o primeiro (mais recente) registro
+          if (!(feeTypeKey in amounts)) {
+            amounts[feeTypeKey] = amountUSD;
+          }
         }
       }
     }

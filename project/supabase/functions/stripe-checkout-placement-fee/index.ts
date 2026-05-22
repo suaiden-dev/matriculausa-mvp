@@ -170,7 +170,7 @@ Deno.serve(async (req: Request) => {
         await supabase.rpc("log_student_action", {
           p_student_id: userProfile.id,
           p_action_type: "checkout_session_created",
-          p_action_description: `Stripe checkout session created for Placement Fee (${session.id})`,
+          p_action_description: `Stripe checkout session created for Placement Fee${metadata?.installment_number === '2' ? ' — 2nd Installment' : ''} (${session.id})`,
           p_performed_by: user.id,
           p_performed_by_type: "student",
           p_metadata: { fee_type: "placement_fee", payment_method: "stripe", session_id: session.id, amount: explicitAmount },
