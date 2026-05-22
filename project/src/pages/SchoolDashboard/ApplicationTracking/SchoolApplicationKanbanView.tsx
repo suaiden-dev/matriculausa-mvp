@@ -6,7 +6,7 @@ import {
   getStepStatus,
   ApplicationFlowStageKey
 } from '../../../utils/applicationFlowStages';
-import { StudentRecord } from '../../../components/AdminDashboard/StudentApplicationsView';
+import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import { UserX, RefreshCw } from 'lucide-react';
 
 interface SchoolApplicationKanbanViewProps {
@@ -183,7 +183,6 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
                   students={studentsInStage}
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
-                  internalAdmins={[]}
                   showSelectionTags={false}
                 />
               </div>
@@ -204,7 +203,6 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
               students={droppedStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
-              internalAdmins={[]}
               isDropped
             />
           </div>
