@@ -602,11 +602,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             return formatFeeAmount(2100, true);
                           }
 
-                          // Not paid: show half if installment enabled (representing the 1st installment due), otherwise total
+                          // Not paid: always show the full total fee
                           const total = calcTotalFee();
                           if (total != null) {
-                            const displayAmount = student?.placement_fee_installment_enabled ? total / 2 : total;
-                            return formatFeeAmount(displayAmount, true);
+                            return formatFeeAmount(total, true);
                           }
                           return 'N/A';
                         })()}
@@ -686,9 +685,21 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center flex-wrap gap-2">
                           <XCircle className="h-5 w-5 text-red-600" />
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
+                          {!!(student as any).placement_fee_installment_enabled && (() => {
+                            const apps = student.all_applications || [];
+                            const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved') || apps[0];
+                            const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                            const total = Number((student as any).placement_fee_amount || sch?.placement_fee_amount || 0);
+                            const half = total > 0 ? formatFeeAmount(total / 2, true) : '50%';
+                            return (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                2× installments — {half} now · {half} later
+                              </span>
+                            );
+                          })()}
                         </div>
                         {isPlatformAdmin && (() => {
                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
@@ -707,7 +718,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                               {/* Toggle de parcelamento */}
                               {onEnableInstallment && onDisableInstallment && (
                                 <div className="flex items-center gap-3">
-                                  <span className="text-xs font-semibold text-slate-600">Installment (50%)</span>
+                                  <span className="text-xs font-semibold text-slate-600">Split in 2× installments</span>
                                   <button
                                     onClick={async () => {
                                       setSavingInstallment(true);
@@ -722,7 +733,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                       }
                                     }}
                                     disabled={savingInstallment}
-                                    title={installmentEnabled ? 'Desabilitar parcelamento' : 'Habilitar parcelamento — aluno paga 50% agora e 50% em 30 dias'}
+                                    title={installmentEnabled ? 'Disable installment split' : 'Enable installment split — student pays 50% now and 50% later'}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
                                       installmentEnabled ? 'bg-amber-500' : 'bg-slate-300'
                                     }`}

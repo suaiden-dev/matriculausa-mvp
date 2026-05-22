@@ -206,13 +206,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     if (!email) return false;
     if (!shouldFilter) return false; // Em desenvolvimento, não excluir
 
-    // Se o próprio usuário logado for um usuário de teste, ou se for Admin/School, permitir ver outros usuários de teste
-    if (
-      userProfile?.email?.toLowerCase().endsWith('@uorak.com') ||
-      userProfile?.role === 'admin' ||
-      userProfile?.role === 'school' ||
-      userProfile?.role === 'affiliate_admin'
-    ) {
+    // Nunca excluir o próprio usuário logado se for @uorak.com
+    if (userProfile?.email?.toLowerCase().endsWith('@uorak.com')) {
       return false;
     }
 

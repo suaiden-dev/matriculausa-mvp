@@ -1283,7 +1283,7 @@ Deno.serve(async (req: Request) => {
       // 4.1. Buscar perfil do usuário
       const { data: userProfile, error: profileFetchError } = await supabase
         .from("user_profiles")
-        .select("id, full_name, email, seller_referral_code")
+        .select("id, full_name, email, seller_referral_code, placement_fee_installment_enabled, placement_fee_installment_number, placement_fee_pending_balance")
         .eq("user_id", userId)
         .single();
 
@@ -1575,8 +1575,16 @@ Deno.serve(async (req: Request) => {
             placement_fee_payment_method: "parcelow",
           };
           if (userProfile.placement_fee_installment_enabled) {
-            placementUpdateFields.placement_fee_pending_balance = netAmount;
-            placementUpdateFields.placement_fee_installment_number = 1;
+            // Se installment_number já é 1, este pagamento é a 2ª parcela
+            const isSecondInstallment = (userProfile as any).placement_fee_installment_number === 1;
+            if (isSecondInstallment) {
+              placementUpdateFields.placement_fee_pending_balance = 0;
+              placementUpdateFields.placement_fee_installment_number = 2;
+              console.log("[parcelow-webhook] 📦 2ª parcela do placement fee detectada — zerando saldo pendente");
+            } else {
+              placementUpdateFields.placement_fee_pending_balance = netAmount;
+              placementUpdateFields.placement_fee_installment_number = 1;
+            }
           }
 
           const { error: placementUpdateError } = await supabase

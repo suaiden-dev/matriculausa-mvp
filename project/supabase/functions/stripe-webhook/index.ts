@@ -623,7 +623,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           p_student_id: userProfile.id,
           p_action_type: "checkout_session_processed",
           p_action_description:
-            `Checkout session processing started: ${sessionId}`,
+            `Checkout session processing started${metadata?.fee_type === 'placement_fee' && metadata?.installment_number === '2' ? ' — Placement Fee 2nd Installment' : ''}: ${sessionId}`,
           p_performed_by: userId,
           p_performed_by_type: "student",
           p_metadata: {
@@ -1388,19 +1388,25 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
     const userId = metadata?.user_id || metadata?.student_id;
     if (userId) {
       const placementPaymentMethod = metadata?.payment_method || "stripe";
-      const { error } = await supabase.from("user_profiles").update({
+      const installmentNumber = parseInt(metadata?.installment_number || '1');
+      const placementBaseUpdate: Record<string, unknown> = {
         is_placement_fee_paid: true,
         placement_fee_paid_at: new Date().toISOString(),
         placement_fee_payment_method: placementPaymentMethod,
         last_payment_date: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }).eq("user_id", userId);
-      
+      };
+      if (installmentNumber === 2) {
+        placementBaseUpdate.placement_fee_pending_balance = 0;
+        placementBaseUpdate.placement_fee_installment_number = 2;
+      }
+      const { error } = await supabase.from("user_profiles").update(placementBaseUpdate).eq("user_id", userId);
+
       if (error) {
         console.error("[stripe-webhook] Error updating placement fee status:", error);
       } else {
         console.log(
-          "[stripe-webhook] Placement fee payment processed successfully for user:",
+          `[stripe-webhook] Placement fee payment processed (installment ${installmentNumber}) for user:`,
           userId,
         );
       }
