@@ -466,6 +466,10 @@ function getRawStepStatus(
       return 'pending';
 
     case 'enrollment':
+      // Transfer students must complete SEVIS before being considered enrolled
+      if (student.student_process_type === 'transfer' && !student.sevis_transfer_completed) {
+        return 'pending';
+      }
       return student.application_status === 'enrolled' ? 'completed' : 'pending';
 
     default:
@@ -487,8 +491,15 @@ export function getStepStatus(
   }
 
   // 2. Se o status da matrícula for 'enrolled', todas as etapas ativas são marcadas como 'completed'
+  // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
   if (student.application_status === 'enrolled') {
-    return 'completed';
+    const isTransferPendingSevis =
+      student.student_process_type === 'transfer' &&
+      !student.sevis_transfer_completed &&
+      (step === 'sevis_transfer' || step === 'student_sends_letter');
+    if (!isTransferPendingSevis) {
+      return 'completed';
+    }
   }
 
   // 3. Obter a ordem das etapas a partir do array oficial do fluxo
@@ -536,7 +547,10 @@ export function getCurrentStage(student: StudentRecord): {
 } {
   // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
   // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
-  if (student.application_status === 'enrolled') {
+  // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+  const isTransferPendingSevis =
+    student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+  if (student.application_status === 'enrolled' && !isTransferPendingSevis) {
     return { stage: 'enrollment', status: 'completed' };
   }
 

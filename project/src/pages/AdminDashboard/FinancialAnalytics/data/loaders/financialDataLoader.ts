@@ -480,7 +480,7 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
     applicationsRaw,
     zellePaymentsRaw,
     allStudentsRaw,
-    individualFeePayments
+    individualFeePaymentsRaw
   ] = await Promise.all([
     loadApplications(),
     loadZellePayments(),
@@ -490,7 +490,7 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
   const filterActive = shouldFilter();
-  
+
   const applications = filterActive
     ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
     : applicationsRaw;
@@ -502,6 +502,18 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
   const allStudents = filterActive
     ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
     : allStudentsRaw;
+
+  // Filtrar individualFeePayments excluindo @uorak.com via set de user_ids excluídos
+  const excludedUserIds = filterActive
+    ? new Set(allStudentsRaw
+        .filter((student: any) => shouldExcludeStudent(student.email))
+        .map((student: any) => student.user_id)
+        .filter(Boolean))
+    : new Set();
+
+  const individualFeePayments = filterActive
+    ? individualFeePaymentsRaw.filter((p: any) => !excludedUserIds.has(p.user_id))
+    : individualFeePaymentsRaw;
 
   // Carregar usuários Stripe (depende de applications já filtradas)
   const stripeUsersRaw = await loadStripeUsers(applications);
