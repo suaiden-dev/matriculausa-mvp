@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Star, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
+import { ArrowRight, Star, ChevronLeft, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
@@ -273,76 +273,84 @@ const Home: React.FC = () => {
     <>
       <SEOHead />
       <div className="bg-white">
-        {/* Split Hero Section */}
-        <section className="relative flex flex-col lg:block lg:h-[768px] overflow-hidden bg-white">
+        <section className="relative flex flex-col lg:block lg:h-[600px] overflow-hidden bg-white">
           {/* Background Image Layer — right side only */}
-          <div className="relative h-[350px] sm:h-[450px] lg:absolute lg:inset-0 lg:z-0 lg:h-full flex justify-end">
-            <img 
-              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/new_hero_large_matriculausa.webp" 
-              alt="Estudante rumo aos EUA"
-              className="w-full h-full object-cover object-[86.2%_center] lg:object-right"
-            />
+          <div className="relative h-[500px] sm:h-[550px] lg:absolute lg:inset-0 lg:z-0 lg:h-full flex justify-end order-2 lg:order-none">
+            {/* Soft white gradient at the top of the mobile image */}
+            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white via-white/30 to-transparent z-10 lg:hidden pointer-events-none" />
+
+            <picture className="w-full h-full">
+              <source 
+                srcSet="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/new_hero_large_matriculausa.webp" 
+                media="(min-width: 1024px)" 
+              />
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/new_hero_matriculausa_mobile.webp" 
+                alt="Estudante rumo aos EUA"
+                className="w-full h-full object-cover object-[86.2%_bottom] lg:object-right"
+              />
+            </picture>
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 w-full lg:h-full lg:flex lg:items-center">
-            <div className="max-w-4xl lg:mr-auto">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full lg:h-full lg:flex lg:items-center order-1 lg:order-none">
+            <div className="max-w-3xl lg:mr-auto">
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8 }}
                 className="text-center lg:text-left"
               >
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight text-[#05294E] tracking-tight">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black mb-4 leading-tight text-[#05294E] tracking-tight">
                   {t('home.hero.title')}
                 </h1>
                 
-                <p className="text-xl lg:text-2xl mb-12 text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mr-auto lg:ml-0 font-medium">
+                <p className="text-lg lg:text-xl mb-8 text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mr-auto lg:ml-0 font-medium">
                   {t('home.hero.description')}
                 </p>
                 
-                <div className="flex flex-col sm:flex-row gap-6 mb-12 justify-center lg:justify-start">
+                <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-center lg:justify-start">
                   {/* Dynamic CTA Logic */}
                   {!isAuthenticated ? (
                     <>
                       <Link
                         to={`/register${location.search}`}
-                        className="group bg-[#D0151C] hover:bg-[#b01218] text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center border-0"
+                        className="group bg-[#D0151C] hover:bg-[#b01218] text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-[0_15px_30px_rgba(208,21,28,0.25)] hover:shadow-[0_20px_40px_rgba(208,21,28,0.35)] hover:-translate-y-0.5 flex items-center justify-center border-0"
                       >
                         {t('home.hero.cta')}
-                        <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     </>
                   ) : (
                     <>
                       {user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee ? (
                         hasPendingSelectionProcessPayment ? (
-                          <div className="group bg-amber-500/20 backdrop-blur-md border-2 border-amber-500/40 rounded-2xl p-6 flex flex-col items-center sm:items-start">
-                            <div className="flex items-center mb-2">
-                              <Clock className="h-6 w-6 text-amber-400 mr-2 animate-spin" />
-                              <span className="text-xl font-bold text-white">
+                          <div className="group bg-amber-500/20 backdrop-blur-md border-2 border-amber-500/40 rounded-xl p-4.5 flex flex-col items-center sm:items-start">
+                            <div className="flex items-center mb-1.5">
+                              <Clock className="h-5 w-5 text-amber-400 mr-2 animate-spin" />
+                              <span className="text-lg font-bold text-white">
                                 {t('nav.processingZellePayment')}
                               </span>
                             </div>
-                            <p className="text-sm text-amber-100">
+                            <p className="text-xs text-amber-100">
                               {t('nav.zellePaymentPending')}
                             </p>
                           </div>
                         ) : (
                           <Link
                             to="/student/onboarding?step=selection_fee"
-                            className="group bg-blue-600 hover:bg-blue-700 text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
+                            className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
                           >
                             {t('nav.startSelectionProcess')}
-                            <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                           </Link>
                         )
                       ) : (
                         <Link
                           to={getDashboardPath()}
-                          className="group bg-[#05294E] hover:bg-[#02172B] text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
+                          className="group bg-[#05294E] hover:bg-[#02172B] text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
                         >
                           {t('nav.goToDashboard')}
-                          <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
                       )}
                       
@@ -351,15 +359,54 @@ const Home: React.FC = () => {
                           onClick={goToMatriculaRewards}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="group bg-gradient-to-r from-slate-900 to-slate-700 text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-2xl flex items-center justify-center gap-3 border border-white/20"
+                          className="group bg-gradient-to-r from-slate-900 to-slate-700 text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-2xl flex items-center justify-center gap-2.5 border border-white/20"
                         >
-                          <Gift className="h-6 w-6 text-yellow-400" />
+                          <Gift className="h-5 w-5 text-yellow-400" />
                           {t('matriculaRewards.visitRewardsStore')}
-                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                         </motion.button>
                       )}
                     </>
                   )}
+                </div>
+
+                {/* Trust Indicators / Social Proof */}
+                <div className="flex flex-col gap-3.5 items-center lg:items-start">
+                  {/* Student Avatars + Enrolled Text */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex -space-x-2.5 overflow-hidden">
+                      <img 
+                        className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover" 
+                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" 
+                        alt="Student Avatar 1" 
+                      />
+                      <img 
+                        className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover" 
+                        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" 
+                        alt="Student Avatar 2" 
+                      />
+                      <img 
+                        className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover" 
+                        src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" 
+                        alt="Student Avatar 3" 
+                      />
+                    </div>
+                    <span className="text-[#05294E]/80 font-semibold text-sm sm:text-base leading-none">
+                      {t('home.cta.badge', { students: t('home.trustIndicators.studentsEnrolled') })}
+                    </span>
+                  </div>
+
+                  {/* Stars + Rating Text */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <span className="text-[#05294E]/90 font-bold text-sm sm:text-base leading-none">
+                      {t('home.trustIndicators.rating')}
+                    </span>
+                  </div>
                 </div>
 
               </motion.div>
@@ -763,23 +810,25 @@ const Home: React.FC = () => {
               )}
             </div>
 
-            {/* 75+ Universities Indicator */}
-            <div className="flex justify-center mt-12">
-              <div className="inline-flex items-center px-6 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600 font-bold text-sm shadow-sm">
-                75+ Universidades Parceiras
-              </div>
-            </div>
-
-            {/* Call to Action Button - Moved below grid */}
-            <div className="text-center pt-16">
+            {/* Integrated Universities CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5 }}
+              className="mt-14 flex justify-center"
+            >
               <Link
                 to="/schools"
-                className="group inline-flex items-center bg-[#05294E] text-white px-12 py-5 rounded-2xl text-xl font-bold hover:bg-[#02172B] transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                aria-label="Ver todas as universidades parceiras"
+                className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-slate-700 font-extrabold text-sm sm:text-base tracking-wide hover:text-[#05294E] hover:shadow-[0_10px_30px_rgba(5,41,78,0.06)] hover:-translate-y-0.5 transition-all duration-300"
               >
-                Ver Todas as Universidades
-                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                <span>Conheça +75 universidades parceiras</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#05294E]/5 text-[#05294E] transition-all duration-300 group-hover:bg-[#05294E] group-hover:text-white">
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                </span>
               </Link>
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -790,8 +839,8 @@ const Home: React.FC = () => {
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="flex flex-col lg:flex-row gap-16 items-center">
-              {/* Image Column */}
-              <div className="w-full lg:w-1/2 order-2 lg:order-1">
+              {/* Image Column (Desktop) */}
+              <div className="w-full lg:w-1/2 order-2 lg:order-1 hidden lg:block">
                 <div className="relative">
                   {/* Modern geometric decorations */}
                   <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
@@ -816,10 +865,33 @@ const Home: React.FC = () => {
               {/* Content Column */}
               <div className="w-full lg:w-1/2 order-1 lg:order-2">
                 <div className="max-w-xl">
-                    <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-8 leading-tight">
-                      {t('home.features.titleMain')} <span className="text-[#05294E]">{t('home.features.titleHighlight')}</span>
-                    </h2>
-                  
+                  <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-8 leading-tight">
+                    {t('home.features.titleMain')} <span className="text-[#05294E]">{t('home.features.titleHighlight')}</span>
+                  </h2>
+
+                  {/* Mobile-only Image (positioned below title and above the 3 items) */}
+                  <div className="block lg:hidden mb-8">
+                    <div className="relative">
+                      {/* Modern geometric decorations */}
+                      <div className="absolute -top-6 -left-6 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+                      <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+                      
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                        className="relative z-10"
+                      >
+                        <img
+                          src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-students-talking-campus-stairs.webp"
+                          alt="Students on campus"
+                          className="rounded-3xl shadow-2xl w-full object-cover aspect-[16/10]"
+                        />
+                      </motion.div>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col gap-6">
                     {/* Featured Item: Exclusive Scholarships */}
                     <motion.div
@@ -975,139 +1047,13 @@ const Home: React.FC = () => {
         </section>
 
         {/* Success Wall */}
-        <section className="py-24 bg-gradient-to-br from-slate-50 to-blue-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            {/* Header */}
-            <div className="text-center mb-12">
-
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
-                {t('home.successWall.title.part1')}{' '}
-                <em className="text-[#D0151C] not-italic font-black">
-                  {t('home.successWall.title.highlight')}
-                </em>
-              </h2>
-              <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
-                {t('home.successWall.subtitle')}
-              </p>
-            </div>
-
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {[
-                { num: '+1.200', label: t('home.successWall.stats.enrolled') },
-                { num: '98%',    label: t('home.successWall.stats.approval') },
-                { num: '47',     label: t('home.successWall.stats.universities') },
-              ].map((s) => (
-                <div key={s.num} className="bg-white border border-slate-200 rounded-full px-5 py-2 text-center shadow-sm">
-                  <span className="block text-lg font-bold text-[#05294E]">{s.num}</span>
-                  <span className="text-xs text-slate-400">{s.label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Masonry Grid */}
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-5">
-
-              {/* Card — Foto com imagem real */}
-              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300 group">
-                <div className="h-48 bg-blue-50 flex items-center justify-center relative">
-                  <img
-                    src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"
-                    alt={t('home.successWall.card1.author')}
-                    className="w-20 h-20 rounded-2xl object-cover shadow-lg border-4 border-white"
-                  />
-                  <span className="absolute bottom-2 text-xs font-bold text-slate-400 bg-white/90 px-3 py-1 rounded-full uppercase tracking-wider">
-                    {t('home.successWall.photoLabel')}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-3 py-1 rounded-full mb-3">
-                    {t('home.successWall.tagPhoto')}
-                  </span>
-                  <p className="text-slate-600 text-sm leading-relaxed italic mb-4">
-                    "{t('home.successWall.card1.text')}"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
-                      alt=""
-                      className="w-9 h-9 rounded-xl object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card1.author')}</p>
-                      <p className="text-xs font-semibold text-[#05294E]">{t('home.successWall.card1.field')}</p>
-                    </div>
-                    <div className="ml-auto flex gap-0.5">
-                      {[1,2,3,4,5].map(s => <Star key={s} className="w-3 h-3 text-yellow-400 fill-current" />)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card — Vídeo */}
-              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300">
-                <div className="h-40 bg-rose-50 flex flex-col items-center justify-center gap-2 relative">
-                  <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md">
-                    <svg className="w-5 h-5 text-[#D0151C] ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    {t('home.successWall.videoLabel')}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-red-100 text-red-800 px-3 py-1 rounded-full mb-3">
-                    {t('home.successWall.tagVideo')}
-                  </span>
-                  <p className="text-slate-600 text-sm leading-relaxed italic mb-4">
-                    "{t('home.successWall.card2.text')}"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
-                      alt=""
-                      className="w-9 h-9 rounded-xl object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card2.author')}</p>
-                      <p className="text-xs font-semibold text-[#D0151C]">{t('home.successWall.card2.field')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card — Depoimento puro */}
-              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300">
-                <div className="p-6">
-                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full mb-4">
-                    {t('home.successWall.tagTestimonial')}
-                  </span>
-                  <p className="text-slate-700 text-base leading-relaxed italic mb-5">
-                    "{t('home.successWall.card3.text')}"
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
-                      alt=""
-                      className="w-9 h-9 rounded-xl object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card3.author')}</p>
-                      <p className="text-xs font-semibold text-green-600">{t('home.successWall.card3.field')}</p>
-                    </div>
-                    <div className="ml-auto flex gap-0.5">
-                      {[1,2,3,4,5].map(s => <Star key={s} className="w-3 h-3 text-yellow-400 fill-current" />)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        </section>
+        <SocialProofSection onCTAClick={() => {
+          if (isAuthenticated) {
+            navigate('/student/dashboard/scholarships');
+          } else {
+            navigate('/selection-fee-registration');
+          }
+        }} />
 
         {/* How It Works Redirect Section (Replaces FAQ) */}
         <section className="py-24 bg-white relative overflow-hidden">
@@ -1151,6 +1097,144 @@ const Home: React.FC = () => {
 
       </div>
     </>
+  );
+};
+
+// Social Proof Section Component - Prova Social
+const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const { t } = useTranslation(['home', 'common']);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const testimonials = [
+    {
+      name: "Mariana Costa",
+      type: "Estudante VIP",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
+      text: "Consegui minha bolsa para Administração com 60% de desconto. O serviço se pagou no primeiro mês!"
+    },
+    {
+      name: "Rodrigo Santos",
+      type: "Membro Premium",
+      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=800&auto=format&fit=crop",
+      text: "A consultoria é imbatível. Já economizei mais de $20 mil dólares em anuidades este ano."
+    },
+    {
+      name: "Beatriz Helena",
+      type: "Estudante VIP",
+      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop",
+      text: "A seleção de universidades é o diferencial. Recebi apenas o que realmente combinava com meu perfil."
+    },
+    {
+      name: "Lucas Oliveira",
+      type: "Membro VIP",
+      image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=800&auto=format&fit=crop",
+      text: "A economia que tive na minha aplicação para o Canadá foi surreal. Melhor investimento!"
+    }
+  ];
+
+  const maxIndex = isMobile ? testimonials.length - 1 : testimonials.length - 3;
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+  };
+
+  // Auto-scroll
+  useEffect(() => {
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, [maxIndex]);
+
+  return (
+    <section className="bg-slate-50 py-24 md:py-32 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 text-center mb-16 md:mb-20">
+        <h2 className="text-4xl md:text-5xl font-black text-[#05294E] tracking-tight">
+          Relatos de quem já foi <span className="text-[#D0151C] italic">Aprovado.</span>
+        </h2>
+      </div>
+
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-12 relative">
+        <div className="relative w-full" role="region" aria-roledescription="carousel">
+          <div className="overflow-hidden rounded-[2rem] py-4">
+            <div 
+              className="flex transition-transform duration-500 ease-in-out" 
+              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.333)}%)` }}
+            >
+              {testimonials.map((testimonial, idx) => (
+                <div 
+                  key={idx}
+                  role="group" 
+                  aria-roledescription="slide" 
+                  className="min-w-full md:min-w-[33.333%] px-3 flex-shrink-0"
+                >
+                  <div className="relative h-[480px] overflow-hidden rounded-[2rem] shadow-xl group border border-slate-200">
+                    <img 
+                      src={testimonial.image} 
+                      alt={testimonial.name} 
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-transparent"></div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white text-left">
+                      <div className="flex gap-1 mb-4">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        ))}
+                      </div>
+                      <p className="text-base md:text-lg font-medium leading-relaxed mb-6 italic opacity-90">
+                        "{testimonial.text}"
+                      </p>
+                      <div className="border-t border-white/20 pt-6">
+                        <h4 className="text-base md:text-lg font-bold tracking-tight">{testimonial.name}</h4>
+                        <p className="text-[10px] text-yellow-400 font-bold tracking-widest uppercase mt-1">
+                          {testimonial.type}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <button 
+            onClick={prevSlide}
+            className="inline-flex items-center justify-center h-12 w-12 rounded-full border border-slate-200 text-slate-600 hover:text-[#D0151C] hover:bg-slate-50 transition-colors bg-white/90 backdrop-blur-sm absolute top-1/2 -translate-y-1/2 left-0 lg:-left-6 z-10 shadow-lg hover:scale-110"
+          >
+            <ChevronLeft className="h-6 w-6" />
+            <span className="sr-only">Previous slide</span>
+          </button>
+          
+          <button 
+            onClick={nextSlide}
+            className="inline-flex items-center justify-center h-12 w-12 rounded-full border border-slate-200 text-slate-600 hover:text-[#D0151C] hover:bg-slate-50 transition-colors bg-white/90 backdrop-blur-sm absolute top-1/2 -translate-y-1/2 right-0 lg:-right-6 z-10 shadow-lg hover:scale-110"
+          >
+            <ChevronRight className="h-6 w-6" />
+            <span className="sr-only">Next slide</span>
+          </button>
+        </div>
+      </div>
+      
+      {/* CTA */}
+      <div className="text-center mt-16 px-4">
+        <button
+          onClick={onCTAClick}
+          className="inline-flex items-center px-8 py-4 md:px-12 md:py-6 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-red-600 hover:scale-105 transition-all duration-300 group"
+        >
+          {t("forStudents.socialProof.ctaButton")}
+        </button>
+      </div>
+    </section>
   );
 };
 

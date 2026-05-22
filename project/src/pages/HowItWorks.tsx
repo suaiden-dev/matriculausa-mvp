@@ -106,7 +106,7 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative pt-32 pb-32 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[600px] lg:h-[768px] flex items-center">
+    <section ref={ref} className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
       {/* Background Image Layer with Responsive Design */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 lg:right-auto lg:left-0 lg:w-[65%]">
@@ -142,14 +142,14 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
           >
 
 
-            <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] lg:pl-6">
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-[0.85] lg:pl-6">
               <span className="block mb-2">{t('howItWorks.title').split(' ')[0]}</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
                 {t('howItWorks.title').split(' ').slice(1).join(' ')}
               </span>
             </h1>
             
-            <p className="text-xl lg:text-2xl text-white mb-12 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
+            <p className="text-lg lg:text-xl text-white mb-6 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
               {t('howItWorks.subtitle')}
             </p>
 
