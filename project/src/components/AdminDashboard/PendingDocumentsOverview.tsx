@@ -8,7 +8,8 @@ import {
     ExternalLink,
     Clock,
     User,
-    CheckCircle
+    CheckCircle,
+    ArrowRightLeft
 } from 'lucide-react';
 // import { useEnvironment } from '../../hooks/useEnvironment';
 
@@ -18,6 +19,25 @@ interface LoadingState {
     studentDocuments: boolean;
     documentRequests: boolean;
     identityPhotos: boolean;
+    transferForms: boolean;
+}
+
+interface TransferFormUpload {
+    id: string;
+    application_id: string;
+    uploaded_by: string;
+    file_url: string;
+    status: string;
+    uploaded_at: string;
+    rejection_reason?: string;
+    reviewed_at?: string;
+    reviewed_by?: string;
+    user_profiles?: {
+        full_name: string;
+        email: string;
+        id: string;
+        user_id: string;
+    };
 }
 
 interface StudentDocument {
@@ -79,15 +99,17 @@ interface IdentityVerification {
 
 const PendingDocumentsOverview: React.FC = () => {
     // const { isDevelopment } = useEnvironment();
-    const [loading, setLoading] = useState<LoadingState>({ 
-        studentDocuments: true, 
-        documentRequests: true, 
-        identityPhotos: true 
+    const [loading, setLoading] = useState<LoadingState>({
+        studentDocuments: true,
+        documentRequests: true,
+        identityPhotos: true,
+        transferForms: true
     });
 
     const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
     const [documentRequests, setDocumentRequests] = useState<DocumentRequestUpload[]>([]);
     const [identityPhotos, setIdentityPhotos] = useState<IdentityVerification[]>([]);
+    const [transferForms, setTransferForms] = useState<TransferFormUpload[]>([]);
     
     // ... rest of state stays the same
 
@@ -97,12 +119,13 @@ const PendingDocumentsOverview: React.FC = () => {
 
     const fetchAllPendingDocuments = async () => {
         try {
-            setLoading({ 
-                studentDocuments: true, 
-                documentRequests: true, 
-                identityPhotos: true 
+            setLoading({
+                studentDocuments: true,
+                documentRequests: true,
+                identityPhotos: true,
+                transferForms: true
             });
-            
+
             // Batch loading usando RPC para evitar N+1 roundtrips e redundância de dados
             const { data, error } = await supabase.rpc('get_pending_documents_batch');
 
@@ -115,15 +138,17 @@ const PendingDocumentsOverview: React.FC = () => {
                 setStudentDocuments(data.student_documents || []);
                 setDocumentRequests(data.document_requests || []);
                 setIdentityPhotos(data.identity_photos || []);
+                setTransferForms(data.transfer_forms || []);
             }
 
         } catch (error) {
             console.error('Unexpected error in fetchAllPendingDocuments:', error);
         } finally {
-            setLoading({ 
-                studentDocuments: false, 
-                documentRequests: false, 
-                identityPhotos: false 
+            setLoading({
+                studentDocuments: false,
+                documentRequests: false,
+                identityPhotos: false,
+                transferForms: false
             });
         }
     };
@@ -199,8 +224,30 @@ const PendingDocumentsOverview: React.FC = () => {
                     // Recarregar se o status mudar para pending ou de pending para outra coisa
                     const newStatus = payload.new?.identity_photo_status;
                     const oldStatus = payload.old?.identity_photo_status;
-                    
+
                     if (newStatus === 'pending' || oldStatus === 'pending') {
+                        fetchAllPendingDocuments();
+                    }
+                }
+            )
+            // Escutar mudanças em transfer_form_uploads
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'transfer_form_uploads'
+                },
+                (payload: any) => {
+                    const newStatus = payload.new?.status;
+                    const oldStatus = payload.old?.status;
+
+                    if (
+                        newStatus === 'pending' ||
+                        newStatus === 'under_review' ||
+                        oldStatus === 'pending' ||
+                        oldStatus === 'under_review'
+                    ) {
                         fetchAllPendingDocuments();
                     }
                 }
@@ -214,9 +261,10 @@ const PendingDocumentsOverview: React.FC = () => {
 
     const unifiedGroups = Array.from(
         [
-            ...studentDocuments.map(d => ({ ...d, source: 'student' })), 
+            ...studentDocuments.map(d => ({ ...d, source: 'student' })),
             ...documentRequests.map(r => ({ ...r, source: 'request', user_id: r.uploaded_by })),
-            ...identityPhotos.map(i => ({ ...i, source: 'identity', uploaded_at: i.created_at }))
+            ...identityPhotos.map(i => ({ ...i, source: 'identity', uploaded_at: i.created_at })),
+            ...transferForms.map(t => ({ ...t, source: 'transfer', user_id: t.uploaded_by }))
         ]
         .reduce((acc, item: any) => {
             const userId = item.user_id;
@@ -228,7 +276,8 @@ const PendingDocumentsOverview: React.FC = () => {
                     last_uploaded: item.uploaded_at,
                     studentDocs: [] as string[],
                     requestDocs: [] as string[],
-                    hasIdentityPhoto: false
+                    hasIdentityPhoto: false,
+                    transferFormCount: 0
                 });
             }
             const group = acc.get(userId)!;
@@ -236,7 +285,7 @@ const PendingDocumentsOverview: React.FC = () => {
             if (new Date(item.uploaded_at) > new Date(group.last_uploaded)) {
                 group.last_uploaded = item.uploaded_at;
             }
-            
+
             if (item.source === 'student') {
                 if (!group.studentDocs.includes(item.type)) {
                     group.studentDocs.push(item.type);
@@ -248,14 +297,16 @@ const PendingDocumentsOverview: React.FC = () => {
                 }
             } else if (item.source === 'identity') {
                 group.hasIdentityPhoto = true;
+            } else if (item.source === 'transfer') {
+                group.transferFormCount += 1;
             }
             return acc;
         }, new Map<string, any>()).values()
     ).sort((a, b) => new Date(b.last_uploaded).getTime() - new Date(a.last_uploaded).getTime());
 
-    const isLoading = loading.studentDocuments || loading.documentRequests || loading.identityPhotos;
+    const isLoading = loading.studentDocuments || loading.documentRequests || loading.identityPhotos || loading.transferForms;
     const totalCount = unifiedGroups.length;
-    const totalItems = studentDocuments.length + documentRequests.length + identityPhotos.length;
+    const totalItems = studentDocuments.length + documentRequests.length + identityPhotos.length + transferForms.length;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -344,6 +395,12 @@ const PendingDocumentsOverview: React.FC = () => {
                                             <div className="flex items-center bg-amber-50 text-amber-700 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">
                                                 <User className="h-3 w-3 mr-1" />
                                                 Identity Photo Verification
+                                            </div>
+                                        )}
+                                        {group.transferFormCount > 0 && (
+                                            <div className="flex items-center bg-orange-50 text-orange-700 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">
+                                                <ArrowRightLeft className="h-3 w-3 mr-1" />
+                                                Transfer Form ({group.transferFormCount})
                                             </div>
                                         )}
                                     </div>

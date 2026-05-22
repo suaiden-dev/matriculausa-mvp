@@ -77,17 +77,28 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         }
       }
 
-      // D. I-20 Control Fee
-      const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
-      const isI20Applicable =
-          student.student_process_type === 'initial' ||
-          student.student_process_type === 'change_of_status' ||
-          (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
-
-      const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+      // D. Control Fee / I-20 Fee
+      const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
       const i20Index = stages.indexOf('i20_fee');
-      if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
-        total += i20Amount;
+
+      if (isTransferInactiveVisa) {
+        // Transfer com visa inativo: Reinstatement Fee ($500) + Control Fee ($1800)
+        if (!student.has_paid_reinstatement_package && currentIndex > i20Index && i20Index !== -1) {
+          total += 500;
+        }
+        if (!student.has_paid_i539_cos_package && currentIndex > i20Index && i20Index !== -1) {
+          total += 1800;
+        }
+      } else {
+        // Outros (initial, change_of_status): I-20 / DS-160 fee
+        const isI20Applicable =
+          student.student_process_type === 'initial' ||
+          student.student_process_type === 'change_of_status';
+        const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+        const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+        if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
+          total += i20Amount;
+        }
       }
 
       return total;
