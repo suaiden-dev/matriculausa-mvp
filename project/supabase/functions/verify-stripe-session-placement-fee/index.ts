@@ -135,7 +135,10 @@ Deno.serve(async (req) => {
         "stripe",
     };
     if (userProfile.placement_fee_installment_enabled) {
-      updateData.placement_fee_pending_balance = amountPaid;
+      // pending_balance = the 2nd installment base amount (same as 1st installment base, before Stripe fees)
+      // base_amount in metadata is the net amount the student owes per installment
+      const baseAmount = parseFloat(session.metadata?.base_amount || '0');
+      updateData.placement_fee_pending_balance = baseAmount > 0 ? baseAmount : amountPaid;
       updateData.placement_fee_installment_number = 1;
     }
     await supabase.from("user_profiles").update(updateData).eq("user_id", userId);
