@@ -451,7 +451,25 @@ const StudentDetails: React.FC = () => {
         if (globalError) {
           console.error("Error fetching global document requests:", globalError);
         } else {
-          globalRequests = globalData || [];
+          // Filtrar requests globais conforme aplicabilidade do estudante
+          const studentType = application.student_process_type || application.user_profiles?.student_process_type;
+          const scholarshipLevel = application.scholarships?.level;
+
+          globalRequests = (globalData || []).filter((r: any) => {
+            // Filtrar por tipo de estudante se configurado
+            if (r.applicable_student_types && r.applicable_student_types.length > 0) {
+              const hasMatchingType = r.applicable_student_types.includes(studentType) || r.applicable_student_types.includes('all');
+              if (!hasMatchingType) return false;
+            }
+
+            // Filtrar por nível acadêmico da bolsa se configurado
+            if (r.applicable_scholarship_levels && r.applicable_scholarship_levels.length > 0 && scholarshipLevel) {
+              const hasMatchingLevel = r.applicable_scholarship_levels.includes(scholarshipLevel) || r.applicable_scholarship_levels.includes('all');
+              if (!hasMatchingLevel) return false;
+            }
+
+            return true;
+          });
         }
       }
 
@@ -465,14 +483,17 @@ const StudentDetails: React.FC = () => {
         const { data: uploads, error: uploadsError } = await supabase
           .from('document_request_uploads')
           .select('*')
-          .in('document_request_id', requestIds);
+          .in('document_request_id', requestIds)
+          .order('uploaded_at', { ascending: false });
 
         if (uploadsError) {
           console.error("Error fetching uploads:", uploadsError);
         } else {
           const requestsWithUploads = allRequests.map(request => ({
             ...request,
-            uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
+            // Filtrar uploads deste request e garantir que o mais recente venha primeiro
+            uploads: (uploads?.filter(upload => upload.document_request_id === request.id) || [])
+              .sort((a, b) => new Date(b.uploaded_at || 0).getTime() - new Date(a.uploaded_at || 0).getTime())
           }));
           setDocumentRequests(requestsWithUploads);
         }
@@ -504,7 +525,9 @@ const StudentDetails: React.FC = () => {
               created_at,
               is_global,
               university_id,
-              scholarship_application_id
+              scholarship_application_id,
+              applicable_student_types,
+              applicable_scholarship_levels
             )
           `)
           .eq('document_requests.scholarship_application_id', application.id);
@@ -532,7 +555,9 @@ const StudentDetails: React.FC = () => {
                 created_at,
                 is_global,
                 university_id,
-                scholarship_application_id
+                scholarship_application_id,
+                applicable_student_types,
+                applicable_scholarship_levels
               )
             `)
             .eq('uploaded_by', application.user_profiles.user_id);
@@ -546,6 +571,37 @@ const StudentDetails: React.FC = () => {
           console.error('Erro na estratégia 2:', error);
         }
       }
+
+      // Filtrar uploads com base nas regras de aplicabilidade dos document_requests
+      const studentType = application.student_process_type || application.user_profiles?.student_process_type;
+      const scholarshipLevel = application.scholarships?.level;
+
+      const filteredUploads = uploads.filter((u: any) => {
+        const req = u.document_requests;
+        if (!req) return false;
+
+        // Se for request específico desta aplicação, é aplicável
+        if (req.scholarship_application_id === application.id) return true;
+
+        // Se for global, validar tipo de estudante e nível da bolsa
+        if (req.is_global) {
+          // Filtrar por tipo de estudante
+          if (req.applicable_student_types && req.applicable_student_types.length > 0) {
+            const hasMatchingType = req.applicable_student_types.includes(studentType) || req.applicable_student_types.includes('all');
+            if (!hasMatchingType) return false;
+          }
+
+          // Filtrar por nível acadêmico da bolsa
+          if (req.applicable_scholarship_levels && req.applicable_scholarship_levels.length > 0 && scholarshipLevel) {
+            const hasMatchingLevel = req.applicable_scholarship_levels.includes(scholarshipLevel) || req.applicable_scholarship_levels.includes('all');
+            if (!hasMatchingLevel) return false;
+          }
+
+          return true;
+        }
+
+        return false;
+      });
 
       // Buscar também a carta de aceite da aplicação
       let acceptanceLetterDoc = null;
@@ -570,8 +626,8 @@ const StudentDetails: React.FC = () => {
         };
       }
 
-      // Combinar uploads com a carta de aceite
-      let allDocuments = [...uploads];
+      // Combinar uploads filtrados com a carta de aceite
+      let allDocuments = [...filteredUploads];
       if (acceptanceLetterDoc) {
         allDocuments.unshift(acceptanceLetterDoc); // Colocar a carta de aceite no topo
       }
@@ -2201,10 +2257,19 @@ const StudentDetails: React.FC = () => {
                       <div className="border-b border-slate-100 pb-4">
                         <dt className="text-sm font-medium text-slate-500">Student Process Type</dt>
                         <dd className="text-base font-semibold text-slate-900 mt-1">
-                          {application.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                           application.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                           application.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                           application.student_process_type || 'Not specified'}
+                          {(() => {
+                            const type = application.student_process_type;
+                            const visaTransferActive = (application.user_profiles as any)?.visa_transfer_active;
+                            if (type === 'initial') return 'Initial – F-1 Visa';
+                            if (type === 'transfer') {
+                              return visaTransferActive === false 
+                                ? 'Transfer – Needs Reinstatement' 
+                                : 'Transfer – Active F-1';
+                            }
+                            if (type === 'change_of_status') return 'Change of Status';
+                            if (type === 'resident') return 'Resident';
+                            return type || 'Not specified';
+                          })()}
                         </dd>
                       </div>
                       <div className="border-b border-slate-100 pb-4">
