@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import KanbanColumn from '../../../components/AdminDashboard/KanbanColumn';
 import {
@@ -24,6 +24,31 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
 }) => {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasRestoredScroll = useRef(false);
+
+  // Restaurar posição do scroll horizontal
+  useEffect(() => {
+    if (students.length > 0 && !hasRestoredScroll.current && scrollContainerRef.current) {
+      const savedScroll = sessionStorage.getItem('kanban_scroll_position');
+      if (savedScroll) {
+        const timer = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = parseInt(savedScroll, 10);
+            hasRestoredScroll.current = true;
+          }
+        }, 100);
+        return () => clearTimeout(timer);
+      } else {
+        hasRestoredScroll.current = true;
+      }
+    }
+  }, [students]);
+
+  // Salvar posição do scroll ao rolar horizontalmente
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    sessionStorage.setItem('kanban_scroll_position', e.currentTarget.scrollLeft.toString());
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -167,7 +192,11 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
       </div>
 
       {/* Kanban Board - Horizontal Scrollable */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-x-auto overflow-y-hidden pb-6"
+      >
         <div className="flex gap-4 h-full min-w-max">
           {visibleStages.map(stage => {
             const studentsInStage = studentsByStage.get(stage.key) || [];

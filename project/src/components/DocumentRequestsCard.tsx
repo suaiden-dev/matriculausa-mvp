@@ -1711,7 +1711,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
             if (isGlobal) {
               // ── GLOBAL REQUEST: staging + submit flow ──────────────────────
-              const { closedGroups, currentGroup } = groupUploadsBySubmission(allUploads);
+              const { closedGroups, currentGroup } = groupUploadsBySubmission(allUploads as any);
               const lastClosedGroup = closedGroups.length > 0 ? closedGroups[closedGroups.length - 1] : null;
               const lastClosedUpload = lastClosedGroup ? lastClosedGroup[lastClosedGroup.length - 1] : null;
               const isPending = currentGroup.length > 0;
@@ -1737,26 +1737,49 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   {/* Current submission files or last closed group status */}
                   {isPending ? (
                     <div className="space-y-2 mb-4">
-                      {currentGroup.map((upload: any, idx: number) => (
-                        <div key={upload.id} className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                              <Clock className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Em Análise</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setPreviewUrl(upload.file_url)}
-                            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                      {currentGroup.map((upload: any) => {
+                        const uploadStatus = normalizeStatus(upload.status);
+                        const isUploadApproved = uploadStatus === 'approved';
+                        const isUploadRejected = uploadStatus === 'rejected';
+
+                        return (
+                          <div
+                            key={upload.id}
+                            className={`flex items-center justify-between px-4 py-3 border rounded-xl transition-all ${
+                              isUploadApproved ? 'bg-emerald-50 border-emerald-100' :
+                              isUploadRejected ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+                            }`}
                           >
-                            <ExternalLink className="w-3 h-3" />
-                            Ver
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                isUploadApproved ? 'bg-emerald-500' :
+                                isUploadRejected ? 'bg-red-500' : 'bg-blue-500'
+                              }`}>
+                                {isUploadApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                                 isUploadRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
+                                 <Clock className="w-4 h-4 text-white" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
+                                  isUploadApproved ? 'text-emerald-600' :
+                                  isUploadRejected ? 'text-red-600' : 'text-blue-600'
+                                }`}>
+                                  {isUploadApproved ? 'Aprovado' :
+                                   isUploadRejected ? 'Correção Solicitada' : 'Em Análise'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setPreviewUrl(upload.file_url)}
+                              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Ver
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : isGlobalApproved && lastClosedUpload ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm bg-emerald-50 border-emerald-200 mb-4 self-start">
@@ -1904,7 +1927,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                   </p>
                                 )}
                                 <div className="space-y-1">
-                                  {group.map((upload: any, fileIdx: number) => (
+                                  {group.map((upload: any) => (
                                     <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
                                       <div className="flex items-center gap-1.5 min-w-0">
                                         <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
