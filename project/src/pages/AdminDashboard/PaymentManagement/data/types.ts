@@ -26,6 +26,8 @@ export interface PaymentRecord {
   admin_approved_at?: string;
   seller_referral_code?: string | null;
   metadata?: any; // Metadata do pagamento (inclui dados de cupom promocional)
+  installment_number?: number;
+  total_installments?: number;
 }
 
 export interface PaymentStats {

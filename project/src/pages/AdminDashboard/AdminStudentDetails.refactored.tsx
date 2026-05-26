@@ -19,6 +19,7 @@ import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
+import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType, computeInstallmentAmounts } from '../../config/installmentConfig';
 import { toast } from 'react-hot-toast';
 
 // Componentes de UI Base
@@ -864,9 +865,21 @@ const AdminStudentDetails: React.FC = () => {
       if (!referral?.referrer_id) { setAffiliateProgramReferral(null); return; }
 
       const [{ data: profile }, { data: codeData }] = await Promise.all([
-        supabase.from('user_profiles').select('full_name, email').eq('user_id', referral.referrer_id).maybeSingle(),
+        supabase.from('user_profiles').select('full_name, email, role').eq('user_id', referral.referrer_id).maybeSingle(),
         supabase.from('affiliate_codes').select('id').eq('code', referral.affiliate_code).maybeSingle(),
       ]);
+
+      // Se o referenciador é aluno (Matricula Rewards), exibir como "Student Referral (Rewards)"
+      if (profile?.role === 'student') {
+        setAffiliateProgramReferral(null);
+        setMatriculaRewardsInfo(prev => prev ?? {
+          name: profile?.full_name || null,
+          email: profile?.email || null,
+          code: referral.affiliate_code,
+          usedAt: new Date().toISOString(),
+        });
+        return;
+      }
 
       setAffiliateProgramReferral({
         code: referral.affiliate_code,
@@ -1352,6 +1365,23 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
+  // Fetch active installment plans for this student (all supported fee types)
+  const [installmentPlans, setInstallmentPlans] = React.useState<Record<string, InstallmentPlan | null>>({});
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', student.user_id)
+      .in('status', ['active', 'completed'])
+      .then(({ data }) => {
+        const map: Record<string, InstallmentPlan | null> = {};
+        (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
+        (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+        setInstallmentPlans(map);
+      });
+  }, [student?.user_id]);
+
   const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'stripe' });
     
@@ -1359,40 +1389,39 @@ const AdminStudentDetails: React.FC = () => {
     
     // ✅ Lógica especial para Placement Fee
     if (feeType === 'placement') {
-      // Se o parcelamento estiver ativo e houver saldo pendente, 
-      // o valor a ser pago deve ser a metade do saldo atual (ou o saldo total se for a última parcela)
-      const currentBalance = student?.placement_fee_pending_balance ?? 0;
-      if (student?.placement_fee_installment_enabled && currentBalance > 0) {
-        // Second installment: suggest the full remaining balance
-        amount = currentBalance;
-      } else {
-        // Fallback para cálculo total se não houver saldo registrado ou parcelamento desativado
-        const applications = student?.all_applications || [];
-        const activeApp = applications.find((app: any) => app.status === 'enrolled') || 
-                         applications.find((app: any) => app.status === 'approved') || 
-                         applications[0];
-        
-        const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
-        
-        if (userFeeOverrides?.placement_fee) {
-          amount = userFeeOverrides.placement_fee;
-        } else if (student?.placement_fee_amount) {
-          amount = Number(student.placement_fee_amount);
-        } else if (scholarship?.annual_value_with_scholarship) {
-          const pAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-          amount = getPlacementFee(Number(scholarship.annual_value_with_scholarship), pAmount);
-        }
+      // Calcular o total real da placement fee
+      const applications = student?.all_applications || [];
+      const activeApp = applications.find((app: any) => app.status === 'enrolled') ||
+                       applications.find((app: any) => app.status === 'approved') ||
+                       applications[0];
+      const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
 
-        // Se o parcelamento for ligado agora mas o saldo ainda for 0 (primeira vez), sugerir 50%
-        if (student?.placement_fee_installment_enabled) {
-          amount = amount / 2;
-        }
+      let totalAmount = amount;
+      if (userFeeOverrides?.placement_fee) {
+        totalAmount = userFeeOverrides.placement_fee;
+      } else if (student?.placement_fee_amount) {
+        totalAmount = Number(student.placement_fee_amount);
+      } else if (scholarship?.placement_fee_amount) {
+        totalAmount = Number(scholarship.placement_fee_amount);
+      } else if (scholarship?.annual_value_with_scholarship) {
+        const pAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+        totalAmount = getPlacementFee(Number(scholarship.annual_value_with_scholarship), pAmount);
+      }
+
+      // Se há plano ativo no novo sistema, usar o valor da parcela atual
+      const activePlan = installmentPlans['placement_fee'];
+      if (activePlan && activePlan.status === 'active') {
+        const nextInstallmentIdx = activePlan.installments_paid; // 0-based index
+        const amounts = computeInstallmentAmounts(totalAmount, activePlan.total_installments);
+        amount = amounts[nextInstallmentIdx] ?? totalAmount;
+      } else {
+        amount = totalAmount;
       }
     }
     
     setPaymentAmount(amount);
     setShowPaymentModal(true);
-  }, [getFeeAmount, student, userFeeOverrides]);
+  }, [getFeeAmount, student, userFeeOverrides, installmentPlans]);
 
   const handleEnableInstallment = useCallback(async () => {
     if (!student?.user_id) return;
@@ -1415,6 +1444,98 @@ const AdminStudentDetails: React.FC = () => {
     toast.success('Parcelamento desabilitado.');
     queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
   }, [student?.user_id, profileId, queryClient]);
+
+  const handleSetInstallmentPlan = useCallback(async (feeType: SupportedInstallmentFeeType, totalInstallments: number | null) => {
+    if (!student?.user_id) return;
+
+    if (totalInstallments === null) {
+      // Cancel active plan
+      const { error } = await supabase
+        .from('fee_installment_plans')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('user_id', student.user_id)
+        .eq('fee_type', feeType)
+        .eq('status', 'active');
+      if (error) throw error;
+      // Mirror: disable legacy placement_fee fields
+      if (feeType === 'placement_fee') {
+        await supabase.from('user_profiles').update({ placement_fee_installment_enabled: false }).eq('user_id', student.user_id);
+      }
+      toast.success('Installment plan cancelled.');
+    } else {
+      // Create new plan — compute actual total respecting overrides + scholarship data
+      let totalAmount: number;
+
+      if (feeType === 'placement_fee') {
+        const applications = student?.all_applications || [];
+        const activeApp = applications.find((app: any) => app.status === 'enrolled') ||
+                         applications.find((app: any) => app.status === 'approved') ||
+                         applications[0];
+        const scholarship = activeApp?.scholarships
+          ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships)
+          : null;
+
+        let resolved = false;
+        totalAmount = 0;
+
+        if (userFeeOverrides?.placement_fee) {
+          totalAmount = userFeeOverrides.placement_fee;
+          resolved = true;
+        } else if (student?.placement_fee_amount) {
+          totalAmount = Number(student.placement_fee_amount);
+          resolved = true;
+        } else if (scholarship?.placement_fee_amount) {
+          totalAmount = Number(scholarship.placement_fee_amount);
+          resolved = true;
+        } else if (scholarship?.annual_value_with_scholarship) {
+          const pAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+          totalAmount = getPlacementFee(Number(scholarship.annual_value_with_scholarship), pAmount);
+          resolved = true;
+        }
+
+        if (!resolved) {
+          toast.error(
+            'Cannot create installment plan: placement fee amount could not be determined. ' +
+            'Set a fee override or ensure the student has a scholarship with an annual value.'
+          );
+          return;
+        }
+      } else {
+        totalAmount = getFeeAmount(feeType);
+      }
+
+      const { error } = await supabase
+        .from('fee_installment_plans')
+        .insert({
+          user_id: student.user_id,
+          fee_type: feeType,
+          total_amount: totalAmount,
+          total_installments: totalInstallments,
+          installments_paid: 0,
+          amount_paid: 0,
+          status: 'active',
+        });
+      if (error) throw error;
+      // Mirror: enable legacy placement_fee fields for backward compat
+      if (feeType === 'placement_fee') {
+        await supabase.from('user_profiles').update({ placement_fee_installment_enabled: true }).eq('user_id', student.user_id);
+      }
+      toast.success(`${totalInstallments}× installment plan created.`);
+    }
+
+    // Refresh installment plans
+    const { data } = await supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', student.user_id)
+      .eq('status', 'active');
+    const map: Record<string, InstallmentPlan | null> = {};
+    (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
+    (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+    setInstallmentPlans(map);
+
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+  }, [student?.user_id, profileId, queryClient, getFeeAmount]);
 
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
@@ -1603,14 +1724,55 @@ const AdminStudentDetails: React.FC = () => {
 
     // Calculate remaining placement fee balance to pass to markFeeAsPaid
     let placementFeePendingBalance: number | undefined = undefined;
-    if (feeType === 'placement' && student?.placement_fee_installment_enabled) {
-      const currentBalance = student?.placement_fee_pending_balance ?? 0;
-      if (currentBalance > 0) {
-        // Paying second (final) installment: clear the balance
-        placementFeePendingBalance = 0;
-      } else {
-        // Paying first installment: remaining = same amount just paid
-        placementFeePendingBalance = finalPaymentAmount;
+    if (feeType === 'placement') {
+      const activePlan = installmentPlans['placement_fee'];
+      if (activePlan && activePlan.status === 'active') {
+        const newInstallmentsPaid = activePlan.installments_paid + 1;
+        const isLastInstallment = newInstallmentsPaid >= activePlan.total_installments;
+
+        // Update fee_installment_plans directly
+        await supabase
+          .from('fee_installment_plans')
+          .update({
+            installments_paid: newInstallmentsPaid,
+            amount_paid: activePlan.amount_paid + finalPaymentAmount,
+            status: isLastInstallment ? 'completed' : 'active',
+            updated_at: new Date().toISOString(),
+            ...(isLastInstallment ? { completed_at: new Date().toISOString() } : {}),
+          })
+          .eq('id', activePlan.id);
+
+        // Mirror to legacy fields
+        placementFeePendingBalance = isLastInstallment ? 0 : (activePlan.total_amount - activePlan.amount_paid - finalPaymentAmount);
+
+        // Refresh installment plans state
+        const { data } = await supabase.from('fee_installment_plans').select('*').eq('user_id', student.user_id).eq('status', 'active');
+        const map: Record<string, InstallmentPlan | null> = {};
+        (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
+        (data || []).forEach((p: InstallmentPlan) => { map[p.fee_type] = p; });
+        setInstallmentPlans(map);
+
+        // If not last installment: advance student past PlacementFeeStep (is_placement_fee_paid = true)
+        // so they reach my_applications where the 2nd installment card will be shown.
+        // fee_installment_plans remains active so UniversityDocumentsStep shows the remaining installment.
+        if (!isLastInstallment) {
+          await supabase.from('user_profiles').update({
+            is_placement_fee_paid: true,
+            placement_fee_paid_at: new Date().toISOString(),
+            placement_fee_payment_method: paymentMethodValue,
+            placement_fee_pending_balance: placementFeePendingBalance,
+            placement_fee_installment_number: newInstallmentsPaid + 1,
+          }).eq('user_id', student.user_id);
+          toast.success(`Installment ${newInstallmentsPaid}/${activePlan.total_installments} recorded. Student advanced to next step.`);
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+          setShowPaymentModal(false);
+          setPendingPayment(null);
+          return;
+        }
+      } else if (student?.placement_fee_installment_enabled) {
+        // Legacy fallback
+        const currentBalance = student?.placement_fee_pending_balance ?? 0;
+        placementFeePendingBalance = currentBalance > 0 ? 0 : finalPaymentAmount;
       }
     }
 
@@ -1696,7 +1858,7 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error recording payment:', result.error);
       toast.error(`Error marking fee as paid: ${result.error || 'Unknown error'}`);
     }
-  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount, user, logAction, profileId, queryClient, validateAndNormalizePaidAmounts]);
+  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount, user, logAction, profileId, queryClient, validateAndNormalizePaidAmounts, installmentPlans, setInstallmentPlans]);
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
     if (!student) return;
@@ -3930,6 +4092,8 @@ const AdminStudentDetails: React.FC = () => {
                 overridesRefreshKey={overridesRefreshKey}
                 onEnableInstallment={handleEnableInstallment}
                 onDisableInstallment={handleDisableInstallment}
+                onSetInstallmentPlan={handleSetInstallmentPlan}
+                installmentPlans={installmentPlans}
                 onToggleVisaStatus={async () => {
                   if (!student) return;
                   const newValue = !student.visa_transfer_active;
@@ -4150,6 +4314,7 @@ const AdminStudentDetails: React.FC = () => {
         isProcessing={saving || isUploadingZelle}
         zelleProofFile={zelleProofFile}
         onZelleProofFileChange={setZelleProofFile}
+        activePlan={pendingPayment?.fee_type === 'placement' ? (installmentPlans['placement_fee'] ?? null) : (pendingPayment?.fee_type ? (installmentPlans[pendingPayment.fee_type] ?? null) : null)}
       />
 
       <RejectDocumentModal
