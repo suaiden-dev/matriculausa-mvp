@@ -52,6 +52,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
     { value: 'initial', label: 'Initial (F-1 Visa Required)' },
     { value: 'change_of_status', label: 'Change of Status (From Other Visa)' },
     { value: 'transfer', label: 'Transfer (Current F-1 Student)' },
+    { value: 'resident', label: 'Resident (U.S. Citizen / Green Card)' },
     { value: 'all', label: 'All Student Types' },
   ];
   const SCHOLARSHIP_LEVEL_OPTIONS = [
