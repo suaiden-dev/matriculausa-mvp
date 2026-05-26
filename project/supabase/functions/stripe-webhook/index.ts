@@ -12,6 +12,7 @@ import {
   getStripeEnvironmentVariables,
 } from "../shared/environment-detector.ts";
 import { getStripeBalanceTransaction } from "../shared/stripe-utils.ts";
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
 
 // Configurações do MailerSend (REMOVIDAS - usando apenas webhook n8n)
 const supportEmail = Deno.env.get("SUPPORT_EMAIL") ||
@@ -1388,45 +1389,15 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
     const userId = metadata?.user_id || metadata?.student_id;
     if (userId) {
       const placementPaymentMethod = metadata?.payment_method || "stripe";
-      const installmentNumber = parseInt(metadata?.installment_number || '1');
-      const placementBaseUpdate: Record<string, unknown> = {
-        is_placement_fee_paid: true,
-        placement_fee_paid_at: new Date().toISOString(),
-        placement_fee_payment_method: placementPaymentMethod,
-        last_payment_date: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      if (installmentNumber === 2) {
-        placementBaseUpdate.placement_fee_pending_balance = 0;
-        placementBaseUpdate.placement_fee_installment_number = 2;
-      }
-      const { error } = await supabase.from("user_profiles").update(placementBaseUpdate).eq("user_id", userId);
+      const paymentDate = new Date().toISOString();
 
-      if (error) {
-        console.error("[stripe-webhook] Error updating placement fee status:", error);
-      } else {
-        console.log(
-          `[stripe-webhook] Placement fee payment processed (installment ${installmentNumber}) for user:`,
-          userId,
-        );
-      }
-
-      // Registrar pagamento na tabela individual_fee_payments
       try {
-        const paymentDate = new Date().toISOString();
-        const paymentAmountRaw = session.amount_total
-          ? session.amount_total / 100
-          : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
         const currency = session.currency?.toUpperCase() || "USD";
         const paymentIntentId = session.payment_intent as string || "";
 
         // Buscar valores reais de net/gross/fee no Stripe BalanceTransaction
-        const stripeInfo = await getStripeBalanceTransaction(
-          stripe,
-          paymentIntentId,
-          paymentAmountRaw,
-          currency
-        );
+        const stripeInfo = await getStripeBalanceTransaction(stripe, paymentIntentId, paymentAmountRaw, currency);
         let paymentAmount = stripeInfo.amount;
         const grossAmountUsd = stripeInfo.gross_amount_usd;
         const feeAmountUsd = stripeInfo.fee_amount_usd;
@@ -1437,27 +1408,60 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
         }
 
-        const { error: insertError } = await supabase.rpc(
-          "insert_individual_fee_payment",
-          {
-            p_user_id: userId,
-            p_fee_type: "placement",
-            p_amount: paymentAmount,
-            p_payment_date: paymentDate,
-            p_payment_method: "stripe",
-            p_payment_intent_id: paymentIntentId,
-            p_stripe_charge_id: null,
-            p_zelle_payment_id: null,
-            p_gross_amount_usd: grossAmountUsd,
-            p_fee_amount_usd: feeAmountUsd,
-          },
+        // Resolver installment plan (novo sistema dinâmico)
+        const { installmentNumber, plan } = await resolveInstallmentNumber(
+          supabase, userId, "placement_fee", metadata?.installment_number,
         );
 
+        let swIsFullyPaid = true;
+        let swRemainingAmount = 0;
+
+        if (plan) {
+          const result = await recordInstallmentPayment(supabase, plan, paymentAmount, paymentDate);
+          swIsFullyPaid = result.isFullyPaid;
+          swRemainingAmount = result.remainingAmount;
+        }
+
+        // Atualizar user_profiles + campos legados
+        const placementBaseUpdate: Record<string, unknown> = {
+          is_placement_fee_paid: true,
+          placement_fee_paid_at: paymentDate,
+          placement_fee_payment_method: placementPaymentMethod,
+          last_payment_date: paymentDate,
+          updated_at: paymentDate,
+          ...buildLegacyProfileMirror("placement_fee", installmentNumber, plan?.total_installments ?? 1, swRemainingAmount, swIsFullyPaid),
+        };
+        const { error } = await supabase.from("user_profiles").update(placementBaseUpdate).eq("user_id", userId);
+        if (error) {
+          console.error("[stripe-webhook] Error updating placement fee status:", error);
+        } else {
+          console.log(
+            `[stripe-webhook] Placement fee — installment ${installmentNumber}/${plan?.total_installments ?? 1} processed for user:`,
+            userId,
+          );
+        }
+
+        // Registrar pagamento na tabela individual_fee_payments
+        const { data: indivPayment, error: insertError } = await supabase.rpc("insert_individual_fee_payment", {
+          p_user_id: userId,
+          p_fee_type: "placement",
+          p_amount: paymentAmount,
+          p_payment_date: paymentDate,
+          p_payment_method: "stripe",
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: grossAmountUsd,
+          p_fee_amount_usd: feeAmountUsd,
+        });
+
         if (insertError) {
-          console.warn("[stripe-webhook] [Individual Fee Payment] Warning: Could not record placement fee payment:", insertError);
+          console.warn("[stripe-webhook] Warning: Could not record placement fee payment:", insertError);
+        } else if (plan && indivPayment) {
+          await linkPaymentToPlan(supabase, indivPayment, plan.id);
         }
       } catch (recordError) {
-        console.error("[stripe-webhook] [Individual Fee Payment] Error recording placement payment:", recordError);
+        console.error("[stripe-webhook] Error processing placement payment:", recordError);
       }
     }
   }

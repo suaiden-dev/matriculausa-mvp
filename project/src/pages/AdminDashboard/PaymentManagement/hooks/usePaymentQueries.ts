@@ -9,7 +9,7 @@ import { AffiliatePaymentRequestService } from '../../../../services/AffiliatePa
 import { getPaymentDatesForUsersLoaderOptimized } from '../data/loaders/paymentDatesLoaderOptimized';
 import { transformPaymentsToRecordsAndStats } from '../utils/transformPayments';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
-import { getGrossPaidAmountsBatch } from '../../../../utils/paymentConverter';
+import { getGrossPaidAmountsBatch, getPlacementInstallmentRowsBatch, getPlacementInstallmentPlansBatch } from '../../../../utils/paymentConverter';
 // import type { PaymentRecord, PaymentStats } from '../data/types';
 
 /**
@@ -34,12 +34,15 @@ export function usePaymentsQuery(enabled: boolean = true) {
       const uniqueUserIds = [...new Set(allUserIds)];
       
       // ✅ TASK-10: 1 única query para todos os usuários (elimina N+1)
-      const realPaymentAmounts = await getGrossPaidAmountsBatch(
-        uniqueUserIds,
-        ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package']
-      );
-
-      const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds);
+      const [realPaymentAmounts, placementInstallmentRows, placementInstallmentPlans, individualPaymentDates] = await Promise.all([
+        getGrossPaidAmountsBatch(
+          uniqueUserIds,
+          ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package']
+        ),
+        getPlacementInstallmentRowsBatch(uniqueUserIds),
+        getPlacementInstallmentPlansBatch(uniqueUserIds),
+        getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds),
+      ]);
 
       // Transformar em registros e stats
       const result = transformPaymentsToRecordsAndStats({
@@ -51,6 +54,8 @@ export function usePaymentsQuery(enabled: boolean = true) {
         individualPaymentDates,
         getFeeAmount,
         realPaymentAmounts,
+        placementInstallmentRows,
+        placementInstallmentPlans,
       });
 
       return result;

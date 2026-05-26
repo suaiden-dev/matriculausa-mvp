@@ -1,6 +1,8 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, AlertCircle } from 'lucide-react';
 import { PendingPayment, StudentRecord } from './types';
+import { InstallmentPlan } from '../../../config/installmentConfig';
 
 interface PaymentConfirmationModalProps {
   isOpen: boolean;
@@ -15,6 +17,7 @@ interface PaymentConfirmationModalProps {
   isProcessing: boolean;
   zelleProofFile?: File | null;
   onZelleProofFileChange?: (file: File | null) => void;
+  activePlan?: InstallmentPlan | null;
 }
 
 /**
@@ -32,11 +35,17 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
   isProcessing,
   zelleProofFile,
   onZelleProofFileChange,
+  activePlan,
 }) => {
   if (!isOpen || !pendingPayment) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  const isInstallment = activePlan && activePlan.status === 'active';
+  const installmentNumber = isInstallment ? activePlan.installments_paid + 1 : null;
+  const totalInstallments = isInstallment ? activePlan.total_installments : null;
+  const isLastInstallment = isInstallment && installmentNumber === totalInstallments;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Confirm Payment</h3>
@@ -44,6 +53,31 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+        {isInstallment && (
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+              <div className="text-sm text-blue-800 space-y-1">
+                <p className="font-semibold">
+                  Installment {installmentNumber} of {totalInstallments}
+                </p>
+                <p>
+                  This fee is split into <strong>{totalInstallments}× installments</strong>. Confirming will record installment <strong>{installmentNumber}</strong> (${amount.toFixed(2)}) as paid.
+                </p>
+                {!isLastInstallment && (
+                  <p className="text-blue-600">
+                    After this, {totalInstallments! - installmentNumber!} more installment{totalInstallments! - installmentNumber! > 1 ? 's' : ''} will remain to be collected.
+                  </p>
+                )}
+                {isLastInstallment && (
+                  <p className="font-medium text-green-700">
+                    This is the final installment — the fee will be marked as fully paid.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
@@ -118,7 +152,8 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

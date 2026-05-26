@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Eye,
@@ -71,12 +71,12 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const studentsQuery = useStudentsQuery();
   const filterDataQuery = useFilterDataQuery();
 
-  // Extrair dados dos queries
-  const students = studentsQuery.data || [];
+  // Extrair dados dos queries — useMemo garante referência estável (evita re-renders infinitos)
+  const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const loading = studentsQuery.isLoading;
-  const affiliates = filterDataQuery.data?.affiliates || [];
-  const scholarships = filterDataQuery.data?.scholarships || [];
-  const universities = filterDataQuery.data?.universities || [];
+  const affiliates = useMemo(() => filterDataQuery.data?.affiliates ?? [], [filterDataQuery.data]);
+  const scholarships = useMemo(() => filterDataQuery.data?.scholarships ?? [], [filterDataQuery.data]);
+  const universities = useMemo(() => filterDataQuery.data?.universities ?? [], [filterDataQuery.data]);
 
   // Função para refresh de todos os dados
   const handleRefresh = async () => {

@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { getStripeConfig } from "../stripe-config.ts";
 import { getStripeBalanceTransaction } from '../shared/stripe-utils.ts';
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -128,32 +129,38 @@ Deno.serve(async (req) => {
     const stripeInfo = await getStripeBalanceTransaction(stripe, paymentIntentId || '', amountRaw, currency);
     const amountPaid = stripeInfo.amount;
 
-    // Atualizar perfil
+    // Resolver installment plan (novo sistema dinâmico)
+    const paymentDate = new Date().toISOString();
+    const { installmentNumber, plan } = await resolveInstallmentNumber(
+      supabase,
+      userId,
+      "placement_fee",
+      session.metadata?.installment_number,
+    );
+
+    let isFullyPaid = true;
+    let remainingAmount = 0;
+
+    if (plan) {
+      const result = await recordInstallmentPayment(supabase, plan, amountPaid, paymentDate);
+      isFullyPaid = result.isFullyPaid;
+      remainingAmount = result.remainingAmount;
+    }
+
+    // Atualizar perfil (inclui mirror de campos legados)
     const updateData: Record<string, unknown> = {
       is_placement_fee_paid: true,
-      placement_fee_payment_method: session.metadata?.payment_method ||
-        "stripe",
+      placement_fee_payment_method: session.metadata?.payment_method || "stripe",
+      ...buildLegacyProfileMirror("placement_fee", installmentNumber, plan?.total_installments ?? 1, remainingAmount, isFullyPaid),
     };
-    if (userProfile.placement_fee_installment_enabled) {
-      const installmentNumber = parseInt(session.metadata?.installment_number || '1');
-      if (installmentNumber === 2) {
-        // 2ª parcela paga → zerar saldo pendente
-        updateData.placement_fee_pending_balance = 0;
-        updateData.placement_fee_installment_number = 2;
-      } else {
-        // 1ª parcela → registrar saldo da 2ª parcela
-        const baseAmount = parseFloat(session.metadata?.base_amount || '0');
-        updateData.placement_fee_pending_balance = baseAmount > 0 ? baseAmount : amountPaid;
-        updateData.placement_fee_installment_number = 1;
-      }
-    }
     await supabase.from("user_profiles").update(updateData).eq("user_id", userId);
 
-    await supabase.rpc("insert_individual_fee_payment", {
+    // Inserir registro de pagamento individual
+    const { data: indivPayment } = await supabase.rpc("insert_individual_fee_payment", {
       p_user_id: userId,
       p_fee_type: "placement",
       p_amount: amountPaid,
-      p_payment_date: new Date().toISOString(),
+      p_payment_date: paymentDate,
       p_payment_method: "stripe",
       p_payment_intent_id: paymentIntentId,
       p_stripe_charge_id: null,
@@ -162,11 +169,18 @@ Deno.serve(async (req) => {
       p_fee_amount_usd: stripeInfo.fee_amount_usd,
     });
 
+    // Linkar pagamento ao plano de installments
+    if (plan && indivPayment) {
+      await linkPaymentToPlan(supabase, indivPayment, plan.id);
+    }
+
     // Logar ação
     await supabase.rpc("log_student_action", {
       p_student_id: userProfile.id,
       p_action_type: "fee_payment",
-      p_action_description: `Placement Fee paid via Stripe (${sessionId})`,
+      p_action_description: plan
+        ? `Placement Fee — Installment ${installmentNumber} of ${plan.total_installments} paid via Stripe (${sessionId})`
+        : `Placement Fee paid via Stripe (${sessionId})`,
       p_performed_by: userId,
       p_performed_by_type: "student",
       p_metadata: {
