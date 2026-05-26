@@ -383,6 +383,7 @@ export function useFinancialAnalytics() {
         ...loadedData,
         currentRange,
         individualPaymentDates: loadedData.individualPaymentDates,
+        individualFeePayments: loadedData.individualFeePayments,
         getFeeAmount
       });
 
