@@ -13,6 +13,7 @@ interface KanbanColumnProps {
   isDropped?: boolean;
   showSelectionTags?: boolean;
   showTeamLabel?: boolean;
+  onMarkLost?: (studentId: string) => void;
 }
 
 const actorHeaderStyles = {
@@ -43,7 +44,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   getUnreadCount, 
   isDropped = false, 
   showSelectionTags = false,
-  showTeamLabel = true
+  showTeamLabel = true,
+  onMarkLost
 }) => {
   const Icon = stage.icon;
   const actor = (stage as any).actor as 'student' | 'admin' | 'both' | undefined;
@@ -140,6 +142,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               unreadMessages={getUnreadCount(student.student_id)}
               showSelectionTags={showSelectionTags}
               currentStageKey={stage.key as ApplicationFlowStageKey}
+              onMarkLost={onMarkLost}
             />
           ))
         )}

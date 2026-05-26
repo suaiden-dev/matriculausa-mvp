@@ -328,7 +328,8 @@ function getRawStepStatus(
       return (student.is_placement_fee_paid || isMigma) ? 'completed' : 'pending';
 
     case 'reinstatement_fee':
-      if (student.student_process_type !== 'transfer' || student.visa_transfer_active !== false) return 'skipped';
+      // Applies to transfer students whose visa is NOT active (expired, null, or undefined)
+      if (student.student_process_type !== 'transfer' || student.visa_transfer_active === true) return 'skipped';
       return student.has_paid_reinstatement_package ? 'completed' : 'pending';
 
     case 'scholarship_fee':
@@ -399,19 +400,30 @@ function getRawStepStatus(
         student.has_paid_ds160_package ||
         student.has_paid_i539_cos_package ||
         student.sevis_transfer_completed ||
-        student.visa_approved ||
-        ['approved', 'sent', 'returned'].includes(student.transfer_form_status || '');
+        student.visa_approved;
 
       if (alreadyProgressed) return 'completed';
       return student.acceptance_letter_url ? 'in_progress' : 'pending';
     }
 
-    case 'student_sends_letter':
+    case 'student_sends_letter': {
       if (student.student_process_type !== 'transfer') return 'skipped';
-      if (student.transfer_form_status === 'approved') return 'completed';
+      // If SEVIS is done, this step is clearly complete
+      if (student.sevis_transfer_completed) return 'completed';
+
+      // For expired-visa transfers (visa_transfer_active != true), the I-20 fee
+      // must be paid before the transfer form can be considered fully complete.
+      // Using !== true to safely handle null/undefined values from Supabase joins.
+      const isExpiredVisaTransfer = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
+      const i20FeePaid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+
+      if (student.transfer_form_status === 'approved') {
+        return (isExpiredVisaTransfer && !i20FeePaid) ? 'in_progress' : 'completed';
+      }
       if (student.transfer_form_status === 'returned') return 'in_progress';
       if (student.transfer_form_status === 'sent') return 'in_progress';
       return 'pending';
+    }
 
     case 'sevis_transfer':
       if (student.student_process_type !== 'transfer') return 'skipped';
@@ -421,14 +433,16 @@ function getRawStepStatus(
       const isApplicable =
         student.student_process_type === 'initial' ||
         student.student_process_type === 'change_of_status' ||
-        (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
+        // transfer with expired/inactive visa (visa_transfer_active !== true handles null/undefined/false)
+        (student.student_process_type === 'transfer' && student.visa_transfer_active !== true);
       if (!isApplicable) return 'skipped';
 
+      // For transfer students with pending SEVIS, 'enrolled' status alone does NOT
+      // complete this stage — the actual fee payment or sevis completion is required.
+      // 'enrolled' is intentionally omitted here; it's handled by getStepStatus.
       const alreadyProgressed =
-        student.application_status === 'enrolled' ||
         student.sevis_transfer_completed ||
-        student.visa_approved ||
-        ['approved', 'sent', 'returned'].includes(student.transfer_form_status || '');
+        student.visa_approved;
 
       if (alreadyProgressed) return 'completed';
 
@@ -490,8 +504,22 @@ export function getStepStatus(
     return 'skipped';
   }
 
-  // 2. Se o status da matrícula for 'enrolled', todas as etapas ativas são marcadas como 'completed'
+  // 2. Stages with a mandatory fee gate: NEVER auto-complete via enrolled status or
+  // linearization if the actual payment hasn't been confirmed.
+  // This prevents enrollment being set prematurely from skipping fee collection.
+  const i20FeePaid =
+    student.has_paid_i20_control_fee ||
+    student.has_paid_ds160_package ||
+    student.has_paid_i539_cos_package;
+  if (step === 'i20_fee' && !i20FeePaid) {
+    // Return raw status directly — 'pending' (applicable) or 'skipped' (not applicable)
+    // Skip both the enrolled auto-complete and the linearization scan.
+    return rawStatus;
+  }
+
+  // 3. Se o status da matrícula for 'enrolled', todas as etapas ativas são marcadas como 'completed'
   // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+  // and student_sends_letter.
   if (student.application_status === 'enrolled') {
     const isTransferPendingSevis =
       student.student_process_type === 'transfer' &&
@@ -502,7 +530,7 @@ export function getStepStatus(
     }
   }
 
-  // 3. Obter a ordem das etapas a partir do array oficial do fluxo
+  // 4. Obter a ordem das etapas a partir do array oficial do fluxo
   // Encontramos o maior índice de etapa que está marcada como 'completed' (individualmente)
   let maxCompletedIndex = -1;
   for (let i = 0; i < APPLICATION_FLOW_STAGES.length; i++) {
@@ -513,7 +541,7 @@ export function getStepStatus(
     }
   }
 
-  // 4. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
+  // 5. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
   // nós a promovemos automaticamente a 'completed' para garantir a linearidade visual.
   const currentStepIndex = APPLICATION_FLOW_STAGES.findIndex(s => s.key === step);
   if (currentStepIndex !== -1 && currentStepIndex <= maxCompletedIndex) {

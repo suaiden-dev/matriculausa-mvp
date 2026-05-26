@@ -110,7 +110,8 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
               placement_fee_pending_balance, placement_fee_due_date, 
               placement_fee_installment_number, placement_fee_installment_enabled,
               source, student_process_type, visa_transfer_active,
-              has_paid_reinstatement_package, has_paid_ds160_package, has_paid_i539_cos_package
+              has_paid_reinstatement_package, has_paid_ds160_package, has_paid_i539_cos_package,
+              has_paid_i20_control_fee, selected_scholarship_id, selected_application_id
             )
           `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
