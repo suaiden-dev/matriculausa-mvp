@@ -399,19 +399,27 @@ function getRawStepStatus(
         student.has_paid_ds160_package ||
         student.has_paid_i539_cos_package ||
         student.sevis_transfer_completed ||
-        student.visa_approved ||
-        ['approved', 'sent', 'returned'].includes(student.transfer_form_status || '');
+        student.visa_approved;
 
       if (alreadyProgressed) return 'completed';
       return student.acceptance_letter_url ? 'in_progress' : 'pending';
     }
 
-    case 'student_sends_letter':
+    case 'student_sends_letter': {
       if (student.student_process_type !== 'transfer') return 'skipped';
-      if (student.transfer_form_status === 'approved') return 'completed';
+      // If SEVIS is done, this step is clearly complete
+      if (student.sevis_transfer_completed) return 'completed';
+
+      const isExpiredVisaTransfer = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+      const i20FeePaid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+
+      if (student.transfer_form_status === 'approved') {
+        return (isExpiredVisaTransfer && !i20FeePaid) ? 'in_progress' : 'completed';
+      }
       if (student.transfer_form_status === 'returned') return 'in_progress';
       if (student.transfer_form_status === 'sent') return 'in_progress';
       return 'pending';
+    }
 
     case 'sevis_transfer':
       if (student.student_process_type !== 'transfer') return 'skipped';
@@ -427,8 +435,7 @@ function getRawStepStatus(
       const alreadyProgressed =
         student.application_status === 'enrolled' ||
         student.sevis_transfer_completed ||
-        student.visa_approved ||
-        ['approved', 'sent', 'returned'].includes(student.transfer_form_status || '');
+        student.visa_approved;
 
       if (alreadyProgressed) return 'completed';
 
@@ -502,7 +509,7 @@ export function getStepStatus(
     }
   }
 
-  // 3. Obter a ordem das etapas a partir do array oficial do fluxo
+  // 4. Obter a ordem das etapas a partir do array oficial do fluxo
   // Encontramos o maior índice de etapa que está marcada como 'completed' (individualmente)
   let maxCompletedIndex = -1;
   for (let i = 0; i < APPLICATION_FLOW_STAGES.length; i++) {
@@ -513,7 +520,7 @@ export function getStepStatus(
     }
   }
 
-  // 4. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
+  // 5. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
   // nós a promovemos automaticamente a 'completed' para garantir a linearidade visual.
   const currentStepIndex = APPLICATION_FLOW_STAGES.findIndex(s => s.key === step);
   if (currentStepIndex !== -1 && currentStepIndex <= maxCompletedIndex) {
