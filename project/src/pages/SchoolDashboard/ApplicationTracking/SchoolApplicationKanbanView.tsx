@@ -213,6 +213,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
                   showSelectionTags={false}
+                  showTeamLabel={false}
                 />
               </div>
             );
@@ -233,6 +234,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
               isDropped
+              showTeamLabel={false}
             />
           </div>
         </div>
