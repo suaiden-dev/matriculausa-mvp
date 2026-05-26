@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import KanbanColumn from '../../../components/AdminDashboard/KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
-  getStepStatus,
   ApplicationFlowStageKey
 } from '../../../utils/applicationFlowStages';
+import { getSchoolStepStatus } from '../../../utils/schoolApplicationFlowStages';
 import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import { UserX, RefreshCw } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -174,7 +174,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
           continue;
         }
 
-        const stepStatus = getStepStatus(student as any, stageDef.key);
+        const stepStatus = getSchoolStepStatus(student, stageDef.key);
 
         if (stepStatus === 'skipped') {
           continue;
