@@ -25,6 +25,7 @@ import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { formatPlacementFee } from '../../../utils/placementFeeCalculator';
 import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { generateDecryptedPDFImage } from '../../../utils/pdfThumbnail';
+import { computeInstallmentAmounts, InstallmentPlan } from '../../../config/installmentConfig';
 
 // ─── Payment icons (2nd installment) ───────────────────────────────────────
 const PixIcon = ({ className }: { className?: string }) => (
@@ -110,8 +111,38 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
     // 2. HOOKS DE CÁLCULO (Sempre No Topo)
     const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
-    const placementFeePendingBalance = (userProfile as any)?.placement_fee_pending_balance ?? 0;
-    const hasPlacementInstallmentPending = placementFeePendingBalance > 0;
+
+    // Plano de parcelamento ativo (novo sistema dinâmico)
+    const [activePlacementPlan, setActivePlacementPlan] = useState<InstallmentPlan | null>(null);
+    useEffect(() => {
+        if (!userProfile?.user_id) return;
+        supabase
+            .from('fee_installment_plans')
+            .select('*')
+            .eq('user_id', userProfile.user_id)
+            .eq('fee_type', 'placement_fee')
+            .eq('status', 'active')
+            .maybeSingle()
+            .then(({ data }) => setActivePlacementPlan(data ?? null));
+    }, [userProfile?.user_id]);
+
+    // Valor a pagar nesta parcela (próxima parcela do plano)
+    const currentInstallmentNumber = (activePlacementPlan?.installments_paid ?? 0) + 1;
+    const totalInstallments = activePlacementPlan?.total_installments ?? 2;
+
+    // Calcular o valor da próxima parcela usando a mesma lógica de divisão
+    const remainingAmount = activePlacementPlan
+        ? Math.max(0, activePlacementPlan.total_amount - activePlacementPlan.amount_paid)
+        : 0;
+    // Amount for THIS specific installment (evenly divided, last absorbs rounding)
+    const placementFeePendingBalance = activePlacementPlan
+        ? computeInstallmentAmounts(activePlacementPlan.total_amount, totalInstallments)[currentInstallmentNumber - 1] ?? remainingAmount
+        : ((userProfile as any)?.placement_fee_pending_balance ?? 0); // backward compat
+
+    const hasPlacementInstallmentPending = activePlacementPlan
+        ? activePlacementPlan.status === 'active' && activePlacementPlan.installments_paid < activePlacementPlan.total_installments
+        : (userProfile as any)?.placement_fee_pending_balance > 0; // backward compat
+
     const installmentCardAmount = hasPlacementInstallmentPending ? calculateCardAmountWithFees(placementFeePendingBalance) : 0;
     const installmentPixInfo = hasPlacementInstallmentPending && exchangeRate > 0
         ? calculatePIXTotalWithIOF(placementFeePendingBalance, exchangeRate)
@@ -369,8 +400,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         },
         ...(hasPlacementInstallmentPending ? [{
             id: 'placement_installment',
-            title: `2ª Parcela do Placement Fee — $${placementFeePendingBalance.toFixed(0)}`,
-            status: 'AÇÃO NECESSÁRIA',
+            title: t('dashboard:studentDashboard.myApplications.placementFee.installmentStepTitle', {
+                n: currentInstallmentNumber,
+                total: totalInstallments,
+                amount: placementFeePendingBalance.toFixed(0),
+            }),
+            status: t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired'),
             variant: 'warning' as any,
             completed: false,
         }] : []),
@@ -604,7 +639,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         selected_scholarship_id: applicationDetails.scholarship_id,
                         fee_type: 'placement_fee',
                         final_amount: placementFeePendingBalance.toString(),
-                        installment_number: '2',
+                        installment_number: String(currentInstallmentNumber),
+                        total_installments: String(totalInstallments),
                         is_installment: 'true',
                     },
                     ...(isParcelow && installmentPayerInfo && { payer_info: installmentPayerInfo }),
@@ -1078,7 +1114,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 </div>
                                                 <div className="flex flex-col items-center md:items-end">
                                                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
-                                                        {t('payment:placementFeeStep.title')} — 2nd Installment (50%)
+                                                        {t('payment:placementFeeStep.title')} — Installment {currentInstallmentNumber} of {totalInstallments}
                                                     </span>
                                                     <div className="text-4xl font-black text-slate-900 tracking-tighter">
                                                         {formatPlacementFee(placementFeePendingBalance)}
@@ -1233,7 +1269,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                             <ZelleCheckout
                                                                 feeType="placement_fee"
                                                                 amount={placementFeePendingBalance}
-                                                                metadata={{ installment_number: 2, is_installment: true }}
+                                                                metadata={{ installment_number: currentInstallmentNumber, total_installments: totalInstallments, is_installment: true }}
                                                                 ignoreApprovedState={true}
                                                                 onSuccess={() => window.location.reload()}
                                                             />
