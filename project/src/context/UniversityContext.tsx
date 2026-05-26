@@ -359,6 +359,40 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
     }
   }, [user, hasLoadedData]);
 
+  // Sincronização em tempo real (Supabase Realtime)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('university-dashboard-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'scholarship_applications' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_profiles' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'document_request_uploads' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const value: UniversityContextType = {
     university,
     scholarships,
