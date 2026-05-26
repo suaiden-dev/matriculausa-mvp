@@ -77,19 +77,21 @@ Deno.serve(async (req: Request) => {
 
     console.log("[stripe-checkout-placement-fee] ✅ User authenticated:", user.id);
 
-    const { data: studentProfile } = await supabase
-      .from("user_profiles")
-      .select("placement_fee_installment_enabled")
+    const { data: activePlan } = await supabase
+      .from("fee_installment_plans")
+      .select("id, total_installments, installments_paid")
       .eq("user_id", user.id)
-      .single();
+      .eq("fee_type", "placement_fee")
+      .eq("status", "active")
+      .maybeSingle();
 
     const sessionMetadata: any = {
       project: "matricula_usa",
+      is_installment: activePlan ? "true" : "false",
       ...metadata,
       student_id: user.id,
       fee_type: "placement_fee",
       payment_method: payment_method || "stripe",
-      is_installment: studentProfile?.placement_fee_installment_enabled ? "true" : "false",
     };
 
     // Lógica PIX

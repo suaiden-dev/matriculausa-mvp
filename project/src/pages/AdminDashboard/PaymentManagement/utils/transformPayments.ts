@@ -1,4 +1,5 @@
 import type { PaymentRecord, PaymentStats } from '../data/types';
+import type { PlacementInstallmentRow } from '../../../../utils/paymentConverter';
 
 interface TransformInputs {
   applications: any[];
@@ -9,6 +10,8 @@ interface TransformInputs {
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
   realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number }>;
+  placementInstallmentRows?: Map<string, PlacementInstallmentRow[]>;
+  placementInstallmentPlans?: Map<string, number>;
 }
 
 export function transformPaymentsToRecordsAndStats({
@@ -20,6 +23,8 @@ export function transformPaymentsToRecordsAndStats({
   individualPaymentDates,
   getFeeAmount,
   realPaymentAmounts,
+  placementInstallmentRows,
+  placementInstallmentPlans,
 }: TransformInputs): { paymentRecords: PaymentRecord[]; stats: PaymentStats } {
   const paymentRecords: PaymentRecord[] = [];
 
@@ -288,40 +293,71 @@ export function transformPaymentsToRecordsAndStats({
 
     // Placement Fee (novo fluxo)
     if (student.placement_fee_flow && student.is_placement_fee_paid && !globalFeesProcessed[student.user_id]?.placement_fee) {
-      let placementFeeAmount: number;
-      
-      // Try resolving placement amount via expected fallback from config/realPaid overrides
-      if (realPaid?.placement !== undefined && realPaid.placement > 0) {
-        placementFeeAmount = Math.round(realPaid.placement * 100);
-      } else if (userOverrides.placement_fee !== undefined) {
-        placementFeeAmount = Math.round(userOverrides.placement_fee * 100);
-      } else if (scholarship?.placement_fee_amount) {
-        placementFeeAmount = Math.round(Number(scholarship.placement_fee_amount) * 100);
+      const installmentRows = placementInstallmentRows?.get(student.user_id) || [];
+
+      if (installmentRows.length > 1) {
+        // Multiple installment payments — create one row per payment
+        const planTotal = placementInstallmentPlans?.get(student.user_id) ?? installmentRows.length;
+        installmentRows.forEach((row, idx) => {
+          const rowAmount = Math.round((row.gross_amount_usd ?? row.amount) * 100);
+          paymentRecords.push({
+            id: `${student.user_id}-placement-${idx + 1}`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            field_of_study: scholarship?.field_of_study || null,
+            fee_type: 'placement',
+            amount: rowAmount,
+            status: 'paid',
+            payment_date: row.payment_date || individualPaymentDates.get(student.user_id)?.get('placement') || student.last_payment_date || app.paid_at || app.created_at,
+            created_at: app.created_at,
+            payment_method: (row.payment_method as any) || student.placement_fee_payment_method || 'manual',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: scholarship.id ? [scholarship.id] : [],
+            installment_number: idx + 1,
+            total_installments: planTotal,
+          } as PaymentRecord);
+        });
       } else {
-        // Fallback or fetched if it wasn't pre-resolved.
-        placementFeeAmount = 145000;
+        // Single payment — original behavior
+        let placementFeeAmount: number;
+        if (installmentRows.length === 1) {
+          placementFeeAmount = Math.round((installmentRows[0].gross_amount_usd ?? installmentRows[0].amount) * 100);
+        } else if (realPaid?.placement !== undefined && realPaid.placement > 0) {
+          placementFeeAmount = Math.round(realPaid.placement * 100);
+        } else if (userOverrides.placement_fee !== undefined) {
+          placementFeeAmount = Math.round(userOverrides.placement_fee * 100);
+        } else if (scholarship?.placement_fee_amount) {
+          placementFeeAmount = Math.round(Number(scholarship.placement_fee_amount) * 100);
+        } else {
+          placementFeeAmount = 145000;
+        }
+
+        paymentRecords.push({
+          id: `${student.user_id}-placement`,
+          student_id: student.id,
+          student_name: studentName,
+          student_email: studentEmail,
+          university_id: university.id,
+          university_name: universityName,
+          scholarship_id: scholarship.id,
+          scholarship_title: scholarshipTitle,
+          field_of_study: scholarship?.field_of_study || null,
+          fee_type: 'placement',
+          amount: placementFeeAmount,
+          status: 'paid',
+          payment_date: individualPaymentDates.get(student.user_id)?.get('placement') || student.last_payment_date || app.paid_at || app.created_at,
+          created_at: app.created_at,
+          payment_method: student.placement_fee_payment_method || 'manual',
+          seller_referral_code: student.seller_referral_code,
+          scholarships_ids: scholarship.id ? [scholarship.id] : [],
+        } as PaymentRecord);
       }
 
-      paymentRecords.push({
-        id: `${student.user_id}-placement`,
-        student_id: student.id,
-        student_name: studentName,
-        student_email: studentEmail,
-        university_id: university.id,
-        university_name: universityName,
-        scholarship_id: scholarship.id,
-        scholarship_title: scholarshipTitle,
-        field_of_study: scholarship?.field_of_study || null,
-        fee_type: 'placement',
-        amount: placementFeeAmount,
-        status: 'paid',
-        payment_date: individualPaymentDates.get(student.user_id)?.get('placement') || student.last_payment_date || app.paid_at || app.created_at,
-        created_at: app.created_at,
-        payment_method: student.placement_fee_payment_method || 'manual',
-        seller_referral_code: student.seller_referral_code,
-        scholarships_ids: scholarship.id ? [scholarship.id] : [],
-      } as PaymentRecord);
-      
       if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].placement_fee = true;
     }
@@ -828,25 +864,55 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     if (stripeUser.is_placement_fee_paid && stripeUser.placement_fee_flow) {
-      paymentRecords.push({
-        id: `stripe-${stripeUser.user_id}-placement`,
-        student_id: stripeUser.id,
-        student_name: studentName,
-        student_email: studentEmail,
-        university_id: '00000000-0000-0000-0000-000000000000',
-        university_name: 'No University Selected',
-        scholarship_id: '00000000-0000-0000-0000-000000000000',
-        scholarship_title: 'No Scholarship Selected',
-        field_of_study: null,
-        fee_type: 'placement',
-        amount: placementFee,
-        status: 'paid',
-        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('placement') || stripeUser.last_payment_date || stripeUser.created_at,
-        created_at: stripeUser.created_at,
-        payment_method: stripeUser.placement_fee_payment_method || 'manual',
-        seller_referral_code: stripeUser.seller_referral_code,
-        scholarships_ids: [],
-      } as PaymentRecord);
+      const stripeInstallmentRows = placementInstallmentRows?.get(stripeUser.user_id) || [];
+
+      if (stripeInstallmentRows.length > 1) {
+        const stripePlanTotal = placementInstallmentPlans?.get(stripeUser.user_id) ?? stripeInstallmentRows.length;
+        stripeInstallmentRows.forEach((row, idx) => {
+          const rowAmount = Math.round((row.gross_amount_usd ?? row.amount) * 100);
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-placement-${idx + 1}`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            field_of_study: null,
+            fee_type: 'placement',
+            amount: rowAmount,
+            status: 'paid',
+            payment_date: row.payment_date || individualPaymentDates.get(stripeUser.user_id)?.get('placement') || stripeUser.last_payment_date || stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: (row.payment_method as any) || stripeUser.placement_fee_payment_method || 'manual',
+            seller_referral_code: stripeUser.seller_referral_code,
+            scholarships_ids: [],
+            installment_number: idx + 1,
+            total_installments: stripePlanTotal,
+          } as PaymentRecord);
+        });
+      } else {
+        paymentRecords.push({
+          id: `stripe-${stripeUser.user_id}-placement`,
+          student_id: stripeUser.id,
+          student_name: studentName,
+          student_email: studentEmail,
+          university_id: '00000000-0000-0000-0000-000000000000',
+          university_name: 'No University Selected',
+          scholarship_id: '00000000-0000-0000-0000-000000000000',
+          scholarship_title: 'No Scholarship Selected',
+          field_of_study: null,
+          fee_type: 'placement',
+          amount: placementFee,
+          status: 'paid',
+          payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('placement') || stripeUser.last_payment_date || stripeUser.created_at,
+          created_at: stripeUser.created_at,
+          payment_method: stripeUser.placement_fee_payment_method || 'manual',
+          seller_referral_code: stripeUser.seller_referral_code,
+          scholarships_ids: [],
+        } as PaymentRecord);
+      }
     }
 
     // DS-160 Package Fee amount logic

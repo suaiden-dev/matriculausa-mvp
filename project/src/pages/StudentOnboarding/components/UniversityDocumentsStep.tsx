@@ -400,8 +400,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         },
         ...(hasPlacementInstallmentPending ? [{
             id: 'placement_installment',
-            title: `Placement Fee — Parcela ${currentInstallmentNumber}/${totalInstallments} — $${placementFeePendingBalance.toFixed(0)}`,
-            status: 'AÇÃO NECESSÁRIA',
+            title: t('dashboard:studentDashboard.myApplications.placementFee.installmentStepTitle', {
+                n: currentInstallmentNumber,
+                total: totalInstallments,
+                amount: placementFeePendingBalance.toFixed(0),
+            }),
+            status: t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired'),
             variant: 'warning' as any,
             completed: false,
         }] : []),
@@ -1110,7 +1114,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 </div>
                                                 <div className="flex flex-col items-center md:items-end">
                                                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
-                                                        {t('payment:placementFeeStep.title')} — 2nd Installment (50%)
+                                                        {t('payment:placementFeeStep.title')} — Installment {currentInstallmentNumber} of {totalInstallments}
                                                     </span>
                                                     <div className="text-4xl font-black text-slate-900 tracking-tighter">
                                                         {formatPlacementFee(placementFeePendingBalance)}
@@ -1265,7 +1269,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                             <ZelleCheckout
                                                                 feeType="placement_fee"
                                                                 amount={placementFeePendingBalance}
-                                                                metadata={{ installment_number: 2, is_installment: true }}
+                                                                metadata={{ installment_number: currentInstallmentNumber, total_installments: totalInstallments, is_installment: true }}
                                                                 ignoreApprovedState={true}
                                                                 onSuccess={() => window.location.reload()}
                                                             />

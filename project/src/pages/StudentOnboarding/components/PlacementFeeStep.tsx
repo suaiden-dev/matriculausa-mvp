@@ -459,8 +459,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                             const couponEffectiveBase = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                                 ? couponValidation.finalAmount
                                 : baseAmount;
-                            // Se o admin habilitou parcelamento, o aluno paga 50% agora
-                            const effectiveAmount = installmentEnabled ? Math.ceil(couponEffectiveBase / 2 * 100) / 100 : couponEffectiveBase;
+                            // Se o admin habilitou parcelamento, cobrar 1ª parcela de N (dinâmico)
+                            const totalInstallments = activePlan?.total_installments ?? 2;
+                            const effectiveAmount = installmentEnabled ? computeInstallmentAmounts(couponEffectiveBase, totalInstallments)[0] : couponEffectiveBase;
                             // Todos os métodos usam effectiveAmount quando installment está ativo
                             const cardAmount = calculateCardAmountWithFees(effectiveAmount);
                             const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
@@ -513,7 +514,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
 
                                             <div className="flex flex-col items-center md:items-end">
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
-                                                    {installmentEnabled ? '1st Installment (50%)' : t('placementFeeStep.title')}
+                                                    {installmentEnabled ? `1st Installment (1/${totalInstallments})` : t('placementFeeStep.title')}
                                                 </span>
                                                 {couponValidation?.isValid ? (
                                                     <div className="flex flex-col items-end">
@@ -546,7 +547,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                 <div>
                                                     <p className="text-sm font-black text-amber-800 uppercase tracking-tight">Installment Plan Available</p>
                                                     <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                                                        Pay <strong>{formatPlacementFee(effectiveAmount)}</strong> now (1st installment) and the remaining <strong>{formatPlacementFee(baseAmount - effectiveAmount)}</strong> within 30 days. Your documents will be released after full payment.
+                                                        Pay <strong>{formatPlacementFee(effectiveAmount)}</strong> now (1/{totalInstallments}) and the remaining <strong>{formatPlacementFee(couponEffectiveBase - effectiveAmount)}</strong> in {totalInstallments - 1} more installment{totalInstallments - 1 > 1 ? 's' : ''}. Your documents will be released after full payment.
                                                     </p>
                                                 </div>
                                             </div>

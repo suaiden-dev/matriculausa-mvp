@@ -810,3 +810,86 @@ export async function getGrossPaidAmountsBatch(
     return new Map();
   }
 }
+
+export interface PlacementInstallmentRow {
+  id: string;
+  user_id: string;
+  fee_type: string;
+  amount: number;
+  gross_amount_usd: number | null;
+  payment_method: string | null;
+  payment_date: string | null;
+  parcelow_status: string | null;
+  installment_plan_id: string | null;
+}
+
+/**
+ * Busca todas as rows de individual_fee_payments para fee_type = 'placement',
+ * retornando uma lista por userId (ordenada por payment_date ASC = parcela 1 primeiro).
+ * Usada para mostrar múltiplas linhas no Payment Management quando há parcelamento.
+ */
+export async function getPlacementInstallmentRowsBatch(
+  userIds: string[],
+): Promise<Map<string, PlacementInstallmentRow[]>> {
+  if (userIds.length === 0) return new Map();
+
+  try {
+    const { data, error } = await supabase
+      .from("individual_fee_payments")
+      .select("id, user_id, fee_type, amount, gross_amount_usd, payment_method, payment_date, parcelow_status, installment_plan_id")
+      .in("user_id", userIds)
+      .eq("fee_type", "placement")
+      .order("payment_date", { ascending: true }); // mais antiga primeiro = installment 1
+
+    const result = new Map<string, PlacementInstallmentRow[]>();
+
+    if (error) {
+      console.error("[paymentConverter] Erro ao buscar placement installment rows:", error);
+      return result;
+    }
+
+    for (const row of data || []) {
+      // Ignorar parcelow não pago
+      if (row.payment_method === "parcelow" && row.parcelow_status && row.parcelow_status !== "paid") continue;
+
+      if (!result.has(row.user_id)) result.set(row.user_id, []);
+      result.get(row.user_id)!.push(row as PlacementInstallmentRow);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("[paymentConverter] Exceção ao buscar placement installment rows:", error);
+    return new Map();
+  }
+}
+
+/**
+ * Busca fee_installment_plans para fee_type = 'placement_fee' em batch,
+ * retornando o total_installments real do plano por userId.
+ */
+export async function getPlacementInstallmentPlansBatch(
+  userIds: string[],
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+
+  try {
+    const { data, error } = await supabase
+      .from("fee_installment_plans")
+      .select("user_id, total_installments")
+      .in("user_id", userIds)
+      .eq("fee_type", "placement_fee");
+
+    const result = new Map<string, number>();
+    if (error) {
+      console.error("[paymentConverter] Erro ao buscar placement installment plans:", error);
+      return result;
+    }
+    for (const row of data || []) {
+      result.set(row.user_id, row.total_installments);
+    }
+    return result;
+  } catch (error) {
+    console.error("[paymentConverter] Exceção ao buscar placement installment plans:", error);
+    return new Map();
+  }
+}

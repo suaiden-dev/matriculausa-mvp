@@ -181,7 +181,13 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
 											FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'
 										}` }>
-											{FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type}
+											{(() => {
+												const label = FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type;
+												if (payment.installment_number && payment.total_installments) {
+													return `${label} — ${payment.installment_number}/${payment.total_installments}`;
+												}
+												return label;
+											})()}
 										</span>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
