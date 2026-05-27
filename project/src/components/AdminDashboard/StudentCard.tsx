@@ -30,9 +30,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   
   // Lógica de Débito Proativa
   const totalDebt = React.useMemo(() => {
+    // Alunos MIGMA gerenciam taxas no próprio sistema — sem exibição de débito
+    if ((student as any).source === 'migma') return 0;
+
     try {
       let total = 0;
-      
+
       // 1. Balanço pendente direto do banco (Placement Fee parcial ou outras)
       const pendingBalance = Number(student.placement_fee_pending_balance || 0);
       total += pendingBalance;

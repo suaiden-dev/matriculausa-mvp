@@ -66,14 +66,14 @@ function processApplications(
     }[] = [
       {
         key: "selection_process",
-        flagPaid: !!student.has_paid_selection_process_fee,
+        flagPaid: !!student.has_paid_selection_process_fee && student?.source !== 'migma',
         fallbackAmount: realPaid?.selection_process ? Math.round(realPaid.selection_process * 100) : (userOverrides.selection_process_fee !== undefined ? Math.round(userOverrides.selection_process_fee * 100) : Math.round((systemType === "simplified" ? 350 : 400 + dependentCost) * 100)),
         paymentMethodFallback: student.selection_process_fee_payment_method || "manual",
       },
       {
         key: "application",
         flagPaid: !!app.is_application_fee_paid,
-        fallbackAmount: realPaid?.application ? Math.round(realPaid.application * 100) : (scholarship?.application_fee_amount ? (parseFloat(scholarship.application_fee_amount) > 1000 ? Math.round(parseFloat(scholarship.application_fee_amount)) : Math.round(parseFloat(scholarship.application_fee_amount) * 100)) + (dependents * 10000) : Math.round(getFeeAmount("application_fee") * 100) + (dependents * 10000)),
+        fallbackAmount: realPaid?.application ? Math.round(realPaid.application * 100) : (scholarship?.application_fee_amount ? (parseFloat(scholarship.application_fee_amount) > 1000 ? Math.round(parseFloat(scholarship.application_fee_amount)) : Math.round(parseFloat(scholarship.application_fee_amount) * 100)) + (student?.source !== 'migma' ? dependents * 10000 : 0) : Math.round(getFeeAmount("application_fee") * 100) + (student?.source !== 'migma' ? dependents * 10000 : 0)),
         paymentMethodFallback: app.application_fee_payment_method || "manual",
       },
       {

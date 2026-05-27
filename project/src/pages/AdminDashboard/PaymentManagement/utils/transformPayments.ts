@@ -176,18 +176,18 @@ export function transformPaymentsToRecordsAndStats({
     } else if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
-      if (dependents > 0) {
+      if (dependents > 0 && student?.source !== 'migma') {
         applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
       }
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-      if (dependents > 0) {
+      if (dependents > 0 && student?.source !== 'migma') {
         applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
       }
     }
 
-    // Selection Process (global)
-    if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
+    // Selection Process (global) — não exibir para alunos Migma (eles pagam para a Migma, não para o MatriculaUSA)
+    if (student.has_paid_selection_process_fee && student?.source !== 'migma' && !globalFeesProcessed[student.user_id]?.selection_process) {
       createPaymentRecordsForFee({
         student,
         feeType: 'selection_process',
@@ -491,7 +491,7 @@ export function transformPaymentsToRecordsAndStats({
     if (hasApplication) return;
 
     const paidFeeTypes = new Set(userZellePayments.map(payment => {
-      if (payment.fee_type === 'application_fee' || payment.fee_type === 'application') return 'application';
+      if (payment.fee_type === 'application_fee' || payment.fee_type === 'application' || payment.fee_type === 'application_fee_migma') return 'application';
       if (payment.fee_type === 'selection_process_fee' || payment.fee_type === 'selection_process') return 'selection_process';
       if (payment.fee_type === 'scholarship_fee' || payment.fee_type === 'scholarship') return 'scholarship';
       if (payment.fee_type === 'i20_control_fee' || payment.fee_type === 'i20_control') return 'i20_control_fee';
@@ -535,10 +535,11 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     if (paidFeeTypes.has('application')) {
-      const applicationPayment = userZellePayments.find((p: any) => 
-        p.fee_type_global === 'application' || 
-        p.fee_type === 'application_fee' || 
-        p.fee_type === 'application'
+      const applicationPayment = userZellePayments.find((p: any) =>
+        p.fee_type_global === 'application' ||
+        p.fee_type === 'application_fee' ||
+        p.fee_type === 'application' ||
+        p.fee_type === 'application_fee_migma'
       );
       const applicationAmount = Math.round(parseFloat(applicationPayment.amount) * 100);
       paymentRecords.push({
@@ -779,7 +780,7 @@ export function transformPaymentsToRecordsAndStats({
       placementFee = expectedPlacementValue * 100;
     }
 
-    if (stripeUser.has_paid_selection_process_fee) {
+    if (stripeUser.has_paid_selection_process_fee && stripeUser?.source !== 'migma') {
       createPaymentRecordsForFee({
         student: stripeUser,
         feeType: 'selection_process',

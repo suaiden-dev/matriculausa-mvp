@@ -324,8 +324,8 @@ function getRawStepStatus(
       return student.is_application_fee_paid ? 'completed' : 'pending';
 
     case 'placement_fee':
-      if (!student.placement_fee_flow) return 'skipped';
-      return (student.is_placement_fee_paid || isMigma) ? 'completed' : 'pending';
+      if (!student.placement_fee_flow || isMigma) return 'skipped';
+      return student.is_placement_fee_paid ? 'completed' : 'pending';
 
     case 'reinstatement_fee':
       if (student.student_process_type !== 'transfer' || student.visa_transfer_active !== false) return 'skipped';
@@ -344,7 +344,7 @@ function getRawStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      
+
       if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
       if (total === 0) return 'pending';
 
