@@ -17,16 +17,16 @@ interface StudentCardProps {
   unreadMessages?: number;
   showSelectionTags?: boolean;
   currentStageKey?: ApplicationFlowStageKey;
+  onMarkLost?: (studentId: string) => void;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey, onMarkLost }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
-  const currentAdminProfileId = (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') ? userProfile.id : null;
   
   // Lógica de Débito Proativa
   const totalDebt = React.useMemo(() => {
@@ -113,9 +113,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   
   // Pode editar se: não for admin (super) ou se o admin não for restrito
   // Post Sales sempre pode editar (parity)
-  const canEdit = !currentAdminProfileId ||
-    userProfile?.role === 'post_sales' ||
-    userProfile?.is_restricted_admin === false;
+  // canEdit disponível para uso futuro se necessário
 
   const currentStageKey = propCurrentStageKey;
 
@@ -135,6 +133,13 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (student.is_dropped) {
       setShowRestoreModal(true);
       return;
+    }
+  };
+
+  const handleMarkLostClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onMarkLost) {
+      onMarkLost(student.student_id);
     }
   };
 
@@ -169,7 +174,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         isDropped: true,
         reason,
         adminId: userProfile?.user_id,
-        adminName: userProfile?.full_name
+        adminName: userProfile?.full_name ?? undefined
       });
       
       await logAction(
@@ -369,21 +374,31 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             </div>
           )}
         </div>
-        {/* Drop button */}
-        <button
-          onClick={handleToggleDrop}
-          title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
-          className={`flex-shrink-0 p-1 rounded transition-colors ${
-            student.is_dropped
-              ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
-              : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
-          }`}
-        >
-          {student.is_dropped
-            ? <RotateCcw className="w-3.5 h-3.5" />
-            : <UserX className="w-3.5 h-3.5" />
-          }
-        </button>
+        {/* Drop / Mark as Lost button */}
+        {onMarkLost ? (
+          <button
+            onClick={handleMarkLostClick}
+            title="Mover para Lost"
+            className="flex-shrink-0 p-1 rounded transition-colors text-gray-300 hover:text-red-400 hover:bg-red-50"
+          >
+            <UserX className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleToggleDrop}
+            title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
+            className={`flex-shrink-0 p-1 rounded transition-colors ${
+              student.is_dropped
+                ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+            }`}
+          >
+            {student.is_dropped
+              ? <RotateCcw className="w-3.5 h-3.5" />
+              : <UserX className="w-3.5 h-3.5" />
+            }
+          </button>
+        )}
       </div>
 
       {/* Course / Scholarship info */}

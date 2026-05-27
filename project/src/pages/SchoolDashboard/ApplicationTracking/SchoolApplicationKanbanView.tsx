@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import KanbanColumn from '../../../components/AdminDashboard/KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
-  getStepStatus,
   ApplicationFlowStageKey
 } from '../../../utils/applicationFlowStages';
+import { getSchoolStepStatus } from '../../../utils/schoolApplicationFlowStages';
 import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import { UserX, RefreshCw } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface SchoolApplicationKanbanViewProps {
   students: StudentRecord[];
@@ -56,6 +58,22 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     setIsRefreshing(false);
   };
 
+  const handleMarkLost = async (studentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ is_dropped: true, updated_at: new Date().toISOString() })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast.success('Aluno movido para Lost');
+      await onRefresh();
+    } catch {
+      toast.error('Erro ao marcar aluno como lost');
+    }
+  };
+
   // Função centralizada para pegar unread counts
   const getStudentTotalUnread = (studentId: string) => {
     return getUnreadCount(studentId) + getGlobalUnreadCount(studentId);
@@ -101,7 +119,15 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
   const visibleStages = useMemo(() => {
     return APPLICATION_FLOW_STAGES.filter(stage =>
       allowedStageKeys.includes(stage.key)
-    );
+    ).map(stage => {
+      if (stage.key === 'docs_approval') {
+        return {
+          ...stage,
+          label: 'Global Document Approval'
+        };
+      }
+      return stage;
+    });
   }, []);
 
   // Organize students by their current stage (first non-completed visible stage)
@@ -114,8 +140,30 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     });
 
     displayStudents.forEach(student => {
-      // Find first visible non-completed stage (current stage)
       let placed = false;
+
+      // School kanban gate: once approved, a student only advances past 'review'
+      // if they explicitly confirmed intent to proceed with THIS specific application.
+      // Signal: selected_application_id on user_profiles matches this application's id (app.id).
+      // Without this gate, all approved students (even those considering other universities) would
+      // incorrectly appear in 'Awaiting Application Fee'.
+      const thisApplicationId = student.application_id;
+      const selectedApplicationId = (student as any).selected_application_id as string | null;
+      const studentSelectedThisApplication =
+        !!selectedApplicationId &&
+        selectedApplicationId === thisApplicationId;
+      const studentCommitted = student.is_application_fee_paid || studentSelectedThisApplication;
+
+      if (
+        student.application_status === 'approved' &&
+        !studentCommitted &&
+        stageMap.has('review')
+      ) {
+        stageMap.get('review')!.push(student);
+        return;
+      }
+
+      // Find first visible non-completed stage (current stage)
       for (const stageDef of visibleStages) {
         // Skip transfer_form if not transfer student
         if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
@@ -126,16 +174,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
           continue;
         }
 
-        const stepStatus = getStepStatus(student as any, stageDef.key);
-
-        if (student.student_email === 'alcor8232@uorak.com') {
-          console.log(`🔍 [DEBUG_FINAL] Etapa: ${stageDef.key} | Status: ${stepStatus}`, {
-            paid: (student as any).is_placement_fee_paid,
-            flow: (student as any).placement_fee_flow,
-            docs_app: (student as any).docs_total_approved,
-            docs_req: (student as any).docs_total_required
-          });
-        }
+        const stepStatus = getSchoolStepStatus(student, stageDef.key);
 
         if (stepStatus === 'skipped') {
           continue;
@@ -213,6 +252,8 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
                   showSelectionTags={false}
+                  showTeamLabel={false}
+                  onMarkLost={handleMarkLost}
                 />
               </div>
             );
@@ -233,6 +274,7 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
               isDropped
+              showTeamLabel={false}
             />
           </div>
         </div>

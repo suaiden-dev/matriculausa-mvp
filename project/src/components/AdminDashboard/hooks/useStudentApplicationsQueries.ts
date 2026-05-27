@@ -64,6 +64,9 @@ export interface StudentRecord {
   docs_total_rejected?: number;
   docs_total_rejected_files?: number;
   docs_total_under_review?: number;
+  docs_approved_names?: string[];
+  docs_rejected_names?: string[];
+  docs_under_review_names?: string[];
   basic_docs_total_required?: number;
   basic_docs_total_uploaded?: number;
   basic_docs_total_approved?: number;
@@ -500,7 +503,7 @@ export function useDropStudentMutation() {
         if (error) throw error;
       }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(variables.studentId) });
     },
