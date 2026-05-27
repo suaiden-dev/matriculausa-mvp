@@ -113,7 +113,8 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
           has_paid_reinstatement_package,
           ds160_package_payment_method,
           i539_cos_package_payment_method,
-          reinstatement_package_payment_method
+          reinstatement_package_payment_method,
+          source
         ),
         scholarships (
           id,
@@ -154,7 +155,8 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
         has_paid_reinstatement_package,
         ds160_package_payment_method,
         i539_cos_package_payment_method,
-        reinstatement_package_payment_method
+        reinstatement_package_payment_method,
+        source
       `).or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true,has_paid_reinstatement_package.eq.true')
     ]);
 

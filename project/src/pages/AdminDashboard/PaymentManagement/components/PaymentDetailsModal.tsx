@@ -1,6 +1,7 @@
 import { XCircle } from 'lucide-react';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import type { PaymentRecord } from '../data/types';
+import { formatPaymentDate } from '../utils/dateFormatter';
 
 export interface PaymentDetailsModalProps {
 	open: boolean;
@@ -94,7 +95,7 @@ export function PaymentDetailsModal(props: PaymentDetailsModalProps) {
 								<label className="block text-sm font-medium text-gray-500">Payment Date</label>
 								<p className="mt-1 text-sm text-gray-900">
 									{payment.payment_date 
-										? new Date(payment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+										? formatPaymentDate(payment.payment_date)
 										: 'Not paid yet'
 									}
 								</p>

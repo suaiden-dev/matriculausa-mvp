@@ -40,7 +40,14 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
     const testUrl = async () => {
       setLoading(true);
       setError(null);
-      
+
+      // URLs externas (ex: Migma Supabase) são públicas — usar diretamente sem HEAD check
+      const isExternalUrl = !imageUrl.includes('fitpynguasqqutuhzifx.supabase.co');
+      if (isExternalUrl && imageUrl.startsWith('http')) {
+        setActualUrl(imageUrl);
+        return;
+      }
+
       try {
         // Primeiro tenta carregar a URL original
         const response = await fetch(imageUrl, { method: 'HEAD' });
@@ -51,7 +58,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
       } catch (e) {
         console.log('Public URL failed, trying signed URL...');
       }
-      
+
       // Se a URL pública falhar, tenta gerar signed URL
       const signedUrl = await getSignedUrl(imageUrl);
       if (signedUrl) {
@@ -60,7 +67,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
         setError('Não foi possível carregar o documento. Por favor, tente novamente.');
       }
     };
-    
+
     testUrl();
   }, [imageUrl]);
 
