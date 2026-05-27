@@ -614,7 +614,7 @@ const ScholarshipDetail: React.FC = () => {
                 Control Fee
               </span>
               <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)')}
+                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
               </span>
             </div>
           </div>

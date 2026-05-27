@@ -1287,7 +1287,7 @@
     "invitedOn": "Convidado em {{date}}",
     "nudgeCooldown": "Aguarde {{minutes}} min para notificar novamente",
     "participatingUniversities": "Universidades Participantes",
-    "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade. Clique em uma universidade para ver mais detalhes.",
+    "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade.",
     "loadingUniversities": "Carregando universidades...",
     "noParticipatingUniversities": "Nenhuma universidade participante ainda",
     "universitiesNotParticipating": "As universidades precisam optar pelo programa Matricula Rewards para aceitar moedas como desconto na mensalidade.",

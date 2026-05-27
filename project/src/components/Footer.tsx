@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-16 pb-16">
         {/* Legal Disclaimer */}
         <div className="mb-8 md:mb-12 pb-6 md:pb-8 border-b border-[#05294E]/10 text-slate-600 text-xs sm:text-sm leading-relaxed">
-          <h4 className="text-[#05294E] font-bold text-sm sm:text-base mb-2">Legal Disclaimer</h4>
+          <h4 className="text-slate-900 font-bold text-sm sm:text-base mb-2">Legal Disclaimer</h4>
           <p>
             MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.
           </p>
@@ -23,7 +23,7 @@ const Footer: React.FC = () => {
 
           {/* Coluna 1: A Plataforma */}
           <div className="space-y-6 col-start-1 lg:col-auto">
-            <h3 className="text-xl font-bold text-[#05294E]">{t('footer.sections.platform')}</h3>
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.platform')}</h3>
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
               <li><Link to="/how-it-works" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
@@ -34,7 +34,7 @@ const Footer: React.FC = () => {
 
           {/* Coluna 2: Ajuda e Contato */}
           <div className="space-y-6 col-start-2 lg:col-auto">
-            <h3 className="text-xl font-bold text-[#05294E]">{t('footer.sections.helpContact')}</h3>
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.helpContact')}</h3>
             <ul className="space-y-3">
               <li><Link to="/help" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
               <li><Link to="/faq" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.faq')}</Link></li>
@@ -45,7 +45,7 @@ const Footer: React.FC = () => {
 
           {/* Coluna 3: Explore */}
           <div className="space-y-6 col-start-1 lg:col-auto">
-            <h3 className="text-xl font-bold text-[#05294E]">{t('footer.sections.explore')}</h3>
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.explore')}</h3>
             <ul className="space-y-3">
               <li><Link to="/scholarships" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
               <li><Link to="/schools" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
@@ -56,7 +56,7 @@ const Footer: React.FC = () => {
 
           {/* Coluna 4: Redes Sociais */}
           <div className="space-y-6 col-start-1 lg:col-auto">
-            <h3 className="text-xl font-bold text-[#05294E]">{t('footer.sections.followUs')}</h3>
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.followUs')}</h3>
             <div className="flex space-x-5">
               <a href="https://facebook.com/matriculausa" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-[#05294E] transition-all duration-300">
                 <Facebook className="h-5 w-5" />

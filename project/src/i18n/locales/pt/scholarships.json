@@ -186,7 +186,7 @@
       "applicationFeeDetail": "Taxa cobrada diretamente pela instituição para emissão do I-20 oficial",
       "placementFeeLabel": "Placement Fee",
       "placementFeeDetail": "",
-      "controlFeeDetail": "Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)",
+      "controlFeeDetail": "Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido",
       "internalFeesDescription": "Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.",
       "regularAnnualCost": "Investimento Anual (Sem Bolsa)",
       "exclusiveScholarshipPrice": "Investimento com Bolsa Exclusiva",

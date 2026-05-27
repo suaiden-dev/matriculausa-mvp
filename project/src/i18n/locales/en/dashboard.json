@@ -1393,7 +1393,7 @@
       "invitedOn": "Invited on {{date}}",
       "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
       "participatingUniversities": "Participating Universities",
-      "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
+      "universitiesDescription": "These universities accept Matricula coins as tuition discounts.",
       "loadingUniversities": "Loading universities...",
       "noParticipatingUniversities": "No participating universities yet",
       "universitiesNotParticipating": "Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.",

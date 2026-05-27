@@ -9,9 +9,7 @@ import {
   Building,
   DollarSign,
   GraduationCap,
-  CheckCircle,
   Users,
-  Eye,
   Lock
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -61,14 +59,6 @@ const ScholarshipBrowser: React.FC = () => {
   // Obter dados do usuário primeiro
   const { userProfile, user, refetchUserProfile } = useAuth();
 
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
-  const getApplicationFeeWithDependents = (sch: any): string => {
-    const base = sch?.application_fee_amount ? Number(sch.application_fee_amount) : 350;
-    const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
-    const finalAmount = deps > 0 ? base + deps * 100 : base;
-    return finalAmount.toFixed(2);
-  };
 
   // Obter faixa de bolsa desejada do perfil do usuário
   // ✅ Se for null/undefined, aluno verá TODAS as bolsas (sem filtro de valor)
@@ -84,8 +74,6 @@ const ScholarshipBrowser: React.FC = () => {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const navigate = useNavigate();
   const [maxValue, setMaxValue] = useState('');
-  const [filtersApplied, setFiltersApplied] = useState(false);
-  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [featuredScholarships, setFeaturedScholarships] = useState<any[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(false);
   // Approved universities filter: keep only scholarships from approved universities
@@ -105,14 +93,6 @@ const ScholarshipBrowser: React.FC = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const [finalAmount, setFinalAmount] = useState<number>(0);
   const [discountCode, setDiscountCode] = useState<string>('');
-  // Estados para filtros aplicados (separados dos valores dos campos)
-  const [appliedSearch, setAppliedSearch] = useState('');
-  const [appliedLevel, setAppliedLevel] = useState('all');
-  const [appliedField, setAppliedField] = useState('all');
-  const [appliedDeliveryMode, setAppliedDeliveryMode] = useState('all');
-  const [appliedWorkPermission, setAppliedWorkPermission] = useState('all');
-  const [appliedMaxValue, setAppliedMaxValue] = useState('');
-  const [appliedUniversity, setAppliedUniversity] = useState('all');
 
   // Opções dinâmicas deduzidas das bolsas
   const {
@@ -153,48 +133,12 @@ const ScholarshipBrowser: React.FC = () => {
     };
   }, [scholarships]);
 
-
-
-
-
-
-
-  // Função para aplicar filtros manualmente
-  const applyFilters = (e?: React.MouseEvent) => {
-    // Prevenir qualquer comportamento padrão
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    setIsApplyingFilters(true);
-
-    // Aplicar todos os filtros de uma vez
-    setAppliedSearch(searchTerm.trim());
-    setAppliedLevel(selectedLevel);
-    setAppliedField(selectedField);
-    setAppliedDeliveryMode(selectedDeliveryMode);
-    setAppliedWorkPermission(selectedWorkPermission);
-    setAppliedMaxValue(maxValue.trim());
-    setAppliedUniversity(selectedUniversity);
-
-    setFiltersApplied(true);
-
-    // Feedback visual
-    setTimeout(() => {
-      setFiltersApplied(false);
-      setIsApplyingFilters(false);
-    }, 2000);
-  };
-
-  // Função para limpar todos os filtros
   const clearAllFilters = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // Limpar valores dos campos
     setSearchTerm('');
     setSelectedLevel('all');
     setSelectedField('all');
@@ -202,39 +146,17 @@ const ScholarshipBrowser: React.FC = () => {
     setSelectedWorkPermission('all');
     setMaxValue('');
     setSelectedUniversity('all');
-
-    // Limpar filtros aplicados
-    setAppliedSearch('');
-    setAppliedLevel('all');
-    setAppliedField('all');
-    setAppliedDeliveryMode('all');
-    setAppliedWorkPermission('all');
-    setAppliedMaxValue('');
-    setAppliedUniversity('all');
-
-    setFiltersApplied(false);
-    setIsApplyingFilters(false);
     localStorage.removeItem('scholarshipFilters');
-
   };
 
+
+
+
+
+
+
+
   // Função para carregar bolsas destacadas
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (fieldRef.current && !fieldRef.current.contains(event.target as Node)) {
-        setFieldDropdownOpen(false);
-      }
-      if (workRef.current && !workRef.current.contains(event.target as Node)) {
-        setWorkDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   const loadFeaturedScholarships = async () => {
     try {
       setFeaturedLoading(true);
@@ -273,25 +195,16 @@ const ScholarshipBrowser: React.FC = () => {
   // Salvar filtros no localStorage quando mudarem
   useEffect(() => {
     const filters = {
-      // Valores dos campos
       searchTerm,
       selectedLevel,
       selectedField,
       selectedDeliveryMode,
       selectedWorkPermission,
       selectedUniversity,
-      maxValue,
-      // Filtros aplicados
-      appliedSearch,
-      appliedLevel,
-      appliedField,
-      appliedDeliveryMode,
-      appliedWorkPermission,
-      appliedUniversity,
-      appliedMaxValue
+      maxValue
     };
     localStorage.setItem('scholarshipFilters', JSON.stringify(filters));
-  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, selectedUniversity, maxValue, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedUniversity, appliedMaxValue]);
+  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, selectedUniversity, maxValue]);
 
   // Restaurar filtros do localStorage ao carregar
   useEffect(() => {
@@ -308,14 +221,6 @@ const ScholarshipBrowser: React.FC = () => {
         if (filters.selectedUniversity) setSelectedUniversity(filters.selectedUniversity);
         if (filters.maxValue) setMaxValue(filters.maxValue);
 
-        // Restaurar filtros aplicados
-        if (filters.appliedSearch !== undefined) setAppliedSearch(filters.appliedSearch);
-        if (filters.appliedLevel) setAppliedLevel(filters.appliedLevel);
-        if (filters.appliedField) setAppliedField(filters.appliedField);
-        if (filters.appliedDeliveryMode) setAppliedDeliveryMode(filters.appliedDeliveryMode);
-        if (filters.appliedWorkPermission) setAppliedWorkPermission(filters.appliedWorkPermission);
-        if (filters.appliedUniversity) setAppliedUniversity(filters.appliedUniversity);
-        if (filters.appliedMaxValue !== undefined) setAppliedMaxValue(filters.appliedMaxValue);
       } catch (error) {
         // Error loading saved filters
       }
@@ -437,21 +342,6 @@ const ScholarshipBrowser: React.FC = () => {
     }
   };
 
-
-
-  const getDeliveryModeColor = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return 'bg-blue-100 text-blue-700';
-      case 'in_person':
-        return 'bg-green-100 text-green-700';
-      case 'hybrid':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
@@ -465,29 +355,6 @@ const ScholarshipBrowser: React.FC = () => {
     }
   };
 
-  // Função para calcular dias até o deadline
-  const getDaysUntilDeadline = (deadline: string) => {
-    // Criar data atual sem hora (apenas dia)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Criar deadline como data local (não UTC) para evitar problemas de timezone
-    // Parse da data no formato YYYY-MM-DD como local
-    const [year, month, day] = deadline.split('-').map(Number);
-    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
-    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
-
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  // Versão para EXIBIÇÃO: nunca mostra valores negativos nos cards
-
-
-  // Função para obter status e cor do deadline
-
-
   // Memoização dos filtros e ordenação com debounce
   const filteredScholarships = useMemo(() => {
     // Proteção contra dados inválidos
@@ -497,7 +364,7 @@ const ScholarshipBrowser: React.FC = () => {
 
 
     // Busca por múltiplas palavras-chave (otimizada)
-    const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const searchWords = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
     const filtered = scholarships.filter(scholarship => {
       // Filtro de bolsas de teste (is_test)
@@ -513,32 +380,32 @@ const ScholarshipBrowser: React.FC = () => {
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
 
       // Filtro de nível
-      const matchesLevel = appliedLevel === 'all' ||
-        (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === appliedLevel.toLowerCase());
+      const matchesLevel = selectedLevel === 'all' ||
+        (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === selectedLevel.toLowerCase());
 
       // Filtro de área
-      const matchesField = appliedField === 'all' ||
+      const matchesField = selectedField === 'all' ||
         (scholarship.field_of_study && typeof scholarship.field_of_study === 'string' &&
-          scholarship.field_of_study.toLowerCase() === appliedField.toLowerCase()) ||
-        (appliedField === 'any' && scholarship.field_of_study === 'any field');
+          scholarship.field_of_study.toLowerCase() === selectedField.toLowerCase()) ||
+        (selectedField === 'any' && scholarship.field_of_study === 'any field');
 
       // Filtro de delivery mode
-      const matchesDeliveryMode = appliedDeliveryMode === 'all' ||
+      const matchesDeliveryMode = selectedDeliveryMode === 'all' ||
         (scholarship.delivery_mode && typeof scholarship.delivery_mode === 'string' &&
-          scholarship.delivery_mode.toLowerCase() === appliedDeliveryMode.toLowerCase());
+          scholarship.delivery_mode.toLowerCase() === selectedDeliveryMode.toLowerCase());
 
       // Filtro de work permissions
-      const matchesWorkPermission = appliedWorkPermission === 'all' ||
+      const matchesWorkPermission = selectedWorkPermission === 'all' ||
         (scholarship.work_permissions &&
           Array.isArray(scholarship.work_permissions) &&
           scholarship.work_permissions.length > 0 &&
           scholarship.work_permissions.some((perm: any) =>
-            perm && typeof perm === 'string' && perm.toLowerCase() === appliedWorkPermission.toLowerCase()
+            perm && typeof perm === 'string' && perm.toLowerCase() === selectedWorkPermission.toLowerCase()
           ));
 
       // Filtro de valor
       const scholarshipValue = scholarship.annual_value_with_scholarship ?? scholarship.amount ?? 0;
-      const maxValueNum = appliedMaxValue && appliedMaxValue !== '' && !isNaN(Number(appliedMaxValue)) ? Number(appliedMaxValue) : null;
+      const maxValueNum = maxValue && maxValue !== '' && !isNaN(Number(maxValue)) ? Number(maxValue) : null;
       const matchesMax = maxValueNum === null || (scholarshipValue <= maxValueNum);
 
       // Filtro automático baseado na faixa de bolsa desejada do usuário
@@ -552,7 +419,7 @@ const ScholarshipBrowser: React.FC = () => {
       const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
       const notExcludedUniversity = !isExcludedUniversityName(universityName);
       // Filtro por universidade (apenas se aplicado e se o usuário já pagou a taxa)
-      const matchesUniversity = (appliedUniversity === 'all' || !userProfile?.has_paid_selection_process_fee) ? true : (String(universityId) === String(appliedUniversity));
+      const matchesUniversity = (selectedUniversity === 'all' || !userProfile?.has_paid_selection_process_fee) ? true : (String(universityId) === String(selectedUniversity));
 
       const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMax && matchesDesiredRange && fromApprovedUniversity && matchesUniversity && notExcludedUniversity;
 
@@ -580,13 +447,13 @@ const ScholarshipBrowser: React.FC = () => {
     return sorted;
   }, [
     scholarships,
-    appliedSearch,
-    appliedLevel,
-    appliedField,
-    appliedDeliveryMode,
-    appliedWorkPermission,
-    appliedMaxValue,
-    appliedUniversity,
+    searchTerm,
+    selectedLevel,
+    selectedField,
+    selectedDeliveryMode,
+    selectedWorkPermission,
+    maxValue,
+    selectedUniversity,
     sortBy,
     desiredScholarshipRange,
     userProfile?.has_paid_selection_process_fee,
@@ -622,26 +489,26 @@ const ScholarshipBrowser: React.FC = () => {
   const filteredFeaturedScholarships = useMemo(() => {
     if (!featuredScholarships || featuredScholarships.length === 0) return [];
 
-    const searchWords = (appliedSearch || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const searchWords = (searchTerm || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
 
     return featuredScholarships.filter(scholarship => {
 
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
 
-      const matchesLevel = appliedLevel === 'all' || (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === appliedLevel.toLowerCase());
+      const matchesLevel = selectedLevel === 'all' || (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === selectedLevel.toLowerCase());
 
-      const matchesField = appliedField === 'all' ||
-        (scholarship.field_of_study && typeof scholarship.field_of_study === 'string' && scholarship.field_of_study.toLowerCase() === appliedField.toLowerCase()) ||
-        (appliedField === 'any' && scholarship.field_of_study === 'any field');
+      const matchesField = selectedField === 'all' ||
+        (scholarship.field_of_study && typeof scholarship.field_of_study === 'string' && scholarship.field_of_study.toLowerCase() === selectedField.toLowerCase()) ||
+        (selectedField === 'any' && scholarship.field_of_study === 'any field');
 
-      const matchesDeliveryMode = appliedDeliveryMode === 'all' || (scholarship.delivery_mode && typeof scholarship.delivery_mode === 'string' && scholarship.delivery_mode.toLowerCase() === appliedDeliveryMode.toLowerCase());
+      const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && typeof scholarship.delivery_mode === 'string' && scholarship.delivery_mode.toLowerCase() === selectedDeliveryMode.toLowerCase());
 
-      const matchesWorkPermission = appliedWorkPermission === 'all' ||
-        (scholarship.work_permissions && Array.isArray(scholarship.work_permissions) && scholarship.work_permissions.some((perm: any) => perm && typeof perm === 'string' && perm.toLowerCase() === appliedWorkPermission.toLowerCase()));
+      const matchesWorkPermission = selectedWorkPermission === 'all' ||
+        (scholarship.work_permissions && Array.isArray(scholarship.work_permissions) && scholarship.work_permissions.some((perm: any) => perm && typeof perm === 'string' && perm.toLowerCase() === selectedWorkPermission.toLowerCase()));
 
       const scholarshipValue = scholarship.annual_value_with_scholarship ?? scholarship.amount ?? 0;
-      const maxValueNum = appliedMaxValue && appliedMaxValue !== '' && !isNaN(Number(appliedMaxValue)) ? Number(appliedMaxValue) : null;
+      const maxValueNum = maxValue && maxValue !== '' && !isNaN(Number(maxValue)) ? Number(maxValue) : null;
       const matchesMax = maxValueNum === null || (scholarshipValue <= maxValueNum);
 
       // Filtro automático baseado na faixa de bolsa desejada do usuário
@@ -652,12 +519,12 @@ const ScholarshipBrowser: React.FC = () => {
       const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
       const universityName = scholarship.universities?.name ?? scholarship.university_name ?? '';
       const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
-      const matchesUniversity = (appliedUniversity === 'all' || !userProfile?.has_paid_selection_process_fee) ? true : (String(universityId) === String(appliedUniversity));
+      const matchesUniversity = (selectedUniversity === 'all' || !userProfile?.has_paid_selection_process_fee) ? true : (String(universityId) === String(selectedUniversity));
       const notExcludedUniversity = !isExcludedUniversityName(universityName);
 
       return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMax && matchesDesiredRange && fromApprovedUniversity && matchesUniversity && notExcludedUniversity;
     });
-  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMaxValue, desiredScholarshipRange, appliedUniversity, userProfile?.has_paid_selection_process_fee, approvedUniversityIds.size]);
+  }, [featuredScholarships, searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, maxValue, desiredScholarshipRange, selectedUniversity, userProfile?.has_paid_selection_process_fee, approvedUniversityIds.size]);
 
 
 
@@ -931,17 +798,17 @@ const ScholarshipBrowser: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="rounded-[28px] border border-slate-100 bg-gradient-to-br from-[#05294E] to-[#0A3C6B] p-4 sm:p-5 shadow-2xl">
+      <div className="rounded-[28px] bg-white p-4 sm:p-5">
         {/* Mobile Filter Toggle */}
         <div className="block md:hidden mb-4">
           <button
             type="button"
             onClick={() => setFiltersExpanded(!filtersExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white/10 rounded-2xl border border-white/15 text-white font-medium backdrop-blur-sm"
+            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 font-medium"
           >
             <span className="flex items-center">
               <Filter className="h-4 w-4 mr-2" />
-              {t('common.filter')} ({Object.values({ appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, ...(userProfile?.has_paid_selection_process_fee ? { appliedUniversity } : {}), appliedMaxValue }).filter(Boolean).length} {t('studentDashboard.findScholarships.filters.active')})
+              {t('common.filter')} ({Object.values({ searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, ...(userProfile?.has_paid_selection_process_fee ? { selectedUniversity } : {}), maxValue }).filter(Boolean).length} {t('studentDashboard.findScholarships.filters.active')})
             </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
           </button>
@@ -949,9 +816,9 @@ const ScholarshipBrowser: React.FC = () => {
 
         {/* Filters Container */}
         <div className={`${filtersExpanded ? 'block' : 'hidden'} md:block space-y-4`}>
-          {/* Search - Always visible on mobile */}
-          <div className="bg-white rounded-[28px] lg:rounded-full p-2.5 flex flex-col lg:flex-row items-center gap-3 lg:gap-4 shadow-2xl border border-slate-100 w-full">
-            <div className="flex flex-col flex-1 min-w-[200px] w-full px-4 py-1.5 justify-center">
+          {/* Search */}
+          <div className="bg-white rounded-[28px] p-3 sm:p-4 border border-slate-200 w-full">
+            <div className="flex flex-col w-full px-2 sm:px-3 py-1 justify-center">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
                 {t('studentDashboard.findScholarships.filters.search')}
               </span>
@@ -967,9 +834,10 @@ const ScholarshipBrowser: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
 
           {/* Filter Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 w-full">
             {/* Level Filter */}
             <div>
               <label htmlFor="level-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.academicLevel')}</label>
@@ -977,7 +845,7 @@ const ScholarshipBrowser: React.FC = () => {
                 id="level-filter"
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
-                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                 title="Filter by academic level"
                 aria-label="Filter by academic level"
               >
@@ -995,7 +863,7 @@ const ScholarshipBrowser: React.FC = () => {
                 id="field-filter"
                 value={selectedField}
                 onChange={(e) => setSelectedField(e.target.value)}
-                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                 title="Filter by field of study"
                 aria-label="Filter by field of study"
               >
@@ -1014,7 +882,7 @@ const ScholarshipBrowser: React.FC = () => {
                 id="delivery-mode-filter"
                 value={selectedDeliveryMode}
                 onChange={(e) => setSelectedDeliveryMode(e.target.value)}
-                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                 title="Filter by study mode"
                 aria-label="Filter by study mode"
               >
@@ -1032,7 +900,7 @@ const ScholarshipBrowser: React.FC = () => {
                 id="work-permission-filter"
                 value={selectedWorkPermission}
                 onChange={(e) => setSelectedWorkPermission(e.target.value)}
-                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                 title="Filter by work authorization"
                 aria-label="Filter by work authorization"
               >
@@ -1051,7 +919,7 @@ const ScholarshipBrowser: React.FC = () => {
                   id="university-filter"
                   value={selectedUniversity}
                   onChange={(e) => setSelectedUniversity(e.target.value)}
-                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                   title="Filter by university"
                   aria-label="Filter by university"
                 >
@@ -1078,60 +946,21 @@ const ScholarshipBrowser: React.FC = () => {
                       setMaxValue(value);
                     }
                   }}
-                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm font-semibold"
+                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-slate-400 transition-all duration-200 text-sm font-semibold"
                   aria-label="Maximum value"
                 />
               </div>
             </div>
           </div>
-          </div>
-
-
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 mt-5">
-          <button
-            type="button"
-            onClick={(e) => applyFilters(e)}
-            disabled={isApplyingFilters}
-            className={`w-full sm:w-auto px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 text-sm sm:text-base ${(searchTerm.trim() !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || (userProfile?.has_paid_selection_process_fee && selectedUniversity !== appliedUniversity) || maxValue.trim() !== appliedMaxValue)
-              ? filtersApplied
-                ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
-                : isApplyingFilters
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white opacity-75'
-                  : 'bg-[#D0151C] text-white hover:bg-[#D0151C]/90'
-              : 'bg-gradient-to-r from-slate-400 to-slate-500 text-white cursor-not-allowed'
-              }`}
-          >
-            {isApplyingFilters ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.applying')}</span>
-                <span className="sm:hidden">{t('studentDashboard.findScholarships.filters.loading')}</span>
-              </>
-            ) : filtersApplied ? (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.applied')}</span>
-                <span className="sm:hidden">{t('studentDashboard.findScholarships.filters.applied')}</span>
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4" />
-                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.applyFilters')} ({filteredScholarships.length})</span>
-                <span className="sm:hidden">{t('common.apply')} ({filteredScholarships.length})</span>
-              </>
-            )}
-          </button>
-
-
-
-          {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || (userProfile?.has_paid_selection_process_fee && appliedUniversity !== 'all') || appliedMaxValue) && (
+          {(searchTerm || selectedLevel !== 'all' || selectedField !== 'all' || selectedDeliveryMode !== 'all' || selectedWorkPermission !== 'all' || (userProfile?.has_paid_selection_process_fee && selectedUniversity !== 'all') || maxValue) && (
             <button
               type="button"
               onClick={(e) => clearAllFilters(e)}
-            className="w-full sm:w-auto bg-white/10 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base border border-white/15"
+            className="w-full sm:w-auto bg-slate-100 text-slate-700 px-4 sm:px-6 py-3 rounded-xl font-semibold hover:bg-slate-200 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base border border-slate-200"
             >
               <Filter className="h-4 w-4" />
               <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.clearAllFilters')}</span>
@@ -1142,48 +971,10 @@ const ScholarshipBrowser: React.FC = () => {
 
         </div>
 
-        {/* Tags de filtros ativos (apenas os aplicados) */}
-        {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || (userProfile?.has_paid_selection_process_fee && appliedUniversity !== 'all') || appliedMaxValue) && (
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/10">
-            {appliedSearch && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.search')} {appliedSearch}</span>}
-            {appliedLevel !== 'all' && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.level')} {appliedLevel}</span>}
-            {appliedField !== 'all' && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.field')} {appliedField}</span>}
-            {appliedDeliveryMode !== 'all' && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.mode')} {getDeliveryModeLabel(appliedDeliveryMode)}</span>}
-            {appliedWorkPermission !== 'all' && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.work')} {appliedWorkPermission}</span>}
-            {userProfile?.has_paid_selection_process_fee && appliedUniversity !== 'all' && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.scholarshipCard.university')} {(() => { const u = uniqueUniversities.find(x => String(x.id) === String(appliedUniversity)); return u?.name || appliedUniversity; })()}</span>}
-            {appliedMaxValue && <span className="bg-white text-[#05294E] px-2 sm:px-3 py-1 rounded-full text-xs font-bold">{t('studentDashboard.findScholarships.filters.max')} {appliedMaxValue}</span>}
-          </div>
-        )}
-
-        {/* Results Summary */}
-        <div className="flex items-center justify-between text-sm text-white/85 mt-4 pt-4 border-t border-white/10">
-          <span>
-            <span className="font-bold text-white">{filteredScholarships.length}</span>
-            <span className="hidden sm:inline"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
-            <span className="sm:hidden"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
-            {totalPages > 1 && (
-              <span className="text-white/70 ml-2">
-                {t('studentDashboard.findScholarships.pagination.pageOf', {
-                  current: currentPage,
-                  total: totalPages
-                })}
-              </span>
-            )}
-            {filteredScholarships.length > 0 && (
-              <span className="text-emerald-200 ml-2 text-xs">
-                {t('studentDashboard.findScholarships.pagination.showing', {
-                  start: startIndex + 1,
-                  end: Math.min(endIndex, filteredScholarships.length),
-                  total: filteredScholarships.length
-                })}
-              </span>
-            )}
-          </span>
-        </div>
       </div>
 
       {/* Featured Scholarships Section - Only show if there are featured scholarships after filtering */}
-      {filteredFeaturedScholarships.length > 0 && (
+      {currentPage === 1 && filteredFeaturedScholarships.length > 0 && (
         featuredLoading ? (
           <div className="rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex items-center justify-center py-8 sm:py-12">
@@ -1210,8 +1001,6 @@ const ScholarshipBrowser: React.FC = () => {
                 const savingsPercentage = originalValue > scholarshipValue && originalValue > 0
                   ? Math.round(((originalValue - scholarshipValue) / originalValue) * 100)
                   : 0;
-                const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-
                 return (
                   <motion.div
                     key={scholarship.id}
@@ -1342,7 +1131,7 @@ const ScholarshipBrowser: React.FC = () => {
                                 {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                               </span>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-slate-700 bg-slate-100 border border-slate-200">
                               {getDeliveryModeLabel(scholarship.delivery_mode)}
                             </span>
                           </div>
@@ -1391,14 +1180,6 @@ const ScholarshipBrowser: React.FC = () => {
                               </span>
                             </div>
 
-                            {/* Application Fee */}
-                            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                              <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                              <span className="text-purple-600 text-xs font-black">
-                                ${getApplicationFeeWithDependents(scholarship)}
-                              </span>
-                            </div>
-                            
                             <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
                               <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                               <span className="text-slate-500 text-xs font-bold">
@@ -1429,25 +1210,17 @@ const ScholarshipBrowser: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action Buttons - 75/25 split */}
+                      {/* Action Button */}
                       <div className="mt-auto">
-                        <div className="flex flex-row gap-3">
-                          <button
-                            onClick={() => openScholarshipModal(scholarship)}
-                            className="w-3/4 bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center relative overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95"
-                          >
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                            <span className="relative z-10 truncate">
-                              {t('studentDashboard.findScholarships.scholarshipCard.details')}
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => openScholarshipModal(scholarship)}
-                            className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
-                          >
-                            <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => openScholarshipModal(scholarship)}
+                          className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center relative overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                          <span className="relative z-10 truncate">
+                            {t('studentDashboard.findScholarships.scholarshipCard.details')}
+                          </span>
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -1468,8 +1241,6 @@ const ScholarshipBrowser: React.FC = () => {
           const savingsPercentage = originalValue > scholarshipValue && originalValue > 0
             ? Math.round(((originalValue - scholarshipValue) / originalValue) * 100)
             : 0;
-          const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-
           return (
             <motion.div
               key={scholarship.id}
@@ -1600,7 +1371,7 @@ const ScholarshipBrowser: React.FC = () => {
                           {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                         </span>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-slate-700 bg-slate-100 border border-slate-200">
                         {getDeliveryModeLabel(scholarship.delivery_mode)}
                       </span>
                     </div>
@@ -1649,14 +1420,6 @@ const ScholarshipBrowser: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Application Fee */}
-                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                        <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                        <span className="text-purple-600 text-xs font-black">
-                          ${getApplicationFeeWithDependents(scholarship)}
-                        </span>
-                      </div>
-                      
                       <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
                         <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                         <span className="text-slate-500 text-xs font-bold">
@@ -1687,25 +1450,17 @@ const ScholarshipBrowser: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons - 75/25 split */}
+                {/* Action Button */}
                 <div className="mt-auto">
-                  <div className="flex flex-row gap-3">
-                    <button
-                      onClick={() => openScholarshipModal(scholarship)}
-                      className="w-3/4 bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center relative overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                      <span className="relative z-10 truncate">
-                        {t('studentDashboard.findScholarships.scholarshipCard.details')}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => openScholarshipModal(scholarship)}
-                      className="w-1/4 bg-transparent text-slate-400 py-3 sm:py-4 rounded-2xl flex items-center justify-center hover:text-[#05294E] transition-all duration-300 transform hover:scale-110"
-                    >
-                      <Eye className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => openScholarshipModal(scholarship)}
+                    className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center relative overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    <span className="relative z-10 truncate">
+                      {t('studentDashboard.findScholarships.scholarshipCard.details')}
+                    </span>
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -1732,7 +1487,7 @@ const ScholarshipBrowser: React.FC = () => {
             disabled={currentPage === 1}
             className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === 1
               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+              : 'bg-[#05294E] text-white hover:bg-[#05294E]/90 hover:scale-105'
               }`}
           >
             {t('studentDashboard.findScholarships.pagination.previous')}
@@ -1757,7 +1512,7 @@ const ScholarshipBrowser: React.FC = () => {
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${currentPage === pageNum
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#05294E] text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                 >
@@ -1773,7 +1528,7 @@ const ScholarshipBrowser: React.FC = () => {
             disabled={currentPage === totalPages}
             className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === totalPages
               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+              : 'bg-[#05294E] text-white hover:bg-[#05294E]/90 hover:scale-105'
               }`}
           >
             {t('studentDashboard.findScholarships.pagination.next')}

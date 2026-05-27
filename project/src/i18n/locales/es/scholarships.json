@@ -181,7 +181,7 @@
       "applicationFeeDetail": "Tarifa cobrada directamente por la institución para la emisión del I-20 oficial",
       "placementFeeLabel": "Placement Fee",
       "placementFeeDetail": "",
-      "controlFeeDetail": "Tarifa requerida para estudiantes que solicitan la visa de tipo Inicial/Cambio de Estatus (COS)",
+      "controlFeeDetail": "Tarifa requerida para estudiantes que solicitan la visa de tipo Inicial/Cambio de Estatus (COS)/Transferencia - visa vencida",
       "internalFeesDescription": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma.",
       "regularAnnualCost": "Inversión Anual (Sin Beca)",
       "exclusiveScholarshipPrice": "Inversión con Beca Exclusiva",

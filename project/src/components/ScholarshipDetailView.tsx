@@ -322,7 +322,7 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                         <div className="flex flex-col text-left">
                           <span className="text-slate-600 font-medium">Control Fee</span>
                           <span className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
-                            {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)')}
+                            {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
                           </span>
                         </div>
                       </td>

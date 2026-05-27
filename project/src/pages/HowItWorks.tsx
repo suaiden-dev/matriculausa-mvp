@@ -85,9 +85,7 @@ const HowItWorks: React.FC = () => {
         scholarshipFee={scholarshipFee}
         i20ControlFee={i20ControlFee}
       />
-      
-      <BottomCTASection onCTAClick={handleCTAClick} t={t} />
-      
+
       <SmartChat />
     </div>
   );
@@ -620,13 +618,13 @@ const JourneySection: React.FC<{
                         <div className="mt-auto">
                           <button
                             disabled
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 rounded-xl font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 cursor-default"
+                            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-2.5 rounded-xl font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-green-500/10 cursor-default"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                               <circle cx="12" cy="12" r="10" />
                               <path d="m9 12 2 2 4-4" />
                             </svg>
-                            <span>Selecionada</span>
+                            <span>Aprovado</span>
                           </button>
                         </div>
                       </div>
@@ -1133,68 +1131,5 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
 };
 
 
-
-/* -------------------------------------------------------------------------- */
-/*                                BOTTOM CTA                                  */
-/* -------------------------------------------------------------------------- */
-const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick, t }) => {
-  
-  return (
-    <section className="py-24 bg-white relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="bg-[#05294E] rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col-reverse lg:flex-row items-stretch min-h-[500px]">
-          
-          {/* Content side */}
-          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] -mt-4 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem] home-page">
-            
-            <div className="relative">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-              >
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-[1.1] tracking-tight">
-                  {t('howItWorks.bottomCTA.title')}
-                </h2>
-                
-                <p className="text-lg md:text-xl text-blue-100/80 max-w-xl mb-10 leading-relaxed font-medium">
-                  {t('howItWorks.bottomCTA.description')}
-                </p>
-
-                <button
-                  onClick={onCTAClick}
-                  className="group inline-flex items-center px-10 py-5 bg-[#D0151C] hover:bg-[#E01B22] text-white font-black text-xl rounded-2xl shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] transition-all duration-300 hover:-translate-y-1"
-                >
-                  {t('howItWorks.bottomCTA.button')}
-                  <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform duration-300" />
-                </button>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Image side with much better transition */}
-          <div className="w-full lg:w-[45%] relative min-h-[350px] lg:min-h-full overflow-hidden lg:mt-0 z-10">
-            <img 
-              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/graduates-throwing-caps-blue-sky-graduation.webp" 
-              alt="Graduation success" 
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-            {/* The Smooth Transition Overlays */}
-            {/* 1. Mobile transition: Stronger fade and solid top blend */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
-            <div className="absolute inset-0 bg-[#05294E]/20 lg:hidden z-10"></div>
-            
-            {/* 2. Desktop fade (left to right) */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-[#05294E]/20 to-transparent hidden lg:block z-10"></div>
-            
-            {/* 3. Extra deep blend for desktop to hide the edge perfectly */}
-            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#05294E] to-transparent hidden lg:block z-20"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 export default HowItWorks;

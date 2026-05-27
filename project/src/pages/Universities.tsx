@@ -613,45 +613,6 @@ const Universities: React.FC = () => {
           </div>
         )}
 
-        {/* Call to Action */}
-        <div className="mt-20 bg-[#05294E] rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col-reverse lg:flex-row items-stretch relative group">
-          {/* Content Side */}
-          <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center text-left relative z-20 bg-[#05294E] -mt-12 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem]">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
-              {t('universitiesPage.callToAction.title')} <span className="text-blue-400">{t('universitiesPage.callToAction.titleHighlight')}</span>
-            </h2>
-            <p className="text-lg text-blue-100 mb-10 max-w-xl leading-relaxed">
-              {t('universitiesPage.callToAction.description')}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link 
-                to="/scholarships"
-                className="bg-[#D0151C] text-white px-8 py-4 rounded-2xl hover:bg-[#B01218] transition-all duration-300 text-lg font-black shadow-xl hover:scale-105 transform text-center"
-              >
-                {t('universitiesPage.callToAction.findScholarships')}
-              </Link>
-              <Link 
-                to="/how-it-works"
-                className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-2xl hover:bg-white/20 transition-all duration-300 text-lg font-bold text-center"
-              >
-                {t('universitiesPage.callToAction.learnMore')}
-              </Link>
-            </div>
-          </div>
-
-          {/* Image Side */}
-          <div className="w-full lg:w-[40%] relative min-h-[350px] lg:min-h-full overflow-hidden lg:mt-0 z-10">
-            <img 
-              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/students-walking-university-campus-autumn.webp" 
-              alt="Estudantes no campus"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-            />
-            {/* Overlay gradient to blend with context */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-[#05294E]/40 to-transparent lg:block hidden z-10"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
-            <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden z-10"></div>
-          </div>
-        </div>
       </div>
     </div>
     <SmartChat />
