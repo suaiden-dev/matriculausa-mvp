@@ -1369,13 +1369,13 @@ const AffiliateManagement: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                                    <p className="text-2xl font-bold text-green-600">
+                                    <div className="text-2xl font-bold text-green-600">
                                       {isLoadingRealPaidAmounts ? (
                                         <div className="animate-pulse bg-slate-200 h-8 w-32 rounded"></div>
                                       ) : (
                                         `$${affiliate.total_revenue.toLocaleString()}`
                                       )}
-                                    </p>
+                                    </div>
                                   </div>
                                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                                     <DollarSign className="h-6 w-6 text-green-600" />
@@ -1501,13 +1501,13 @@ const AffiliateManagement: React.FC = () => {
                                               <p className="text-sm font-medium text-slate-900 mt-1">
                                                 {seller.students_count} students
                                               </p>
-                                              <p className="text-sm text-green-600 font-medium">
+                                              <div className="text-sm text-green-600 font-medium">
                                                 {isLoadingRealPaidAmounts ? (
                                                   <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                 ) : (
                                                   formatCurrency(seller.total_revenue)
                                                 )}
-                                              </p>
+                                              </div>
                                             </div>
 
                                             {sellerStudents.length > 0 && (
@@ -1694,13 +1694,13 @@ const AffiliateManagement: React.FC = () => {
                                                           {student.status || 'Unknown'}
                                                         </span>
                                                       </div>
-                                                      <p className="text-sm font-medium text-green-600 mt-1">
+                                                      <div className="text-sm font-medium text-green-600 mt-1">
                                                         {isLoadingRealPaidAmounts ? (
                                                           <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                         ) : (
                                                           formatCurrency(student.total_paid_adjusted)
                                                         )}
-                                                      </p>
+                                                      </div>
                                                       <p className="text-xs text-slate-500">
                                                         {formatDate(student.created_at)}
                                                       </p>
@@ -1857,13 +1857,13 @@ const AffiliateManagement: React.FC = () => {
                                                       {/* Total */}
                                                       <div className="flex items-center justify-between p-2 bg-slate-100 rounded border border-slate-300 mt-2">
                                                         <p className="text-xs font-semibold text-slate-900">Total (Period)</p>
-                                                        <p className="text-sm font-bold text-green-700">
+                                                        <div className="text-sm font-bold text-green-700">
                                                           {isLoadingRealPaidAmounts ? (
                                                             <div className="animate-pulse bg-slate-200 h-4 w-20 rounded"></div>
                                                           ) : (
                                                             formatCurrency(selectionFee + scholarshipFee + i20Fee)
                                                           )}
-                                                        </p>
+                                                        </div>
                                                       </div>
                                                     </div>
                                                   </div>

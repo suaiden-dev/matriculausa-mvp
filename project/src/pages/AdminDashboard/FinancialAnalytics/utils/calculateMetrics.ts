@@ -276,6 +276,7 @@ export function calculateFunnelData(allStudents: any[], paymentRecords: any[]): 
 const paidFeeTypes = new Map<string, Set<string>>();
   paymentRecords.filter(p => p.status === 'paid').forEach(p => {
     const userId = p.student_id || p.user_id;
+    if (!userId) return;
     // Normalizar variantes de fee_type para chaves canônicas
     const raw = p.fee_type || '';
     let canonical = raw;

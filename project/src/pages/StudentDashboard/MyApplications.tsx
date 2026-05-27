@@ -1201,15 +1201,8 @@ const MyApplications: React.FC = () => {
 
                                   const allDocumentsBase = [
                                     { type: 'passport', label: t('studentDashboard.myApplications.documents.passport') },
-                                    { type: 'diploma', label: diplomaLabel },
-                                    { type: 'funds_proof', label: t('studentDashboard.myApplications.documents.proofOfFunds') }
                                   ];
 
-                                  if (processType === 'initial') {
-                                    allDocumentsBase.push({ type: 'ds160', label: t('scholarships:scholarshipsPage.modal.ds160Package') });
-                                  } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
-                                    allDocumentsBase.push({ type: 'i539', label: t('scholarships:scholarshipsPage.modal.i539Package') });
-                                  }
 
                                   const allDocuments = allDocumentsBase.map(docTemplate => {
                                     const docData = docs.find(d => d.type === docTemplate.type);

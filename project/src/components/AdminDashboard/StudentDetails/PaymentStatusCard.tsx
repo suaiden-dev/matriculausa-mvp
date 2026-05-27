@@ -525,7 +525,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
                     const expectedAmount = scholarship?.application_fee_amount || (student as any).application_fee_amount || 100;
                     let finalExpected = Number(expectedAmount);
-                    if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                    if (dependents > 0 && (userSystemType || 'legacy') === 'legacy' && student.source !== 'migma') {
                       finalExpected += dependents * 100;
                     }
                     
@@ -541,7 +541,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                       if (scholarship?.application_fee_amount) {
                         let amount = Number(scholarship.application_fee_amount);
-                        if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                        if (dependents > 0 && (userSystemType || 'legacy') === 'legacy' && student.source !== 'migma') {
                           amount += dependents * 100;
                         }
                         return formatFeeAmount(amount, true);
@@ -633,7 +633,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         </div>
 
         {/* Flag de fluxo do aluno: se placement_fee_flow, mostrar Placement Fee em vez de Scholarship + I-20 */}
-        {(() => {
+        {student.source !== 'migma' && (() => {
           const isPlacementFeeFlow = !!(student as any).placement_fee_flow;
 
           if (isPlacementFeeFlow) {
@@ -1347,7 +1347,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
-        {student.student_process_type === 'initial' && (() => {
+        {student.student_process_type === 'initial' && student.source !== 'migma' && (() => {
           const isPaid = !!student.has_paid_ds160_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
@@ -1472,7 +1472,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* I-539 COS Package — apenas para alunos change_of_status */}
-        {student.student_process_type === 'change_of_status' && (() => {
+        {student.student_process_type === 'change_of_status' && student.source !== 'migma' && (() => {
           const isPaid = !!student.has_paid_i539_cos_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
