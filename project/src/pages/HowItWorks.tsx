@@ -677,7 +677,7 @@ const JourneySection: React.FC<{
                           <p className="text-[9px] text-slate-400 font-bold">Documentos da Universidade</p>
                         </div>
                         <span className="bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          2 / 4 Enviados
+                          2 / 3 Enviados
                         </span>
                       </div>
 
@@ -748,31 +748,6 @@ const JourneySection: React.FC<{
                           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '65%' }}></div>
                           </div>
-                        </div>
-
-                        {/* 4. Proficiência em Inglês - Pendente / Ação Necessária */}
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between transition-all hover:scale-[1.02]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-                                <path d="M12 9v4" />
-                                <path d="M12 16v.01" />
-                              </svg>
-                            </div>
-                            <div>
-                              <h5 className="text-[10px] font-black text-slate-500 leading-tight">Proficiência em Inglês</h5>
-                              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Pendente</p>
-                            </div>
-                          </div>
-                          <button className="px-2.5 py-1 bg-[#05294E] hover:bg-[#083a6e] text-white rounded-lg text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-colors cursor-default">
-                            Upload
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="17 8 12 3 7 8" />
-                              <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>
-                          </button>
                         </div>
 
                       </div>
