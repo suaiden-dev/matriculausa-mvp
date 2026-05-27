@@ -1057,7 +1057,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
               >
                 <option value="all">All Sources</option>
                 <option value="migma">MIGMA</option>
-                <option value="direct">Direct</option>
+                <option value="direct">MatriculaUSA</option>
               </select>
             </div>
 
