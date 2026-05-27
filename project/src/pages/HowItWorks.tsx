@@ -178,7 +178,6 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
       {/* Decorative Background Glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-1/4 -left-24 w-[500px] h-[500px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -206,23 +205,28 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
             hidden: { opacity: 0, y: 40 },
             visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: 0.2 } }
           }}
-          className="max-w-6xl mx-auto bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100/80 p-4 sm:p-8"
+          className="max-w-6xl mx-auto bg-white p-4 sm:p-8"
         >
           <div className="overflow-x-auto pb-4">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse min-w-0 md:min-w-[800px]">
               <thead>
                 <tr className="border-b-2 border-slate-100">
-                  <th className="py-8 px-6 text-sm font-bold uppercase tracking-widest text-slate-400 w-1/4">Diferencial</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80">Fazer Sozinho (DIY)</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80">Agências Tradicionais</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-[#05294E] bg-[#05294E]/[0.03] rounded-t-[2rem] border-x border-t border-[#05294E]/10">Matrícula USA</th>
+                  <th className="py-8 px-6 text-sm font-bold uppercase tracking-widest text-slate-400 w-1/4 hidden md:table-cell">Diferencial</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 w-1/2 md:w-auto">Fazer sozinho</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 hidden md:table-cell">Agências tradicionais</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-[#05294E] bg-blue-50 border-x border-t border-blue-100 w-1/2 md:w-auto">
+                    <div className="inline-block bg-[#D0151C] text-white text-[9px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-sm mb-2 whitespace-nowrap">
+                      Recomendado
+                    </div>
+                    <span className="block">Matrícula USA</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {/* Row 1 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
-                  <td className="py-8 px-6">
-                    <p className="text-base font-bold text-slate-800">Acesso a Bolsas de Estudos</p>
+                  <td className="py-8 px-6 hidden md:table-cell">
+                    <p className="text-base font-bold text-slate-800">Acesso a bolsas</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -230,32 +234,32 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Dificuldade extrema em achar e negociar</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Difícil encontrar oportunidades reais</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center">
+                  <td className="py-8 px-6 text-center hidden md:table-cell">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Foco em custo integral ou pouca bolsa</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Poucas opções ou descontos limitados</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                  <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Bolsas exclusivas de até 50% de desconto</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Bolsas exclusivas com grandes descontos</span>
                     </div>
                   </td>
                 </tr>
 
                 {/* Row 2 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
-                  <td className="py-8 px-6">
-                    <p className="text-base font-bold text-slate-800">Suporte & Mentoria</p>
+                  <td className="py-8 px-6 hidden md:table-cell">
+                    <p className="text-base font-bold text-slate-800">Suporte e mentoria</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -263,65 +267,65 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sem ajuda. Risco alto de erros nos docs</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Você decide tudo por conta própria</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center">
+                  <td className="py-8 px-6 text-center hidden md:table-cell">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Processos burocráticos lentos e manuais</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Atendimento genérico e pouco personalizado</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                  <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Orientação estratégica e IA dedicada 24h</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Orientação estratégica com especialistas</span>
                     </div>
                   </td>
                 </tr>
 
                 {/* Row 3 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
-                  <td className="py-8 px-6">
-                    <p className="text-base font-bold text-slate-800">Transparência de Custos</p>
+                  <td className="py-8 px-6 hidden md:table-cell">
+                    <p className="text-base font-bold text-slate-800">Transparência nos custos</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Múltiplas taxas extras por faculdade</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Gastos podem aparecer no caminho</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center">
+                  <td className="py-8 px-6 text-center hidden md:table-cell">
                     <div className="flex flex-col items-center gap-2 opacity-40">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxas ocultas e comissões extras</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxas extras e pouca clareza</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                  <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Valor único transparente e sem surpresas</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Transparência em todos os passos</span>
                     </div>
                   </td>
                 </tr>
 
                 {/* Row 4 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
-                  <td className="py-8 px-6">
-                    <p className="text-base font-bold text-slate-800">Preparação de Visto & I-20</p>
+                  <td className="py-8 px-6 hidden md:table-cell">
+                    <p className="text-base font-bold text-slate-800">Organização do processo</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -329,32 +333,32 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lidar com o consulado sem preparo</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manual, confuso e fácil de errar</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center">
+                  <td className="py-8 px-6 text-center hidden md:table-cell">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Suporte básico cobrado separadamente</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Processo lento e espalhado</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                  <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Simulações de entrevista de visto inclusas</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Tudo simples em uma única plataforma</span>
                     </div>
                   </td>
                 </tr>
 
                 {/* Row 5 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
-                  <td className="py-8 px-6">
-                    <p className="text-base font-bold text-slate-800">Garantia de Aprovação</p>
+                  <td className="py-8 px-6 hidden md:table-cell">
+                    <p className="text-base font-bold text-slate-800">Segurança na aprovação</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -362,19 +366,19 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Risco total de perder tempo e dinheiro</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sem garantia se não avançar</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center">
+                  <td className="py-8 px-6 text-center hidden md:table-cell">
                     <div className="flex flex-col items-center gap-2 opacity-40">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nenhuma garantia em caso de rejeição</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Garantia nem sempre clara</span>
                     </div>
                   </td>
-                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                  <td className="py-8 px-6 text-center bg-blue-50 border-x border-b border-blue-100">
                     <div className="flex flex-col items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -421,14 +425,7 @@ const JourneySection: React.FC<{
   return (
     <section ref={ref} className="relative py-16 md:py-24 overflow-hidden bg-white">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 home-page">
-          <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
-            {t('howItWorks.journey')}
-          </h2>
-          <div className="w-24 h-1 bg-[#D0151C] mx-auto rounded-full"></div>
-        </div>
-
-        <div className="max-w-5xl mx-auto relative mt-16">
+        <div className="max-w-5xl mx-auto relative mt-4">
           {/* Vertical central timeline line */}
           <div className="absolute left-1/2 top-0 bottom-0 hidden w-0.5 bg-slate-200 -translate-x-1/2 lg:block"></div>
           
@@ -439,118 +436,112 @@ const JourneySection: React.FC<{
               {/* Visual mockup (left side) */}
               <div className="w-full lg:w-1/2 flex justify-center">
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
-                  <div className="relative w-full h-full flex flex-col items-center justify-center">
-                    <div className="absolute inset-0 bg-[#05294E]/5 rounded-full blur-3xl"></div>
-                    <div className="grid grid-cols-3 gap-4 relative z-10 w-full">
-                      {/* Harvard */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#05294E]/5 rounded-full blur-[80px] opacity-40"></div>
+                    <div className="relative w-full max-w-[320px] bg-white rounded-3xl border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-6 space-y-4 text-left">
+                      {/* Header containing counter */}
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">Minha Seleção</h4>
+                          <p className="text-[9px] text-muted-foreground font-bold">Cursos Pré-Selecionados</p>
                         </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Harvard</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        <span className="bg-blue-50 text-blue-600 border border-blue-100 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
+                          4 / 4 Selecionados
+                        </span>
+                      </div>
+
+                      {/* Selected Scholarships List */}
+                      <div className="space-y-3">
+                        {/* Course 1 */}
+                        <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Master of Science in Computer Science</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                            </div>
+                            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
+                            <div className="space-x-1.5">
+                              <span className="text-slate-400 line-through">$37,480</span>
+                              <span className="text-green-600">$24,370 / ano</span>
+                            </div>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">35% OFF</span>
+                          </div>
+                        </div>
+
+                        {/* Course 2 */}
+                        <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Professional MBA</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Pós-Graduação / MBA</p>
+                            </div>
+                            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
+                            <div className="space-x-1.5">
+                              <span className="text-slate-400 line-through">$32,700</span>
+                              <span className="text-green-600">$19,500 / ano</span>
+                            </div>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">40% OFF</span>
+                          </div>
+                        </div>
+
+                        {/* Course 3 */}
+                        <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Master of Business in Business Analytics</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                            </div>
+                            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
+                            <div className="space-x-1.5">
+                              <span className="text-slate-400 line-through">$44,700</span>
+                              <span className="text-green-600">$21,900 / ano</span>
+                            </div>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">51% OFF</span>
+                          </div>
+                        </div>
+
+                        {/* Course 4 */}
+                        <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">MS Computer Science</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                            </div>
+                            <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
+                            <div className="space-x-1.5">
+                              <span className="text-slate-400 line-through">$27,000</span>
+                              <span className="text-green-600">$16,625 / ano</span>
+                            </div>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">38% OFF</span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Columbia */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-slate-300">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-slate-200"></div>
-                        </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Columbia</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-slate-200"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
-                        </div>
-                      </div>
-
-                      {/* MIT */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
-                        </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">MIT</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
-                        </div>
-                      </div>
-
-                      {/* Stanford */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
-                        </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Stanford</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
-                        </div>
-                      </div>
-
-                      {/* NYU */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-slate-300">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-slate-200"></div>
-                        </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">NYU</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-slate-200"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
-                        </div>
-                      </div>
-
-                      {/* UCLA */}
-                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
-                        <div className="flex justify-between items-start mb-auto">
-                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
-                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-                            </svg>
-                          </div>
-                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
-                        </div>
-                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">UCLA</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
-                        </div>
-                      </div>
                     </div>
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#05294E]/20 to-transparent -rotate-12 animate-pulse z-20"></div>
                   </div>
                 </div>
               </div>
@@ -579,78 +570,64 @@ const JourneySection: React.FC<{
               <div className="w-full lg:w-1/2 flex justify-center">
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="absolute inset-0 bg-accent/5 rounded-full blur-[100px] opacity-50"></div>
-                    <div className="relative w-full max-w-[360px] bg-white rounded-[2.5rem] border border-border/40 shadow-[0_32px_64px_rgba(0,0,0,0.06)] overflow-hidden">
-                      <div className="bg-slate-50/50 border-b border-border/30 px-6 py-4 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Bolsas Disponíveis</span>
+                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
+                    <div className="relative w-full max-w-[280px] bg-white rounded-3xl border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.06)] overflow-hidden text-left flex flex-col">
+                      {/* Scholarship Card Header Image */}
+                      <div className="relative w-full aspect-[8/3.5] bg-slate-900 overflow-hidden border-b border-slate-100 shrink-0">
+                        <img
+                          src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=600&auto=format&fit=crop"
+                          alt="St. Francis College Campus"
+                          className="w-full h-full object-cover opacity-80"
+                        />
+                        {/* Top Right Badges */}
+                        <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+                          <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold shadow-sm uppercase tracking-wider flex items-center gap-1">
+                            ★ Exclusiva
+                          </span>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-filter h-3.5 w-3.5 text-muted-foreground/40">
-                          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                        </svg>
+                        {/* Course overlay label */}
+                        <div className="absolute inset-y-0 left-0 w-[80%] bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-3">
+                          <p className="text-[10px] font-black text-slate-900 leading-tight">
+                            MS COMPUTER SCIENCE
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-4 space-y-3">
-                        {/* Discarded 1 */}
-                        <div className="group relative bg-slate-50/50 border border-slate-100 rounded-2xl p-4 opacity-40 transition-all">
-                          <div className="flex justify-between items-start">
-                            <span className="text-[8px] font-bold bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full uppercase">Incompatível</span>
-                            <span className="text-[9px] font-bold text-slate-400">Anuidade Cheia</span>
+
+                      {/* Card Body */}
+                      <div className="p-4 space-y-3 flex-1 flex flex-col">
+                        {/* Title & Uni */}
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900 leading-tight">MS Computer Science</h4>
+                        </div>
+
+                        {/* Financial Box */}
+                        <div className="bg-white rounded-xl p-3 border border-blue-100 shadow-sm space-y-1.5">
+                          <div className="flex justify-between items-center text-[9px]">
+                            <span className="text-slate-400 font-medium">Anuidade Original</span>
+                            <span className="text-slate-400 font-bold line-through">$27,000</span>
                           </div>
-                          <p className="mt-2 text-[11px] font-bold text-slate-500">Boston University • 10% Bolsa</p>
-                          <div className="mt-1 flex items-center gap-1.5 opacity-60">
-                            <div className="h-1 w-1 rounded-full bg-slate-300"></div>
-                            <span className="text-[8px] font-medium text-slate-400">Custo fora do orçamento</span>
+                          <div className="flex justify-between items-center text-[9px]">
+                            <span className="text-[#05294E] font-bold">Com Bolsa de Estudo</span>
+                            <span className="text-green-600 font-black text-xs">$16,625 / ano</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-1 border-t border-slate-100 text-[9px]">
+                            <span className="text-slate-400 font-medium">Desconto Garantido</span>
+                            <span className="text-green-600 font-extrabold bg-green-50 px-1.5 py-0.5 rounded text-[8px]">38% OFF</span>
                           </div>
                         </div>
-                        {/* Selected */}
-                        <div className="relative bg-white border-2 border-accent rounded-2xl p-5 shadow-[0_15px_30px_rgba(var(--accent-rgb),0.1)] scale-[1.05] z-10">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles h-3.5 w-3.5">
-                                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
-                                  <path d="M20 3v4"></path>
-                                  <path d="M22 5h-4"></path>
-                                  <path d="M4 17v2"></path>
-                                  <path d="M5 18H3"></path>
-                                </svg>
-                              </div>
-                              <span className="text-[8px] font-bold text-accent uppercase tracking-widest">Melhor Correspondência</span>
-                            </div>
-                            <div className="h-5 w-5 rounded-full bg-accent flex items-center justify-center text-accent-foreground shadow-lg shadow-accent/20">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check h-3 w-3">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="m9 12 2 2 4-4"></path>
-                              </svg>
-                            </div>
-                          </div>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-end">
-                              <div>
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Florida Tech • 60% Bolsa</p>
-                                <p className="text-xl font-bold text-[#D0151C]">Anuidade Reduzida</p>
-                              </div>
-                              <div className="text-right">
-                                <span className="inline-block px-2 py-1 bg-[#D0151C] text-white text-[8px] font-bold rounded-lg uppercase tracking-tighter">100% Compatível</span>
-                              </div>
-                            </div>
-                            <div className="h-px bg-slate-50 w-full"></div>
-                            <div className="flex items-center gap-3 text-[8px] font-bold text-red-700/60 italic">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3">
-                                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
-                              </svg>
-                              <span>Bolsa Garantida • Campus Completo • 10/10 Suporte</span>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Discarded 3 */}
-                        <div className="bg-slate-50/30 border border-slate-100 rounded-2xl p-4 opacity-20">
-                          <div className="flex justify-between items-start">
-                            <span className="text-[8px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-tighter">Incompatível</span>
-                            <span className="text-[9px] font-bold text-slate-300">Sem Bolsa</span>
-                          </div>
-                          <p className="mt-2 text-[11px] font-bold text-slate-300">NYU • Sem Bolsa</p>
+
+                        {/* Select Button in Selected state */}
+                        <div className="mt-auto">
+                          <button
+                            disabled
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 rounded-xl font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 cursor-default"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="m9 12 2 2 4-4" />
+                            </svg>
+                            <span>Selecionada</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -694,72 +671,112 @@ const JourneySection: React.FC<{
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
                   <div className="relative w-full h-full flex items-center justify-center">
                     <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
-                    <div className="relative w-full max-w-[320px] space-y-3">
-                      {/* Notification 1 */}
-                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default z-30">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                              </svg>
-                            </div>
-                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
-                          </div>
-                          <span className="text-[10px] text-black/40 font-medium">agora</span>
+                    <div className="relative w-full max-w-[320px] bg-white rounded-3xl border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-5 space-y-4 text-left">
+                      {/* Header do Mockup */}
+                      <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">Onboarding</h4>
+                          <p className="text-[9px] text-slate-400 font-bold">Documentos da Universidade</p>
                         </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[13px] font-bold text-black tracking-tight">Histórico Traduzido</p>
-                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Documento traduzido e validado com sucesso.</p>
-                        </div>
-                        <div className="absolute top-4 right-4 h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                      </div>
-                      
-                      {/* Notification 2 */}
-                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default opacity-60 scale-[0.96] -mt-10 z-20">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                              </svg>
-                            </div>
-                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
-                          </div>
-                          <span className="text-[10px] text-black/40 font-medium">3m atrás</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[13px] font-bold text-black tracking-tight">Recomendação Carregada</p>
-                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Suas cartas de recomendação foram vinculadas.</p>
-                        </div>
+                        <span className="bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                          2 / 4 Enviados
+                        </span>
                       </div>
 
-                      {/* Notification 3 */}
-                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default opacity-30 scale-[0.92] -mt-10 z-10">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
+                      {/* Lista de Documentos no Onboarding */}
+                      <div className="space-y-2.5">
+                        
+                        {/* 1. Passaporte - Aprovado */}
+                        <div className="p-3 rounded-2xl bg-emerald-50/20 border border-emerald-100 flex items-center justify-between transition-all hover:scale-[1.02]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
                               </svg>
                             </div>
-                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">Passaporte Oficial</h5>
+                              <p className="text-[8px] text-emerald-600 font-black tracking-wider uppercase mt-0.5">Aprovado ✓</p>
+                            </div>
                           </div>
-                          <span className="text-[10px] text-black/40 font-medium">10m atrás</span>
+                          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/25">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[13px] font-bold text-black tracking-tight">Perfil Aprovado</p>
-                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Seu perfil foi aceito pelas universidades selecionadas.</p>
+
+                        {/* 2. Histórico Escolar - Em Análise */}
+                        <div className="p-3 rounded-2xl bg-amber-50/30 border border-amber-100 flex items-center justify-between transition-all hover:scale-[1.02]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                              </svg>
+                            </div>
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">Histórico Escolar</h5>
+                              <p className="text-[8px] text-amber-600 font-black tracking-wider uppercase mt-0.5">Em Análise</p>
+                            </div>
+                          </div>
+                          <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-sm shadow-amber-500/25 animate-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                          </div>
                         </div>
+
+                        {/* 3. Comprovante Financeiro - Fazendo Upload (Ativo) */}
+                        <div className="p-3 rounded-2xl bg-blue-50/20 border border-blue-100/80 space-y-2 transition-all hover:scale-[1.02]">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm animate-pulse">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                  <polyline points="17 8 12 3 7 8" />
+                                  <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h5 className="text-[10px] font-black text-slate-800 leading-tight">Comprovante Financeiro</h5>
+                                <p className="text-[8px] text-blue-600 font-black tracking-wider uppercase mt-0.5">Enviando... 65%</p>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Barra de Progresso de Upload */}
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '65%' }}></div>
+                          </div>
+                        </div>
+
+                        {/* 4. Proficiência em Inglês - Pendente / Ação Necessária */}
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between transition-all hover:scale-[1.02]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                                <path d="M12 9v4" />
+                                <path d="M12 16v.01" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h5 className="text-[10px] font-black text-slate-500 leading-tight">Proficiência em Inglês</h5>
+                              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Pendente</p>
+                            </div>
+                          </div>
+                          <button className="px-2.5 py-1 bg-[#05294E] hover:bg-[#083a6e] text-white rounded-lg text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-colors cursor-default">
+                            Upload
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="17 8 12 3 7 8" />
+                              <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                          </button>
+                        </div>
+
                       </div>
                     </div>
                   </div>
@@ -778,17 +795,9 @@ const JourneySection: React.FC<{
                     {t('howItWorks.steps.documents.title')}
                   </h3>
                 </div>
-                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-0">
                   {t('howItWorks.steps.documents.description')}
                 </p>
-                <ul className="space-y-3 flex flex-col items-center lg:items-start">
-                  {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
-                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
 
@@ -797,92 +806,77 @@ const JourneySection: React.FC<{
               {/* Visual mockup (right side) */}
               <div className="w-full lg:w-1/2 flex justify-center">
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
-                  <div className="relative w-full h-full flex items-center justify-center scale-90">
-                    <div className="absolute inset-0 bg-[#05294E]/5 rounded-full blur-[80px] opacity-40"></div>
-                    <div className="relative w-full max-w-[240px] flex flex-col drop-shadow-[0_15px_30px_rgba(0,0,0,0.1)]">
-                      <div className="bg-slate-900 text-white rounded-t-[1.5rem] p-4 text-[10px]">
-                        <div className="flex justify-between items-center mb-4">
-                          <div className="flex items-center gap-1.5 line-clamp-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3 text-accent">
-                              <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
-                            </svg>
-                            <span className="font-bold uppercase tracking-widest text-white/70">STUDENT VISA</span>
-                          </div>
-                          <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></div>
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
+                    <div className="relative w-full max-w-[300px] bg-white rounded-2xl border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 space-y-4 overflow-hidden text-left">
+                      {/* University Header */}
+                      <div className="flex justify-between items-start pt-2">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-black text-slate-800 tracking-wider uppercase font-serif">FLORIDA INSTITUTE OF TECHNOLOGY</p>
+                          <p className="text-[7px] text-muted-foreground uppercase tracking-widest">Office of Admissions</p>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <div className="space-y-0.5">
-                            <p className="text-[7px] font-bold text-white/40 uppercase">Estudante</p>
-                            <p className="font-bold">ALUNO VIP</p>
-                          </div>
-                          <div className="text-right space-y-0.5">
-                            <p className="text-[7px] font-bold text-white/40 uppercase">Status</p>
-                            <p className="font-bold text-accent">APROVADO</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-white border-x border-border/10 p-4 space-y-4">
-                        <div className="flex justify-between items-center">
-                          <div className="text-left">
-                            <p className="text-[8px] font-bold text-muted-foreground uppercase">SAO</p>
-                            <p className="text-xl font-bold text-slate-900 leading-none">GRU</p>
-                          </div>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3 text-[#05294E]/30 rotate-90">
-                            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
-                          </svg>
-                          <div className="text-right">
-                            <p className="text-[8px] font-bold text-muted-foreground uppercase">USA</p>
-                            <p className="text-xl font-bold text-slate-900 leading-none">MIA</p>
-                          </div>
-                        </div>
-                        <div className="bg-[#05294E]/[0.03] rounded-xl p-3 border border-[#05294E]/5 flex justify-between items-center">
-                          <div className="space-y-0.5">
-                            <p className="text-[7px] font-bold text-[#05294E]/60 uppercase">Bolsa de Estudos</p>
-                            <p className="text-sm font-bold text-[#05294E]">60% Aprovada</p>
-                          </div>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check h-4 w-4 text-accent">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="m9 12 2 2 4-4"></path>
+                        <div className="h-6 w-6 rounded bg-[#05294E]/10 flex items-center justify-center text-[#05294E]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                            <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                           </svg>
                         </div>
                       </div>
-                      <div className="relative py-1.5 bg-white border-x border-border/10 flex items-center justify-between">
-                        <div className="h-4 w-2 bg-slate-50 border-r border-border/10 rounded-r-full -ml-[1px]"></div>
-                        <div className="border-t border-dashed border-slate-200 flex-1 mx-2"></div>
-                        <div className="h-4 w-2 bg-slate-50 border-l border-border/10 rounded-l-full -mr-[1px]"></div>
-                      </div>
-                      <div className="bg-white rounded-b-[1.5rem] p-4 pt-1 border-x border-b border-border/10 flex flex-col items-center">
-                        <div className="flex justify-between w-full mb-4 text-[7px] font-bold">
-                          <p className="text-[#05294E] uppercase">I-20 Emitido</p>
-                          <p className="text-slate-400 uppercase">Confirmado</p>
+
+                      <div className="h-px bg-slate-100 w-full"></div>
+
+                      {/* Letter Content Mock */}
+                      <div className="space-y-3">
+                        <div className="space-y-0.5">
+                          <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">OFFICIAL ACCEPTANCE</span>
+                          <h4 className="text-sm font-black text-slate-900 pt-1">Congratulations!</h4>
                         </div>
-                        <div className="w-full h-8 flex justify-center gap-[1px] opacity-40">
-                          <div className="bg-slate-900 h-full" style={{ width: '1.17px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.39px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.00px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.87px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.12px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.85px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.64px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.10px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.04px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '3.33px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.88px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.02px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.35px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '0.76px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.31px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.72px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.72px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.32px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.00px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.81px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '0.95px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '2.53px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.33px' }}></div>
-                          <div className="bg-slate-900 h-full" style={{ width: '1.15px' }}></div>
+                        
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                          We are thrilled to inform you that you have been admitted to the incoming class of 2026.
+                        </p>
+                      </div>
+
+                      {/* Official Seal and Details */}
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2 relative overflow-hidden">
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-muted-foreground font-semibold">Scholarship Award</span>
+                          <span className="text-[#05294E] font-extrabold">$28,500 / Yr</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-muted-foreground font-semibold">Academic Program</span>
+                          <span className="text-slate-900 font-bold">Computer Science, B.S.</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px]">
+                          <span className="text-muted-foreground font-semibold">Status</span>
+                          <span className="text-emerald-600 font-bold">Admitted (F-1)</span>
+                        </div>
+                        
+                        {/* Stamp Overlay */}
+                        <div className="absolute right-2 bottom-0 opacity-15 rotate-12 pointer-events-none">
+                          <div className="border-4 border-[#05294E] rounded-full p-1.5 flex flex-col items-center justify-center w-14 h-14">
+                            <span className="text-[6px] font-black text-[#05294E] uppercase leading-none">ACCEPTED</span>
+                            <span className="text-[4px] font-bold text-[#05294E] leading-none">FIT 2026</span>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Sign and Seal */}
+                      <div className="flex justify-between items-end pt-1">
+                        <div className="space-y-0.5">
+                          <div className="h-3 w-16 bg-slate-100 rounded opacity-70 flex items-center justify-center">
+                            <span className="text-[6px] font-bold italic text-slate-400 font-serif">M. Anderson</span>
+                          </div>
+                          <p className="text-[6px] text-muted-foreground uppercase">Dean of Admissions</p>
+                        </div>
+                        <div className="h-6 w-6 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm animate-pulse">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="m9 12 2 2 4-4"/>
+                          </svg>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -900,90 +894,13 @@ const JourneySection: React.FC<{
                     {t('howItWorks.steps.applicationFee.title')}
                   </h3>
                 </div>
-                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6 lg:text-right">
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-0 lg:text-right">
                   {t('howItWorks.steps.applicationFee.description')}
                 </p>
-                <ul className="space-y-3 flex flex-col items-center lg:items-end">
-                  {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 lg:flex-row-reverse text-slate-500 font-medium text-center lg:text-right">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
-                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
 
-            {/* STEP 5: Taxa de Colocação */}
-            <div className="relative flex flex-col gap-20 lg:flex-row items-center group">
-              {/* Visual mockup (left side) */}
-              <div className="w-full lg:w-1/2 flex justify-center">
-                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
-                    <div className="relative w-full max-w-[280px] bg-white rounded-[2rem] border border-border/40 shadow-[0_20px_40px_rgba(0,0,0,0.08)] p-6 text-center space-y-4">
-                      {/* Success Checkmark Stamp */}
-                      <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 border-4 border-white shadow-md flex items-center justify-center text-emerald-500 animate-bounce">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase tracking-wider">
-                          Vaga Garantida
-                        </span>
-                        <h4 className="text-lg font-black text-slate-900 pt-2">Matrícula Confirmada!</h4>
-                        <p className="text-xs text-muted-foreground">Florida Institute of Technology</p>
-                      </div>
 
-                      <div className="bg-slate-50 rounded-xl p-3 text-left space-y-2 border border-slate-100">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-muted-foreground font-semibold">Tipo de Visto</span>
-                          <span className="text-slate-900 font-bold">F-1 Student</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-muted-foreground font-semibold">Embarque</span>
-                          <span className="text-slate-900 font-bold">Agosto, 2026</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-muted-foreground font-semibold">Status de Suporte</span>
-                          <span className="text-emerald-600 font-bold">100% Concluído</span>
-                        </div>
-                      </div>
-
-                      <p className="text-[9px] font-bold text-[#05294E] italic">"Parabéns! Sua jornada rumo aos EUA está prestes a começar."</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Central Number Circle */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
-                <span className="text-base font-bold text-[#05294E]">5</span>
-              </div>
-              
-              {/* Text Side (right side) */}
-              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
-                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start">
-                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
-                    {t('howItWorks.steps.placementFee.title')}
-                  </h3>
-                </div>
-                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
-                  {t('howItWorks.steps.placementFee.description')}
-                </p>
-                <ul className="space-y-3 flex flex-col items-center lg:items-start">
-                  {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
-                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
 
           </div>
         </div>

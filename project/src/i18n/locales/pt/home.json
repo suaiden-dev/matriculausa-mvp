@@ -235,8 +235,8 @@
         ]
       },
       "documents": {
-        "title": "Escolha Bolsas e Envie Documentos",
-        "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
+        "title": "Prepare sua candidatura com mais confiança",
+        "description": "Envie os documentos solicitados pela universidade diretamente pela plataforma e acompanhe sua jornada com mais clareza e segurança.",
         "items": [
           "Selecione até 4 bolsas",
           "Upload seguro de documentos",
@@ -244,8 +244,8 @@
         ]
       },
       "applicationFee": {
-        "title": "Taxa de Matrícula",
-        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável.",
+        "title": "Viva sua conquista",
+        "description": "Receba sua carta de aceite e comece seu novo capítulo nos EUA.",
         "items": [
           "Visualize bolsas aprovadas",
           "Confirme sua escolha de universidade",
@@ -295,12 +295,12 @@
       }
     },
     "selectionFeeShowcase": {
-      "title": "Por que o Processo Seletivo é o melhor caminho?",
-      "subtitle": "Sua Chave de Ouro para as Universidades Americanas. Diferente de agências tradicionais, nossa taxa consolida tudo em um único investimento inicial.",
+      "title": "O caminho mais seguro para conquistar sua bolsa nos EUA",
+      "subtitle": "Compare a diferença entre tentar sozinho, depender de processos tradicionais e avançar com uma estrutura pensada para aproximar você da sua aprovação.",
       "traditionalWay": "Meio Tradicional (Agências)",
       "ourWay": "Com Matrícula USA",
       "savings": "Economia Significativa",
-      "startProcess": "Iniciar Processo Seletivo",
+      "startProcess": "Quero conquistar minha bolsa",
       "traditionalItems": [
         "Incerteza no valor final",
         "Taxas ocultas por cada serviço",

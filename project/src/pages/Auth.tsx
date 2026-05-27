@@ -715,19 +715,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="w-full lg:w-1/2 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar">
-          <div className="max-w-lg w-full mx-auto p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col justify-center min-h-full">
+        <div className="relative w-full lg:w-1/2 flex-1 flex flex-col justify-center items-center bg-white overflow-y-auto custom-scrollbar p-8 sm:p-12 lg:p-16 xl:p-24">
+          <div className="w-full max-w-lg">
+            {/* Mobile Logo — fixed at top (Hidden on Desktop) */}
+            <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
+              <Link to="/">
+                <img 
+                  src="/logo.png.png" 
+                  alt="Matrícula USA" 
+                  className="h-10 w-auto"
+                />
+              </Link>
+            </div>
+
             {/* Mobile Header (Hidden on Desktop) */}
             <div className="lg:hidden text-center mb-10">
-              <div className="flex justify-center mb-6">
-                <Link to="/">
-                  <img 
-                    src="/logo.png.png" 
-                    alt="Matrícula USA" 
-                    className="h-12 w-auto"
-                  />
-                </Link>
-              </div>
               <h1 className="text-3xl font-black text-slate-900 mb-2">
                 {t('authPage.login.title')}
               </h1>
@@ -737,16 +739,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
 
             {/* Login Header (Desktop only) */}
-            <div className="hidden lg:block mb-10">
-              <h2 className="text-3xl xl:text-4xl font-black text-slate-900 mb-4">
+            <div className="hidden lg:block mb-10 text-center">
+              <h2 className="text-3xl xl:text-4xl font-black text-slate-900">
                 {t('authPage.login.title')}
               </h2>
-              <p className="text-slate-500 font-medium">
-                {t('authPage.login.noAccount')}{' '}
-                <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
-                  {t('authPage.login.signUpHere')}
-                </Link>
-              </p>
             </div>
 
             {error && (
@@ -824,8 +820,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 )}
               </button>
 
-              {/* Mobile Sign Up Link */}
-              <div className="lg:hidden text-center mt-8">
+              {/* Sign Up Link */}
+              <div className="text-center mt-6">
                 <p className="text-slate-500 font-medium text-sm">
                   {t('authPage.login.noAccount')}{' '}
                   <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
@@ -912,16 +908,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       </div>
 
       {/* Right Side: Registration Form */}
-      <div className="w-full lg:w-1/2 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar">
-        <div className="max-w-3xl w-full mx-auto p-6 sm:p-12 lg:p-16 xl:p-20 flex flex-col justify-center min-h-full">
+      <div className="w-full lg:w-1/2 flex flex-col h-screen bg-white overflow-y-auto custom-scrollbar">
+        <div className="max-w-3xl w-full mx-auto p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center min-h-full">
           {/* Mobile Logo Only */}
-          <div className="lg:hidden text-center mb-6">
+          <div className="lg:hidden text-center mb-4">
             <div className="flex justify-center">
               <Link to="/">
                 <img 
                   src="/logo.png.png" 
                   alt="Matrícula USA" 
-                  className="h-12 w-auto"
+                  className="h-10 w-auto"
                 />
               </Link>
             </div>
@@ -930,7 +926,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
           {/* Tab Navigation */}
-          <div className="flex justify-center mb-10 border-b border-slate-200">
+          <div className="flex justify-center mb-6 border-b border-slate-200">
             <div className="flex relative w-full">
               {/* Active Indicator Line */}
               <div 
@@ -943,7 +939,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               
               <button
                 onClick={() => handleTabChange('student')}
-                className={`relative z-10 flex items-center justify-center px-4 py-4 flex-1 font-bold transition-all duration-300 text-sm ${
+                className={`relative z-10 flex items-center justify-center px-4 py-3 flex-1 font-bold transition-all duration-300 text-sm ${
                   activeTab === 'student'
                     ? 'text-[#05294E]'
                     : 'text-slate-500 hover:text-slate-700'
@@ -955,7 +951,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               
               <button
                 onClick={() => handleTabChange('university')}
-                className={`relative z-10 flex items-center justify-center px-4 py-4 flex-1 font-bold transition-all duration-300 text-sm ${
+                className={`relative z-10 flex items-center justify-center px-4 py-3 flex-1 font-bold transition-all duration-300 text-sm ${
                   activeTab === 'university'
                     ? 'text-[#D0151C]'
                     : 'text-slate-500 hover:text-slate-700'
@@ -967,9 +963,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
           </div>
 
-          {/* Registration Title (Moved below toggle) */}
-          <div className="text-center mb-10">
-            <h2 className="text-3xl xl:text-4xl font-black text-slate-900 mb-2">
+          {/* Registration Title */}
+          <div className="text-center mb-5">
+            <h2 className="text-2xl xl:text-3xl font-black text-slate-900">
               {t('authPage.register.title')}
             </h2>
           </div>
@@ -990,11 +986,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Form Fields Grid */}
             {activeTab === 'student' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {/* Full Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Full Name — full width */}
                   <div className="sm:col-span-2">
                     <label htmlFor="full_name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.fullName')}
@@ -1009,14 +1005,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-base"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-sm"
                         placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
                   </div>
 
-                  {/* Email */}
-                  <div className="sm:col-span-2">
+                  {/* Email — col 1 */}
+                  <div>
                     <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.emailAddress')}
                     </label>
@@ -1030,15 +1026,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-base"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-sm"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
                     </div>
                   </div>
 
-                  {/* Phone */}
-                  <div className="sm:col-span-2">
+                  {/* Phone — col 2 */}
+                  <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.phoneNumber')}
                     </label>
@@ -1058,7 +1054,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#05294E'
                         }}
                         maxLength={20}
-                        className={`phone-input-custom register w-full pl-4 pr-4 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-base ${
+                        className={`phone-input-custom register w-full pl-4 pr-4 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
                             : 'border-slate-200 focus-within:border-[#05294E] focus-within:bg-white'
@@ -1074,8 +1070,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Password */}
-                  <div className="sm:col-span-2">
+                  {/* Password — col 1 */}
+                  <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
@@ -1089,7 +1085,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
+                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500/20'
                             : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
@@ -1108,8 +1104,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Confirm Password */}
-                  <div className="sm:col-span-2">
+                  {/* Confirm Password — col 2 */}
+                  <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
@@ -1123,7 +1119,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
+                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500/20'
                             : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
@@ -1142,7 +1138,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Referral Code */}
+                  {/* Referral Code — full width */}
                   <div className="sm:col-span-2">
                     <label htmlFor="referralCode" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.referralCodeAutoApplied')} (Opcional)
@@ -1160,7 +1156,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.referralCode || ''}
                         onChange={handleReferralCodeChange}
                         readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
+                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           isReferralCodeLocked 
                             ? 'bg-green-50/50 cursor-not-allowed border-green-200' 
                             : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
@@ -1210,26 +1206,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       </div>
                     )}
                   </div>
-
-
-
               </div>
             )}
 
+
             {/* University Form */}
             {activeTab === 'university' && (
-              <>
-                <div className="text-center mb-6 sm:mb-8">
-                  <div className="bg-[#D0151C] w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">{t('authPage.register.universityRegistration')}</h2>
-                  <p className="text-sm sm:text-base text-slate-600 px-4">{t('authPage.register.universitySubtitle')}</p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="lg:col-span-1">
-                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-900 mb-2">
+                  {/* University Name — col 1 */}
+                  <div>
+                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.universityName')}
                     </label>
                     <div className="relative group">
@@ -1242,14 +1229,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.universityName || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('university_name')}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
                         placeholder={t('authPage.register.enterUniversityName')}
                       />
                     </div>
                   </div>
 
-                  {/* Contact Name */}
-                  <div className="sm:col-span-2">
+                  {/* Contact Name — col 2 */}
+                  <div>
                     <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.contactPersonName')}
                     </label>
@@ -1263,14 +1250,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
                         placeholder={t('authPage.register.yourFullName')}
                       />
                     </div>
                   </div>
 
-                  {/* University Email */}
-                  <div className="sm:col-span-2">
+                  {/* University Email — col 1 */}
+                  <div>
                     <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.officialEmail')}
                     </label>
@@ -1284,14 +1271,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-base"
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
                         placeholder={t('authPage.register.officialUniversityEmail')}
                       />
                     </div>
                   </div>
 
-                  {/* Phone */}
-                  <div className="sm:col-span-2">
+                  {/* Phone — col 2 */}
+                  <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.phoneNumber')}
                     </label>
@@ -1311,7 +1298,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         }}
                         maxLength={20}
                         onBlur={() => handleFieldBlur('phone')}
-                        className={`phone-input-custom university w-full pl-4 pr-4 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-base ${
+                        className={`phone-input-custom university w-full pl-4 pr-4 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
                             : 'border-slate-200 focus-within:border-[#D0151C] focus-within:bg-white'
@@ -1321,8 +1308,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Password */}
-                  <div className="sm:col-span-2">
+                  {/* Password — col 1 */}
+                  <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.password')}
                     </label>
@@ -1336,7 +1323,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('password')}
-                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
+                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500/20'
                             : 'border-slate-200 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white'
@@ -1354,8 +1341,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Confirm Password */}
-                  <div className="sm:col-span-2">
+                  {/* Confirm Password — col 2 */}
+                  <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.confirmPassword')}
                     </label>
@@ -1369,7 +1356,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         onBlur={() => trackFieldFilled('confirm_password')}
-                        className={`w-full pl-12 pr-12 py-4 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base ${
+                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500/20'
                             : 'border-slate-200 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white'
@@ -1386,12 +1373,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       </button>
                     </div>
                   </div>
-                </div>
-              </>
+
+              </div>
             )}
 
+
             {/* Checkboxes Area */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-3 pt-1">
               <label className="flex items-start space-x-3 cursor-pointer group">
                 <div className="relative flex items-center mt-1">
                   <input
@@ -1435,7 +1423,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 cursor-pointer disabled:active:scale-100 mt-8 ${
+              className={`w-full group relative flex items-center justify-center py-3.5 px-6 border border-transparent text-base font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 cursor-pointer disabled:active:scale-100 mt-4 ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#041f3a]' 
                   : 'bg-[#D0151C] hover:bg-[#B01218]'
@@ -1455,7 +1443,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               )}
             </button>
 
-            <div className="text-center mt-6">
+            <div className="text-center mt-4">
               <p className="text-slate-500 font-medium text-sm">
                 {t('authPage.register.hasAccount')}{' '}
                 <Link to={`/login${location.search}`} className="text-[#D0151C] hover:text-[#B01218] font-bold transition-colors">

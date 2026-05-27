@@ -23,8 +23,7 @@ import { useCartStore } from '../../stores/applicationStore';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import {
   useStudentApplicationsQuery,
-  useStudentDocumentsQuery,
-  useScholarshipsQuery
+  useStudentDocumentsQuery
 } from '../../hooks/useStudentDashboardQueries';
 
 import './Overview.css';
@@ -191,7 +190,6 @@ const Overview: React.FC = () => {
 
   // Hooks de dados — declarados antes dos useMemos que dependem deles
   const { data: applications = [] } = useStudentApplicationsQuery(userProfile?.id);
-  const { data: scholarships = [] } = useScholarshipsQuery();
   const { data: studentDocuments = [], isLoading: documentsLoading } = useStudentDocumentsQuery(user?.id);
 
   // Threshold para obrigatoriedade do questionário: 18/02/2026
@@ -274,15 +272,6 @@ const Overview: React.FC = () => {
 
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
   const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'selection_fee' && savedOnboardingStep !== 'welcome';
-
-
-  // Stats computadas localmente a partir dos dados do hook
-  const stats = {
-    totalApplications: applications.length,
-    approvedApplications: applications.filter((app: any) => app.status === 'approved' || app.status === 'enrolled').length,
-    pendingApplications: applications.filter((app: any) => ['pending', 'under_review', 'submitted'].includes(app.status)).length,
-    availableScholarships: scholarships.length,
-  };
 
   // Aplicações recentes ordenadas por data
   const recentApplications = [...applications]
@@ -729,11 +718,6 @@ const Overview: React.FC = () => {
                 </p>
               </div>
 
-              {/* Count badge */}
-              <div className="flex items-baseline justify-center gap-1.5 mt-auto">
-                <span className="text-3xl font-black text-[#05294E] transition-colors">{stats.availableScholarships}</span>
-                <span className="text-xs text-slate-400 font-medium">bolsas</span>
-              </div>
 
             </div>
           </Link>
