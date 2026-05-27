@@ -5,7 +5,6 @@ import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, Chevro
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
 import { useAuth } from '../hooks/useAuth';
@@ -656,7 +655,6 @@ const Universities: React.FC = () => {
       </div>
     </div>
     <SmartChat />
-    <Footer />
     </>
   );
 };

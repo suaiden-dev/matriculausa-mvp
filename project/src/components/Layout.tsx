@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import FooterCTA from './FooterCTA';
 import { useLocation } from 'react-router-dom';
 import SmartChat from './SmartChat';
 import { ModalProvider, useModal } from '../contexts/ModalContext';
@@ -13,7 +14,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { isModalOpen } = useModal();
   
-  const hideHeader = location.pathname.startsWith('/school') ||
+  const hideHeader = location.pathname.startsWith('/school/') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
                      location.pathname.startsWith('/affiliate-admin') ||
@@ -59,6 +60,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
           <SmartChat />
         )}
       </main>
+      {!hideFooter && <FooterCTA />}
       {!hideFooter && <Footer />}
     </div>
   );

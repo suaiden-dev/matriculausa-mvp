@@ -390,6 +390,20 @@ const Header: React.FC = () => {
         )}
       </AnimatePresence>
     </header>
+    {/* Mobile menu backdrop — frosted glass blur over the page */}
+    <AnimatePresence>
+      {isMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          onClick={() => setIsMenuOpen(false)}
+          className="lg:hidden fixed inset-0 top-20 z-30 bg-white/40 backdrop-blur-md"
+          aria-hidden="true"
+        />
+      )}
+    </AnimatePresence>
     {/* Spacer para impedir que o conteúdo da página fique sob o header fixed (h-20) */}
     <div className="h-20" />
     </>

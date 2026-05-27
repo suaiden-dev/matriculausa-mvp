@@ -1,9 +1,11 @@
 {
   "home": {
     "hero": {
-      "title": "Sua Porta para Universidades Americanas",
+      "title": "Estude nos EUA com bolsa em universidades americanas.",
+      "titleMain": "Estude nos EUA com",
+      "titleHighlight": "bolsa em universidades americanas.",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Alunos descobrem bolsas que mudam vidas todo ano — o seu começo é o Processo Seletivo.",
+      "description": "A Matrícula USA ajuda você a encontrar universidades americanas com bolsas híbridas, poucas aulas presenciais e oportunidades com permissão de trabalho, para estudar nos EUA com mais estratégia, economia e liberdade.",
       "cta": "Começar Agora",
       "watchVideo": "Assistir Vídeo",
       "stats": {
@@ -36,21 +38,21 @@
     },
     "features": {
       "whyChoose": "Por Que Escolher MatriculaUSA?",
-      "title": "Seu futuro nos EUA pode estar mais perto do que você imagina",
-      "titleMain": "Seu futuro nos EUA pode estar",
-      "titleHighlight": "mais perto do que você imagina",
-      "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
+      "title": "Encontre as melhores oportunidades para o seu perfil.",
+      "titleMain": "Encontre as melhores oportunidades",
+      "titleHighlight": "para o seu perfil.",
+      "subtitle": "Com o processo seletivo da Matrícula USA, você entende quais oportunidades combinam com seu perfil e recebe um caminho claro para iniciar sua jornada acadêmica nos Estados Unidos.",
       "opportunities": {
-        "title": "Oportunidades que abrem portas",
-        "description": "Descubra programas e bolsas que podem tornar sua jornada internacional muito mais possível."
+        "title": "Processo Seletivo simples",
+        "description": "Em poucos passos a gente avalia seu perfil, organiza seus documentos e te conecta às bolsas certas. Comece em 5 minutos."
       },
       "universities": {
-        "title": "Universidades para o seu próximo capítulo",
-        "description": "Conectamos você a instituições nos EUA que combinam com seus sonhos, seus objetivos e sua história."
+        "title": "Bolsas exclusivas",
+        "description": "Mais de 150 bolsas em universidades parceiras nos EUA, com descontos que só os alunos da Matrícula USA têm acesso."
       },
       "confidence": {
-        "title": "Uma jornada com mais confiança",
-        "description": "Você não precisa carregar esse sonho sozinho. A Matrícula USA caminha com você para transformar dúvida em direção."
+        "title": "Garantia de aprovação",
+        "description": "Se sua bolsa não sair, devolvemos seu investimento. Você só avança com a gente quando o caminho está confirmado."
       },
       "moreThanStudy": {
         "title": "Mais do que estudar fora",
@@ -132,12 +134,12 @@
       "title": "Uma experiência que pode mudar sua vida",
       "subtitle": "Benefícios",
       "step1": {
-        "title": "Viva uma nova cultura",
-        "description": "Estudar nos EUA é mergulhar em um ambiente internacional, onde cada experiência fora da sala também ensina."
+        "title": "Experiência Internacional",
+        "description": "Permissão de trabalho durante e após o curso (CPT e OPT). Ganhe experiência internacional, complemente a renda e construa carreira nos EUA."
       },
       "step2": {
-        "title": "Construa conexões globais",
-        "description": "Conheça pessoas de diferentes países, culturas e histórias — conexões que podem acompanhar você por toda a vida."
+        "title": "Networking de Alto Nível",
+        "description": "Conecte-se com estudantes e profissionais do mundo todo. Construa uma rede de contatos poderosa nos EUA que abrirá portas para sua carreira global."
       },
       "step4": {
         "title": "Ganhe confiança para ir além",
@@ -596,7 +598,7 @@
     "socialProof": {
       "title": "Mais de 150 alunos aprovados só em 2026",
       "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
-      "ctaButton": "Ser o Próximo Aprovado",
+      "ctaButton": "Quero ser o próximo",
       "statistics": {
         "approved": "Alunos aprovados",
         "approvalRate": "Taxa de aprovação",

@@ -729,38 +729,39 @@ select:focus,
 
 /* ======================================================
    Home Page Typography & Commercial Elements Standard
+   Only applies when the element has NO Tailwind text-size class.
    ====================================================== */
-.home-page h1 {
-  font-size: 48px !important;
-  line-height: 1.05 !important;
-  letter-spacing: -0.03em !important;
+.home-page h1:not([class*="text-"]) {
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
-.home-page h2 {
-  font-size: 36px !important;
-  line-height: 1.1 !important;
-  letter-spacing: -0.025em !important;
+.home-page h2:not([class*="text-"]) {
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 
-.home-page h3 {
-  font-size: 28px !important;
-  line-height: 1.2 !important;
-  letter-spacing: -0.02em !important;
+.home-page h3:not([class*="text-"]) {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
-.home-page h4 {
-  font-size: 22px !important;
-  line-height: 1.25 !important;
+.home-page h4:not([class*="text-"]) {
+  font-size: 22px;
+  line-height: 1.25;
 }
 
-.home-page p.lead {
-  font-size: 20px !important;
-  line-height: 1.5 !important;
+.home-page p.lead:not([class*="text-"]) {
+  font-size: 20px;
+  line-height: 1.5;
 }
 
-.home-page p {
-  font-size: 16px !important;
-  line-height: 1.6 !important;
+.home-page p:not([class*="text-"]) {
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .home-page .eyebrow {
@@ -780,34 +781,34 @@ select:focus,
 
 /* Mobile Typography */
 @media (max-width: 768px) {
-  .home-page h1 {
-    font-size: 40px !important;
-    line-height: 1.05 !important;
+  .home-page h1:not([class*="text-"]) {
+    font-size: 40px;
+    line-height: 1.05;
   }
 
-  .home-page h2 {
-    font-size: 28px !important;
-    line-height: 1.15 !important;
+  .home-page h2:not([class*="text-"]) {
+    font-size: 28px;
+    line-height: 1.15;
   }
 
-  .home-page h3 {
-    font-size: 22px !important;
-    line-height: 1.2 !important;
+  .home-page h3:not([class*="text-"]) {
+    font-size: 22px;
+    line-height: 1.2;
   }
 
-  .home-page h4 {
-    font-size: 18px !important;
-    line-height: 1.25 !important;
+  .home-page h4:not([class*="text-"]) {
+    font-size: 18px;
+    line-height: 1.25;
   }
 
-  .home-page p.lead {
-    font-size: 16px !important;
-    line-height: 1.5 !important;
+  .home-page p.lead:not([class*="text-"]) {
+    font-size: 16px;
+    line-height: 1.5;
   }
 
-  .home-page p {
-    font-size: 15px !important;
-    line-height: 1.6 !important;
+  .home-page p:not([class*="text-"]) {
+    font-size: 15px;
+    line-height: 1.6;
   }
 
   .home-page .eyebrow {
@@ -896,6 +897,15 @@ select:focus,
   .home-page .price-badge {
     font-size: 11px !important;
   }
+}
+
+/* Utility: hide scrollbar but keep scroll behavior */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 

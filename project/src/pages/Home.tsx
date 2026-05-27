@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Star, ChevronLeft, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
+import { ArrowRight, Star, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
 import { useUniversityLogos } from '../hooks/useUniversityLogos';
 import SEOHead from '../components/SEO/SEOHead';
+import ImageCollage from '../components/Home/ImageCollage';
 import { useWindowSize } from 'usehooks-ts';
 import { motion } from 'framer-motion';
 import { useScholarships } from '../hooks/useScholarships';
@@ -173,10 +174,11 @@ const Home: React.FC = () => {
                 className="text-center lg:text-left"
               >
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-black mb-4 leading-tight text-slate-900 tracking-tight">
-                  {t('home.hero.title')}
+                  {t('home.hero.titleMain')}{' '}
+                  <span className="text-[#D0151C] italic">{t('home.hero.titleHighlight')}</span>
                 </h1>
-                
-                <p className="text-lg lg:text-xl mb-8 text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mr-auto lg:ml-0 font-medium">
+
+                <p className="text-sm md:text-base lg:text-lg mb-8 text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mr-auto lg:ml-0 font-medium">
                   {t('home.hero.description')}
                 </p>
                 
@@ -259,7 +261,7 @@ const Home: React.FC = () => {
                         alt="Student Avatar 3" 
                       />
                     </div>
-                    <span className="text-slate-900/80 font-semibold text-sm sm:text-base leading-none">
+                    <span className="text-slate-900/80 font-semibold text-xs sm:text-sm leading-none">
                       {t('home.cta.badge', { students: t('home.trustIndicators.studentsEnrolled') })}
                     </span>
                   </div>
@@ -291,8 +293,9 @@ const Home: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                 <div className="max-w-2xl text-center md:text-left mx-auto md:mx-0">
-                  <h2 className="text-4xl md:text-5xl font-black text-slate-900 leading-tight">
-                    {t('home.featuredScholarships.title')}
+                  <h2 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">
+                    {t('home.featuredScholarships.titleMain', 'Bolsas')}{' '}
+                    <span className="text-[#D0151C] italic">{t('home.featuredScholarships.titleHighlight', 'mais procuradas.')}</span>
                   </h2>
                 </div>
                 <div className="shrink-0 hidden md:flex justify-center">
@@ -425,7 +428,7 @@ const Home: React.FC = () => {
                                 navigate(`/scholarships/${scholarship.id}`);
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
-                              className="group bg-white rounded-[2rem] border border-slate-200 shadow-[0_12px_30px_rgba(0,0,0,0.04)] hover:border-blue-200 hover:shadow-[0_24px_50px_rgba(5,41,78,0.12)] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col h-[480px] relative text-left"
+                              className="group bg-white rounded-[2rem] border border-slate-200 shadow-[0_8px_20px_rgba(0,0,0,0.04)] hover:border-blue-200 hover:shadow-[0_12px_25px_rgba(5,41,78,0.08)] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col h-[480px] relative text-left"
                               whileHover={{ y: -10 }}
                             >
                               {/* Card Header (Cover Image with Course Banner & Matricula Logo) */}
@@ -633,304 +636,235 @@ const Home: React.FC = () => {
           </section>
         )}
 
-        {/* Trusted Universities Section */}
-        <section className="py-24 bg-white relative overflow-hidden">
-          {/* Background Elements */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 left-10 w-64 h-64 bg-[#05294E]/3 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-20 right-10 w-64 h-64 bg-[#D0151C]/3 rounded-full blur-3xl"></div>
-          </div>
-          
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            
-            {/* Header Section */}
-            <div className="text-center max-w-7xl mx-auto mb-20">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-              >
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-                  {t('home.trustedUniversities.titleMain')}{' '}
-                  <span className="text-[#D0151C]">{t('home.trustedUniversities.titleHighlight')}</span>
-                </h2>
-              </motion.div>
-            </div>
-
-            {/* University Logos Grid / Carousel */}
-            <div className="relative">
-              {/* Loading State */}
-              {partnersLoading && (
-                <div className="flex gap-8 overflow-hidden py-4 animate-pulse">
-                  {Array.from({ length: 8 }).map((_, index) => (
-                    <div key={index} className="flex-shrink-0 w-[200px] h-28 bg-slate-50 rounded-[2rem] border border-slate-100" />
-                  ))}
-                </div>
-              )}
-
-              {/* University Cards Carousel */}
-              {!partnersLoading && (
-                <div className="relative w-full overflow-hidden py-4">
-                  {/* Elegant fade gradients on the sides */}
-                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-white via-white/80 to-transparent z-10 pointer-events-none" />
-                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-white via-white/80 to-transparent z-10 pointer-events-none" />
-                  
-                  <div className="animate-marquee flex gap-8 py-4">
-                    {[...partnerUniversities, ...partnerUniversities].map((university, index) => (
-                      <div 
-                        key={`${university.name}-${index}`}
-                        className="group relative flex-shrink-0 w-[200px] h-28 bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#05294E]/10 transition-all duration-500 overflow-hidden flex items-center justify-center select-none"
-                      >
-                        {/* Elegant background highlight on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                        
-                        <div className="relative z-10 flex flex-col items-center justify-center w-full h-full">
-                          <div className="h-full w-full flex items-center justify-center transition-all duration-500 transform group-hover:scale-110">
-                            {university.isLoading ? (
-                              <div className="animate-pulse bg-slate-100 h-full w-full rounded-2xl"></div>
-                            ) : university.logoUrl ? (
-                              <img
-                                src={university.logoUrl}
-                                alt={`${university.name} logo`}
-                                className="max-h-full max-w-full object-contain transition-all duration-700 opacity-75 group-hover:opacity-100 filter grayscale group-hover:grayscale-0"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const fallback = target.nextElementSibling as HTMLElement;
-                                  if (fallback) fallback.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            
-                            {/* Fallback Icon */}
-                            <div 
-                              className={`${university.logoUrl ? 'hidden' : 'flex'} items-center justify-center w-12 h-12 bg-gradient-to-br from-[#05294E] to-slate-700 rounded-2xl shadow-inner`}
-                              style={{ display: university.logoUrl ? 'none' : 'flex' }}
-                            >
-                              <span className="text-white font-black text-xl uppercase">{university.name.charAt(0)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Integrated Universities CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.5 }}
-              className="mt-14 flex justify-center"
-            >
-              <Link
-                to="/schools"
-                aria-label="Ver todas as universidades parceiras"
-                className="group relative inline-flex items-center px-8 py-4 rounded-full bg-white text-slate-700 font-extrabold text-sm sm:text-base tracking-wide hover:text-[#05294E] hover:shadow-[0_10px_30px_rgba(5,41,78,0.06)] hover:-translate-y-0.5 transition-all duration-300"
-              >
-                <span>Conheça +75 universidades parceiras</span>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Premium Features Section */}
-        <section className="py-32 bg-white relative overflow-hidden">
-          {/* Decorative background elements */}
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-50 skew-x-12 translate-x-32 z-0 hidden lg:block"></div>
-          
+        {/* Premium Features Section — Arco-inspired bento layout */}
+        <section className="py-24 md:py-32 bg-white relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="flex flex-col lg:flex-row gap-12 xl:gap-16 items-center">
-              {/* Image Column (Desktop) */}
-              <div className="w-full lg:w-[45%] order-2 lg:order-1 hidden lg:block">
-                <div className="relative">
-                  {/* Modern geometric decorations */}
-                  <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-                  <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-                  
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8 }}
-                    className="relative z-10"
-                  >
-                    <img
-                      src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-students-talking-campus-stairs.webp"
-                      alt="Students on campus"
-                      className="rounded-3xl shadow-2xl w-full object-cover aspect-[4/5] md:aspect-[16/10] lg:aspect-[4/5]"
-                    />
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Content Column */}
-              <div className="w-full lg:w-[55%] order-1 lg:order-2">
-                <div className="w-full">
-                  <h2 className="text-center lg:text-left text-4xl md:text-5xl font-black text-slate-900 mb-8 leading-tight">
-                    {t('home.features.titleMain')} {t('home.features.titleHighlight')}
-                  </h2>
-
-                  {/* Mobile-only Image (positioned below title and above the items) */}
-                  <div className="block lg:hidden mb-8">
-                    <div className="relative">
-                      {/* Modern geometric decorations */}
-                      <div className="absolute -top-6 -left-6 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-                      <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-                      
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8 }}
-                        className="relative z-10"
-                      >
-                        <img
-                          src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-students-talking-campus-stairs.webp"
-                          alt="Students on campus"
-                          className="rounded-3xl shadow-2xl w-full object-cover aspect-[16/10]"
-                        />
-                      </motion.div>
-                    </div>
-                  </div>
-
-                  {/* Bento Grid Interno */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    
-                    {/* Card 1: Opportunities (Vertical Alto) */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5 }}
-                      className="md:col-span-1 md:row-span-2 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center items-center text-center relative overflow-hidden min-h-[350px] md:min-h-full"
-                    >
-                      <div className="flex flex-col justify-center items-center">
-                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                          {t('home.features.opportunities.title')}
-                        </h3>
-                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold max-w-[280px] md:max-w-[170px] mx-auto">
-                          {t('home.features.opportunities.description')}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    {/* Card 2: Universities (Horizontal Largo) */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: 0.1 }}
-                      className="md:col-span-2 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
-                    >
-                      <div className="text-center sm:text-left">
-                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                          {t('home.features.universities.title')}
-                        </h3>
-                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
-                          {t('home.features.universities.description')}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    {/* Card 3: Confidence */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                      className="md:col-span-1 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
-                    >
-                      <div className="text-center sm:text-left">
-                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                          {t('home.features.confidence.title')}
-                        </h3>
-                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
-                          {t('home.features.confidence.description')}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    {/* Card 4: More Than Study */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: 0.3 }}
-                      className="md:col-span-1 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
-                    >
-                      <div className="text-center sm:text-left">
-                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                          {t('home.features.moreThanStudy.title')}
-                        </h3>
-                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
-                          {t('home.features.moreThanStudy.description')}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* How It Works */}
-        <section className="py-32 bg-slate-50 relative overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#05294E]/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            {/* Header */}
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight">
-                {t('home.threeSteps.title')}
+            {/* Centered Header */}
+            <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-tight mb-5">
+                {t('home.features.titleMain')}{' '}
+                <span className="text-[#D0151C] italic">{t('home.features.titleHighlight')}</span>
               </h2>
-            </div>
-            
-            {/* Centerpiece Image */}
-            <div className="relative mb-6 max-w-6xl mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="relative rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[21/9] lg:aspect-[32/9]"
-              >
-                <img
-                  src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/college_friends_enjoying_the_sun_%20campus_walk.webp"
-                  alt="Amigos da faculdade caminhando pelo campus"
-                  className="w-full h-full object-cover"
-                />
-              </motion.div>
+              <p className="text-base md:text-lg text-slate-600 leading-relaxed">
+                {t('home.features.subtitle')}
+              </p>
             </div>
 
-            {/* Steps typography grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative max-w-6xl mx-auto justify-center">
-              {['step1', 'step2', 'step4', 'step5'].map((stepKey, idx) => (
+            {/* Grid: cards (left) + image (right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px] gap-6 lg:gap-3 xl:gap-4 items-stretch">
+              {/* Cards Bento Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+                {/* Card 1: Opportunities — Coral/Red accent */}
                 <motion.div
-                  key={stepKey}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: 0.1 * (idx + 1) }}
-                  className="bg-white p-8 lg:p-6 rounded-2xl shadow-lg relative overflow-hidden border border-slate-100 flex flex-col justify-between"
+                  transition={{ duration: 0.5 }}
+                  className="relative overflow-hidden rounded-3xl p-8 md:p-10 min-h-[280px] md:min-h-[340px] flex flex-col items-center text-center md:items-start md:text-left gap-6 md:gap-6 bg-[#D0151C] text-white"
                 >
-                  <div className="relative z-10 text-center md:text-left">
-                    <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                      {t(`home.threeSteps.${stepKey}.title`)}
+                  <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <img src="/icons/selection.svg" alt="" className="w-12 h-12 brightness-0 invert opacity-90" />
+                  <div>
+                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 leading-tight">
+                      {t('home.features.opportunities.title')}
                     </h3>
-                    <p className="text-slate-600 leading-relaxed font-medium">
-                      {t(`home.threeSteps.${stepKey}.description`)}
+                    <p className="text-base md:text-[15px] text-white/90 leading-relaxed">
+                      {t('home.features.opportunities.description')}
                     </p>
                   </div>
                 </motion.div>
-              ))}
+
+                {/* Card 2: Universities — Mid blue */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="relative overflow-hidden rounded-3xl p-8 md:p-10 min-h-[280px] md:min-h-[340px] flex flex-col items-center text-center md:items-start md:text-left gap-6 md:gap-6 bg-[#2E5BBF] text-white"
+                >
+                  <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <img src="/icons/scholarship.svg" alt="" className="w-12 h-12 brightness-0 invert opacity-90" />
+                  <div>
+                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 leading-tight">
+                      {t('home.features.universities.title')}
+                    </h3>
+                    <p className="text-base md:text-[15px] text-white/90 leading-relaxed">
+                      {t('home.features.universities.description')}
+                    </p>
+                  </div>
+                </motion.div>
+
+                {/* Card 3: Confidence — Dark navy */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="relative overflow-hidden rounded-3xl p-8 md:p-10 min-h-[280px] md:min-h-[340px] flex flex-col items-center text-center md:items-start md:text-left gap-6 md:gap-6 bg-[#05294E] text-white"
+                >
+                  <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <img src="/icons/award.svg" alt="" className="w-12 h-12 brightness-0 invert opacity-90" />
+                  <div>
+                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3 leading-tight">
+                      {t('home.features.confidence.title')}
+                    </h3>
+                    <p className="text-base md:text-[15px] text-white/90 leading-relaxed">
+                      {t('home.features.confidence.description')}
+                    </p>
+                  </div>
+                </motion.div>
+
+                {/* Card 4: Partner Universities Marquee — wide */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="relative rounded-3xl py-6 sm:col-span-2 lg:col-span-3 bg-transparent flex flex-col sm:flex-row items-center gap-6"
+                >
+                  {/* Heading (left) */}
+                  <div className="shrink-0 text-center sm:text-left sm:pr-6 sm:border-r sm:border-slate-200">
+                    <p className="text-3xl md:text-4xl font-black text-[#05294E] leading-none">+500</p>
+                    <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider mt-1">
+                      {t('home.features.universitiesCount', 'universidades')}
+                    </p>
+                  </div>
+
+                  {/* Marquee (right) */}
+                  <div className="relative flex-1 w-full overflow-hidden">
+                    {/* Side fade gradients */}
+                    <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-r from-white via-white/70 to-transparent z-10 pointer-events-none" />
+                    <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-l from-white via-white/70 to-transparent z-10 pointer-events-none" />
+
+                    {partnersLoading ? (
+                      <div className="flex gap-10 overflow-hidden animate-pulse">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="flex-shrink-0 w-[140px] h-16" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="animate-marquee flex gap-10 items-center">
+                        {[...partnerUniversities, ...partnerUniversities].map((university, index) => (
+                          <div
+                            key={`features-marquee-${university.name}-${index}`}
+                            className="flex-shrink-0 w-[140px] h-16 flex items-center justify-center select-none"
+                          >
+                            {university.logoUrl ? (
+                              <img
+                                src={university.logoUrl}
+                                alt={`${university.name} logo`}
+                                className="max-h-full max-w-full object-contain grayscale opacity-70 hover:opacity-100 hover:grayscale-0 transition-all duration-500"
+                              />
+                            ) : (
+                              <span className="text-slate-500 font-black text-base uppercase tracking-wider">{university.name.charAt(0)}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Image Column (right) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7 }}
+                className="relative min-h-[400px] lg:min-h-0 flex items-center justify-center lg:block"
+              >
+                <img
+                  src="/banner_vertical.png"
+                  alt="Students on campus"
+                  className="relative lg:absolute lg:inset-0 w-auto h-[400px] lg:w-full lg:h-full object-contain object-center scale-110"
+                />
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works — Smart Living-inspired layout */}
+        <section className="py-24 md:py-32 bg-slate-50 relative overflow-hidden">
+          {/* Decorative dotted background */}
+          <div
+            className="absolute inset-0 opacity-[0.35] pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, #94a3b8 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }}
+          />
+          {/* Soft diagonal accent */}
+          <div className="absolute top-0 left-0 w-1/2 h-full bg-white/60 -skew-x-12 -translate-x-32 pointer-events-none" />
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              {/* Image Composition (Left) */}
+              <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7 }}
+                className="w-full"
+              >
+                <ImageCollage
+                  mainImage="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/college_friends_enjoying_the_sun_%20campus_walk.webp"
+                  secondaryImage="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/library-facade-white-columns-students.webp"
+                  mainAlt="Amigos da faculdade caminhando pelo campus"
+                  secondaryAlt="Biblioteca da universidade com colunas brancas"
+                />
+              </motion.div>
+
+              {/* Content (Right) */}
+              <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7 }}
+                className="relative flex flex-col items-center text-center md:items-start md:text-left"
+              >
+                <h2 className="font-black text-slate-900 leading-tight mb-6" style={{ fontSize: 'clamp(28px, 4.5vw, 52px)' }}>
+                  {t('home.threeSteps.titleMain', 'Uma experiência que pode')}{' '}
+                  <span className="text-[#D0151C] italic">{t('home.threeSteps.titleHighlight', 'mudar sua vida.')}</span>
+                </h2>
+
+                <p className="text-slate-600 mb-10 max-w-xl" style={{ fontSize: '16px', lineHeight: '1.6' }}>
+                  {t('home.features.subtitle')}
+                </p>
+
+                {/* Two feature blocks */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 mb-10 w-full">
+                  {['step1', 'step2'].map((stepKey) => (
+                    <div key={stepKey} className="flex flex-col items-center text-center md:items-start md:text-left bg-slate-50/80 p-8 md:p-10 rounded-3xl border border-slate-100 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
+                      <div className="mb-5">
+                        {stepKey === 'step1' ? (
+                          <svg className="w-10 h-10 text-[#D0151C]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-10 h-10 text-[#D0151C]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6 5.87a4 4 0 00-6 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-slate-900 mb-3" style={{ fontSize: '22px', lineHeight: '1.3' }}>
+                        {t(`home.threeSteps.${stepKey}.title`)}
+                      </h3>
+                      <p className="text-slate-600" style={{ fontSize: '15px', lineHeight: '1.6' }}>
+                        {t(`home.threeSteps.${stepKey}.description`)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA Button — matches hero CTA */}
+                <Link
+                  to="/scholarships"
+                  className="group inline-flex items-center justify-center bg-[#D0151C] hover:bg-[#b01218] text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-[0_15px_30px_rgba(208,21,28,0.25)] hover:shadow-[0_20px_40px_rgba(208,21,28,0.35)] hover:-translate-y-0.5 border-0"
+                >
+                  {t('home.cta.studyAndWork', 'Estudar e trabalhar nos EUA')}
+                </Link>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -944,184 +878,111 @@ const Home: React.FC = () => {
           }
         }} />
 
-        {/* How It Works Redirect Section (Replaces FAQ) */}
-        <section className="py-24 bg-white relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="bg-[#05294E] rounded-[3rem] overflow-hidden shadow-2xl flex flex-col-reverse lg:flex-row items-stretch">
-              {/* Content Side */}
-              <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center text-left relative z-20 bg-[#05294E] -mt-12 lg:mt-0 rounded-b-[3rem] lg:rounded-br-none lg:rounded-l-[3rem]">
-                
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 leading-tight">
-                  Ainda tem <span className="text-blue-400">dúvidas</span> sobre o processo?
-                </h2>
-                
-                <p className="text-xl text-blue-100 mb-12 leading-relaxed">
-                  Preparamos um guia completo com cada etapa do processo, da escolha da bolsa até a carta de aceite. Simples, claro e com suporte sempre que precisar.
-                </p>
-                
-                <Link
-                  to="/how-it-works"
-                  className="group inline-flex items-center justify-center bg-white text-[#05294E] px-10 py-5 rounded-2xl text-xl font-black hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 shadow-xl w-fit"
-                >
-                  Ver Como Funciona
-                </Link>
-              </div>
-
-              {/* Image Side */}
-              <div className="lg:w-2/5 relative min-h-[400px] lg:mt-0 z-10">
-                <img 
-                  src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/reading-room-library-green-lamps.webp" 
-                  alt="Reading Room Library"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                {/* Overlay gradient to blend with context */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-transparent to-transparent lg:block hidden"></div>
-                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden block"></div>
-                <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden block"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
       </div>
     </>
   );
 };
 
-// Social Proof Section Component - Prova Social
+// Social Proof Section — Photo Mosaic (Arco-inspired)
 const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const { t } = useTranslation(['home', 'common']);
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  const testimonials = [
-    {
-      name: "Mariana Costa",
-      type: "Estudante VIP",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
-      text: "Consegui minha bolsa para Administração com 60% de desconto. O serviço se pagou no primeiro mês!"
-    },
-    {
-      name: "Rodrigo Santos",
-      type: "Membro Premium",
-      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=800&auto=format&fit=crop",
-      text: "A consultoria é imbatível. Já economizei mais de $20 mil dólares em anuidades este ano."
-    },
-    {
-      name: "Beatriz Helena",
-      type: "Estudante VIP",
-      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop",
-      text: "A seleção de universidades é o diferencial. Recebi apenas o que realmente combinava com meu perfil."
-    },
-    {
-      name: "Lucas Oliveira",
-      type: "Membro VIP",
-      image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=800&auto=format&fit=crop",
-      text: "A economia que tive na minha aplicação para o Canadá foi surreal. Melhor investimento!"
-    }
+  const photos = [
+    "/client-1.jpeg",
+    "/client-2.jpeg",
+    "/client-3.jpeg",
+    "/client-4.jpeg",
+    "/client-5.jpeg",
+    "/client-6.jpeg",
+    "/client-7.jpeg",
+    "/client-8.jpeg",
   ];
 
-  const maxIndex = isMobile ? testimonials.length - 1 : testimonials.length - 3;
-
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
-  };
-
-  // Auto-scroll
-  useEffect(() => {
-    const interval = setInterval(nextSlide, 5000);
-    return () => clearInterval(interval);
-  }, [maxIndex]);
-
   return (
-    <section className="bg-slate-50 py-24 md:py-32 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 text-center mb-16 md:mb-20">
-        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-          Relatos de quem já foi <span className="text-[#D0151C] italic">Aprovado.</span>
-        </h2>
-      </div>
+    <section className="py-24 md:py-32 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
+            Veja quem já está vivendo a <span className="text-[#D0151C] italic">experiência.</span>
+          </h2>
+        </div>
 
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-12 relative">
-        <div className="relative w-full" role="region" aria-roledescription="carousel">
-          <div className="overflow-hidden rounded-[2rem] py-4">
-            <div 
-              className="flex transition-transform duration-500 ease-in-out" 
-              style={{ transform: `translateX(-${currentIndex * (isMobile ? 100 : 33.333)}%)` }}
-            >
-              {testimonials.map((testimonial, idx) => (
-                <div 
-                  key={idx}
-                  role="group" 
-                  aria-roledescription="slide" 
-                  className="min-w-full md:min-w-[33.333%] px-3 flex-shrink-0"
-                >
-                  <div className="relative h-[480px] overflow-hidden rounded-[2rem] shadow-xl group border border-slate-200">
-                    <img 
-                      src={testimonial.image} 
-                      alt={testimonial.name} 
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-transparent"></div>
-                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-white text-left">
-                      <div className="flex gap-1 mb-4">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        ))}
-                      </div>
-                      <p className="text-base md:text-lg font-medium leading-relaxed mb-6 italic opacity-90">
-                        "{testimonial.text}"
-                      </p>
-                      <div className="border-t border-white/20 pt-6">
-                        <h4 className="text-base md:text-lg font-bold tracking-tight">{testimonial.name}</h4>
-                        <p className="text-[10px] text-yellow-400 font-bold tracking-widest uppercase mt-1">
-                          {testimonial.type}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {/* Mobile: horizontal scroll wrapper — keeps EXACT desktop grid layout */}
+        <div className="md:hidden -mx-4 px-4 overflow-x-auto scrollbar-hide">
+          <div
+            className="grid grid-cols-12 gap-4 auto-rows-[180px]"
+            style={{ width: '1100px' }}
+          >
+            {/* ROW 1 — same as desktop */}
+            <div className="col-span-3 col-start-2 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[0]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[5]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[2]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[3]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            {/* ROW 2 — same as desktop */}
+            <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[4]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            <div className="col-span-4 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[1]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top" />
+            </div>
+            <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[6]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            </div>
+            <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200">
+              <img src={photos[7]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
             </div>
           </div>
-          
-          <button 
-            onClick={prevSlide}
-            className="inline-flex items-center justify-center h-12 w-12 rounded-full border border-slate-200 text-slate-600 hover:text-[#D0151C] hover:bg-slate-50 transition-colors bg-white/90 backdrop-blur-sm absolute top-1/2 -translate-y-1/2 left-0 lg:-left-6 z-10 shadow-lg hover:scale-110"
+        </div>
+
+        {/* Desktop: Photo Mosaic — 2 rows, equal heights, varied widths */}
+        <div className="hidden md:grid grid-cols-12 gap-5 auto-rows-[260px] lg:auto-rows-[300px]">
+          {/* ROW 1 — indented (1 col gap on each side) */}
+          <div className="col-span-3 col-start-2 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[0]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[5]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[2]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[3]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+
+          {/* ROW 2 */}
+          <div className="col-span-2 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[4]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-4 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[1]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[6]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+          <div className="col-span-3 relative rounded-2xl overflow-hidden bg-slate-200 transition-shadow duration-300 group">
+            <img src={photos[7]} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center mt-14">
+          <button
+            onClick={onCTAClick}
+            className="group inline-flex items-center justify-center bg-[#D0151C] hover:bg-[#b01218] text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-[0_15px_30px_rgba(208,21,28,0.25)] hover:shadow-[0_20px_40px_rgba(208,21,28,0.35)] hover:-translate-y-0.5 border-0"
           >
-            <ChevronLeft className="h-6 w-6" />
-            <span className="sr-only">Previous slide</span>
-          </button>
-          
-          <button 
-            onClick={nextSlide}
-            className="inline-flex items-center justify-center h-12 w-12 rounded-full border border-slate-200 text-slate-600 hover:text-[#D0151C] hover:bg-slate-50 transition-colors bg-white/90 backdrop-blur-sm absolute top-1/2 -translate-y-1/2 right-0 lg:-right-6 z-10 shadow-lg hover:scale-110"
-          >
-            <ChevronRight className="h-6 w-6" />
-            <span className="sr-only">Next slide</span>
+            {t("forStudents.socialProof.ctaButton")}
           </button>
         </div>
-      </div>
-      
-      {/* CTA */}
-      <div className="text-center mt-16 px-4">
-        <button
-          onClick={onCTAClick}
-          className="inline-flex items-center px-8 py-4 md:px-12 md:py-6 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-red-600 hover:scale-105 transition-all duration-300 group"
-        >
-          {t("forStudents.socialProof.ctaButton")}
-        </button>
       </div>
     </section>
   );
