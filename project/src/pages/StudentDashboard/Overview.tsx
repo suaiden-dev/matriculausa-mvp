@@ -834,32 +834,32 @@ const Overview: React.FC = () => {
           </div>
 
           {/* Study Tips */}
-          <div className="relative overflow-hidden bg-[#05294E] rounded-[2rem] shadow-lg text-white p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
-              💡 {t('studentDashboard.successTips.title')}
+          <div className="relative overflow-hidden bg-white border border-slate-100 rounded-[2rem] shadow-lg p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center text-[#05294E]">
+              {t('studentDashboard.successTips.title')}
             </h3>
             <div className="space-y-2.5 sm:space-y-3">
               <div className="flex items-start space-x-2 sm:space-x-3">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                   {t('studentDashboard.successTips.tip1')}
                 </p>
               </div>
               <div className="flex items-start space-x-2 sm:space-x-3">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                   {t('studentDashboard.successTips.tip2')}
                 </p>
               </div>
               <div className="flex items-start space-x-2 sm:space-x-3">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                   {t('studentDashboard.successTips.tip3')}
                 </p>
               </div>
             </div>
             {/* Decorative blob */}
-            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import Header from '../components/Header';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
 import { useAuth } from '../hooks/useAuth';
@@ -185,7 +184,6 @@ const Universities: React.FC = () => {
 
   return (
     <>
-      <Header />
       <div className="bg-white min-h-screen home-page">
         {/* Hero Section */}
         <section className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
