@@ -239,7 +239,7 @@ const Home: React.FC = () => {
                 </div>
 
                 {/* Trust Indicators / Social Proof */}
-                <div className="flex flex-col gap-3.5 items-center lg:items-start">
+                <div className="flex flex-col gap-1.5 sm:gap-3.5 items-center lg:items-start">
                   {/* Student Avatars + Enrolled Text */}
                   <div className="flex items-center gap-0.5 lg:gap-3">
                     <div className="flex -space-x-2.5 overflow-hidden">

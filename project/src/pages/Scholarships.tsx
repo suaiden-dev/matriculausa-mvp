@@ -546,11 +546,11 @@ const Scholarships: React.FC = () => {
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left flex flex-col items-center lg:items-start w-full"
             >
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 lg:mb-4 tracking-tight leading-tight max-w-3xl">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 lg:mb-4 tracking-tight leading-tight max-w-xl lg:max-w-[630px]">
                 {t('scholarships.title')}
               </h1>
               
-              <p className="text-lg lg:text-xl text-white mb-3 lg:mb-8 max-w-2xl leading-relaxed font-medium drop-shadow-lg">
+              <p className="text-lg lg:text-xl text-white mb-3 lg:mb-8 max-w-xl lg:max-w-[630px] leading-relaxed font-medium drop-shadow-lg">
                 {t('scholarships.subtitle')}
               </p>
 
@@ -1033,7 +1033,7 @@ const Scholarships: React.FC = () => {
                         </div>
 
                         {/* Financial Overview Table View */}
-                        <div className="mb-4 px-4 sm:px-5">
+                        <div className="mb-4">
                           <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                             <h4 className="text-[11px] font-black text-slate-800 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
                               <DollarSign className="h-3.5 w-3.5 text-green-600" />

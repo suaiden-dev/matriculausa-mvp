@@ -213,7 +213,7 @@ const Universities: React.FC = () => {
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 sm:px-6 lg:px-8 w-full">
-            <div className="max-w-4xl lg:ml-auto">
+            <div className="max-w-xl lg:max-w-[630px] lg:ml-auto">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}

@@ -129,7 +129,7 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="max-w-4xl lg:ml-auto">
+        <div className="max-w-xl lg:max-w-[630px] lg:ml-auto">
           <motion.div
              initial="hidden"
              animate={controls}
@@ -226,7 +226,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -235,7 +235,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Foco em custo integral ou pouca bolsa</span>
@@ -243,7 +243,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
                     <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
@@ -259,7 +259,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -268,7 +268,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Processos burocráticos lentos e manuais</span>
@@ -276,7 +276,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
                     <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
@@ -292,7 +292,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Múltiplas taxas extras por faculdade</span>
@@ -300,7 +300,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -309,7 +309,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
                     <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
@@ -325,7 +325,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -334,7 +334,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Suporte básico cobrado separadamente</span>
@@ -342,7 +342,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
                     <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
@@ -358,7 +358,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -367,7 +367,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-red-500">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -376,7 +376,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                   </td>
                   <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
                     <div className="flex flex-col items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-emerald-500">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
@@ -446,7 +446,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -464,7 +464,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-slate-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-slate-300">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -482,7 +482,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -500,7 +500,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -518,7 +518,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-slate-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-slate-300">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -536,7 +536,7 @@ const JourneySection: React.FC<{
                       <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
                         <div className="flex justify-between items-start mb-auto">
                           <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-[#05294E]">
                               <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                               <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                             </svg>
@@ -567,17 +567,9 @@ const JourneySection: React.FC<{
                     {t('howItWorks.steps.profile.title')}
                   </h3>
                 </div>
-                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-0">
                   {t('howItWorks.steps.profile.description')}
                 </p>
-                <ul className="space-y-3 flex flex-col items-center lg:items-start">
-                  {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
-                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
 
@@ -594,7 +586,7 @@ const JourneySection: React.FC<{
                           <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Bolsas Disponíveis</span>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-filter h-3.5 w-3.5 text-muted-foreground/40">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-filter h-3.5 w-3.5 text-muted-foreground/40">
                           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                         </svg>
                       </div>
@@ -616,7 +608,7 @@ const JourneySection: React.FC<{
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
                               <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-sparkles h-3.5 w-3.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles h-3.5 w-3.5">
                                   <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
                                   <path d="M20 3v4"></path>
                                   <path d="M22 5h-4"></path>
@@ -627,7 +619,7 @@ const JourneySection: React.FC<{
                               <span className="text-[8px] font-bold text-accent uppercase tracking-widest">Melhor Correspondência</span>
                             </div>
                             <div className="h-5 w-5 rounded-full bg-accent flex items-center justify-center text-accent-foreground shadow-lg shadow-accent/20">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-check h-3 w-3">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check h-3 w-3">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="m9 12 2 2 4-4"></path>
                               </svg>
@@ -645,7 +637,7 @@ const JourneySection: React.FC<{
                             </div>
                             <div className="h-px bg-slate-50 w-full"></div>
                             <div className="flex items-center gap-3 text-[8px] font-bold text-red-700/60 italic">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3">
                                 <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
                               </svg>
                               <span>Bolsa Garantida • Campus Completo • 10/10 Suporte</span>
@@ -689,17 +681,9 @@ const JourneySection: React.FC<{
                     )}
                   </h3>
                 </div>
-                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6 lg:text-right">
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-0 lg:text-right">
                   {t('howItWorks.steps.selectionFee.description')}
                 </p>
-                <ul className="space-y-3 flex flex-col items-center lg:items-end">
-                  {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 lg:flex-row-reverse text-slate-500 font-medium text-center lg:text-right">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
-                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
 
@@ -716,7 +700,7 @@ const JourneySection: React.FC<{
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -739,7 +723,7 @@ const JourneySection: React.FC<{
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -761,7 +745,7 @@ const JourneySection: React.FC<{
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -819,7 +803,7 @@ const JourneySection: React.FC<{
                       <div className="bg-slate-900 text-white rounded-t-[1.5rem] p-4 text-[10px]">
                         <div className="flex justify-between items-center mb-4">
                           <div className="flex items-center gap-1.5 line-clamp-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3 text-accent">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3 text-accent">
                               <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
                             </svg>
                             <span className="font-bold uppercase tracking-widest text-white/70">STUDENT VISA</span>
@@ -843,7 +827,7 @@ const JourneySection: React.FC<{
                             <p className="text-[8px] font-bold text-muted-foreground uppercase">SAO</p>
                             <p className="text-xl font-bold text-slate-900 leading-none">GRU</p>
                           </div>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3 text-[#05294E]/30 rotate-90">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plane h-3 w-3 text-[#05294E]/30 rotate-90">
                             <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
                           </svg>
                           <div className="text-right">
@@ -856,7 +840,7 @@ const JourneySection: React.FC<{
                             <p className="text-[7px] font-bold text-[#05294E]/60 uppercase">Bolsa de Estudos</p>
                             <p className="text-sm font-bold text-[#05294E]">60% Aprovada</p>
                           </div>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-check h-4 w-4 text-accent">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check h-4 w-4 text-accent">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="m9 12 2 2 4-4"></path>
                           </svg>
@@ -940,7 +924,7 @@ const JourneySection: React.FC<{
                     <div className="relative w-full max-w-[280px] bg-white rounded-[2rem] border border-border/40 shadow-[0_20px_40px_rgba(0,0,0,0.08)] p-6 text-center space-y-4">
                       {/* Success Checkmark Stamp */}
                       <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 border-4 border-white shadow-md flex items-center justify-center text-emerald-500 animate-bounce">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="w-8 h-8">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                           <polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>

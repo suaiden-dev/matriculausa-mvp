@@ -216,8 +216,8 @@
     },
     "steps": {
       "profile": {
-        "title": "Crie Seu Perfil",
-        "description": "Preencha suas informações acadêmicas e pessoais. Nossa IA encontra suas melhores opções.",
+        "title": "Encontre sua oportunidade",
+        "description": "Escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
         "items": [
           "Histórico acadêmico e conquistas",
           "Objetivos de carreira e preferências",
@@ -226,8 +226,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Processo Seletivo",
-        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável.",
+        "title": "Avance com foco",
+        "description": "Selecione a bolsa ideal para seu bolso e seguir com seu processo até o final.",
         "items": [
           "Acesso para navegar pelas bolsas",
           "Iniciar processo de candidatura",
