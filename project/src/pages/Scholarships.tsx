@@ -515,7 +515,7 @@ const Scholarships: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-24 lg:py-32 overflow-hidden bg-[#05294E] min-h-[550px] lg:min-h-[700px] flex items-center">
+      <section className="relative pt-10 pb-10 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[380px] lg:h-[600px] flex items-center home-page">
         {/* Background Image Layer */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 lg:right-0 lg:left-auto lg:w-[65%]">
@@ -525,7 +525,7 @@ const Scholarships: React.FC = () => {
               className="w-full h-full object-cover lg:object-center"
             />
             {/* Mobile Overlay */}
-            <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
+            <div className="absolute inset-0 bg-[#05294E]/85 lg:hidden"></div>
             
             {/* Desktop Transition: Solid blue on left to transparent on right */}
             <div className="absolute inset-0 hidden lg:block bg-gradient-to-r from-[#05294E] via-[#05294E]/30 to-transparent"></div>
@@ -538,7 +538,7 @@ const Scholarships: React.FC = () => {
           <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-3 sm:py-6 lg:py-8 w-full">
           <div className="max-w-full">
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -546,19 +546,16 @@ const Scholarships: React.FC = () => {
               transition={{ duration: 0.8 }}
               className="text-center lg:text-left flex flex-col items-center lg:items-start w-full"
             >
-              <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-tight lg:pr-6 max-w-3xl">
-                <span className="block mb-1">{t('scholarships.title').split(' ').slice(0, -1).join(' ')}</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
-                  {t('scholarships.title').split(' ').slice(-1)[0]}
-                </span>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 lg:mb-4 tracking-tight leading-tight max-w-3xl">
+                {t('scholarships.title')}
               </h1>
               
-              <p className="text-lg lg:text-xl text-white mb-6 max-w-2xl leading-relaxed font-medium drop-shadow-lg">
+              <p className="text-lg lg:text-xl text-white mb-3 lg:mb-8 max-w-2xl leading-relaxed font-medium drop-shadow-lg">
                 {t('scholarships.subtitle')}
               </p>
 
               {/* Seção de Filtros Premium Unificada Embutida no Hero */}
-              <div id="scholarships-filters" className="w-full mt-8 relative z-25 text-left">
+              <div id="scholarships-filters" className="w-full mt-3 lg:mt-8 relative z-25 text-left">
                 <div className="bg-transparent relative overflow-visible">
                   <div className="relative z-10">
                     {/* Camada 2: Barra Branca Unificada Integrada */}
@@ -844,7 +841,7 @@ const Scholarships: React.FC = () => {
           </div>
         ) : filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
-            <div className="text-center mb-8">
+            <div className="home-page text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                 <span className="text-slate-900">{t('scholarshipsPage.featuredSection.subtitle')}</span>
               </h2>
@@ -1109,7 +1106,7 @@ const Scholarships: React.FC = () => {
         {/* All Scholarships Section */}
         <div className="mb-12 scroll-mt-24" ref={scholarshipsSectionRef}>
           {filteredScholarships.length > 0 && (
-            <div className="text-center mb-8">
+            <div className="home-page text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                 <span className="text-slate-900">{t('scholarshipsPage.allScholarships.title')}</span>
               </h2>

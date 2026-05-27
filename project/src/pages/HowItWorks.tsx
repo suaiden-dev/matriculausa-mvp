@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  Shield, 
   ChevronDown,
   ArrowRight,
-  CheckCircle,
-  Globe,
   Compass,
   Users
 } from 'lucide-react';
@@ -66,11 +63,6 @@ const HowItWorks: React.FC = () => {
     <div className="bg-white min-h-screen font-sans">
       <HeroSection t={t} />
       
-      <SelectionFeeShowcase 
-        t={t}
-        onCTAClick={handleCTAClick}
-      />
-      
       <JourneySection 
         t={t} 
         baseSelectionFee={baseSelectionFee}
@@ -78,6 +70,11 @@ const HowItWorks: React.FC = () => {
         hasSellerPackage={hasSellerPackage}
         packageName={packageName || ''}
         isLoadingFee={baseSelectionFee === undefined}
+      />
+
+      <SelectionFeeShowcase 
+        t={t}
+        onCTAClick={handleCTAClick}
       />
       
       <WhyUsSection t={t} />
@@ -108,7 +105,7 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
+    <section ref={ref} className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center home-page">
       {/* Background Image Layer with Responsive Design */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 lg:right-auto lg:left-0 lg:w-[65%]">
@@ -118,7 +115,7 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
             className="w-full h-full object-cover object-[55.6%_center] lg:object-center"
           />
           {/* Overlay for Mobile: Simple dark overlay for text readability */}
-          <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
+          <div className="absolute inset-0 bg-[#05294E]/85 lg:hidden"></div>
           
           {/* Desktop Transition Gradient: Solid blue on right to transparent on left */}
           <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
@@ -144,11 +141,8 @@ const HeroSection: React.FC<{ t: any }> = ({ t }) => {
           >
 
 
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-[0.85] lg:pl-6">
-              <span className="block mb-2">{t('howItWorks.title').split(' ')[0]}</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
-                {t('howItWorks.title').split(' ').slice(1).join(' ')}
-              </span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+              {t('howItWorks.title')}
             </h1>
             
             <p className="text-lg lg:text-xl text-white mb-6 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
@@ -176,17 +170,18 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
   const texts = {
     title: t('howItWorks.selectionFeeShowcase.title'),
     subtitle: t('howItWorks.selectionFeeShowcase.subtitle'),
-    traditionalTitle: t('howItWorks.selectionFeeShowcase.traditionalWay'),
-    ourTitle: t('howItWorks.selectionFeeShowcase.ourWay'),
-    savings: t('howItWorks.selectionFeeShowcase.savings'),
     startNow: t('howItWorks.selectionFeeShowcase.startProcess'),
-    tradItems: t('howItWorks.selectionFeeShowcase.traditionalItems', { returnObjects: true }) as string[],
-    ourItems: t('howItWorks.selectionFeeShowcase.ourItems', { returnObjects: true }) as string[]
   };
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-br from-slate-50 to-white relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Decorative Background Glows */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-1/4 -left-24 w-[500px] h-[500px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
            initial="hidden"
            animate={controls}
@@ -194,7 +189,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
              hidden: { opacity: 0, y: 30 },
              visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
            }}
-           className="text-center mb-16"
+           className="text-center mb-16 home-page"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-6">
             {texts.title}
@@ -204,77 +199,205 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Traditional Card */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, x: 0, transition: { duration: 0.6, delay: 0.2 } } }}
-            className="bg-white rounded-[2rem] p-8 md:p-10 shadow-lg border border-slate-200 opacity-90 grayscale-[0.2]"
-          >
-            <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
-                <Globe className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-slate-700">{texts.traditionalTitle}</h3>
-              </div>
-            </div>
-            <ul className="space-y-5">
-              {texts.tradItems.map((item: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-4">
-                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                  </div>
-                  <span className="text-slate-600 leading-relaxed text-lg">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Pricing Card Premium */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={controls}
-            variants={{ visible: { opacity: 1, x: 0, transition: { duration: 0.6, delay: 0.4 } } }}
-            className="bg-[#05294E] rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 group-hover:bg-blue-400/30 transition-all duration-700"></div>
-            
-            <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-start gap-4 mb-8 pb-6 border-b border-blue-800/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-900">
-                    <Shield className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white">{texts.ourTitle}</h3>
-                    <div className="text-blue-300 font-medium">{texts.savings}</div>
-                  </div>
-                </div>
-              </div>
-
-              <ul className="space-y-5 mb-10">
-                {texts.ourItems.map((item: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-4">
-                    <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                      <CheckCircle className="w-4 h-4 text-blue-400" />
+        <motion.div
+          initial="hidden"
+          animate={controls}
+          variants={{
+            hidden: { opacity: 0, y: 40 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: 0.2 } }
+          }}
+          className="max-w-6xl mx-auto bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100/80 p-4 sm:p-8"
+        >
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b-2 border-slate-100">
+                  <th className="py-8 px-6 text-sm font-bold uppercase tracking-widest text-slate-400 w-1/4">Diferencial</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80">Fazer Sozinho (DIY)</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80">Agências Tradicionais</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-[#05294E] bg-[#05294E]/[0.03] rounded-t-[2rem] border-x border-t border-[#05294E]/10">Matrícula USA</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {/* Row 1 */}
+                <tr className="group transition-colors hover:bg-slate-50/50">
+                  <td className="py-8 px-6">
+                    <p className="text-base font-bold text-slate-800">Acesso a Bolsas de Estudos</p>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Dificuldade extrema em achar e negociar</span>
                     </div>
-                    <span className="text-blue-100 leading-relaxed text-lg">{item}</span>
-                  </li>
-                ))}
-              </ul>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-60">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Foco em custo integral ou pouca bolsa</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Bolsas exclusivas de até 50% de desconto</span>
+                    </div>
+                  </td>
+                </tr>
 
-              <button 
-                onClick={onCTAClick}
-                className="w-full py-4 bg-white hover:bg-slate-50 text-[#05294E] rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-2"
-              >
-                {texts.startNow}
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.div>
-        </div>
+                {/* Row 2 */}
+                <tr className="group transition-colors hover:bg-slate-50/50">
+                  <td className="py-8 px-6">
+                    <p className="text-base font-bold text-slate-800">Suporte & Mentoria</p>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sem ajuda. Risco alto de erros nos docs</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-60">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Processos burocráticos lentos e manuais</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Orientação estratégica e IA dedicada 24h</span>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Row 3 */}
+                <tr className="group transition-colors hover:bg-slate-50/50">
+                  <td className="py-8 px-6">
+                    <p className="text-base font-bold text-slate-800">Transparência de Custos</p>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-60">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Múltiplas taxas extras por faculdade</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxas ocultas e comissões extras</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Valor único transparente e sem surpresas</span>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Row 4 */}
+                <tr className="group transition-colors hover:bg-slate-50/50">
+                  <td className="py-8 px-6">
+                    <p className="text-base font-bold text-slate-800">Preparação de Visto & I-20</p>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lidar com o consulado sem preparo</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-60">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-amber-500">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Suporte básico cobrado separadamente</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Simulações de entrevista de visto inclusas</span>
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Row 5 */}
+                <tr className="group transition-colors hover:bg-slate-50/50">
+                  <td className="py-8 px-6">
+                    <p className="text-base font-bold text-slate-800">Garantia de Aprovação</p>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Risco total de perder tempo e dinheiro</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-5 w-5 text-red-500">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nenhuma garantia em caso de rejeição</span>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6 text-center bg-[#05294E]/[0.03] border-x border-[#05294E]/10">
+                    <div className="flex flex-col items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="h-6 w-6 text-emerald-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Aprovação garantida ou reembolso total</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-center mt-12">
+            <button 
+              onClick={onCTAClick}
+              className="px-10 py-5 bg-[#D0151C] hover:bg-[#E01B22] text-white rounded-2xl font-black text-xl shadow-[0_20px_40px_rgba(208,21,28,0.25)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.35)] transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-1"
+            >
+              {texts.startNow}
+              <ArrowRight className="w-6 h-6" />
+            </button>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -298,169 +421,584 @@ const JourneySection: React.FC<{
   return (
     <section ref={ref} className="relative py-16 md:py-24 overflow-hidden bg-white">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 home-page">
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
             {t('howItWorks.journey')}
           </h2>
           <div className="w-24 h-1 bg-[#D0151C] mx-auto rounded-full"></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          <div className="lg:col-span-12 space-y-10 lg:space-y-12 relative">
+        <div className="max-w-5xl mx-auto relative mt-16">
+          {/* Vertical central timeline line */}
+          <div className="absolute left-1/2 top-0 bottom-0 hidden w-0.5 bg-slate-200 -translate-x-1/2 lg:block"></div>
+          
+          <div className="space-y-32 lg:space-y-24">
             
-            {/* Step 1 */}
-            <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-1/2 h-[calc(50%+2.5rem)] lg:h-[calc(50%+3rem)] bg-slate-200"></div>
-              <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ duration: 0.6, delay: 0.1 }}
-                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
-              >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
-                  <span className="font-black text-2xl">01</span>
+            {/* STEP 1: Análise de Perfil */}
+            <div className="relative flex flex-col gap-20 lg:flex-row items-center group">
+              {/* Visual mockup (left side) */}
+              <div className="w-full lg:w-1/2 flex justify-center">
+                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+                  <div className="relative w-full h-full flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 bg-[#05294E]/5 rounded-full blur-3xl"></div>
+                    <div className="grid grid-cols-3 gap-4 relative z-10 w-full">
+                      {/* Harvard */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Harvard</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+
+                      {/* Columbia */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-slate-300">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-slate-200"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Columbia</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-slate-200"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+
+                      {/* MIT */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">MIT</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+
+                      {/* Stanford */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">Stanford</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+
+                      {/* NYU */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 ">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-slate-300">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-slate-200"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">NYU</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-slate-200"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+
+                      {/* UCLA */}
+                      <div className="h-24 rounded-2xl bg-white border border-border/40 shadow-sm flex flex-col p-4 transition-all duration-700 hover:border-[#05294E]/30 hover:shadow-xl hover:-translate-y-1 mt-8">
+                        <div className="flex justify-between items-start mb-auto">
+                          <div className="h-5 w-5 rounded-lg bg-slate-50 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-[#05294E]">
+                              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+                            </svg>
+                          </div>
+                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground tracking-tight line-clamp-1">UCLA</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                          <span className="text-[7px] font-bold text-muted-foreground uppercase">Compatível</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#05294E]/20 to-transparent -rotate-12 animate-pulse z-20"></div>
+                  </div>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
-                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
-                <ul className="space-y-3">
+              </div>
+              
+              {/* Central Number Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
+                <span className="text-base font-bold text-[#05294E]">1</span>
+              </div>
+              
+              {/* Text Side (right side) */}
+              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
+                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                    {t('howItWorks.steps.profile.title')}
+                  </h3>
+                </div>
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
+                  {t('howItWorks.steps.profile.description')}
+                </p>
+                <ul className="space-y-3 flex flex-col items-center lg:items-start">
                   {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </motion.div>
             </div>
 
-            {/* Step 2 (Fee) */}
-            <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
-              <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ duration: 0.6, delay: 0.2 }}
-                 className="relative flex items-center justify-between md:justify-normal w-full"
-              >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D0151C] text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
-                  <span className="font-black text-2xl">02</span>
+            {/* STEP 2: Processo Seletivo (Reversed) */}
+            <div className="relative flex flex-col gap-20 lg:flex-row items-center lg:flex-row-reverse group">
+              {/* Visual mockup (right side) */}
+              <div className="w-full lg:w-1/2 flex justify-center">
+                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-accent/5 rounded-full blur-[100px] opacity-50"></div>
+                    <div className="relative w-full max-w-[360px] bg-white rounded-[2.5rem] border border-border/40 shadow-[0_32px_64px_rgba(0,0,0,0.06)] overflow-hidden">
+                      <div className="bg-slate-50/50 border-b border-border/30 px-6 py-4 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-accent animate-pulse"></div>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Bolsas Disponíveis</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-filter h-3.5 w-3.5 text-muted-foreground/40">
+                          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                        </svg>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        {/* Discarded 1 */}
+                        <div className="group relative bg-slate-50/50 border border-slate-100 rounded-2xl p-4 opacity-40 transition-all">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[8px] font-bold bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full uppercase">Incompatível</span>
+                            <span className="text-[9px] font-bold text-slate-400">Anuidade Cheia</span>
+                          </div>
+                          <p className="mt-2 text-[11px] font-bold text-slate-500">Boston University • 10% Bolsa</p>
+                          <div className="mt-1 flex items-center gap-1.5 opacity-60">
+                            <div className="h-1 w-1 rounded-full bg-slate-300"></div>
+                            <span className="text-[8px] font-medium text-slate-400">Custo fora do orçamento</span>
+                          </div>
+                        </div>
+                        {/* Selected */}
+                        <div className="relative bg-white border-2 border-accent rounded-2xl p-5 shadow-[0_15px_30px_rgba(var(--accent-rgb),0.1)] scale-[1.05] z-10">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-sparkles h-3.5 w-3.5">
+                                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                                  <path d="M20 3v4"></path>
+                                  <path d="M22 5h-4"></path>
+                                  <path d="M4 17v2"></path>
+                                  <path d="M5 18H3"></path>
+                                </svg>
+                              </div>
+                              <span className="text-[8px] font-bold text-accent uppercase tracking-widest">Melhor Correspondência</span>
+                            </div>
+                            <div className="h-5 w-5 rounded-full bg-accent flex items-center justify-center text-accent-foreground shadow-lg shadow-accent/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-check h-3 w-3">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="m9 12 2 2 4-4"></path>
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Florida Tech • 60% Bolsa</p>
+                                <p className="text-xl font-bold text-[#D0151C]">Anuidade Reduzida</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="inline-block px-2 py-1 bg-[#D0151C] text-white text-[8px] font-bold rounded-lg uppercase tracking-tighter">100% Compatível</span>
+                              </div>
+                            </div>
+                            <div className="h-px bg-slate-50 w-full"></div>
+                            <div className="flex items-center gap-3 text-[8px] font-bold text-red-700/60 italic">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3">
+                                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
+                              </svg>
+                              <span>Bolsa Garantida • Campus Completo • 10/10 Suporte</span>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Discarded 3 */}
+                        <div className="bg-slate-50/30 border border-slate-100 rounded-2xl p-4 opacity-20">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[8px] font-bold bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-tighter">Incompatível</span>
+                            <span className="text-[9px] font-bold text-slate-300">Sem Bolsa</span>
+                          </div>
+                          <p className="mt-2 text-[11px] font-bold text-slate-300">NYU • Sem Bolsa</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight flex flex-wrap items-center gap-3">
-                  {isLoadingFee ? (
-                    <span className="inline-block h-8 w-40 bg-slate-200 rounded-lg animate-pulse"></span>
-                  ) : (
-                    <>
-                      {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee }).replace(/\(\$[\d.]+\)/g, '').replace(/\$[\d.]+/g, '').trim()}
-                    </>
-                  )}
-                  {hasSellerPackage && (
-                    <span className="text-[10px] bg-red-50 text-red-600 border border-red-100 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
-                      {packageName}
-                    </span>
-                  )}
-                </h3>
-                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">
+              </div>
+              
+              {/* Central Number Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
+                <span className="text-base font-bold text-[#05294E]">2</span>
+              </div>
+              
+              {/* Text Side (left side on desktop) */}
+              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
+                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start lg:flex-row-reverse lg:text-right">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                    {isLoadingFee ? (
+                      <span className="inline-block h-8 w-40 bg-slate-200 rounded-lg animate-pulse"></span>
+                    ) : (
+                      <>
+                        {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee }).replace(/\(\$[\d.]+\)/g, '').replace(/\$[\d.]+/g, '').trim()}
+                      </>
+                    )}
+                    {hasSellerPackage && (
+                      <span className="text-[10px] bg-red-50 text-red-600 border border-red-100 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
+                        {packageName}
+                      </span>
+                    )}
+                  </h3>
+                </div>
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6 lg:text-right">
                   {t('howItWorks.steps.selectionFee.description')}
                 </p>
-                <ul className="space-y-3">
+                <ul className="space-y-3 flex flex-col items-center lg:items-end">
                   {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#D0151C] mt-2 shrink-0" />
+                    <li key={index} className="flex items-start gap-3 lg:flex-row-reverse text-slate-500 font-medium text-center lg:text-right">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </motion.div>
             </div>
 
-            {/* Step 3 */}
-            <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
-              <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ duration: 0.6, delay: 0.3 }}
-                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
-              >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
-                  <span className="font-black text-2xl">03</span>
+            {/* STEP 3: Escolha Bolsas e Envie Documentos */}
+            <div className="relative flex flex-col gap-20 lg:flex-row items-center group">
+              {/* Visual mockup (left side) */}
+              <div className="w-full lg:w-1/2 flex justify-center">
+                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
+                    <div className="relative w-full max-w-[320px] space-y-3">
+                      {/* Notification 1 */}
+                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default z-30">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                              </svg>
+                            </div>
+                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
+                          </div>
+                          <span className="text-[10px] text-black/40 font-medium">agora</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[13px] font-bold text-black tracking-tight">Histórico Traduzido</p>
+                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Documento traduzido e validado com sucesso.</p>
+                        </div>
+                        <div className="absolute top-4 right-4 h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                      </div>
+                      
+                      {/* Notification 2 */}
+                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default opacity-60 scale-[0.96] -mt-10 z-20">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                              </svg>
+                            </div>
+                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
+                          </div>
+                          <span className="text-[10px] text-black/40 font-medium">3m atrás</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[13px] font-bold text-black tracking-tight">Recomendação Carregada</p>
+                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Suas cartas de recomendação foram vinculadas.</p>
+                        </div>
+                      </div>
+
+                      {/* Notification 3 */}
+                      <div className="relative w-full bg-white/70 backdrop-blur-2xl rounded-[22px] p-4 border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-700 hover:scale-[1.02] hover:bg-white/90 cursor-default opacity-30 scale-[0.92] -mt-10 z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-[5px] bg-[#05294E] flex items-center justify-center shadow-sm">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="h-3 w-3 text-white">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                              </svg>
+                            </div>
+                            <span className="text-[10px] font-bold text-black/50 uppercase tracking-tight">MATRÍCULA USA VIP</span>
+                          </div>
+                          <span className="text-[10px] text-black/40 font-medium">10m atrás</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[13px] font-bold text-black tracking-tight">Perfil Aprovado</p>
+                          <p className="text-[12px] text-black/60 leading-tight line-clamp-1">Seu perfil foi aceito pelas universidades selecionadas.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
-                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
-                <ul className="space-y-3">
+              </div>
+              
+              {/* Central Number Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
+                <span className="text-base font-bold text-[#05294E]">3</span>
+              </div>
+              
+              {/* Text Side (right side) */}
+              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
+                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                    {t('howItWorks.steps.documents.title')}
+                  </h3>
+                </div>
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
+                  {t('howItWorks.steps.documents.description')}
+                </p>
+                <ul className="space-y-3 flex flex-col items-center lg:items-start">
                   {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </motion.div>
             </div>
 
-            {/* Step 4 */}
-            <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-slate-200"></div>
-              <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ duration: 0.6, delay: 0.4 }}
-                 className="relative flex items-center justify-between md:justify-normal w-full"
-              >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D0151C] text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
-                  <span className="font-black text-2xl">04</span>
+            {/* STEP 4: Taxa de Matrícula (Reversed) */}
+            <div className="relative flex flex-col gap-20 lg:flex-row items-center lg:flex-row-reverse group">
+              {/* Visual mockup (right side) */}
+              <div className="w-full lg:w-1/2 flex justify-center">
+                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+                  <div className="relative w-full h-full flex items-center justify-center scale-90">
+                    <div className="absolute inset-0 bg-[#05294E]/5 rounded-full blur-[80px] opacity-40"></div>
+                    <div className="relative w-full max-w-[240px] flex flex-col drop-shadow-[0_15px_30px_rgba(0,0,0,0.1)]">
+                      <div className="bg-slate-900 text-white rounded-t-[1.5rem] p-4 text-[10px]">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-1.5 line-clamp-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3 text-accent">
+                              <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
+                            </svg>
+                            <span className="font-bold uppercase tracking-widest text-white/70">STUDENT VISA</span>
+                          </div>
+                          <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-0.5">
+                            <p className="text-[7px] font-bold text-white/40 uppercase">Estudante</p>
+                            <p className="font-bold">ALUNO VIP</p>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <p className="text-[7px] font-bold text-white/40 uppercase">Status</p>
+                            <p className="font-bold text-accent">APROVADO</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white border-x border-border/10 p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="text-left">
+                            <p className="text-[8px] font-bold text-muted-foreground uppercase">SAO</p>
+                            <p className="text-xl font-bold text-slate-900 leading-none">GRU</p>
+                          </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-plane h-3 w-3 text-[#05294E]/30 rotate-90">
+                            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
+                          </svg>
+                          <div className="text-right">
+                            <p className="text-[8px] font-bold text-muted-foreground uppercase">USA</p>
+                            <p className="text-xl font-bold text-slate-900 leading-none">MIA</p>
+                          </div>
+                        </div>
+                        <div className="bg-[#05294E]/[0.03] rounded-xl p-3 border border-[#05294E]/5 flex justify-between items-center">
+                          <div className="space-y-0.5">
+                            <p className="text-[7px] font-bold text-[#05294E]/60 uppercase">Bolsa de Estudos</p>
+                            <p className="text-sm font-bold text-[#05294E]">60% Aprovada</p>
+                          </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-check h-4 w-4 text-accent">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="m9 12 2 2 4-4"></path>
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="relative py-1.5 bg-white border-x border-border/10 flex items-center justify-between">
+                        <div className="h-4 w-2 bg-slate-50 border-r border-border/10 rounded-r-full -ml-[1px]"></div>
+                        <div className="border-t border-dashed border-slate-200 flex-1 mx-2"></div>
+                        <div className="h-4 w-2 bg-slate-50 border-l border-border/10 rounded-l-full -mr-[1px]"></div>
+                      </div>
+                      <div className="bg-white rounded-b-[1.5rem] p-4 pt-1 border-x border-b border-border/10 flex flex-col items-center">
+                        <div className="flex justify-between w-full mb-4 text-[7px] font-bold">
+                          <p className="text-[#05294E] uppercase">I-20 Emitido</p>
+                          <p className="text-slate-400 uppercase">Confirmado</p>
+                        </div>
+                        <div className="w-full h-8 flex justify-center gap-[1px] opacity-40">
+                          <div className="bg-slate-900 h-full" style={{ width: '1.17px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.39px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.00px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.87px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.12px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.85px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.64px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.10px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.04px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '3.33px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.88px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.02px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.35px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '0.76px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.31px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.72px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.72px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.32px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.00px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.81px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '0.95px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '2.53px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.33px' }}></div>
+                          <div className="bg-slate-900 h-full" style={{ width: '1.15px' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
-                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
-                <ul className="space-y-3">
+              </div>
+              
+              {/* Central Number Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
+                <span className="text-base font-bold text-[#05294E]">4</span>
+              </div>
+              
+              {/* Text Side (left side on desktop) */}
+              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
+                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start lg:flex-row-reverse lg:text-right">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                    {t('howItWorks.steps.applicationFee.title')}
+                  </h3>
+                </div>
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6 lg:text-right">
+                  {t('howItWorks.steps.applicationFee.description')}
+                </p>
+                <ul className="space-y-3 flex flex-col items-center lg:items-end">
                   {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#D0151C] mt-2 shrink-0" />
+                    <li key={index} className="flex items-start gap-3 lg:flex-row-reverse text-slate-500 font-medium text-center lg:text-right">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </motion.div>
             </div>
 
-            {/* Step 5 */}
-            <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-0.5 top-0 h-1/2 bg-slate-200"></div>
-              <motion.div 
-                 initial={{ opacity: 0, y: 30 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ duration: 0.6, delay: 0.5 }}
-                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
-              >
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-sm md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-300 group-hover:scale-105">
-                  <span className="font-black text-2xl">05</span>
+            {/* STEP 5: Taxa de Colocação */}
+            <div className="relative flex flex-col gap-20 lg:flex-row items-center group">
+              {/* Visual mockup (left side) */}
+              <div className="w-full lg:w-1/2 flex justify-center">
+                <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
+                    <div className="relative w-full max-w-[280px] bg-white rounded-[2rem] border border-border/40 shadow-[0_20px_40px_rgba(0,0,0,0.08)] p-6 text-center space-y-4">
+                      {/* Success Checkmark Stamp */}
+                      <div className="mx-auto w-16 h-16 rounded-full bg-emerald-50 border-4 border-white shadow-md flex items-center justify-center text-emerald-500 animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="w-8 h-8">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase tracking-wider">
+                          Vaga Garantida
+                        </span>
+                        <h4 className="text-lg font-black text-slate-900 pt-2">Matrícula Confirmada!</h4>
+                        <p className="text-xs text-muted-foreground">Florida Institute of Technology</p>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-xl p-3 text-left space-y-2 border border-slate-100">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground font-semibold">Tipo de Visto</span>
+                          <span className="text-slate-900 font-bold">F-1 Student</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground font-semibold">Embarque</span>
+                          <span className="text-slate-900 font-bold">Agosto, 2026</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground font-semibold">Status de Suporte</span>
+                          <span className="text-emerald-600 font-bold">100% Concluído</span>
+                        </div>
+                      </div>
+
+                      <p className="text-[9px] font-bold text-[#05294E] italic">"Parabéns! Sua jornada rumo aos EUA está prestes a começar."</p>
+                    </div>
+                  </div>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-slate-50/50 border border-slate-100/80 p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-md hover:bg-slate-50">
-                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-slate-900 tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
-                <p className="text-slate-600 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
-                <ul className="space-y-3">
+              </div>
+              
+              {/* Central Number Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex h-14 w-14 items-center justify-center rounded-full bg-white border-4 border-[#05294E] shadow-2xl z-30 group-hover:scale-110 transition-transform">
+                <span className="text-base font-bold text-[#05294E]">5</span>
+              </div>
+              
+              {/* Text Side (right side) */}
+              <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
+                <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                    {t('howItWorks.steps.placementFee.title')}
+                  </h3>
+                </div>
+                <p className="text-xl text-muted-foreground leading-relaxed font-medium mb-6">
+                  {t('howItWorks.steps.placementFee.description')}
+                </p>
+                <ul className="space-y-3 flex flex-col items-center lg:items-start">
                   {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
+                    <li key={index} className="flex items-start gap-3 text-slate-500 font-medium text-center lg:text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#05294E] mt-2 shrink-0" />
                       <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              </motion.div>
             </div>
 
           </div>
@@ -521,7 +1059,7 @@ const WhyUsSection: React.FC<{ t: any }> = ({ t }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={controls}
               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.8 } } }}
-              className="text-left"
+              className="text-left home-page"
             >
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-8 tracking-tighter leading-[0.95]">
                 {t('howItWorks.whyUs.mainTitle')}
@@ -590,7 +1128,7 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
            animate={controls}
            variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
         >
-          <h2 className="text-3xl md:text-4xl font-black mb-8 text-center text-slate-900">{t('howItWorks.faq.title')}</h2>
+          <h2 className="text-3xl md:text-4xl font-black mb-8 text-center text-slate-900 home-page">{t('howItWorks.faq.title')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {/* Coluna Esquerda */}
@@ -706,7 +1244,7 @@ const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAC
         <div className="bg-[#05294E] rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col-reverse lg:flex-row items-stretch min-h-[500px]">
           
           {/* Content side */}
-          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] -mt-4 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem]">
+          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] -mt-4 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem] home-page">
             
             <div className="relative">
               <motion.div

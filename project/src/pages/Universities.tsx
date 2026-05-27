@@ -187,7 +187,7 @@ const Universities: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="bg-white min-h-screen">
+      <div className="bg-white min-h-screen home-page">
         {/* Hero Section */}
         <section className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
           {/* Background Image Layer */}
@@ -199,7 +199,7 @@ const Universities: React.FC = () => {
                 className="w-full h-full object-cover lg:object-center"
               />
               {/* Mobile Overlay */}
-              <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
+              <div className="absolute inset-0 bg-[#05294E]/85 lg:hidden"></div>
               
               {/* Desktop Transition: Solid blue on right to transparent on left */}
               <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
@@ -212,7 +212,7 @@ const Universities: React.FC = () => {
             <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 sm:px-6 lg:px-8 w-full">
             <div className="max-w-4xl lg:ml-auto">
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
@@ -220,14 +220,11 @@ const Universities: React.FC = () => {
                 transition={{ duration: 0.8 }}
                 className="text-center lg:text-right"
               >
-                <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter leading-tight lg:pl-6">
-                  <span className="block mb-1">{t('universitiesPage.header.title').split(' ')[0]}</span>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
-                    {t('universitiesPage.header.title').split(' ').slice(1).join(' ')}
-                  </span>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+                  {t('universitiesPage.header.title')}
                 </h1>
                 
-                <p className="text-lg lg:text-xl text-white mb-6 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
+                <p className="text-lg lg:text-xl text-white mb-8 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
                   {t('universitiesPage.header.subtitle')}
                 </p>
 
@@ -238,49 +235,50 @@ const Universities: React.FC = () => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
           {/* Search and Filters */}
-          <div id="university-search" className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder={t('universitiesPage.search.placeholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              />
+          {isAuthenticated && (
+            <div id="university-search" className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={t('universitiesPage.search.placeholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  />
+                </div>
+
+                {/* Type Filter */}
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
+                >
+                  <option value="all">{t('universitiesPage.search.allTypes')}</option>
+                  <option value="Private University">{t('universitiesPage.search.private')}</option>
+                  <option value="Public University">{t('universitiesPage.search.public')}</option>
+                </select>
+
+                {/* Location Filter */}
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => {
+                    setSelectedLocation(e.target.value);
+                  }}
+                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  title="Filtrar por estado da universidade"
+                >
+                  <option value="all">{t('universitiesPage.search.allStates')}</option>
+                  {states.map((state: string) => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-
-            {/* Type Filter */}
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
-            >
-              <option value="all">{t('universitiesPage.search.allTypes')}</option>
-              <option value="Private University">{t('universitiesPage.search.private')}</option>
-              <option value="Public University">{t('universitiesPage.search.public')}</option>
-            </select>
-
-            {/* Location Filter */}
-            <select
-              value={selectedLocation}
-              onChange={(e) => {
-                setSelectedLocation(e.target.value);
-              }}
-              className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              title="Filtrar por estado da universidade"
-            >
-              <option value="all">{t('universitiesPage.search.allStates')}</option>
-              {states.map((state: string) => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-
-          </div>
-        </div>
+          )}
 
 
         {/* Featured Universities Section */}
@@ -656,9 +654,9 @@ const Universities: React.FC = () => {
           </div>
         </div>
       </div>
-      <SmartChat />
-      <Footer />
     </div>
+    <SmartChat />
+    <Footer />
     </>
   );
 };

@@ -144,7 +144,7 @@ const Home: React.FC = () => {
   return (
     <>
       <SEOHead />
-      <div className="bg-white">
+      <div className="bg-white home-page">
         <section className="relative flex flex-col lg:block lg:h-[600px] overflow-hidden bg-white">
           {/* Background Image Layer — right side only */}
           <div className="relative h-[500px] sm:h-[550px] lg:absolute lg:inset-0 lg:z-0 lg:h-full flex justify-end order-2 lg:order-none">
@@ -164,7 +164,7 @@ const Home: React.FC = () => {
             </picture>
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 w-full lg:h-full lg:flex lg:items-center order-1 lg:order-none">
+          <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 sm:px-6 lg:px-8 w-full lg:h-full lg:flex lg:items-center order-1 lg:order-none">
             <div className="max-w-3xl lg:mr-auto">
               <motion.div
                 initial={{ opacity: 0, x: -50 }}
@@ -241,7 +241,7 @@ const Home: React.FC = () => {
                 {/* Trust Indicators / Social Proof */}
                 <div className="flex flex-col gap-3.5 items-center lg:items-start">
                   {/* Student Avatars + Enrolled Text */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-0.5 lg:gap-3">
                     <div className="flex -space-x-2.5 overflow-hidden">
                       <img 
                         className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover" 
@@ -771,7 +771,7 @@ const Home: React.FC = () => {
               {/* Content Column */}
               <div className="w-full lg:w-[55%] order-1 lg:order-2">
                 <div className="w-full">
-                  <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8 leading-tight">
+                  <h2 className="text-center lg:text-left text-4xl md:text-5xl font-black text-slate-900 mb-8 leading-tight">
                     {t('home.features.titleMain')} {t('home.features.titleHighlight')}
                   </h2>
 
@@ -810,10 +810,10 @@ const Home: React.FC = () => {
                       className="md:col-span-1 md:row-span-2 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center items-center text-center relative overflow-hidden min-h-[350px] md:min-h-full"
                     >
                       <div className="flex flex-col justify-center items-center">
-                        <h3 className="font-black text-slate-900 mb-2 text-base md:text-lg leading-snug">
+                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
                           {t('home.features.opportunities.title')}
                         </h3>
-                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold max-w-[170px] mx-auto">
+                        <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold max-w-[280px] md:max-w-[170px] mx-auto">
                           {t('home.features.opportunities.description')}
                         </p>
                       </div>
@@ -828,7 +828,7 @@ const Home: React.FC = () => {
                       className="md:col-span-2 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
                     >
                       <div className="text-center sm:text-left">
-                        <h3 className="font-black text-slate-900 mb-2 text-base md:text-lg leading-snug">
+                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
                           {t('home.features.universities.title')}
                         </h3>
                         <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
@@ -846,7 +846,7 @@ const Home: React.FC = () => {
                       className="md:col-span-1 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
                     >
                       <div className="text-center sm:text-left">
-                        <h3 className="font-black text-slate-900 mb-2 text-base md:text-lg leading-snug">
+                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
                           {t('home.features.confidence.title')}
                         </h3>
                         <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
@@ -864,7 +864,7 @@ const Home: React.FC = () => {
                       className="md:col-span-1 p-6 rounded-2xl bg-white border-2 border-slate-200/80 flex flex-col justify-center"
                     >
                       <div className="text-center sm:text-left">
-                        <h3 className="font-black text-slate-900 mb-2 text-base md:text-lg leading-snug">
+                        <h3 className="text-2xl font-bold text-slate-900 mb-4">
                           {t('home.features.moreThanStudy.title')}
                         </h3>
                         <p className="text-xs md:text-[13px] text-slate-600 leading-relaxed font-semibold">
@@ -921,7 +921,7 @@ const Home: React.FC = () => {
                   transition={{ delay: 0.1 * (idx + 1) }}
                   className="bg-white p-8 lg:p-6 rounded-2xl shadow-lg relative overflow-hidden border border-slate-100 flex flex-col justify-between"
                 >
-                  <div className="relative z-10 text-left">
+                  <div className="relative z-10 text-center md:text-left">
                     <h3 className="text-2xl font-bold text-slate-900 mb-4">
                       {t(`home.threeSteps.${stepKey}.title`)}
                     </h3>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Facebook, Instagram } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
   // Footer links rely on global scroll-to-top in App
 
   return (
-    <footer className="bg-[#05294E] text-white relative overflow-hidden">
+    <footer className="bg-[#05294E] text-white relative overflow-hidden footer-custom-14">
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-96 h-96 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
@@ -24,10 +24,10 @@ const Footer: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 md:gap-12">
 
           {/* Coluna 1: A Plataforma */}
-          <div className="space-y-6">
+          <div className="space-y-6 col-start-1 lg:col-auto">
             <h3 className="text-xl font-bold text-white">{t('footer.sections.platform')}</h3>
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Coluna 2: Ajuda e Contato */}
-          <div className="space-y-6">
+          <div className="space-y-6 col-start-2 lg:col-auto">
             <h3 className="text-xl font-bold text-white">{t('footer.sections.helpContact')}</h3>
             <ul className="space-y-3">
               <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
@@ -49,7 +49,7 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Coluna 3: Explore */}
-          <div className="space-y-6">
+          <div className="space-y-6 col-start-1 lg:col-auto">
             <h3 className="text-xl font-bold text-white">{t('footer.sections.explore')}</h3>
             <ul className="space-y-3">
               <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
@@ -60,20 +60,14 @@ const Footer: React.FC = () => {
           </div>
 
           {/* Coluna 4: Redes Sociais */}
-          <div className="space-y-6">
+          <div className="space-y-6 col-start-1 lg:col-auto">
             <h3 className="text-xl font-bold text-white">{t('footer.sections.followUs')}</h3>
             <div className="flex space-x-5">
               <a href="https://facebook.com/matriculausa" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-all duration-300">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://twitter.com/matriculausa" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-all duration-300">
-                <Twitter className="h-5 w-5" />
-              </a>
               <a href="https://www.instagram.com/matriculausa?igsh=MWJram91MGhxMXloOQ==" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-all duration-300">
                 <Instagram className="h-5 w-5" />
-              </a>
-              <a href="https://linkedin.com/company/matriculausa" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-all duration-300">
-                <Linkedin className="h-5 w-5" />
               </a>
             </div>
           </div>
