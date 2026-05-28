@@ -61,6 +61,7 @@ BEGIN
               WHEN s.id IS NOT NULL THEN jsonb_build_object(
                 'title', s.title,
                 'university_id', s.university_id,
+                'level', s.level,
                 'field_of_study', s.field_of_study,
                 'annual_value_with_scholarship', s.annual_value_with_scholarship,
                 'application_fee_amount', s.application_fee_amount,
@@ -99,5 +100,5 @@ $$;
 
 -- Comentário explicativo
 COMMENT ON FUNCTION get_admin_student_full_details(uuid) IS 
-'Consolida todas as queries de AdminStudentDetails em uma única chamada RPC, reduzindo drasticamente o número de requests HTTP. Retorna os mesmos dados que a query original com joins.';
+'Consolida todas as queries de AdminStudentDetails em uma única chamada RPC, reduzindo drasticamente o número de requests HTTP. Retorna os mesmos dados que a query original com joins. Inclui scholarship.level para filtro por nível de bolsa.';
 

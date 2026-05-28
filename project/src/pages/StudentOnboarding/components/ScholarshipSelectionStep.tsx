@@ -11,7 +11,7 @@ import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { formatAmount, getDaysUntilDeadline } from '../../../utils/scholarshipHelpers';
-import { AlertTriangle, Loader2, AlertCircle as AlertCircleIcon } from 'lucide-react';
+import { AlertTriangle, Loader2, AlertCircle as AlertCircleIcon, FileText } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
@@ -19,6 +19,17 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const { user, userProfile } = useAuth();
   
+  const getPrerequisites = (level: string): string[] => {
+    const prereqs: string[] = [];
+    switch (level?.toLowerCase()) {
+      case 'undergraduate': prereqs.push('High School Diploma'); break;
+      case 'graduate':      prereqs.push("Bachelor's Diploma"); break;
+      case 'doctorate':     prereqs.push("Master's Diploma"); break;
+    }
+    prereqs.push('Proof of Funds');
+    return prereqs;
+  };
+
   const isScholarshipSelectionBlocked = (scholarship: any): boolean => {
     if (!scholarship) return false;
     if (is3800ScholarshipBlocked(scholarship)) return true;
@@ -684,6 +695,42 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                               <div className={`text-sm mb-2 flex items-center ${isBlocked ? 'text-red-400' : 'text-slate-500'}`}>
                                 {scholarship.universities?.name || scholarship.university_name || t('scholarshipSelection.review.unknownUniversity')}
                               </div>
+                              {scholarship.field_of_study && (
+                                <div className="text-xs text-slate-400 font-medium mb-2">
+                                  {scholarship.field_of_study}
+                                </div>
+                              )}
+                              {(getPrerequisites(scholarship.level).length > 0 || scholarship.requirements) && (
+                                <div className="mb-2">
+                                  {getPrerequisites(scholarship.level).length > 0 && (
+                                    <div>
+                                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Documents Required:</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {getPrerequisites(scholarship.level).map((req) => (
+                                          <span key={req} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wide">
+                                            <FileText className="w-3 h-3" />
+                                            {req}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {getPrerequisites(scholarship.level).includes('Proof of Funds') && (
+                                    <p className="text-[10px] text-slate-400 font-medium mt-1.5 leading-relaxed">
+                                      Proof of Funds: min. <strong className="text-slate-500">$22,000 USD</strong> + <strong className="text-slate-500">$5,000 USD</strong> per dependent.
+                                    </p>
+                                  )}
+                                  {scholarship.requirements && (Array.isArray(scholarship.requirements) ? scholarship.requirements.length > 0 : true) && (
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {(Array.isArray(scholarship.requirements) ? scholarship.requirements : [scholarship.requirements]).map((req: string, idx: number) => (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-200 text-slate-500 text-[10px] font-semibold rounded-lg tracking-wide">
+                                          {req}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <div className="flex items-center gap-3">
                                 <div className={`text-lg font-black ${isBlocked ? 'text-red-500' : 'text-green-600'}`}>
                                   ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}

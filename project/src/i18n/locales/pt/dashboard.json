@@ -474,6 +474,9 @@
     "myApplications": {
       "title": "Minhas Aplicações",
       "subtitle": "Acompanhe o progresso de todas as suas aplicações para bolsas de estudo",
+      "placementFee": {
+        "installmentStepTitle": "Taxa de Colocação — Parcela {{n}} de {{total}} — ${{amount}}"
+      },
       "totalApplications": "Total de Aplicações",
       "approved": "Aprovadas",
       "pending": "Pendentes",

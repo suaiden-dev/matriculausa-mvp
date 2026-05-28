@@ -94,7 +94,10 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
     displayStudents.forEach(student => {
       // Alunos já matriculados → vão direto para Enrollment
-      if (student.application_status === 'enrolled' && stageMap.has('enrollment')) {
+      // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+      const isTransferPendingSevis =
+        student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+      if (student.application_status === 'enrolled' && !isTransferPendingSevis && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }

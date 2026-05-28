@@ -28,7 +28,9 @@
       "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); funcs=json.loads\\(data[0]['text']\\); [print\\(f['slug'], '| verify_jwt:', f.get\\('verify_jwt','?'\\)\\) for f in funcs if f['slug'] in ['verify-stripe-session-application-fee','verify-stripe-session-placement-fee','verify-stripe-session-selection-process-fee','verify-stripe-session-package-fee','verify-stripe-session-scholarship-fee','verify-stripe-session-i20-control-fee','verify-stripe-session-reinstatement-fee','notify-university-document-reupload','parcelow-webhook']]\")",
       "Bash(python3:*)",
       "Bash(rtk npm:*)",
-      "Bash(date /t)"
+      "Bash(date /t)",
+      "Bash(grep -n \"get_admin_student_full_details\\\\|get_admin_student_secondary\" supabase/migrations/*.sql)",
+      "Bash(grep -rn \"bbb9711f\\\\|user_id.*students\\\\|students.*user_id\\\\|/students/\\\\${.*user\" src/pages/AdminDashboard/UserManagement.tsx)"
     ]
   }
 }

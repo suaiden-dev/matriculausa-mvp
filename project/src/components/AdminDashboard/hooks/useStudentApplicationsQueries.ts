@@ -64,6 +64,9 @@ export interface StudentRecord {
   docs_total_rejected?: number;
   docs_total_rejected_files?: number;
   docs_total_under_review?: number;
+  docs_approved_names?: string[];
+  docs_rejected_names?: string[];
+  docs_under_review_names?: string[];
   basic_docs_total_required?: number;
   basic_docs_total_uploaded?: number;
   basic_docs_total_approved?: number;
@@ -217,8 +220,8 @@ export function useStudentsQuery() {
 
         const mostRecentActivity = getMostRecentActivity();
 
-        // Calculate basic documents statistics (passport, diploma, funds_proof)
-        let basicDocsRequired = 3; // Basic docs are always 3 (passport, diploma, funds_proof)
+        // Calculate basic documents statistics (passport only)
+        let basicDocsRequired = 1; // Only passport remains in onboarding
         let basicDocsUploaded = 0;
         let basicDocsApproved = 0;
         let basicDocsRejected = 0;
@@ -234,7 +237,7 @@ export function useStudentsQuery() {
         };
 
         if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
-          const requiredBasicTypes = ['passport', 'diploma', 'funds_proof'];
+          const requiredBasicTypes = ['passport'];
           const latestStatusMap = new Map<string, string>();
           
           lockedApplication.documents.forEach((doc: any) => {
@@ -369,7 +372,7 @@ export function useFilterDataQuery() {
               .from('affiliate_admins')
               .select('id')
               .eq('user_id', admin.user_id)
-              .single();
+              .maybeSingle();
             
             let sellers: any[] = [];
             if (affiliateAdminData) {
@@ -500,7 +503,7 @@ export function useDropStudentMutation() {
         if (error) throw error;
       }
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(variables.studentId) });
     },

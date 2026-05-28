@@ -109,7 +109,9 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
               is_placement_fee_paid, placement_fee_flow, 
               placement_fee_pending_balance, placement_fee_due_date, 
               placement_fee_installment_number, placement_fee_installment_enabled,
-              source, student_process_type
+              source, student_process_type, visa_transfer_active,
+              has_paid_reinstatement_package, has_paid_ds160_package, has_paid_i539_cos_package,
+              has_paid_i20_control_fee, selected_scholarship_id, selected_application_id
             )
           `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
@@ -357,6 +359,40 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
       loadData();
     }
   }, [user, hasLoadedData]);
+
+  // Sincronização em tempo real (Supabase Realtime)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('university-dashboard-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'scholarship_applications' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_profiles' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'document_request_uploads' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const value: UniversityContextType = {
     university,

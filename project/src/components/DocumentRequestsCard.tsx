@@ -245,6 +245,23 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // eslint-disable-next-line
   }, [requests.length, applicationId]);
 
+  // Realtime: re-fetch requests when document_requests are updated (e.g. admin hides/restores for student)
+  useEffect(() => {
+    if (!applicationId) return;
+    const channel = supabase
+      .channel(`doc-requests-${applicationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'document_requests' },
+        () => {
+          fetchRequests();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line
+  }, [applicationId]);
+
   useEffect(() => {
     // Logar uploads carregados para debug
     if (Object.keys(uploads).length > 0) {
@@ -272,15 +289,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       // Buscar a aplicação para obter o university_id e logo
       const { data: appData, error: appError } = await supabase
         .from('scholarship_applications')
-        .select('id, scholarship_id, scholarships(university_id, universities(logo_url, name)), student_process_type, student_id')
+        .select('id, scholarship_id, scholarships(university_id, level, universities(logo_url, name)), student_process_type, student_id')
         .eq('id', applicationId)
         .maybeSingle();
       if (appError || !appData) throw new Error('Failed to fetch application data');
       let universityId: any = undefined;
+      let scholarshipLevel: string | undefined = undefined;
       if (Array.isArray(appData.scholarships) && appData.scholarships.length > 0) {
         universityId = appData.scholarships[0]?.university_id;
+        scholarshipLevel = appData.scholarships[0]?.level;
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
         universityId = (appData.scholarships as any).university_id;
+        scholarshipLevel = (appData.scholarships as any).level;
       }
       // console.log('[DEBUG] appData:', appData);
       // console.log('[DocumentRequestsCard] universityId:', universityId);
@@ -299,20 +319,24 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           .from('document_requests')
           .select('*')
           .eq('is_global', true)
-          .eq('university_id', universityId)
+          .or(`university_id.eq.${universityId},university_id.is.null`)
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         globalRequests = (globalData || []).filter((req: any) => {
           // Ocultar para estudantes quando status estiver fechado
           if (!isSchool && (req.status || '').toLowerCase() === 'closed') return false;
-          // Se não houver applicable_student_types ou não for array, não mostra para ninguém (segurança)
+          // Ocultar requests escondidos para este aluno
+          if (!isSchool && currentUser?.id && req.hidden_for_students?.includes(currentUser.id)) return false;
+          // Filtro por process type
           if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return false;
-          // Se o tipo do estudante estiver incluso, mostra
-          if (req.applicable_student_types.includes(studentType)) return true;
-          // Suporte legado: se o array inclui 'all', mostra para todos
-          if (req.applicable_student_types.includes('all')) return true;
-          // Caso contrário, não mostra
-          return false;
+          const passesStudentType = req.applicable_student_types.includes(studentType) || req.applicable_student_types.includes('all');
+          if (!passesStudentType) return false;
+          // Filtro por nível de bolsa
+          const levels = req.applicable_scholarship_levels;
+          if (!levels || !Array.isArray(levels) || levels.length === 0) return true; // retrocompatível
+          if (!scholarshipLevel) return true; // sem nível definido, não bloqueia
+          return levels.includes(scholarshipLevel);
         });
         // console.log('[DocumentRequestsCard] universityId usado:', universityId);
         // console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
@@ -1687,7 +1711,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
             if (isGlobal) {
               // ── GLOBAL REQUEST: staging + submit flow ──────────────────────
-              const { closedGroups, currentGroup } = groupUploadsBySubmission(allUploads);
+              const { closedGroups, currentGroup } = groupUploadsBySubmission(allUploads as any);
               const lastClosedGroup = closedGroups.length > 0 ? closedGroups[closedGroups.length - 1] : null;
               const lastClosedUpload = lastClosedGroup ? lastClosedGroup[lastClosedGroup.length - 1] : null;
               const isPending = currentGroup.length > 0;
@@ -1706,33 +1730,56 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </div>
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
-                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                     </div>
                   </div>
 
                   {/* Current submission files or last closed group status */}
                   {isPending ? (
                     <div className="space-y-2 mb-4">
-                      {currentGroup.map((upload: any, idx: number) => (
-                        <div key={upload.id} className="flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                              <Clock className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Em Análise</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setPreviewUrl(upload.file_url)}
-                            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                      {currentGroup.map((upload: any) => {
+                        const uploadStatus = normalizeStatus(upload.status);
+                        const isUploadApproved = uploadStatus === 'approved';
+                        const isUploadRejected = uploadStatus === 'rejected';
+
+                        return (
+                          <div
+                            key={upload.id}
+                            className={`flex items-center justify-between px-4 py-3 border rounded-xl transition-all ${
+                              isUploadApproved ? 'bg-emerald-50 border-emerald-100' :
+                              isUploadRejected ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+                            }`}
                           >
-                            <ExternalLink className="w-3 h-3" />
-                            Ver
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                isUploadApproved ? 'bg-emerald-500' :
+                                isUploadRejected ? 'bg-red-500' : 'bg-blue-500'
+                              }`}>
+                                {isUploadApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                                 isUploadRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
+                                 <Clock className="w-4 h-4 text-white" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
+                                  isUploadApproved ? 'text-emerald-600' :
+                                  isUploadRejected ? 'text-red-600' : 'text-blue-600'
+                                }`}>
+                                  {isUploadApproved ? 'Aprovado' :
+                                   isUploadRejected ? 'Correção Solicitada' : 'Em Análise'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setPreviewUrl(upload.file_url)}
+                              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Ver
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : isGlobalApproved && lastClosedUpload ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm bg-emerald-50 border-emerald-200 mb-4 self-start">
@@ -1880,7 +1927,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                   </p>
                                 )}
                                 <div className="space-y-1">
-                                  {group.map((upload: any, fileIdx: number) => (
+                                  {group.map((upload: any) => (
                                     <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
                                       <div className="flex items-center gap-1.5 min-w-0">
                                         <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
@@ -1927,7 +1974,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                      </div>
                      <div className="min-w-0 flex-1 overflow-hidden">
                         <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
-                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
+                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                      </div>
                   </div>
 

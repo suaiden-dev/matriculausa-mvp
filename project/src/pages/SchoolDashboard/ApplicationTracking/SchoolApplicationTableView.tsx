@@ -4,8 +4,8 @@ import {
   User, 
   Calendar
 } from 'lucide-react';
-import { StudentRecord } from '../../../components/AdminDashboard/StudentApplicationsView';
 import { getStepStatus, APPLICATION_FLOW_STAGES } from '../../../utils/applicationFlowStages';
+import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 
 interface SchoolApplicationTableViewProps {
   students: StudentRecord[];
@@ -33,9 +33,9 @@ const SchoolApplicationTableView: React.FC<SchoolApplicationTableViewProps> = ({
       'application_fee',
       'placement_fee',
       'reinstatement_fee',
-      'university_docs',
       'docs_approval',
       'send_acceptance_letter',
+      'i20_fee',
       'student_sends_letter',
       'sevis_transfer',
       'visa_approval',

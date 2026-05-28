@@ -305,7 +305,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             <div className="flex items-center space-x-2">
                               {(() => {
                                 // Calcular status baseado nos documentos disponíveis (prioriza props recentes)
-                                const requiredDocs = ['passport', 'diploma', 'funds_proof'];
+                                const requiredDocs = ['passport'];
                                 const appDocuments = (studentDetails as any)?.documents || [];
                                 const docsFromProps = Array.isArray(studentDocuments) ? studentDocuments : [];
                                 

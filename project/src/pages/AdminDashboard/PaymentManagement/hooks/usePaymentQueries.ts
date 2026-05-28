@@ -9,7 +9,7 @@ import { AffiliatePaymentRequestService } from '../../../../services/AffiliatePa
 import { getPaymentDatesForUsersLoaderOptimized } from '../data/loaders/paymentDatesLoaderOptimized';
 import { transformPaymentsToRecordsAndStats } from '../utils/transformPayments';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
-import { getGrossPaidAmountsBatch } from '../../../../utils/paymentConverter';
+import { getGrossPaidAmountsBatch, getPlacementInstallmentRowsBatch, getPlacementInstallmentPlansBatch } from '../../../../utils/paymentConverter';
 // import type { PaymentRecord, PaymentStats } from '../data/types';
 
 /**
@@ -34,12 +34,22 @@ export function usePaymentsQuery(enabled: boolean = true) {
       const uniqueUserIds = [...new Set(allUserIds)];
       
       // ✅ TASK-10: 1 única query para todos os usuários (elimina N+1)
-      const realPaymentAmounts = await getGrossPaidAmountsBatch(
-        uniqueUserIds,
-        ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package']
-      );
+      const [realPaymentAmounts, placementInstallmentRows, placementInstallmentPlans, individualPaymentDates, individualFeePaymentsRes] = await Promise.all([
+        getGrossPaidAmountsBatch(
+          uniqueUserIds,
+          ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package']
+        ),
+        getPlacementInstallmentRowsBatch(uniqueUserIds),
+        getPlacementInstallmentPlansBatch(uniqueUserIds),
+        getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds),
+        supabase
+          .from('individual_fee_payments')
+          .select('id, user_id, fee_type, amount, gross_amount_usd, fee_amount_usd, payment_date, payment_method, payment_intent_id, parcelow_status')
+          .in('user_id', uniqueUserIds)
+          .order('payment_date', { ascending: false })
+      ]);
 
-      const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds);
+      const individualFeePayments = individualFeePaymentsRes.data || [];
 
       // Transformar em registros e stats
       const result = transformPaymentsToRecordsAndStats({
@@ -51,6 +61,9 @@ export function usePaymentsQuery(enabled: boolean = true) {
         individualPaymentDates,
         getFeeAmount,
         realPaymentAmounts,
+        placementInstallmentRows,
+        placementInstallmentPlans,
+        individualFeePayments,
       });
 
       return result;

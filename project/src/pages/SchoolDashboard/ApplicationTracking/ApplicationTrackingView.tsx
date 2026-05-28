@@ -4,7 +4,7 @@ import { useStudentUnreadMessages } from '../../../hooks/useStudentUnreadMessage
 import { useGlobalStudentUnread } from '../../../hooks/useGlobalStudentUnread';
 import SchoolApplicationKanbanView from './SchoolApplicationKanbanView';
 import SchoolApplicationTableView from './SchoolApplicationTableView';
-import { StudentRecord } from '../../../components/AdminDashboard/StudentApplicationsView';
+import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import ProfileCompletionGuard from '../../../components/ProfileCompletionGuard';
 import { Search, LayoutGrid, Table } from 'lucide-react';
 import { Scholarship } from '../../../types';
@@ -36,11 +36,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
 
       // For University View, we show ALL documents in the application
       const universityDocs = Array.isArray(app.documents) ? app.documents : [];
-      
-      let docsUploaded = universityDocs.length;
-      let docsApproved = universityDocs.filter((d: any) => d.status === 'approved').length;
-      let docsRejected = universityDocs.filter((d: any) => d.status === 'rejected' || d.status === 'changes_requested').length;
-      let docsUnderReview = universityDocs.filter((d: any) => d.status === 'under_review' || !d.status).length;
+      const docsUploaded = universityDocs.length;
 
 
       return {
@@ -51,10 +47,13 @@ const SchoolApplicationTrackingView: React.FC = () => {
         student_created_at: app.created_at,
         has_paid_selection_process_fee: student.is_selection_process_fee_paid || false,
         has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+        selected_scholarship_id: student.selected_scholarship_id || null,
+        selected_application_id: student.selected_application_id || null,
         seller_referral_code: null,
 
         application_id: app.id,
         scholarship_id: app.scholarship_id,
+        university_id: university?.id || scholarship.university_id || null,
         status: status,
         application_status: status, // Keeping it simple, matching DB
         applied_at: app.created_at,
@@ -66,7 +65,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
         acceptance_letter_url: app.acceptance_letter_url || null,
         payment_status: null,
         student_process_type: app.student_process_type || student.student_process_type || 'initial',
-        transfer_form_status: student.transfer_form_status || null,
+        transfer_form_status: app.transfer_form_status || null,
         scholarship_title: scholarship.title || 'Unknown',
         course_name: null,
         university_name: university?.name || null,
@@ -85,18 +84,26 @@ const SchoolApplicationTrackingView: React.FC = () => {
         placement_fee_installment_number: student.placement_fee_installment_number || 0,
         placement_fee_installment_enabled: student.placement_fee_installment_enabled || false,
 
-        // Doc aggregation - Combine Basic Docs + University Specific Docs
-        docs_total_required: universityDocs.length + (app.university_document_stats?.required || 0),
-        docs_total_uploaded: docsUploaded + (app.university_document_stats?.uploaded || 0),
-        docs_total_approved: docsApproved + (app.university_document_stats?.approved || 0),
-        docs_total_rejected: docsRejected + (app.university_document_stats?.rejected || 0),
-        docs_total_under_review: docsUnderReview + (app.university_document_stats?.under_review || 0),
+        // Doc aggregation - University Specific Docs only (new document_requests system)
+        // Basic docs (passport, diploma) are managed by admin in the 'review' stage
+        // and should not affect the school's docs_approval column logic
+        docs_total_required: app.university_document_stats?.required || 0,
+        docs_total_uploaded: app.university_document_stats?.uploaded || 0,
+        docs_total_approved: app.university_document_stats?.approved || 0,
+        docs_total_rejected: app.university_document_stats?.rejected || 0,
+        docs_total_under_review: app.university_document_stats?.under_review || 0,
 
         has_sent_docs_to_university: app.has_sent_docs_to_university || false,
-        sevis_transfer_completed: student.sevis_transfer_completed || false,
-        visa_approved: student.visa_approved || false,
+        sevis_transfer_completed: app.sevis_transfer_completed || false,
+        visa_approved: app.visa_approved || false,
         documents_uploaded: docsUploaded > 0,
         source: student.source || app.source || null,
+
+        // Novos campos para suportar etapas de visto e reintegração
+        visa_transfer_active: student.visa_transfer_active,
+        has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
+        has_paid_ds160_package: student.has_paid_ds160_package || false,
+        has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
       } as StudentRecord;
     });
 

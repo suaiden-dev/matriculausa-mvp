@@ -141,7 +141,7 @@ const FeeManagement: React.FC = () => {
             .from('affiliate_admins')
             .select('id')
             .eq('user_id', admin.user_id)
-            .single();
+            .maybeSingle();
 
           let sellers: any[] = [];
           if (affiliateAdminData) {

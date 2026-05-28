@@ -541,6 +541,40 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                   </div>
                 )}
 
+                {/* Document Prerequisites by Level */}
+                {scholarship.level && (() => {
+                  const level = scholarship.level.toLowerCase();
+                  const prereqs: { label: string; note?: string }[] = [];
+                  if (level === 'undergraduate') {
+                    prereqs.push({ label: 'High School Diploma' });
+                  } else if (level === 'graduate') {
+                    prereqs.push({ label: "Bachelor's Diploma" });
+                  } else if (level === 'doctorate') {
+                    prereqs.push({ label: "Master's Diploma" });
+                  }
+                  prereqs.push({ label: 'Proof of Funds', note: 'Min. $22,000 USD + $5,000 USD per dependent' });
+                  if (prereqs.length === 0) return null;
+                  return (
+                    <div className="pt-4 border-t border-slate-200">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2 flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        Required Documents
+                      </p>
+                      <ul className="space-y-2 text-sm text-slate-600">
+                        {prereqs.map((p, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-1.5 flex-shrink-0" />
+                            <span>
+                              {p.label}
+                              {p.note && <span className="text-slate-400 text-xs ml-1">({p.note})</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
+
                 {/* Requirements */}
                 {scholarship.requirements && (
                   <div className="pt-4 border-t border-slate-200">

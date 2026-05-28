@@ -12,6 +12,8 @@ interface KanbanColumnProps {
   getUnreadCount: (studentId: string) => number;
   isDropped?: boolean;
   showSelectionTags?: boolean;
+  showTeamLabel?: boolean;
+  onMarkLost?: (studentId: string) => void;
 }
 
 const actorHeaderStyles = {
@@ -35,7 +37,16 @@ const actorHeaderStyles = {
   },
 };
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, isDropped = false, showSelectionTags = false }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ 
+  stage, 
+  students, 
+  onStudentClick, 
+  getUnreadCount, 
+  isDropped = false, 
+  showSelectionTags = false,
+  showTeamLabel = true,
+  onMarkLost
+}) => {
   const Icon = stage.icon;
   const actor = (stage as any).actor as 'student' | 'admin' | 'both' | undefined;
   const styles = isDropped
@@ -80,7 +91,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentC
       {/* Column Header */}
       <div className={`sticky top-0 border-b px-4 py-3 rounded-t-lg z-10 ${styles.header}`}>
         <div className="flex flex-col mb-1.5">
-          {stage.team && (
+          {showTeamLabel && stage.team && (
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-900 mb-0.5">
               {stage.team}
             </span>
@@ -131,6 +142,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentC
               unreadMessages={getUnreadCount(student.student_id)}
               showSelectionTags={showSelectionTags}
               currentStageKey={stage.key as ApplicationFlowStageKey}
+              onMarkLost={onMarkLost}
             />
           ))
         )}

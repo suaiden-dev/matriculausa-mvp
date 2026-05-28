@@ -476,6 +476,9 @@
     "myApplications": {
       "title": "My Applications",
       "subtitle": "Track the progress of all your scholarship applications",
+      "placementFee": {
+        "installmentStepTitle": "Placement Fee — Installment {{n}} of {{total}} — ${{amount}}"
+      },
       "totalApplications": "Total Applications",
       "approved": "Approved",
       "pending": "Pending",

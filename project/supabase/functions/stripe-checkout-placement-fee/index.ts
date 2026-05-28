@@ -77,19 +77,21 @@ Deno.serve(async (req: Request) => {
 
     console.log("[stripe-checkout-placement-fee] ✅ User authenticated:", user.id);
 
-    const { data: studentProfile } = await supabase
-      .from("user_profiles")
-      .select("placement_fee_installment_enabled")
+    const { data: activePlan } = await supabase
+      .from("fee_installment_plans")
+      .select("id, total_installments, installments_paid")
       .eq("user_id", user.id)
-      .single();
+      .eq("fee_type", "placement_fee")
+      .eq("status", "active")
+      .maybeSingle();
 
     const sessionMetadata: any = {
       project: "matricula_usa",
+      is_installment: activePlan ? "true" : "false",
       ...metadata,
       student_id: user.id,
       fee_type: "placement_fee",
       payment_method: payment_method || "stripe",
-      is_installment: studentProfile?.placement_fee_installment_enabled ? "true" : "false",
     };
 
     // Lógica PIX
@@ -170,7 +172,7 @@ Deno.serve(async (req: Request) => {
         await supabase.rpc("log_student_action", {
           p_student_id: userProfile.id,
           p_action_type: "checkout_session_created",
-          p_action_description: `Stripe checkout session created for Placement Fee (${session.id})`,
+          p_action_description: `Stripe checkout session created for Placement Fee${metadata?.installment_number === '2' ? ' — 2nd Installment' : ''} (${session.id})`,
           p_performed_by: user.id,
           p_performed_by_type: "student",
           p_metadata: { fee_type: "placement_fee", payment_method: "stripe", session_id: session.id, amount: explicitAmount },

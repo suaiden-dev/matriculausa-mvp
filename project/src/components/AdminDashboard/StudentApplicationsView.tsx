@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Eye,
@@ -71,12 +71,12 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const studentsQuery = useStudentsQuery();
   const filterDataQuery = useFilterDataQuery();
 
-  // Extrair dados dos queries
-  const students = studentsQuery.data || [];
+  // Extrair dados dos queries — useMemo garante referência estável (evita re-renders infinitos)
+  const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);
   const loading = studentsQuery.isLoading;
-  const affiliates = filterDataQuery.data?.affiliates || [];
-  const scholarships = filterDataQuery.data?.scholarships || [];
-  const universities = filterDataQuery.data?.universities || [];
+  const affiliates = useMemo(() => filterDataQuery.data?.affiliates ?? [], [filterDataQuery.data]);
+  const scholarships = useMemo(() => filterDataQuery.data?.scholarships ?? [], [filterDataQuery.data]);
+  const universities = useMemo(() => filterDataQuery.data?.universities ?? [], [filterDataQuery.data]);
 
   // Função para refresh de todos os dados
   const handleRefresh = async () => {
@@ -127,6 +127,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [processTypeFilter, setProcessTypeFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
@@ -155,6 +156,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       onlyBlackCouponUsers,
       showCurrentStudents,
       processTypeFilter,
+      sourceFilter,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -179,6 +181,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
         setProcessTypeFilter(filters.processTypeFilter || 'all');
+        setSourceFilter(filters.sourceFilter || 'all');
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -203,6 +206,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     setOnlyBlackCouponUsers(false);
     setShowCurrentStudents(false);
     setProcessTypeFilter('all');
+    setSourceFilter('all');
     setCurrentPage(1);
   };
 
@@ -296,6 +300,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     onlyBlackCouponUsers,
     showCurrentStudents,
     processTypeFilter,
+    sourceFilter,
     currentPage
   ]);
 
@@ -435,6 +440,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
     }
+
     const matchesSearch =
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -592,10 +598,14 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     })();
 
     // Filtro por tipo de processo
-    const matchesProcessType = processTypeFilter === 'all' || 
+    const matchesProcessType = processTypeFilter === 'all' ||
       (student.student_process_type && student.student_process_type === processTypeFilter);
 
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType;
+    const matchesSource = sourceFilter === 'all' ||
+      (sourceFilter === 'migma' && student.source === 'migma') ||
+      (sourceFilter === 'direct' && (!student.source || student.source !== 'migma'));
+
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType && matchesSource;
 
     return finalResult;
   });
@@ -1034,6 +1044,20 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                     {affiliate.name || affiliate.email || 'Unknown'}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Filtro por Source (MIGMA) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Sources</option>
+                <option value="migma">MIGMA</option>
+                <option value="direct">MatriculaUSA</option>
               </select>
             </div>
 

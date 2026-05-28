@@ -252,6 +252,9 @@
     "myApplications": {
       "title": "Mis Solicitudes",
       "subtitle": "Rastrea el progreso de todas tus solicitudes de beca",
+      "placementFee": {
+        "installmentStepTitle": "Cuota de Colocación — Cuota {{n}} de {{total}} — ${{amount}}"
+      },
       "totalApplications": "Solicitudes Totales",
       "approved": "Aprobadas",
       "pending": "Pendientes",

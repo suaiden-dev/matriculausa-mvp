@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle, User, Building2, Eye, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
+import { formatPaymentDate } from '../utils/dateFormatter';
 
 export interface PaymentsTableProps {
 	viewMode: 'grid' | 'list';
@@ -181,7 +182,9 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
 											FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'
 										}` }>
-											{FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type}
+											{(() => {
+												return FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type;
+											})()}
 										</span>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
@@ -230,12 +233,18 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										</span>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-										<div className="flex items-center">
-											<Calendar className="h-4 w-4 mr-1" />
-											{payment.payment_date 
-												? new Date(payment.payment_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-												: 'N/A'
-											}
+										<div className="flex items-start gap-1.5">
+											<Calendar className="h-4 w-4 mr-1 mt-0.5" />
+											<div className="flex flex-col">
+												<span>
+													{formatPaymentDate(payment.payment_date)}
+												</span>
+												{payment.installment_number && payment.total_installments && (
+													<span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 w-fit">
+														Installment ({payment.installment_number}/{payment.total_installments})
+													</span>
+												)}
+											</div>
 										</div>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

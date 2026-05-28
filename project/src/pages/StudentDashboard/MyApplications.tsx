@@ -177,7 +177,7 @@ const MyApplications: React.FC = () => {
         // Buscar requests individuais da aplicação e globais (por universidade ou gerais)
         const { data: reqs } = await supabase
           .from('document_requests')
-          .select('id,title,scholarship_application_id,university_id,is_global')
+          .select('id,title,scholarship_application_id,university_id,is_global,applicable_scholarship_levels,applicable_student_types,status,hidden_for_students')
           .or(`scholarship_application_id.in.(${appIds.join(',')}),and(is_global.eq.true,university_id.in.(${uniIds.join(',')})),and(is_global.eq.true,university_id.is.null)`);
 
         const requestIds = (reqs || []).map(r => r.id);
@@ -190,17 +190,38 @@ const MyApplications: React.FC = () => {
             .eq('uploaded_by', user.id);
 
           // Mapear requestId -> {title, appIds[]}
+          const studentType = userProfile?.student_process_type;
           const reqMeta: Record<string, { title: string; appIds: string[] }> = {};
           (reqs || []).forEach((r: any) => {
             if (r.scholarship_application_id) {
               reqMeta[r.id] = { title: r.title, appIds: [r.scholarship_application_id] };
             } else if (r.is_global) {
-              if (r.university_id) {
-                const targetApps = apps.filter(a => a.scholarships?.university_id === r.university_id).map(a => a.id);
-                reqMeta[r.id] = { title: r.title, appIds: targetApps };
-              } else {
-                // Truly global: aplica-se a todas as aplicações
-                reqMeta[r.id] = { title: r.title, appIds: apps.map(a => a.id) };
+              // Skip closed global requests
+              if ((r.status || '').toLowerCase() === 'closed') return;
+              // Skip requests hidden for this student
+              if (r.hidden_for_students?.includes(user.id)) return;
+              // Filter by student type
+              if (r.applicable_student_types?.length > 0
+                && !r.applicable_student_types.includes(studentType)
+                && !r.applicable_student_types.includes('all')) return;
+
+              let candidateApps = r.university_id
+                ? apps.filter((a: any) => a.scholarships?.university_id === r.university_id)
+                : apps;
+
+              // Filter by scholarship level per app
+              const levels: string[] | undefined = r.applicable_scholarship_levels;
+              if (levels && levels.length > 0) {
+                candidateApps = candidateApps.filter((a: any) => {
+                  const appLevel = a.scholarships?.level;
+                  if (!appLevel) return true;
+                  return levels.includes(appLevel);
+                });
+              }
+
+              const targetAppIds = candidateApps.map((a: any) => a.id);
+              if (targetAppIds.length > 0) {
+                reqMeta[r.id] = { title: r.title, appIds: targetAppIds };
               }
             }
           });
@@ -1171,17 +1192,17 @@ const MyApplications: React.FC = () => {
                                   const processType = userProfile?.student_process_type;
                                   const visaTransferActive = userProfile?.visa_transfer_active;
 
+                                  const scholarshipLevel = (application as any).scholarships?.level;
+                                  const diplomaLabel = scholarshipLevel === 'doctorate'
+                                    ? "Master's Diploma"
+                                    : scholarshipLevel === 'graduate'
+                                      ? "Bachelor's Diploma"
+                                      : t('studentDashboard.myApplications.documents.highSchoolDiploma');
+
                                   const allDocumentsBase = [
                                     { type: 'passport', label: t('studentDashboard.myApplications.documents.passport') },
-                                    { type: 'diploma', label: t('studentDashboard.myApplications.documents.highSchoolDiploma') },
-                                    { type: 'funds_proof', label: t('studentDashboard.myApplications.documents.proofOfFunds') }
                                   ];
 
-                                  if (processType === 'initial') {
-                                    allDocumentsBase.push({ type: 'ds160', label: t('scholarships:scholarshipsPage.modal.ds160Package') });
-                                  } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
-                                    allDocumentsBase.push({ type: 'i539', label: t('scholarships:scholarshipsPage.modal.i539Package') });
-                                  }
 
                                   const allDocuments = allDocumentsBase.map(docTemplate => {
                                     const docData = docs.find(d => d.type === docTemplate.type);

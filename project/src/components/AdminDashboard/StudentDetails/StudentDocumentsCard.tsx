@@ -464,7 +464,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                 if (app.status === 'rejected') return 'This application has been rejected.';
                                 
                                 const docs = app.documents || [];
-                                const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+                                const requiredTypes = ['passport'];
                                 const presentTypes = docs.map(d => (d.type || '').toLowerCase());
                                 const missingRequired = requiredTypes.filter(t => !presentTypes.includes(t));
                                 
@@ -508,7 +508,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                           </button>
                           {(() => {
                             const docs = app.documents || [];
-                            const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+                            const requiredTypes = ['passport'];
                             const presentTypes = docs.map(d => (d.type || '').toLowerCase());
                             const hasAllRequired = requiredTypes.every(t => presentTypes.includes(t));
                             const allApproved = docs.length > 0 && docs.every(d => (d.status || '').toLowerCase() === 'approved');
