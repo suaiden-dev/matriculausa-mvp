@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -36,7 +36,7 @@ interface DocumentInfo {
 // Função utilitária de download imediato será movida para dentro do componente
 
 const ApplicationChatPage: React.FC = () => {
-  const { t } = useTranslation(['dashboard', 'common']);
+  const { t, i18n } = useTranslation(['dashboard', 'common']);
   const { applicationId } = useParams<{ applicationId: string }>();
   const [searchParams] = useSearchParams();
   const { user, userProfile, refetchUserProfile } = useAuth();
@@ -157,39 +157,23 @@ const ApplicationChatPage: React.FC = () => {
 
   // Buscar deadline da scholarship fee (data limite para I-20 Control Fee)
   useEffect(() => {
-    async function fetchScholarshipFeeDeadline() {
-      if (!userProfile?.id) return;
+    if (!userProfile) return;
 
-      try {
-        const { data, error } = await supabase
-          .from('scholarship_applications')
-          .select('id, updated_at, is_scholarship_fee_paid, is_placement_fee_paid')
-          .eq('student_id', userProfile.id)
-          .or('is_scholarship_fee_paid.eq.true,is_placement_fee_paid.eq.true')
-          .order('updated_at', { ascending: false })
-          .limit(1);
+    let paidDateStr: string | null | undefined = null;
 
-        if (error) {
-          console.error('Erro ao buscar scholarship fee deadline:', error);
-          setScholarshipFeeDeadline(null);
-          return;
-        }
-
-        // Verificar se há dados e pegar o primeiro resultado
-        if (data && data.length > 0 && data[0]?.updated_at) {
-          const paidDate = new Date(data[0].updated_at);
-          const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
-          setScholarshipFeeDeadline(deadline);
-        } else {
-          setScholarshipFeeDeadline(null);
-        }
-      } catch (error) {
-        console.error('Erro inesperado ao buscar scholarship fee deadline:', error);
-        setScholarshipFeeDeadline(null);
-      }
+    if (userProfile.is_scholarship_fee_paid && userProfile.scholarship_fee_paid_at) {
+      paidDateStr = userProfile.scholarship_fee_paid_at;
+    } else if (userProfile.is_placement_fee_paid && userProfile.placement_fee_paid_at) {
+      paidDateStr = userProfile.placement_fee_paid_at;
     }
 
-    fetchScholarshipFeeDeadline();
+    if (paidDateStr) {
+      const paidDate = new Date(paidDateStr);
+      const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+      setScholarshipFeeDeadline(deadline);
+    } else {
+      setScholarshipFeeDeadline(null);
+    }
   }, [userProfile]);
 
   // Buscar cupom promocional do I-20 Control Fee do banco de dados
@@ -574,9 +558,38 @@ const ApplicationChatPage: React.FC = () => {
     }
   }, [selectedPaymentMethod, showI20ControlFeeModal, handleProceedPayment]);
 
+  // ✅ SEGURANÇA: Redirecionar para onboarding se onboarding não concluído ou application não aprovada
+  // Alunos com status pending/rejected/under_review não devem acessar esta página
+  const navigate = useNavigate();
+  const isApplicationApproved = !applicationDetails || 
+    applicationDetails.status === 'approved' || 
+    applicationDetails.status === 'enrolled';
+
+  useEffect(() => {
+    if (userProfile && !userProfile.onboarding_completed) {
+      console.log('[ApplicationChatPage] ⛔ Acesso bloqueado - onboarding não concluído');
+      navigate('/student/onboarding', { replace: true });
+      return;
+    }
+
+    if (applicationDetails && !isApplicationApproved) {
+      console.log('[ApplicationChatPage] ⛔ Acesso bloqueado - application status:', applicationDetails.status);
+      navigate('/student/onboarding', { replace: true });
+    }
+  }, [userProfile, applicationDetails, isApplicationApproved, navigate]);
+
   // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
     return <div className="text-center text-gray-500 py-10">{t('studentDashboard.applicationChatPage.hardcodedTexts.authenticating')}</div>;
+  }
+
+  // Bloqueia renderização enquanto redireciona
+  if (userProfile && !userProfile.onboarding_completed) {
+    return null;
+  }
+
+  if (applicationDetails && !isApplicationApproved) {
+    return null;
   }
 
   // Array de informações dos documentos (Dinâmico para incluir I-20 e Acceptance Letter)
@@ -1833,20 +1846,22 @@ const ApplicationChatPage: React.FC = () => {
                 isSchool={false}
                 currentUserId={user.id}
                 studentType={applicationDetails.student_process_type || 'initial'}
+                applicationStatus={applicationDetails.status}
                 showAcceptanceLetter={false} // Não mostrar acceptance letter aqui, será controlado separadamente
-                onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean) => {
+                onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean, requestTitle?: string) => {
                   try {
                     if (logAction && user?.id) {
                       await logAction(
                         isResubmission ? 'document_resubmitted' : 'document_uploaded',
-                        `Document "${fileName}" ${isResubmission ? 'resubmitted' : 'uploaded'} for document request`,
+                        `Document "${fileName}" ${isResubmission ? 'resubmitted' : 'uploaded'} for document request${requestTitle ? ` "${requestTitle}"` : ''}`,
                         user.id,
                         'student',
                         {
                           request_id: requestId,
                           file_name: fileName,
                           is_resubmission: isResubmission,
-                          application_id: applicationId
+                          application_id: applicationId,
+                          request_title: requestTitle
                         }
                       );
                     }

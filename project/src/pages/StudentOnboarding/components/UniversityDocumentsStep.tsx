@@ -232,6 +232,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         let allApproved = true;
 
         documentRequests.forEach(req => {
+            // Ignorar requests fechados
+            if ((req.status || '').toLowerCase() === 'closed') return;
+
+            // Ignorar requests globais que não se aplicam ao tipo de processo do aluno
+            if (req.is_global && Array.isArray(req.applicable_student_types) && req.applicable_student_types.length > 0) {
+                const types: string[] = req.applicable_student_types;
+                if (!types.includes('all') && !types.includes(studentProcessType)) return;
+            }
+
             const allUploads = req.document_request_uploads || [];
             // Para docs globais, filtrar apenas os uploads do aluno atual
             const uploads = allUploads.filter((u: any) => !u.uploaded_by || u.uploaded_by === userProfile?.user_id);
@@ -244,7 +253,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 hasReview = true;
                 allApproved = false;
             } else {
-                // Pending or Rejected without new upload
                 hasPending = true;
                 allApproved = false;
                 pendingNames.push(req.title);
@@ -257,7 +265,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             allDocsApproved: allApproved,
             pendingDocNames: pendingNames
         };
-    }, [documentRequests, userProfile?.user_id]);
+    }, [documentRequests, userProfile?.user_id, studentProcessType]);
 
     const currentStatusInfo = useMemo(() => {
         if (!applicationDetails) {
@@ -490,7 +498,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                 const reqQuery = supabase
                     .from('document_requests')
-                    .select('id, title, status, document_request_uploads(status, uploaded_by)');
+                    .select('id, title, status, is_global, applicable_student_types, applicable_scholarship_levels, hidden_for_students, document_request_uploads(status, uploaded_by)');
 
                 if (universityId) {
                     reqQuery.or(
@@ -869,6 +877,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                         isSchool={false}
                                         studentType={applicationDetails.student_process_type}
                                         studentUserId={applicationDetails.student_id}
+                                        applicationStatus={applicationDetails.status}
                                     />
                                 </div>
                             )}

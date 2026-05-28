@@ -47,8 +47,8 @@ interface DocumentRequestsCardProps {
   currentUserId: string;
   studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
-  onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean) => void; // Callback para logging
-
+  onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean, requestTitle?: string) => void; // Callback para logging
+  applicationStatus?: string; // ✅ SEGURANÇA: Status da scholarship_application para bloquear uploads
 }
 
 const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
@@ -57,7 +57,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   currentUserId,
   studentType,
   studentUserId,
-  onDocumentUploaded
+  onDocumentUploaded,
+  applicationStatus
 }) => {
   const { t } = useTranslation('dashboard');
 
@@ -402,7 +403,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
 
+  // ✅ SEGURANÇA: Verificar se o aluno pode fazer upload
+  const canUploadDocuments = !applicationStatus || ['approved', 'enrolled'].includes(applicationStatus);
+
   const handleFileSelect = (requestId: string, file: File | null, isGlobal?: boolean, inputEl?: HTMLInputElement) => {
+    if (!canUploadDocuments) {
+      console.log('[DocumentRequestsCard] ⛔ Upload bloqueado - application status:', applicationStatus);
+      return;
+    }
     if (!file) return;
     if (file.type !== 'application/pdf') {
       alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
@@ -891,7 +899,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       setSelectedFiles(prev => ({ ...prev, [requestId]: null }));
 
       if (onDocumentUploaded) {
-        await onDocumentUploaded(requestId, file.name, isResubmission);
+        const request = requests.find(r => r.id === requestId);
+        await onDocumentUploaded(requestId, file.name, isResubmission, request?.title);
       }
     } catch (err: any) {
       console.error('Erro fatal no upload:', err);

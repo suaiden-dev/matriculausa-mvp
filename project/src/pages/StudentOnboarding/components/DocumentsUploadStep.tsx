@@ -244,9 +244,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
               if (idx >= 0) {
                 const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
-                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [...prevHistory, { ...oldDoc, saved_at: now }] };
               } else {
-                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [] });
               }
             }
             await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', applicationId);
@@ -280,9 +280,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               const idx = mergedDocs.findIndex((d: any) => d?.type === nd.type);
               if (idx >= 0) {
                 const { history: prevHistory = [], ...oldDoc } = mergedDocs[idx] as any;
-                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+                mergedDocs[idx] = { type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [...prevHistory, { ...oldDoc, saved_at: now }] };
               } else {
-                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, history: [] });
+                mergedDocs.push({ type: nd.type, url: nd.url, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [] });
               }
             }
             await supabase
@@ -386,11 +386,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       if (idx >= 0) {
         newDocs = currentDocs.map((d: any) => {
           if (d.type !== type) return d;
-          const { history: prevHistory = [], rejected_at: _ra, rejection_reason: _rr, ...oldDoc } = d;
-          return { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [...prevHistory, { ...oldDoc, saved_at: now }] };
+          // Preserve ALL fields (including rejected_at, rejection_reason) in the history entry
+          // so we know when/why it was rejected. The new doc is a fresh object without those fields.
+          const { history: prevHistory = [], ...oldDocFull } = d;
+          const historyEntry = { ...oldDocFull, saved_at: now };
+          return { type, url: publicUrl, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [...prevHistory, historyEntry] };
         });
       } else {
-        newDocs = [...currentDocs, { type, url: publicUrl, status: 'under_review', uploaded_at: now, history: [] }];
+        newDocs = [...currentDocs, { type, url: publicUrl, status: 'under_review', uploaded_at: now, uploaded_by_type: 'student', uploaded_by_name: userProfile?.full_name || user?.email || 'Student', history: [] }];
       }
       
       const { error: updateError } = await supabase

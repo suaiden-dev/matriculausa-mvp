@@ -1,4 +1,5 @@
 import React, { useState, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -481,6 +482,8 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
+  const [showApproveConfirmModal, setShowApproveConfirmModal] = useState(false);
+  const [pendingApproveAppId, setPendingApproveAppId] = useState<string | null>(null);
 
   // Estados de dados secundários
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
@@ -1452,10 +1455,19 @@ const AdminStudentDetails: React.FC = () => {
     if (!student?.user_id) return;
 
     if (totalInstallments === null) {
+      // Capture active plan details before cancelling (for audit log)
+      const activePlan = installmentPlans[feeType];
+
       // Cancel active plan
+      const cancelledAt = new Date().toISOString();
       const { error } = await supabase
         .from('fee_installment_plans')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .update({
+          status: 'cancelled',
+          updated_at: cancelledAt,
+          cancelled_by: user?.id,
+          cancelled_at: cancelledAt,
+        })
         .eq('user_id', student.user_id)
         .eq('fee_type', feeType)
         .eq('status', 'active');
@@ -1464,6 +1476,24 @@ const AdminStudentDetails: React.FC = () => {
       if (feeType === 'placement_fee') {
         await supabase.from('user_profiles').update({ placement_fee_installment_enabled: false }).eq('user_id', student.user_id);
       }
+      // Audit log
+      try {
+        await logAction(
+          'installment_plan_cancelled',
+          `Installment plan cancelled (${activePlan?.installments_paid ?? 0}/${activePlan?.total_installments ?? '?'} installments paid)`,
+          user?.id || '',
+          user?.role === 'post_sales' ? 'post_sales' : 'admin',
+          {
+            fee_type: feeType,
+            plan_id: activePlan?.id,
+            total_amount: activePlan?.total_amount,
+            total_installments: activePlan?.total_installments,
+            installments_paid: activePlan?.installments_paid,
+            amount_paid: activePlan?.amount_paid,
+            performed_by_role: user?.role,
+          }
+        );
+      } catch (_) { /* log failure não bloqueia o fluxo */ }
       toast.success('Installment plan cancelled.');
     } else {
       // Create new plan — compute actual total respecting overrides + scholarship data
@@ -1507,7 +1537,7 @@ const AdminStudentDetails: React.FC = () => {
         totalAmount = getFeeAmount(feeType);
       }
 
-      const { error } = await supabase
+      const { data: insertedPlan, error } = await supabase
         .from('fee_installment_plans')
         .insert({
           user_id: student.user_id,
@@ -1517,12 +1547,33 @@ const AdminStudentDetails: React.FC = () => {
           installments_paid: 0,
           amount_paid: 0,
           status: 'active',
-        });
+          created_by: user?.id,
+        })
+        .select('id')
+        .single();
       if (error) throw error;
       // Mirror: enable legacy placement_fee fields for backward compat
       if (feeType === 'placement_fee') {
         await supabase.from('user_profiles').update({ placement_fee_installment_enabled: true }).eq('user_id', student.user_id);
       }
+      // Audit log
+      try {
+        const installmentAmounts = computeInstallmentAmounts(totalAmount, totalInstallments);
+        await logAction(
+          'installment_plan_created',
+          `${totalInstallments}× installment plan created for ${feeType.replace(/_/g, ' ')} — ${totalInstallments}× of $${installmentAmounts[0].toFixed(2)}`,
+          user?.id || '',
+          user?.role === 'post_sales' ? 'post_sales' : 'admin',
+          {
+            fee_type: feeType,
+            plan_id: insertedPlan?.id,
+            total_amount: totalAmount,
+            total_installments: totalInstallments,
+            installment_amounts: installmentAmounts,
+            performed_by_role: user?.role,
+          }
+        );
+      } catch (_) { /* log failure não bloqueia o fluxo */ }
       toast.success(`${totalInstallments}× installment plan created.`);
     }
 
@@ -1538,7 +1589,7 @@ const AdminStudentDetails: React.FC = () => {
     setInstallmentPlans(map);
 
     queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-  }, [student?.user_id, profileId, queryClient, getFeeAmount]);
+  }, [student?.user_id, profileId, queryClient, getFeeAmount, user?.id, user?.role, logAction, installmentPlans]);
 
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
@@ -2554,15 +2605,16 @@ const AdminStudentDetails: React.FC = () => {
             url: publicUrl,
             status: 'under_review',
             uploaded_at: new Date().toISOString(),
+            uploaded_by_type: 'admin',
+            uploaded_by_name: userProfile?.full_name || user?.email || 'Admin',
             history: [...prevHistory, historyEntry]
           };
         }
         return d;
       });
 
-      const finalDocs = found
-        ? updatedDocs
-        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString(), history: [] }];
+      const newDocEntry = { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString(), uploaded_by_type: 'admin', uploaded_by_name: userProfile?.full_name || user?.email || 'Admin', history: [] };
+      const finalDocs = found ? updatedDocs : [...updatedDocs, newDocEntry];
 
       const { data, error } = await supabase
         .from('scholarship_applications')
@@ -4049,7 +4101,10 @@ const AdminStudentDetails: React.FC = () => {
                 onUploadDocument={handleUploadDocument}
                 onApproveDocument={handleApproveDocument}
                 onRejectDocument={handleRejectDocument}
-                onApproveApplication={approveApplication}
+                onApproveApplication={(appId) => {
+                    setPendingApproveAppId(appId);
+                    setShowApproveConfirmModal(true);
+                  }}
                   onRejectApplication={(appId) => {
                     setPendingRejectAppId(appId);
                     setShowRejectStudentModal(true);
@@ -4334,8 +4389,8 @@ const AdminStudentDetails: React.FC = () => {
       />
 
       {/* Modal para rejeitar aplicação */}
-      {showRejectStudentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      {showRejectStudentModal && ReactDOM.createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center">
           <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
             <h3 className="text-xl font-semibold text-slate-900 mb-4">Reject Application</h3>
             <p className="text-sm text-slate-600 mb-4">
@@ -4378,8 +4433,95 @@ const AdminStudentDetails: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* Modal de confirmação de aprovação */}
+      {showApproveConfirmModal && (() => {
+        const pendingApp = (student?.all_applications || []).find((a: any) => a.id === pendingApproveAppId);
+        const scholarship = pendingApp?.scholarships
+          ? (Array.isArray(pendingApp.scholarships) ? pendingApp.scholarships[0] : pendingApp.scholarships)
+          : null;
+        const universityName = scholarship?.universities?.name || scholarship?.university_name || '—';
+        return ReactDOM.createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Confirm Approval</h3>
+                  <p className="text-sm text-slate-500">Review the details before confirming</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 mb-5 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide flex-shrink-0">Student</span>
+                  <span className="text-sm font-semibold text-slate-900 text-right">{student?.student_name || '—'}</span>
+                </div>
+                <div className="flex items-start justify-between gap-2 border-t border-slate-200 pt-3">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide flex-shrink-0">Scholarship</span>
+                  <span className="text-sm font-semibold text-slate-900 text-right">{scholarship?.title || '—'}</span>
+                </div>
+                <div className="flex items-start justify-between gap-2 border-t border-slate-200 pt-3">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide flex-shrink-0">University</span>
+                  <span className="text-sm font-semibold text-slate-900 text-right">{universityName}</span>
+                </div>
+                {scholarship?.field_of_study && (
+                  <div className="flex items-start justify-between gap-2 border-t border-slate-200 pt-3">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide flex-shrink-0">Field of Study</span>
+                    <span className="text-sm font-semibold text-slate-900 text-right">{scholarship.field_of_study}</span>
+                  </div>
+                )}
+                {scholarship?.annual_value_with_scholarship && (
+                  <div className="flex items-start justify-between gap-2 border-t border-slate-200 pt-3">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide flex-shrink-0">With Scholarship</span>
+                    <span className="text-sm font-bold text-green-700 text-right">
+                      ${Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US')}<span className="text-xs font-medium text-green-600">/yr</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowApproveConfirmModal(false);
+                    setPendingApproveAppId(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowApproveConfirmModal(false);
+                    if (pendingApproveAppId) approveApplication(pendingApproveAppId);
+                    setPendingApproveAppId(null);
+                  }}
+                  disabled={approvingStudent}
+                  className="px-5 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {approvingStudent ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Approving...
+                    </>
+                  ) : (
+                    'Confirm Approval'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
 
       {/* Modal de Visualização de Documentos Premium */}
       {previewUrl && (

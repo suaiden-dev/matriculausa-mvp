@@ -392,9 +392,9 @@ export function transformPaymentsToRecordsAndStats({
     if (student.placement_fee_flow && student.is_placement_fee_paid && !globalFeesProcessed[student.user_id]?.placement_fee) {
       const installmentRows = placementInstallmentRows?.get(student.user_id) || [];
 
-      if (installmentRows.length > 1) {
-        // Multiple installment payments — create one row per payment
-        const planTotal = placementInstallmentPlans?.get(student.user_id) ?? installmentRows.length;
+      const planTotal = placementInstallmentPlans?.get(student.user_id) ?? installmentRows.length;
+      if (installmentRows.length > 1 || (installmentRows.length === 1 && planTotal > 1)) {
+        // Multiple installment payments (or 1 paid of N total) — create one row per paid installment
         installmentRows.forEach((row, idx) => {
           const rowAmount = Math.round((row.gross_amount_usd ?? row.amount) * 100);
           paymentRecords.push({
