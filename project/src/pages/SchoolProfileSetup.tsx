@@ -210,13 +210,11 @@ const SchoolProfileSetup: React.FC = () => {
           }
         };
         
-        // Se o estado foi alterado, buscar cidades e limpar cidade selecionada
+        // Se o estado foi alterado, limpar cidade selecionada
         if (parent === 'address' && child === 'state') {
           const address = newData.address as typeof formData.address;
           // Limpar cidade quando estado muda
           address.city = '';
-          // Buscar cidades do novo estado
-          fetchCitiesByState(value);
         }
         
         // Auto-populate location when city or state changes
@@ -550,61 +548,16 @@ const SchoolProfileSetup: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  
-                  {!formData.address.state ? (
-                    <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
-                      Select a state first
-                    </div>
-                  ) : loadingCities ? (
-                    <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
-                      Loading cities...
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <select
-                        value={formData.address.city}
-                        onChange={(e) => {
-                          handleInputChange('address.city', e.target.value);
-                          setCitySearch(''); // Limpar busca quando seleciona
-                        }}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
-                          errors['address.city'] ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                        size={formData.address.city ? 1 : (filteredCities.length > 10 ? 10 : Math.max(3, filteredCities.length + 1))}
-                      >
-                        <option value="">
-                          {citySearch ? `Search results for "${citySearch}"` : 'Select a city'}
-                        </option>
-                        {filteredCities.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      {/* Campo de busca integrado - só aparece quando não há cidade selecionada */}
-                      {!formData.address.city && (
-                        <div className="absolute top-0 left-0 right-0 bg-white border border-gray-300 rounded-t-lg px-3 py-1">
-                          <input
-                            type="text"
-                            value={citySearch}
-                            onChange={(e) => setCitySearch(e.target.value)}
-                            placeholder="Search cities..."
-                            className="w-full text-sm border-none outline-none bg-transparent"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
+                  <input
+                    type="text"
+                    value={formData.address.city}
+                    onChange={(e) => handleInputChange('address.city', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
+                      errors['address.city'] ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter city"
+                  />
                   {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
-                  {cities.length > 0 && !loadingCities && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {cities.length} cities available
-                      {citySearch && ` • ${filteredCities.length} matching "${citySearch}"`}
-                    </p>
-                  )}
                 </div>
 
                 <div className="md:col-span-2">
