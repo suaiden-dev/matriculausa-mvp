@@ -4,7 +4,7 @@ import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import NotificationService from '../services/NotificationService';
-// ✅ OTIMIZAÇÃO: Lazy loading do cities.json - carregar apenas quando necessário
+import usCities from '../data/us-cities-by-state.json';
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -21,9 +21,41 @@ const US_STATES = [
   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
 ];
 
+interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+interface Contact {
+  phone: string;
+  email: string;
+  admissionsEmail: string;
+  fax: string;
+}
+
+interface SchoolProfileFormData {
+  name: string;
+  description: string;
+  website: string;
+  location: string;
+  address: Address;
+  contact: Contact;
+  programs: string[];
+}
+
 const SchoolProfileSetup: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    const savedStep = localStorage.getItem('school_setup_profile_step');
+    if (savedStep) {
+      const step = parseInt(savedStep, 10);
+      if (step >= 1 && step <= 4) return step;
+    }
+    return 1;
+  });
   const [cities, setCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [citySearch, setCitySearch] = useState('');
@@ -31,33 +63,59 @@ const SchoolProfileSetup: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    // Basic Information
-    name: '',
-    description: '',
-    website: '',
-    
-    // Location
-    location: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'United States'
-    },
-    
-    // Contact Information
-    contact: {
-      phone: '',
-      email: '',
-      admissionsEmail: '',
-      fax: ''
-    },
-    
-    // Academic Information
-    programs: [] as string[],
+  const [formData, setFormData] = useState<SchoolProfileFormData>(() => {
+    const saved = localStorage.getItem('school_setup_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing school_setup_profile from localStorage', e);
+      }
+    }
+    return {
+      // Basic Information
+      name: '',
+      description: '',
+      website: '',
+      
+      // Location
+      location: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'United States'
+      },
+      
+      // Contact Information
+      contact: {
+        phone: '',
+        email: '',
+        admissionsEmail: '',
+        fax: ''
+      },
+      
+      // Academic Information
+      programs: [] as string[],
+    };
   });
+
+  // Salvar no localStorage sempre que o formData ou currentStep mudarem
+  useEffect(() => {
+    localStorage.setItem('school_setup_profile', JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
+    localStorage.setItem('school_setup_profile_step', String(currentStep));
+  }, [currentStep]);
+
+  // Carregar cidades se já houver um estado selecionado ao iniciar
+  useEffect(() => {
+    if (formData.address.state) {
+      fetchCitiesByState(formData.address.state);
+    }
+  }, []);
 
   const [newProgram, setNewProgram] = useState('');
 
@@ -68,9 +126,8 @@ const SchoolProfileSetup: React.FC = () => {
     city.toLowerCase().includes(citySearch.toLowerCase())
   );
 
-  // ✅ OTIMIZAÇÃO: Função para buscar cidades com lazy loading do cities.json
-  // Carrega o arquivo de 208 MB apenas quando o usuário seleciona um estado
-  const fetchCitiesByState = async (state: string) => {
+  // ✅ OTIMIZAÇÃO: Busca instantânea das cidades a partir do JSON de estados dos EUA otimizado
+  const fetchCitiesByState = (state: string) => {
     if (!state) {
       setCities([]);
       setCitySearch(''); // Limpar busca quando não há estado
@@ -82,32 +139,8 @@ const SchoolProfileSetup: React.FC = () => {
     
     try {
       const stateCode = getStateAbbreviation(state);
-      
-      // ✅ OTIMIZAÇÃO: Carregar cities.json apenas quando necessário (lazy loading)
-      // Isso evita carregar 208 MB no início da aplicação
-      const citiesModule = await import('cities.json');
-      const citiesData = citiesModule.default || citiesModule;
-      
-      // Filtrar cidades dos EUA para o estado específico
-      const allCities = (citiesData as any[]);
-      
-      // O dataset usa 'admin1' para o estado, não 'state'
-      const stateCities = allCities
-        .filter(city => {
-          // Verificar se é dos EUA
-          const isUS = city.country === 'US';
-          
-          // Verificar se é do estado correto usando admin1
-          const isState = city.admin1 === stateCode;
-          
-          return isUS && isState;
-        })
-        .map(city => city.name)
-        .filter((city: string, index: number, self: string[]) => 
-          self.indexOf(city) === index // Remove duplicatas
-        )
-        .sort();
-      
+      const stateData = (usCities.states as Record<string, { name: string; cities: string[] }>)[stateCode];
+      const stateCities = stateData ? stateData.cities : [];
       setCities(stateCities);
     } catch (error: any) {
       console.error('Erro ao buscar cidades:', error.message);
@@ -149,7 +182,7 @@ const SchoolProfileSetup: React.FC = () => {
         .from('universities')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -254,7 +287,7 @@ const SchoolProfileSetup: React.FC = () => {
   const removeProgram = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      programs: prev.programs.filter((_, i) => i !== index)
+      programs: prev.programs.filter((_: string, i: number) => i !== index)
     }));
   };
 
@@ -275,9 +308,23 @@ const SchoolProfileSetup: React.FC = () => {
         if (!formData.address.zipCode.trim()) newErrors['address.zipCode'] = 'ZIP code is required';
         break;
       case 3:
-        if (!formData.contact.phone || formData.contact.phone.length < 8) newErrors['contact.phone'] = 'Please enter a valid phone number with country code';
-        if (!formData.contact.email.trim()) newErrors['contact.email'] = 'Email is required';
-        if (!formData.contact.admissionsEmail.trim()) newErrors['contact.admissionsEmail'] = 'Admissions email is required';
+        if (!formData.contact.phone || formData.contact.phone.length < 8) {
+          newErrors['contact.phone'] = 'Please enter a valid phone number with country code';
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!formData.contact.email.trim()) {
+          newErrors['contact.email'] = 'Email is required';
+        } else if (!emailRegex.test(formData.contact.email.trim())) {
+          newErrors['contact.email'] = 'Please enter a valid email address';
+        }
+        
+        if (!formData.contact.admissionsEmail.trim()) {
+          newErrors['contact.admissionsEmail'] = 'Admissions email is required';
+        } else if (!emailRegex.test(formData.contact.admissionsEmail.trim())) {
+          newErrors['contact.admissionsEmail'] = 'Please enter a valid admissions email';
+        }
         break;
       case 4:
         if (formData.programs.length === 0) newErrors.programs = 'At least one program is required';
@@ -324,6 +371,10 @@ const SchoolProfileSetup: React.FC = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Limpar o localStorage após o cadastro concluído com sucesso
+      localStorage.removeItem('school_setup_profile');
+      localStorage.removeItem('school_setup_profile_step');
 
       // Enviar notificação para o admin sobre universidade pendente para aprovação
       try {
@@ -569,7 +620,7 @@ const SchoolProfileSetup: React.FC = () => {
                     readOnly
                   />
                   {errors.location && <p className="text-red-600 text-xs mt-1">{errors.location}</p>}
-                  <p className="text-xs text-gray-500 mt-1">Este campo é preenchido automaticamente baseado na cidade e estado</p>
+                  <p className="text-xs text-gray-500 mt-1">This field is automatically filled based on the city and state</p>
                 </div>
 
                 <div>

@@ -1,6 +1,6 @@
 {
   "scholarships": {
-    "title": "Tu futuro en EE. UU. no tiene que parecer distante",
+    "title": "Tu futuro en Estados Unidos no tiene que parecer distante",
     "subtitle": "Conoce becas que te acercan a universidades estadounidenses.",
     "searchPlaceholder": "Search scholarships...",
     "filterBy": "Filter by",
@@ -317,6 +317,11 @@
     "loginRequired": {
       "title": "Inicio de Sesión Requerido",
       "message": "Inicie sesión para ver los detalles de las universidades y acceder a todas las funciones"
+    },
+    "unlockAccess": {
+      "title": "Desbloquea el Acceso",
+      "message": "Inicie el Proceso de Selección para ver todos los detalles de las universidades.",
+      "button": "Iniciar Proceso de Selección"
     },
     "search": {
       "placeholder": "Buscar universidades...",

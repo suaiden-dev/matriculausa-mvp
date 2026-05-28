@@ -303,7 +303,7 @@ const Home: React.FC = () => {
                     to="/scholarships"
                     className="group inline-flex items-center gap-1.5 text-slate-900 hover:text-[#D0151C] font-black text-lg transition-colors duration-300"
                   >
-                    <span>Ver todas</span>
+                    <span>{t('home.featuredScholarships.viewAll', 'Ver todas')}</span>
                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
@@ -628,7 +628,7 @@ const Home: React.FC = () => {
                   to="/scholarships"
                   className="group inline-flex items-center gap-1.5 text-slate-900 hover:text-[#D0151C] font-black text-lg transition-colors duration-300"
                 >
-                  <span>Ver todas</span>
+                  <span>{t('home.featuredScholarships.viewAll', 'Ver todas')}</span>
                   <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -724,7 +724,9 @@ const Home: React.FC = () => {
                 >
                   {/* Heading (left) */}
                   <div className="shrink-0 text-center sm:text-left sm:pr-6 sm:border-r sm:border-slate-200">
-                    <p className="text-3xl md:text-4xl font-black text-[#05294E] leading-none">+500</p>
+                    <p className="text-3xl md:text-4xl font-black text-[#05294E] leading-none">
+                      {t('home.features.universitiesNumber', '+500')}
+                    </p>
                     <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider mt-1">
                       {t('home.features.universitiesCount', 'universidades')}
                     </p>
@@ -904,7 +906,8 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-            Veja quem já está vivendo a <span className="text-[#D0151C] italic">experiência.</span>
+            {t('home.successWall.title.part1', 'Veja quem já está vivendo a')}{' '}
+            <span className="text-[#D0151C] italic">{t('home.successWall.title.highlight', 'experiência.')}</span>
           </h2>
         </div>
 

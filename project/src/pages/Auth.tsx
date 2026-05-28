@@ -52,6 +52,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   // Ref para evitar múltiplas execuções
   const referralCodeProcessedRef = useRef(false);
 
@@ -398,8 +399,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         !formData.email?.trim() || 
         !formData.phone?.trim() || 
         !formData.password?.trim() || 
-        !formData.confirmPassword?.trim() || 
-        !formData.universityName?.trim()
+        !formData.confirmPassword?.trim()
       );
 
       if (isStudentMissing || isUniversityMissing) {
@@ -463,7 +463,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         // Limite de 20 caracteres para novas senhas
         if (formData.password.length > 20) {
-          setError('Password must be at most 20 characters.');
+          setError(t('authPage.messages.weakPassword')); // A chave weakPassword ou uma genérica de validação pode ser usada, mas vamos traduzir apropriadamente com uma string customizada no i18n
           setLoading(false);
           return;
         }
@@ -526,7 +526,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           newsletter_consent: newsletterConsent,
           // Add additional registration data only for universities
           ...(activeTab === 'university' && {
-            universityName: formData.universityName || '',
             position: formData.position || '',
             website: formData.website || '',
             location: formData.location || '',
@@ -581,10 +580,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         markAsConverted(normalizedEmail);
 
-        // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
-        // O AuthRedirect vai redirecionar para o dashboard
-        // Para universidades, também não mostra modal - o email será confirmado normalmente
-        return;
+         // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
+         // O AuthRedirect vai redirecionar para o dashboard
+         // Para universidades, definir isRegistered para mostrar a mensagem de sucesso e redirecionar em 10 segundos
+         if (activeTab === 'university') {
+           setIsRegistered(true);
+           setLoading(false);
+           setTimeout(() => {
+             navigate(`/login${location.search}`);
+           }, 10000);
+         }
+         return;
       } else {
         await login(formData.email, formData.password);
         // O redirecionamento será feito pelo AuthRedirect
@@ -647,70 +653,34 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return (
       <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
         {/* Left Side: Branding & Copywriting (Hidden on Mobile) */}
-        <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-center items-center p-12 lg:p-16 xl:p-24">
-          {/* Abstract Background Elements */}
-          <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-            <div className="absolute top-1/2 -left-24 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
+        <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-between items-center p-12 lg:p-16 xl:p-24 text-center">
+          {/* Background Image with Dark Overlay */}
+          <div className="absolute inset-0 w-full h-full">
+            <img 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/student-couple-graduation-diploma-campus.webp" 
+              alt="Estudantes graduados nos EUA" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-[#05294E]/60 mix-blend-multiply"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#031b33]/60 via-transparent to-transparent"></div>
           </div>
 
-          {/* Content Wrapper for Vertical Centering */}
-          <div className="relative z-10 w-full max-w-xl space-y-12 xl:space-y-16">
-            {/* Logo & Identity */}
-            <div className="flex flex-col items-center">
-              <Link to="/">
-                <img 
-                  src="/favicon-branco.png" 
-                  alt="Matrícula USA" 
-                  className="h-16 w-auto mb-10 hover:scale-105 transition-transform duration-300"
-                />
-              </Link>
-              
-              <div className="space-y-6">
-                <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight text-center">
-                  Transforme seu sonho de estudar nos EUA em realidade.
-                </h1>
-              </div>
-            </div>
+          {/* Logo - Top */}
+          <div className="relative z-10">
+            <Link to="/">
+              <img 
+                src="/favicon-branco.png" 
+                alt="Matrícula USA" 
+                className="h-16 w-auto hover:scale-105 transition-transform duration-300"
+              />
+            </Link>
+          </div>
 
-            {/* Identity Points / Features */}
-            <div className="space-y-8">
-              <div className="flex items-center space-x-4 group">
-                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                  <GraduationCap className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Bolsas Exclusivas</h3>
-                  <p className="text-blue-100/70 text-sm leading-relaxed">
-                    Acesso a descontos de até 75% na anuidade através de parcerias diretas.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 group">
-                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Processo Simplificado</h3>
-                  <p className="text-blue-100/70 text-sm leading-relaxed">
-                    Nós cuidamos da burocracia para que você foque apenas nos seus estudos.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 group">
-                <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                  <User className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Suporte Especializado</h3>
-                  <p className="text-blue-100/70 text-sm leading-relaxed">
-                    Mentoria personalizada em português durante todas as etapas da jornada.
-                  </p>
-                </div>
-              </div>
-            </div>
+          {/* Title - Bottom */}
+          <div className="relative z-10 w-full max-w-xl">
+            <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
+              {t('authPage.sideTitle', 'Transforme seu sonho de estudar nos EUA em realidade.')}
+            </h1>
           </div>
         </div>
 
@@ -839,71 +809,45 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   return (
     <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
       {/* Left Side: Branding & Copywriting (Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-center items-center p-12 lg:p-16 xl:p-24">
-        {/* Abstract Background Elements */}
-        <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 -left-24 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-[#05294E] relative overflow-hidden flex-col justify-between items-center p-12 lg:p-16 xl:p-24 text-center">
+        {/* Background Image with Dark Overlay */}
+        <div className="absolute inset-0 w-full h-full">
+          {/* Student Image */}
+          <img 
+            src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/student-couple-graduation-diploma-campus.webp" 
+            alt="Estudantes graduados nos EUA" 
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              activeTab === 'student' ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          {/* University Image */}
+          <img 
+            src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/aerial-view-university-campus-quad-stadium.webp" 
+            alt="Universidade Campus" 
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              activeTab === 'university' ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          <div className="absolute inset-0 bg-[#05294E]/60 mix-blend-multiply"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#031b33]/60 via-transparent to-transparent"></div>
         </div>
 
-        {/* Content Wrapper for Vertical Centering */}
-        <div className="relative z-10 w-full max-w-xl space-y-12 xl:space-y-16">
-          {/* Logo & Identity */}
-          <div className="flex flex-col items-center">
-            <Link to="/">
-              <img 
-                src="/favicon-branco.png" 
-                alt="Matrícula USA" 
-                className="h-16 w-auto mb-10 hover:scale-105 transition-transform duration-300"
-              />
-            </Link>
-            <div className="space-y-6">
-              <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight text-center">
-                Transforme seu sonho de estudar nos EUA em realidade.
-              </h1>
-            </div>
-          </div>
+        {/* Logo - Top */}
+        <div className="relative z-10">
+          <Link to="/">
+            <img 
+              src="/favicon-branco.png" 
+              alt="Matrícula USA" 
+              className="h-16 w-auto hover:scale-105 transition-transform duration-300"
+            />
+          </Link>
+        </div>
 
-          {/* Identity Points / Features */}
-          <div className="space-y-8">
-            <div className="flex items-center space-x-4 group">
-              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1">Bolsas Exclusivas</h3>
-                <p className="text-blue-100/70 text-sm leading-relaxed">
-                  Acesso a descontos de até 75% na anuidade através de parcerias diretas.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 group">
-              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1">Processo Simplificado</h3>
-                <p className="text-blue-100/70 text-sm leading-relaxed">
-                  Nós cuidamos da burocracia para que você foque apenas nos seus estudos.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 group">
-              <div className="bg-white/10 p-3 rounded-2xl group-hover:bg-white/20 transition-colors duration-300 border border-white/10">
-                <User className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1">Suporte Especializado</h3>
-                <p className="text-blue-100/70 text-sm leading-relaxed">
-                  Mentoria personalizada em português durante todas as etapas da jornada.
-                </p>
-              </div>
-            </div>
-          </div>
-
-
+        {/* Title - Bottom */}
+        <div className="relative z-10 w-full max-w-xl">
+          <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
+            {t('authPage.sideTitle', 'Transforme seu sonho de estudar nos EUA em realidade.')}
+          </h1>
         </div>
       </div>
 
@@ -982,6 +926,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <div>
                 <div className="font-bold text-red-800 mb-0.5">{t('authPage.messages.registrationFailed')}</div>
                 <div className="opacity-90">{error}</div>
+              </div>
+            </div>
+          )}
+
+          {isRegistered && (
+            <div className="bg-green-50 border border-green-200 text-green-800 px-5 py-4 rounded-2xl text-sm mb-8 flex items-start">
+              <CheckCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0 text-green-600" />
+              <div>
+                <div className="font-bold text-green-900 mb-0.5">Sucesso!</div>
+                <div className="opacity-90 leading-relaxed">
+                  Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, confirme seu e-mail antes de fazer o login. Redirecionando para a tela de login em 10 segundos...
+                </div>
               </div>
             </div>
           )}
@@ -1194,7 +1150,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {referralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Detected: {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.title') : t('authPage.register.referralCode.title')}
+                            {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.referralCode.applied')}
                           </p>
                         )}
                         {referralCodeValid === false && (
@@ -1214,29 +1170,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             {activeTab === 'university' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                  {/* University Name — col 1 */}
-                  <div>
-                    <label htmlFor="universityName" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.universityName')}
-                    </label>
-                    <div className="relative group">
-                      <Building className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#D0151C] transition-colors" />
-                      <input
-                        id="universityName"
-                        name="universityName"
-                        type="text"
-                        required
-                        value={formData.universityName || ''}
-                        onChange={handleInputChange}
-                        onBlur={() => trackFieldFilled('university_name')}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
-                        placeholder={t('authPage.register.enterUniversityName')}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Contact Name — col 2 */}
-                  <div>
+                  {/* Contact Name — full width */}
+                  <div className="sm:col-span-2">
                     <label htmlFor="name" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
                       {t('authPage.register.contactPersonName')}
                     </label>

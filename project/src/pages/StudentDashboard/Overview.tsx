@@ -31,9 +31,10 @@ import './Overview.css';
 // --- Sub-componente do Passo 1 do Onboarding ---
 interface Step1SelectionFeeCTAProps {
   onStart: () => void;
+  t: any;
 }
 
-const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) => {
+const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart, t }) => {
   return (
     <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-[#05294E] p-6 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-8 border border-white/10 ring-1 ring-white/5">
       {/* Dynamic Background Blobs */}
@@ -76,7 +77,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
             {/* Label */}
             <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-1.5">
               <span className="text-white font-bold text-[10px] sm:text-xs uppercase tracking-[0.15em]">
-                Processo Seletivo
+                {t('studentDashboard.onboardingStep1.stepLabel')}
               </span>
             </div>
           </motion.div>
@@ -93,7 +94,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
                 transition={{ delay: 0.1 }}
                 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight"
               >
-                Sua bolsa nos EUA começa aqui
+                {t('studentDashboard.onboardingStep1.title')}
               </motion.h1>
               <motion.p 
                 initial={{ opacity: 0, x: -20 }}
@@ -101,8 +102,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
                 transition={{ delay: 0.2 }}
                 className="text-white/80 text-sm sm:text-lg md:text-xl leading-relaxed"
               >
-                Pague o Processo Seletivo e libere seu acesso completo — 
-                as melhores bolsas de estudos para os Estados Unidos.
+                {t('studentDashboard.onboardingStep1.description')}
               </motion.p>
             </div>
 
@@ -115,15 +115,15 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
             >
               <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
                 <GraduationCap className="w-5 h-5 mr-3 text-blue-400" />
-                Bolsas presenciais, online e híbridas
+                {t('studentDashboard.onboardingStep1.benefit1')}
               </div>
               <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
                 <Briefcase className="w-5 h-5 mr-3 text-blue-400" />
-                Autorização de trabalho OPT e CPT
+                {t('studentDashboard.onboardingStep1.benefit2')}
               </div>
               <div className="inline-flex items-center bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-5 py-3 text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors cursor-default">
                 <RefreshCw className="w-5 h-5 mr-3 text-blue-400" />
-                Reembolso se não for aceito em nenhuma bolsa
+                {t('studentDashboard.onboardingStep1.benefit3')}
               </div>
             </motion.div>
           </div>
@@ -138,7 +138,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
             <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/60 to-transparent z-10 opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
             <img 
               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-four-students-graduation-blue-gown.webp" 
-              alt="Estudantes em uma universidade moderna"
+              alt={t('studentDashboard.onboardingStep1.imageAlt')}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
               style={{ objectPosition: '65% 50%' }} // Ajuste aqui a posição da imagem (X% Y%)
             />
@@ -157,7 +157,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
             className="flex items-center text-white/80"
           >
             <p className="text-sm sm:text-base font-medium tracking-wide text-center sm:text-left">
-              As bolsas disponíveis são <span className="text-white font-bold">limitadas</span>! Garanta sua vaga!
+              {t('studentDashboard.onboardingStep1.urgencyNoticeBefore')}<span className="text-white font-bold">{t('studentDashboard.onboardingStep1.urgencyNoticeBold')}</span>{t('studentDashboard.onboardingStep1.urgencyNoticeAfter')}
             </p>
           </motion.div>
 
@@ -171,7 +171,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
               onClick={onStart}
               className="group relative inline-flex items-center justify-center bg-white text-[#05294E] px-12 py-5 rounded-2xl font-black text-xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] shadow-[0_15px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
             >
-              Começar
+              {t('studentDashboard.onboardingStep1.startBtn')}
             </button>
           </motion.div>
         </div>
@@ -181,7 +181,7 @@ const Step1SelectionFeeCTA: React.FC<Step1SelectionFeeCTAProps> = ({ onStart }) 
 };
 
 const Overview: React.FC = () => {
-  const { t, i18n } = useTranslation(['dashboard', 'common']);
+  const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -425,17 +425,8 @@ const Overview: React.FC = () => {
   let currentStepDescription = t(`studentDashboard.progressBar.onboardingBanner.stepDescriptions.${currentStepKey}`);
 
   if (currentStepKey === 'selection_fee' && !userProfile?.has_paid_selection_process_fee) {
-    const lang = i18n.language || 'pt';
-    if (lang.startsWith('pt')) {
-      currentStepLabel = 'Processo Seletivo';
-      currentStepDescription = 'Dê início ao processo seletivo, descubra bolsas de estudos nos Estados Unidos esperando por você.';
-    } else if (lang.startsWith('es')) {
-      currentStepLabel = 'Proceso de Selección';
-      currentStepDescription = 'Inicia el proceso de selección y descubre becas de estudio en Estados Unidos esperándote.';
-    } else {
-      currentStepLabel = 'Selection Process';
-      currentStepDescription = 'Start the selection process and discover study scholarships in the United States waiting for you.';
-    }
+    currentStepLabel = t('studentDashboard.progressBar.onboardingBanner.stepLabels.selection_fee_pending');
+    currentStepDescription = t('studentDashboard.progressBar.onboardingBanner.stepDescriptions.selection_fee_pending');
   }
 
   const isStep1Pending = currentStepKey === 'selection_fee' && !userProfile?.has_paid_selection_process_fee;
@@ -459,6 +450,7 @@ const Overview: React.FC = () => {
       {isStep1Pending ? (
         <Step1SelectionFeeCTA
           onStart={() => navigate('/student/onboarding?step=selection_fee')}
+          t={t}
         />
       ) : (
         <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-[#05294E] p-6 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-8 border border-white/10 ring-1 ring-white/5">

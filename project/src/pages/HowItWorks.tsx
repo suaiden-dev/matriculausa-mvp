@@ -188,7 +188,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
            }}
            className="text-center mb-16 home-page"
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-6 max-w-3xl mx-auto">
             {texts.title}
           </h2>
           <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
@@ -209,14 +209,15 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
             <table className="w-full text-left border-collapse min-w-0 md:min-w-[800px]">
               <thead>
                 <tr className="border-b-2 border-slate-100">
-                  <th className="py-8 px-6 text-sm font-bold uppercase tracking-widest text-slate-400 w-1/4 hidden md:table-cell">Diferencial</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 w-1/2 md:w-auto">Fazer sozinho</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 hidden md:table-cell">Agências tradicionais</th>
-                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-[#05294E] bg-blue-50 border-x border-t border-blue-100 w-1/2 md:w-auto">
-                    <div className="inline-block bg-[#D0151C] text-white text-[9px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-sm mb-2 whitespace-nowrap">
-                      Recomendado
-                    </div>
-                    <span className="block">Matrícula USA</span>
+                  <th className="py-8 px-6 text-sm font-bold uppercase tracking-widest text-slate-400 w-1/4 hidden md:table-cell">{t('howItWorks.showcaseTable.differential')}</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 w-1/2 md:w-auto">{t('howItWorks.showcaseTable.doItAlone')}</th>
+                  <th className="py-8 px-6 text-center text-sm font-bold uppercase tracking-widest text-slate-400/80 hidden md:table-cell">{t('howItWorks.showcaseTable.traditionalAgencies')}</th>
+                  <th className="py-8 px-6 text-center bg-blue-50 border-x border-t border-blue-100 w-1/2 md:w-auto">
+                    <img
+                      src="/logo.png.png"
+                      alt="Matrícula USA"
+                      className="h-10 w-auto mx-auto"
+                    />
                   </th>
                 </tr>
               </thead>
@@ -224,7 +225,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                 {/* Row 1 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
                   <td className="py-8 px-6 hidden md:table-cell">
-                    <p className="text-base font-bold text-slate-800">Acesso a bolsas</p>
+                    <p className="text-base font-bold text-slate-800">{t('howItWorks.showcaseTable.accessScholarships')}</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -232,7 +233,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Difícil encontrar oportunidades reais</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.difficultOpportunities')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center hidden md:table-cell">
@@ -240,7 +241,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Poucas opções ou descontos limitados</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.fewOptions')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
@@ -249,7 +250,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Bolsas exclusivas com grandes descontos</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">{t('howItWorks.showcaseTable.exclusiveScholarships')}</span>
                     </div>
                   </td>
                 </tr>
@@ -257,7 +258,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                 {/* Row 2 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
                   <td className="py-8 px-6 hidden md:table-cell">
-                    <p className="text-base font-bold text-slate-800">Suporte e mentoria</p>
+                    <p className="text-base font-bold text-slate-800">{t('howItWorks.showcaseTable.supportMentorship')}</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -265,7 +266,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Você decide tudo por conta própria</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.decideAlone')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center hidden md:table-cell">
@@ -273,7 +274,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Atendimento genérico e pouco personalizado</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.genericService')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
@@ -282,7 +283,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Orientação estratégica com especialistas</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">{t('howItWorks.showcaseTable.strategicOrientation')}</span>
                     </div>
                   </td>
                 </tr>
@@ -290,14 +291,14 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                 {/* Row 3 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
                   <td className="py-8 px-6 hidden md:table-cell">
-                    <p className="text-base font-bold text-slate-800">Transparência nos custos</p>
+                    <p className="text-base font-bold text-slate-800">{t('howItWorks.showcaseTable.costTransparency')}</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-60">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Gastos podem aparecer no caminho</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.hiddenExpenses')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center hidden md:table-cell">
@@ -306,7 +307,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Taxas extras e pouca clareza</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.extraFees')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
@@ -315,7 +316,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Transparência em todos os passos</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">{t('howItWorks.showcaseTable.transparencyAllSteps')}</span>
                     </div>
                   </td>
                 </tr>
@@ -323,7 +324,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                 {/* Row 4 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
                   <td className="py-8 px-6 hidden md:table-cell">
-                    <p className="text-base font-bold text-slate-800">Organização do processo</p>
+                    <p className="text-base font-bold text-slate-800">{t('howItWorks.showcaseTable.processOrganization')}</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -331,7 +332,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manual, confuso e fácil de errar</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.manualConfusing')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center hidden md:table-cell">
@@ -339,7 +340,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-amber-500">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Processo lento e espalhado</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.slowProcess')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center bg-blue-50 border-x border-blue-100">
@@ -348,7 +349,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Tudo simples em uma única plataforma</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">{t('howItWorks.showcaseTable.simplePlatform')}</span>
                     </div>
                   </td>
                 </tr>
@@ -356,7 +357,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                 {/* Row 5 */}
                 <tr className="group transition-colors hover:bg-slate-50/50">
                   <td className="py-8 px-6 hidden md:table-cell">
-                    <p className="text-base font-bold text-slate-800">Segurança na aprovação</p>
+                    <p className="text-base font-bold text-slate-800">{t('howItWorks.showcaseTable.approvalSecurity')}</p>
                   </td>
                   <td className="py-8 px-6 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
@@ -364,7 +365,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sem garantia se não avançar</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.noGuarantee')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center hidden md:table-cell">
@@ -373,7 +374,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Garantia nem sempre clara</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('howItWorks.showcaseTable.guaranteeUnclear')}</span>
                     </div>
                   </td>
                   <td className="py-8 px-6 text-center bg-blue-50 border-x border-b border-blue-100">
@@ -382,7 +383,7 @@ const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t,
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="m9 12 2 2 4-4"></path>
                       </svg>
-                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">Aprovação garantida ou reembolso total</span>
+                      <span className="text-[10px] text-[#05294E] font-black uppercase tracking-wider">{t('howItWorks.showcaseTable.refundSelection')}</span>
                     </div>
                   </td>
                 </tr>
@@ -440,11 +441,11 @@ const JourneySection: React.FC<{
                       {/* Header containing counter */}
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                         <div>
-                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">Minha Seleção</h4>
-                          <p className="text-[9px] text-muted-foreground font-bold">Cursos Pré-Selecionados</p>
+                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">{t('howItWorks.mockups.mySelection')}</h4>
+                          <p className="text-[9px] text-muted-foreground font-bold">{t('howItWorks.mockups.preSelectedCourses')}</p>
                         </div>
                         <span className="bg-blue-50 text-blue-600 border border-blue-100 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
-                          4 / 4 Selecionados
+                          {t('howItWorks.mockups.selectedCount')}
                         </span>
                       </div>
 
@@ -454,8 +455,8 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Master of Science in Computer Science</h5>
-                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Faculty and Staff Scholarship</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
@@ -465,10 +466,10 @@ const JourneySection: React.FC<{
                           </div>
                           <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
                             <div className="space-x-1.5">
-                              <span className="text-slate-400 line-through">$37,480</span>
-                              <span className="text-green-600">$24,370 / ano</span>
+                              <span className="text-slate-400 line-through">$6,000</span>
+                              <span className="text-green-600">$4,000 / {t('howItWorks.mockups.year')}</span>
                             </div>
-                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">35% OFF</span>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">33% OFF</span>
                           </div>
                         </div>
 
@@ -476,8 +477,8 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Professional MBA</h5>
-                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Pós-Graduação / MBA</p>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Academic Excellence Scholarship</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
@@ -487,10 +488,10 @@ const JourneySection: React.FC<{
                           </div>
                           <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
                             <div className="space-x-1.5">
-                              <span className="text-slate-400 line-through">$32,700</span>
-                              <span className="text-green-600">$19,500 / ano</span>
+                              <span className="text-slate-400 line-through">$8,000</span>
+                              <span className="text-green-600">$4,200 / {t('howItWorks.mockups.year')}</span>
                             </div>
-                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">40% OFF</span>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">47% OFF</span>
                           </div>
                         </div>
 
@@ -498,8 +499,8 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Master of Business in Business Analytics</h5>
-                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Special Scholarship</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
@@ -509,10 +510,10 @@ const JourneySection: React.FC<{
                           </div>
                           <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
                             <div className="space-x-1.5">
-                              <span className="text-slate-400 line-through">$44,700</span>
-                              <span className="text-green-600">$21,900 / ano</span>
+                              <span className="text-slate-400 line-through">$15,000</span>
+                              <span className="text-green-600">$4,200 / {t('howItWorks.mockups.year')}</span>
                             </div>
-                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">51% OFF</span>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">72% OFF</span>
                           </div>
                         </div>
 
@@ -520,8 +521,8 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">MS Computer Science</h5>
-                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Mestrado</p>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">STEM Scholarship</h5>
+                              <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.graduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5">
@@ -531,10 +532,10 @@ const JourneySection: React.FC<{
                           </div>
                           <div className="bg-white rounded-xl p-2 border border-slate-100 flex items-center justify-between text-[8px] font-bold">
                             <div className="space-x-1.5">
-                              <span className="text-slate-400 line-through">$27,000</span>
-                              <span className="text-green-600">$16,625 / ano</span>
+                              <span className="text-slate-400 line-through">$15,000</span>
+                              <span className="text-green-600">$4,200 / {t('howItWorks.mockups.year')}</span>
                             </div>
-                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">38% OFF</span>
+                            <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[7px] font-extrabold">72% OFF</span>
                           </div>
                         </div>
                       </div>
@@ -580,13 +581,13 @@ const JourneySection: React.FC<{
                         {/* Top Right Badges */}
                         <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                           <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold shadow-sm uppercase tracking-wider flex items-center gap-1">
-                            ★ Exclusiva
+                            ★ {t('howItWorks.mockups.exclusive')}
                           </span>
                         </div>
                         {/* Course overlay label */}
                         <div className="absolute inset-y-0 left-0 w-[80%] bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-3">
                           <p className="text-[10px] font-black text-slate-900 leading-tight">
-                            MS COMPUTER SCIENCE
+                            STEM SCHOLARSHIP
                           </p>
                         </div>
                       </div>
@@ -595,22 +596,22 @@ const JourneySection: React.FC<{
                       <div className="p-4 space-y-3 flex-1 flex flex-col">
                         {/* Title & Uni */}
                         <div>
-                          <h4 className="text-xs font-black text-slate-900 leading-tight">MS Computer Science</h4>
+                          <h4 className="text-xs font-black text-slate-900 leading-tight">STEM Scholarship</h4>
                         </div>
 
                         {/* Financial Box */}
                         <div className="bg-white rounded-xl p-3 border border-blue-100 shadow-sm space-y-1.5">
                           <div className="flex justify-between items-center text-[9px]">
-                            <span className="text-slate-400 font-medium">Anuidade Original</span>
-                            <span className="text-slate-400 font-bold line-through">$27,000</span>
+                            <span className="text-slate-400 font-medium">{t('howItWorks.mockups.originalTuition', 'Anuidade Original')}</span>
+                            <span className="text-slate-400 font-bold line-through">$15,000</span>
                           </div>
                           <div className="flex justify-between items-center text-[9px]">
-                            <span className="text-[#05294E] font-bold">Com Bolsa de Estudo</span>
-                            <span className="text-green-600 font-black text-xs">$16,625 / ano</span>
+                            <span className="text-[#05294E] font-bold">{t('howItWorks.mockups.withScholarship')}</span>
+                            <span className="text-green-600 font-black text-xs">$3,800 / {t('howItWorks.mockups.year')}</span>
                           </div>
                           <div className="flex justify-between items-center pt-1 border-t border-slate-100 text-[9px]">
-                            <span className="text-slate-400 font-medium">Desconto Garantido</span>
-                            <span className="text-green-600 font-extrabold bg-green-50 px-1.5 py-0.5 rounded text-[8px]">38% OFF</span>
+                            <span className="text-slate-400 font-medium">{t('howItWorks.mockups.guaranteedDiscount')}</span>
+                            <span className="text-green-600 font-extrabold bg-green-50 px-1.5 py-0.5 rounded text-[8px]">75% OFF</span>
                           </div>
                         </div>
 
@@ -624,7 +625,7 @@ const JourneySection: React.FC<{
                               <circle cx="12" cy="12" r="10" />
                               <path d="m9 12 2 2 4-4" />
                             </svg>
-                            <span>Aprovado</span>
+                            <span>{t('howItWorks.mockups.approved')}</span>
                           </button>
                         </div>
                       </div>
@@ -673,11 +674,11 @@ const JourneySection: React.FC<{
                       {/* Header do Mockup */}
                       <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                         <div>
-                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">Onboarding</h4>
-                          <p className="text-[9px] text-slate-400 font-bold">Documentos da Universidade</p>
+                          <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">{t('howItWorks.mockups.onboarding')}</h4>
+                          <p className="text-[9px] text-slate-400 font-bold">{t('howItWorks.mockups.universityDocuments')}</p>
                         </div>
                         <span className="bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          2 / 3 Enviados
+                          {t('howItWorks.mockups.sentCount')}
                         </span>
                       </div>
 
@@ -694,8 +695,8 @@ const JourneySection: React.FC<{
                               </svg>
                             </div>
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">Passaporte Oficial</h5>
-                              <p className="text-[8px] text-emerald-600 font-black tracking-wider uppercase mt-0.5">Aprovado ✓</p>
+                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">{t('howItWorks.mockups.officialPassport')}</h5>
+                              <p className="text-[8px] text-emerald-600 font-black tracking-wider uppercase mt-0.5">{t('howItWorks.mockups.approvedCheck')}</p>
                             </div>
                           </div>
                           <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/25">
@@ -715,8 +716,8 @@ const JourneySection: React.FC<{
                               </svg>
                             </div>
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">Histórico Escolar</h5>
-                              <p className="text-[8px] text-amber-600 font-black tracking-wider uppercase mt-0.5">Em Análise</p>
+                              <h5 className="text-[10px] font-black text-slate-800 leading-tight">{t('howItWorks.mockups.academicTranscripts')}</h5>
+                              <p className="text-[8px] text-amber-600 font-black tracking-wider uppercase mt-0.5">{t('howItWorks.mockups.underReview')}</p>
                             </div>
                           </div>
                           <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-sm shadow-amber-500/25 animate-pulse">
@@ -739,8 +740,8 @@ const JourneySection: React.FC<{
                                 </svg>
                               </div>
                               <div>
-                                <h5 className="text-[10px] font-black text-slate-800 leading-tight">Comprovante Financeiro</h5>
-                                <p className="text-[8px] text-blue-600 font-black tracking-wider uppercase mt-0.5">Enviando... 65%</p>
+                                <h5 className="text-[10px] font-black text-slate-800 leading-tight">{t('howItWorks.mockups.financialStatement')}</h5>
+                                <p className="text-[8px] text-blue-600 font-black tracking-wider uppercase mt-0.5">{t('howItWorks.mockups.uploading')} 65%</p>
                               </div>
                             </div>
                           </div>
@@ -780,76 +781,65 @@ const JourneySection: React.FC<{
               <div className="w-full lg:w-1/2 flex justify-center">
                 <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[#05294E]/10 rounded-full blur-[100px] opacity-30"></div>
-                    <div className="relative w-full max-w-[300px] bg-white rounded-2xl border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 space-y-4 overflow-hidden text-left">
-                      {/* University Header */}
-                      <div className="flex justify-between items-start pt-2">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black text-slate-800 tracking-wider uppercase font-serif">FLORIDA INSTITUTE OF TECHNOLOGY</p>
-                          <p className="text-[7px] text-muted-foreground uppercase tracking-widest">Office of Admissions</p>
-                        </div>
-                        <div className="h-6 w-6 rounded bg-[#05294E]/10 flex items-center justify-center text-[#05294E]">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-[100px] opacity-40"></div>
+                    <div className="relative w-full max-w-[280px] bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden text-left">
+
+                      {/* Green top bar */}
+                      <div className="bg-gradient-to-r from-emerald-500 to-green-600 px-5 py-3 flex items-center justify-between">
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{t('howItWorks.mockups.officeAdmissions')}</span>
+                        <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
                             <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                            <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
                           </svg>
                         </div>
                       </div>
 
-                      <div className="h-px bg-slate-100 w-full"></div>
+                      {/* Body */}
+                      <div className="px-5 py-4 space-y-4">
 
-                      {/* Letter Content Mock */}
-                      <div className="space-y-3">
-                        <div className="space-y-0.5">
-                          <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">OFFICIAL ACCEPTANCE</span>
-                          <h4 className="text-sm font-black text-slate-900 pt-1">Congratulations!</h4>
+                        {/* Big check icon */}
+                        <div className="flex flex-col items-center gap-1.5 pt-1">
+                          <div className="h-14 w-14 rounded-full bg-emerald-50 border-4 border-emerald-400 flex items-center justify-center shadow-md shadow-emerald-200 animate-pulse">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-emerald-500">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </div>
+                          <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-0.5 rounded-full uppercase tracking-widest">✓ {t('howItWorks.mockups.approved')}</span>
                         </div>
-                        
-                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-                          We are thrilled to inform you that you have been admitted to the incoming class of 2026.
-                        </p>
-                      </div>
 
-                      {/* Official Seal and Details */}
-                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2 relative overflow-hidden">
-                        <div className="flex justify-between items-center text-[9px]">
-                          <span className="text-muted-foreground font-semibold">Scholarship Award</span>
-                          <span className="text-[#05294E] font-extrabold">$28,500 / Yr</span>
+                        {/* Title */}
+                        <div className="text-center space-y-0.5">
+                          <h4 className="text-sm font-black text-slate-900">{t('howItWorks.mockups.congratulations')}</h4>
+                          <p className="text-[9px] text-slate-500 font-medium leading-snug">{t('howItWorks.mockups.admittedMessage')}</p>
                         </div>
-                        <div className="flex justify-between items-center text-[9px]">
-                          <span className="text-muted-foreground font-semibold">Academic Program</span>
-                          <span className="text-slate-900 font-bold">Computer Science, B.S.</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[9px]">
-                          <span className="text-muted-foreground font-semibold">Status</span>
-                          <span className="text-emerald-600 font-bold">Admitted (F-1)</span>
-                        </div>
-                        
-                        {/* Stamp Overlay */}
-                        <div className="absolute right-2 bottom-0 opacity-15 rotate-12 pointer-events-none">
-                          <div className="border-4 border-[#05294E] rounded-full p-1.5 flex flex-col items-center justify-center w-14 h-14">
-                            <span className="text-[6px] font-black text-[#05294E] uppercase leading-none">ACCEPTED</span>
-                            <span className="text-[4px] font-bold text-[#05294E] leading-none">FIT 2026</span>
+
+                        {/* Divider */}
+                        <div className="h-px bg-slate-100 w-full"></div>
+
+                        {/* Status pills */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[9px]">
+                            <span className="text-slate-400 font-semibold">{t('howItWorks.mockups.status')}</span>
+                            <span className="text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{t('howItWorks.mockups.admittedVisa')}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[9px]">
+                            <span className="text-slate-400 font-semibold">{t('howItWorks.mockups.scholarshipLabel')}</span>
+                            <span className="text-emerald-600 font-extrabold">$3,800 / {t('howItWorks.mockups.year')}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[9px]">
+                            <span className="text-slate-400 font-semibold">{t('howItWorks.mockups.startDate')}</span>
+                            <span className="text-slate-700 font-bold">{t('howItWorks.mockups.fall2026')}</span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Sign and Seal */}
-                      <div className="flex justify-between items-end pt-1">
-                        <div className="space-y-0.5">
-                          <div className="h-3 w-16 bg-slate-100 rounded opacity-70 flex items-center justify-center">
-                            <span className="text-[6px] font-bold italic text-slate-400 font-serif">M. Anderson</span>
+                        {/* Footer stamp */}
+                        <div className="flex items-center justify-center pt-1">
+                          <div className="border-2 border-emerald-400 rounded-lg px-3 py-1 opacity-70 flex items-center justify-center">
+                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">{t('howItWorks.mockups.approved')}</span>
                           </div>
-                          <p className="text-[6px] text-muted-foreground uppercase">Dean of Admissions</p>
                         </div>
-                        <div className="h-6 w-6 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm animate-pulse">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <path d="m9 12 2 2 4-4"/>
-                          </svg>
-                        </div>
-                      </div>
 
+                      </div>
                     </div>
                   </div>
                 </div>

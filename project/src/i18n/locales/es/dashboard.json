@@ -38,7 +38,8 @@
           "university_documents": "Documentos de la Universidad",
           "waiting_approval": "Esperando Aprobación",
           "completed": "Completado",
-          "my_applications": "Mis Solicitudes"
+          "my_applications": "Mis Solicitudes",
+          "selection_fee_pending": "Proceso de Selección"
         },
         "stepDescriptions": {
           "selection_fee": "Paga la tarifa para desbloquear el acceso a las becas.",
@@ -53,9 +54,23 @@
           "university_documents": "Envía los documentos requeridos por la universidad.",
           "waiting_approval": "Tus documentos están en revisión. Plazo de 48h.",
           "my_applications": "Sigue tus documentos y la carta de aceptación.",
-          "completed": "¡Proceso completado con éxito!"
+          "completed": "¡Proceso completado con éxito!",
+          "selection_fee_pending": "Inicia el proceso de selección y descubre becas de estudio en Estados Unidos esperándote."
         }
       }
+    },
+    "onboardingStep1": {
+      "stepLabel": "Proceso de Selección",
+      "title": "Tu beca en EE. UU. comienza aquí",
+      "description": "Paga el Proceso de Selección y libera tu acceso completo — las mejores becas de estudios para Estados Unidos.",
+      "benefit1": "Becas presenciales, en línea e híbridas",
+      "benefit2": "Autorización de trabajo OPT y CPT",
+      "benefit3": "Reembolso si no eres aceptado en ninguna beca",
+      "imageAlt": "Estudiantes en una universidad moderna",
+      "urgencyNoticeBefore": "¡Las becas disponibles son ",
+      "urgencyNoticeBold": "limitadas",
+      "urgencyNoticeAfter": "! ¡Asegura tu lugar!",
+      "startBtn": "Empezar"
     },
     "stepByStepTour": {
       "title": "Tour Paso a Paso",
@@ -111,6 +126,30 @@
       "You have been selected for the scholarship.": "Has sido seleccionado para la beca."
     },
     "chat": {
+      "pleaseLogin": "Por favor, inicie sesión para acceder al chat.",
+      "supportTeam": "Equipo de Soporte",
+      "responseTime": "Tiempo de respuesta: 1-2 horas hábiles",
+      "yesterday": "Ayer",
+      "noMessagesYet": "Ningún mensaje aún",
+      "supportTab": "Soporte",
+      "universitiesTab": "Universidades",
+      "searchStudents": "Buscar estudiantes...",
+      "searchConversations": "Buscar conversaciones...",
+      "studentConversations": "Conversaciones con Estudiantes",
+      "messages": "Mensajes",
+      "refreshConversations": "Actualizar conversaciones",
+      "tryAgain": "Intentar de nuevo",
+      "noConversationsMatch": "Ninguna conversación coincide con su búsqueda",
+      "noConversationsYet": "Ninguna conversación aún",
+      "startConversationHelp": "Inicie una conversación con un administrador para obtener ayuda.",
+      "startNewConversation": "Iniciar nueva conversación",
+      "viewStudentDetails": "Ver detalles del estudiante",
+      "openStudentDetails": "Abrir detalles del estudiante",
+      "selectStudentToChat": "Seleccione un estudiante para conversar",
+      "startConversation": "Iniciar una conversación",
+      "chooseConversationSidebar": "Elija una conversación en la barra lateral para comenzar a enviar mensajes",
+      "selectConversationOrNew": "Seleccione una conversación o inicie una nueva con soporte",
+      "noStudentConversationsYet": "Ninguna conversación con estudiantes aún",
       "welcomeMessage": {
         "title": "¡Bienvenido al Chat de Soporte!",
         "body": "¡Hola! Este es tu chat de soporte. Nuestro equipo está disponible para ayudarte de 9 AM a 5 PM (Zona Horaria de Arizona). Puedes hacer preguntas sobre becas, documentos y el progreso de tu solicitud. ¡Siéntete libre de enviar mensajes y archivos adjuntos en cualquier momento!",
@@ -1170,6 +1209,8 @@
     "errorLoadingData": "Error loading data",
     "loading": "Loading {{title}}...",
     "shareDescription": "Use the buttons below to quickly share your code",
+    "balanceAbbreviation": "Saldo:",
+    "universityLogoAlt": "Logo de {{name}}",
     "customRedemption": {
       "title": "Custom Tuition Discount",
       "subtitle": "Redeem any amount of coins as tuition discount",

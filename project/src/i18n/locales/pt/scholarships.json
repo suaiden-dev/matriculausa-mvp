@@ -323,6 +323,11 @@
       "title": "Login Necessário",
       "message": "Faça login para visualizar os detalhes das universidades e acessar todos os recursos"
     },
+    "unlockAccess": {
+      "title": "Desbloqueie o Acesso",
+      "message": "Inicie o Processo Seletivo para ver todos os detalhes das universidades.",
+      "button": "Iniciar Processo Seletivo"
+    },
     "search": {
       "placeholder": "Buscar universidades...",
       "allTypes": "Todos os Tipos",

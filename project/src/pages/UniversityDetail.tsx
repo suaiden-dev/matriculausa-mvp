@@ -9,7 +9,7 @@ import Header from '../components/Header';
 import { slugify } from '../utils/slugify';
 
 const UniversityDetail: React.FC = () => {
-  const { t } = useTranslation(['school', 'common']);
+  const { t } = useTranslation(['scholarships', 'school', 'common']);
   const { slug } = useParams<{ slug: string }>();
   const [university, setUniversity] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);

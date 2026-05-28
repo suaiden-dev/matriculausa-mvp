@@ -28,6 +28,9 @@
     },
     "featuredScholarships": {
       "title": "Bolsas mais procuradas",
+      "titleMain": "Bolsas",
+      "titleHighlight": "mais procuradas.",
+      "viewAll": "Ver todas",
       "subtitle": "Essas são só algumas das bolsas que podem ser suas. Quer ver quais combinam com você? Faça seu processo seletivo e descubra nosso catálogo completo esperando por você."
     },
     "trustedUniversities": {
@@ -57,7 +60,9 @@
       "moreThanStudy": {
         "title": "Mais do que estudar fora",
         "description": "É sobre viver uma nova cultura, ampliar sua visão de mundo e construir um futuro com mais possibilidades."
-      }
+      },
+      "universitiesNumber": "+500",
+      "universitiesCount": "universidades"
     },
     "stats": {
       "students": "Estudantes Colocados",
@@ -132,6 +137,8 @@
     },
     "threeSteps": {
       "title": "Uma experiência que pode mudar sua vida",
+      "titleMain": "Uma experiência que pode",
+      "titleHighlight": "mudar sua vida.",
       "subtitle": "Benefícios",
       "step1": {
         "title": "Experiência Internacional",
@@ -188,6 +195,7 @@
       "button": "Comece Seu Processo Hoje",
       "learnMore": "Saiba Mais",
       "badge": "Junte-se a mais de 5.000 {{students}}",
+      "studyAndWork": "Estudar e trabalhar nos EUA",
       "features": {
         "freeToStart": "Gratuito para começar",
         "noHiddenFees": "Sem taxas ocultas",
@@ -205,7 +213,7 @@
     }
   },
   "howItWorks": {
-    "title": "Entre o sonho e o campus, existe um caminho possível",
+    "title": "A forma mais inteligente de estudar nos EUA",
     "subtitle": "Clareza para transformar vontade em movimento.",
     "journey": "Seu Processo",
     "cta": {
@@ -218,7 +226,7 @@
     },
     "steps": {
       "profile": {
-        "title": "Encontre sua oportunidade",
+        "title": "Faça o Processo Seletivo",
         "description": "Escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
         "items": [
           "Histórico acadêmico e conquistas",
@@ -237,8 +245,8 @@
         ]
       },
       "documents": {
-        "title": "Prepare sua candidatura com mais confiança",
-        "description": "Envie os documentos solicitados pela universidade diretamente pela plataforma e acompanhe sua jornada com mais clareza e segurança.",
+        "title": "Prepare sua matrícula com especialistas ao seu lado",
+        "description": "Envie seus documentos pela plataforma e conte com suporte especializado em cada etapa do processo, da candidatura à matrícula.",
         "items": [
           "Selecione até 4 bolsas",
           "Upload seguro de documentos",
@@ -247,7 +255,7 @@
       },
       "applicationFee": {
         "title": "Viva sua conquista",
-        "description": "Receba sua carta de aceite e comece seu novo capítulo nos EUA.",
+        "description": "Receba sua carta de aceite e comece seu novo capítulo nos EUA. Estaremos prontos para te receber no primeiro dia!",
         "items": [
           "Visualize bolsas aprovadas",
           "Confirme sua escolha de universidade",
@@ -392,6 +400,61 @@
         "question": "O que é o Processo Seletivo?",
         "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Este valor é final e você será reembolsado caso não seja aceito em nenhuma universidade."
       }
+    },
+    "mockups": {
+      "mySelection": "Minha Seleção",
+      "preSelectedCourses": "Cursos Pré-Selecionados",
+      "selectedCount": "4 / 4 Selecionados",
+      "undergraduate": "Graduação",
+      "graduate": "Mestrado",
+      "year": "ano",
+      "exclusive": "Exclusiva",
+      "originalTuition": "Anuidade Original",
+      "withScholarship": "Com Bolsa de Estudo",
+      "guaranteedDiscount": "Desconto Garantido",
+      "approved": "Aprovado",
+      "onboarding": "Onboarding",
+      "universityDocuments": "Documentos da Universidade",
+      "sentCount": "2 / 3 Enviados",
+      "officialPassport": "Passaporte Oficial",
+      "approvedCheck": "Aprovado ✓",
+      "academicTranscripts": "Histórico Escolar",
+      "underReview": "Em Análise",
+      "financialStatement": "Comprovante Financeiro",
+      "uploading": "Enviando...",
+      "officeAdmissions": "Escritório de Admissões",
+      "congratulations": "Parabéns!",
+      "admittedMessage": "Você foi oficialmente admitido para a turma de 2026.",
+      "status": "Status",
+      "scholarshipLabel": "Bolsa de Estudo",
+      "startDate": "Data de Início",
+      "admittedVisa": "Admitido — Visto F-1",
+      "fall2026": "Outono 2026"
+    },
+    "showcaseTable": {
+      "differential": "Diferencial",
+      "doItAlone": "Fazer sozinho",
+      "traditionalAgencies": "Agências tradicionais",
+      "accessScholarships": "Acesso a bolsas",
+      "difficultOpportunities": "Difícil encontrar oportunidades reais",
+      "fewOptions": "Poucas opções ou descontos limitados",
+      "exclusiveScholarships": "Bolsas exclusivas com grandes descontos",
+      "supportMentorship": "Suporte e mentoria",
+      "decideAlone": "Você decide tudo por conta própria",
+      "genericService": "Atendimento genérico e pouco personalizado",
+      "strategicOrientation": "Orientação estratégica com especialistas",
+      "costTransparency": "Transparência nos custos",
+      "hiddenExpenses": "Gastos podem aparecer no caminho",
+      "extraFees": "Taxas extras e pouca clareza",
+      "transparencyAllSteps": "Transparência em todos os passos",
+      "processOrganization": "Organização do processo",
+      "manualConfusing": "Manual, confuso e fácil de errar",
+      "slowProcess": "Processo lento e espalhado",
+      "simplePlatform": "Tudo simples em uma única plataforma",
+      "approvalSecurity": "Segurança na aprovação",
+      "noGuarantee": "Sem garantia se não avançar",
+      "guaranteeUnclear": "Garantia nem sempre clara",
+      "refundSelection": "Sem aprovação? Reembolsamos o valor do Processo Seletivo"
     }
   },
 
@@ -698,5 +761,11 @@
       "confirm": "Ir para o Perfil",
       "cancel": "Agora não"
     }
+  },
+  "footerCTA": {
+    "badge": "Oferta por tempo limitado",
+    "title": "Garanta sua vaga no Processo Seletivo",
+    "description": "Desbloqueie acesso completo às bolsas, candidate-se a múltiplas universidades e dê o primeiro passo rumo aos EUA.",
+    "priceLabel": "A partir de"
   }
 }

@@ -22,7 +22,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         .from('universities')
         .select('terms_accepted, profile_completed')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       const result = {
         error: error && error.code !== 'PGRST116' ? error : null,
@@ -150,7 +150,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // REDIRECIONAMENTO APÓS LOGIN
       // REDIRECIONAMENTO APÓS LOGIN (REMOVIDO PARA MOSTRAR MENSAGEM NO COMPONENTE)
-      const isRegistrationPath = false;
+      const isRegistrationPath = currentPath === '/login' || currentPath === '/register' || currentPath === '/auth';
 
       if (isRegistrationPath) {
         const searchParams = new URLSearchParams(location.search);

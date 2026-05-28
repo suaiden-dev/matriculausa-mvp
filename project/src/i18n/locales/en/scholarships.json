@@ -321,6 +321,11 @@
       "title": "Login Required",
       "message": "Please log in to view university details and access all features"
     },
+    "unlockAccess": {
+      "title": "Unlock Access",
+      "message": "Start the Selection Process to see all university details.",
+      "button": "Start Selection Process"
+    },
     "search": {
       "placeholder": "Search universities...",
       "allTypes": "All Types",

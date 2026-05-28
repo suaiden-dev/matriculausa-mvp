@@ -11,7 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 const PAGE_SIZE = 21;
 
 const Universities: React.FC = () => {
-  const { t } = useTranslation(['school', 'scholarships', 'common']);
+  const { t } = useTranslation(['scholarships', 'school', 'common', 'home']);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, userProfile, loading } = useAuth();
@@ -300,16 +300,16 @@ const Universities: React.FC = () => {
                         {needsToPaySelectionFee ? (
                           <>
                             <h4 className="text-lg font-bold text-slate-900 mb-2">
-                              Desbloqueie o Acesso
+                              {t('universitiesPage.unlockAccess.title')}
                             </h4>
                             <p className="text-sm text-slate-600 mb-4">
-                              Inicie o Processo Seletivo para ver todos os detalhes das universidades.
+                              {t('universitiesPage.unlockAccess.message')}
                             </p>
                             <button
                               onClick={() => navigate(`/student/onboarding`)}
                               className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
                             >
-                              Iniciar Processo Seletivo
+                              {t('universitiesPage.unlockAccess.button')}
                             </button>
                           </>
                         ) : (
@@ -456,16 +456,16 @@ const Universities: React.FC = () => {
                     {needsToPaySelectionFee ? (
                       <>
                         <h4 className="text-lg font-bold text-slate-900 mb-2">
-                          Desbloqueie o Acesso
+                          {t('universitiesPage.unlockAccess.title')}
                         </h4>
                         <p className="text-sm text-slate-600 mb-4">
-                          Inicie o Processo Seletivo para ver todos os detalhes das universidades.
+                          {t('universitiesPage.unlockAccess.message')}
                         </p>
                         <button
                           onClick={() => navigate(`/student/onboarding`)}
                           className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
                         >
-                          Iniciar Processo Seletivo
+                          {t('universitiesPage.unlockAccess.button')}
                         </button>
                       </>
                     ) : (

@@ -8,9 +8,7 @@ import {
   Users,
   Clock,
   ArrowUpRight,
-  Mail,
   GraduationCap,
-  Bell,
   ChevronLeft,
   ChevronRight,
   Link2,
@@ -20,11 +18,9 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
-import WhatsAppIcon from '../../components/icons/WhatsApp';
 import {
   useAffiliateCodeQuery,
   useMatriculacoinCreditsQuery,
@@ -36,22 +32,10 @@ import {
 import AffiliateRedemptionSection from '../AffiliateDashboard/AffiliateRedemptionSection';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
-import NotificationService from '../../services/NotificationService';
 
 const MatriculaRewards: React.FC = () => {
   const { t } = useTranslation(['dashboard', 'common']);
   
-  // Logos oficiais em SVG simplificados (inline), sem dependências externas
-  const FacebookLogo = () => (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
-      <path d="M22 12.06C22 6.48 17.52 2 11.94 2 6.36 2 1.88 6.48 1.88 12.06c0 4.99 3.65 9.14 8.43 9.94v-7.03H7.9v-2.9h2.41V9.83c0-2.38 1.41-3.69 3.57-3.69 1.03 0 2.11.18 2.11.18v2.32h-1.19c-1.17 0-1.53.73-1.53 1.48v1.77h2.61l-.42 2.9h-2.19v7.03c4.78-.8 8.43-4.95 8.43-9.94z"/>
-    </svg>
-  );
-  const TwitterLogo = () => (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
-      <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
-    </svg>
-  );
   const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
@@ -66,7 +50,6 @@ const MatriculaRewards: React.FC = () => {
   const updateAffiliateCode = useUpdateAffiliateCode();
 
   const [copied, setCopied] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
   const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -188,65 +171,8 @@ const MatriculaRewards: React.FC = () => {
     }
   };
 
-  const getShareUrl = (code: string) => {
-    return `${window.location.origin}?ref=${code}`;
-  };
-
   const getRegistrationUrl = (code: string) => {
     return `${window.location.origin}/selection-fee-registration?ref=${code}`;
-  };
-
-  const shareToSocialMedia = async (platform: string, url: string, text: string) => {
-    const shareData = {
-      title: t('matriculaRewards.title'),
-      text: text,
-      url: url
-    };
-
-    try {
-      switch (platform) {
-        case 'facebook':
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
-          break;
-        case 'twitter':
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-          break;
-        case 'linkedin':
-          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
-          break;
-        case 'whatsapp':
-          window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-          break;
-        case 'email':
-          window.open(`mailto:?subject=${encodeURIComponent(t('matriculaRewards.title'))}&body=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
-          break;
-        default:
-          if (navigator.share) {
-            await navigator.share(shareData);
-          } else {
-            await copyToClipboard(url);
-          }
-      }
-
-      // Registrar o compartilhamento
-      if (user?.id && affiliateCode) {
-        await supabase
-          .from('affiliate_shares')
-          .insert([
-            {
-              user_id: user.id,
-              affiliate_code_id: affiliateCode.id,
-              platform: platform,
-              shared_at: new Date().toISOString()
-            }
-          ]);
-        
-        // Invalidar cache de rewards após compartilhamento
-        invalidateStudentDashboardRewards(queryClient);
-      }
-    } catch (error) {
-      console.error('Erro ao compartilhar:', error);
-    }
   };
 
   // Mantido para referência futura: rastrear cliques em campanhas
@@ -283,68 +209,7 @@ const MatriculaRewards: React.FC = () => {
     });
   };
 
-  const handleNotifyStudent = async (referral: any) => {
-    if (!referral.referred_id) return;
 
-    try {
-      const studentName = referral.referred_user?.full_name || 'Student';
-      const studentEmail = referral.referred_user?.email;
-
-      if (!studentEmail) {
-        alert(t('common.error'));
-        return;
-      }
-
-      // 🕒 Controle de Cooldown (5 minutos) - Silencioso, pois o botão estará desabilitado
-      const cooldownKey = `nudge_cooldown_${referral.id}`;
-      const lastSent = localStorage.getItem(cooldownKey);
-      const now = Date.now();
-      const COOLDOWN_MS = 5 * 60 * 1000;
-
-      if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
-        return;
-      }
-
-      // Payload para a função de notificação do n8n
-      const payload = {
-        tipo_notf: "Nudge to complete enrollment",
-        email_aluno: studentEmail,
-        nome_aluno: studentName,
-        nome_bolsa: "",
-        nome_universidade: "Matrícula USA",
-        email_universidade: "contato@matriculausa.com",
-        o_que_enviar: `Your friend ${(user && user.name) || 'who referred you'} is cheering for you! \n\nYou're almost there! Complete your current pending step in Matrícula USA to move forward in your journey to study in the USA.`,
-        contact_name: (user && user.name) || 'Your Friend',
-        contact_position: "Friend",
-        location: "student/dashboard",
-        website: "matriculausa.com",
-        notification_target: "student",
-        next_step: !referral.selection_process_paid_at ? "Selection Process Fee" :
-                   !referral.application_fee_paid_at ? "Application Fee" :
-                   !referral.scholarship_fee_paid_at ? "Placement Fee" : "Control Fee"
-      };
-
-      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'loading' }));
-
-      const result = await NotificationService.sendUniversityNotification(payload);
-
-      if (!result.success) throw new Error(result.error || 'Failed to send notification');
-
-      // 🕒 Atualizar cooldown apenas em caso de sucesso
-      localStorage.setItem(cooldownKey, Date.now().toString());
-
-      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'success' }));
-      
-      // Voltar ao estado inicial após 3 segundos
-      setTimeout(() => {
-        setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
-      }, 3000);
-    } catch (err) {
-      console.error('Error sending notification:', err);
-      alert(t('common.error'));
-      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
-    }
-  };
 
   const StepProgress = ({ referral }: { referral: any }) => {
     const stages = [
@@ -785,7 +650,7 @@ const MatriculaRewards: React.FC = () => {
                       <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold text-sm sm:text-base`}>
                         {tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}
                       </p>
-                      <p className="text-[10px] text-slate-500">Bal: {formatCoins(tx.balance_after)}</p>
+                      <p className="text-[10px] text-slate-500">{t('matriculaRewards.balanceAbbreviation')} {formatCoins(tx.balance_after)}</p>
                     </div>
                   </li>
                 ))}
@@ -868,7 +733,7 @@ const MatriculaRewards: React.FC = () => {
                         {university.logo_url ? (
                           <img 
                             src={university.logo_url} 
-                            alt={`${university.name} logo`}
+                            alt={t('matriculaRewards.universityLogoAlt', { name: university.name })}
                             className="h-8 w-8 object-contain"
                           />
                         ) : (

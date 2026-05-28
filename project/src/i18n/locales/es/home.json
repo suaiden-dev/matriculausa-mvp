@@ -2,6 +2,8 @@
   "home": {
     "hero": {
       "title": "Tu Puerta a las Universidades Americanas",
+      "titleMain": "Estudia en los EE. UU. con",
+      "titleHighlight": "becas de estudio exclusivas.",
       "subtitle": "Descubre becas exclusivas y desbloquea tu potencial en los Estados Unidos",
       "description": "Los estudiantes descubren becas que cambian vidas cada año — tu comienzo es el Proceso de Selección.",
       "cta": "Comenzar Ahora",
@@ -26,6 +28,9 @@
     },
     "featuredScholarships": {
       "title": "Becas más solicitadas",
+      "titleMain": "Becas más",
+      "titleHighlight": "solicitadas.",
+      "viewAll": "Ver todas",
       "subtitle": "Estas son solo algunas de las becas que pueden ser tuyas. ¿Quieres ver cuáles combinan contigo? Realiza tu proceso de selección y descubre nuestro catálogo completo esperándote."
     },
     "trustedUniversities": {
@@ -55,7 +60,9 @@
       "moreThanStudy": {
         "title": "Más que estudiar en el extranjero",
         "description": "Se trata de vivir una nueva cultura, ampliar tu visión del mundo y construir un futuro con más posibilidades."
-      }
+      },
+      "universitiesNumber": "+500",
+      "universitiesCount": "universidades"
     },
     "stats": {
       "students": "Estudiantes Colocados",
@@ -130,6 +137,8 @@
     },
     "threeSteps": {
       "title": "Una experiencia que puede cambiar tu vida",
+      "titleMain": "Una experiencia que puede",
+      "titleHighlight": "cambiar tu vida.",
       "subtitle": "Beneficios",
       "step1": {
         "title": "Vive una nueva cultura",
@@ -186,6 +195,7 @@
       "button": "Inicia Tu Proceso Hoy",
       "learnMore": "Saber Más",
       "badge": "Únete a más de 5,000 {{students}}",
+      "studyAndWork": "Estudiar y trabajar en los EE. UU.",
       "features": {
         "freeToStart": "Gratis para comenzar",
         "noHiddenFees": "Sin tarifas ocultas",
@@ -203,7 +213,7 @@
     }
   },
   "howItWorks": {
-    "title": "Entre el sueño y el campus, existe un camino posible",
+    "title": "La forma más inteligente de estudiar en EE. UU.",
     "subtitle": "Claridad para transformar el deseo en movimiento.",
     "journey": "Tu Jornada",
     "cta": {
@@ -216,7 +226,7 @@
     },
     "steps": {
       "profile": {
-        "title": "Crea Tu Perfil",
+        "title": "Realiza el Proceso de Selección",
         "description": "Completa tu información académica y personal. Nuestra IA encuentra tus mejores opciones.",
         "items": [
           "Historial académico y logros",
@@ -235,8 +245,8 @@
         ]
       },
       "documents": {
-        "title": "Elige Becas y Sube Documentos",
-        "description": "Elige becas y sube tus documentos. Revisión rápida.",
+        "title": "Prepare su matrícula con especialistas a su lado",
+        "description": "Envíe sus documentos a través de la plataforma y cuente con soporte especializado en cada etapa del proceso, desde la postulación hasta la matrícula.",
         "items": [
           "Selecciona múltiples becas",
           "Carga segura de documentos",
@@ -245,7 +255,7 @@
       },
       "applicationFee": {
         "title": "Cuota de Solicitud (Según universidad)",
-        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable.",
+        "description": "Reciba su carta de aceptación y comience su nuevo capítulo en los EE. UU. ¡Estaremos listos para recibirle desde el primer día!",
         "items": [
           "Ver becas aprobadas",
           "Confirmar elección de universidad",
@@ -282,6 +292,16 @@
       "successTracking": {
         "title": "Soporte Local Continuo",
         "description": "Seguimiento dedicado para garantizar tu mantenimiento de estatus legal en EE. UU."
+      },
+      "benefits": {
+        "clarity": {
+          "title": "Claridad para elegir mejor",
+          "description": "Entiende qué caminos tienen sentido para tu perfil, tus objetivos y tu realidad."
+        },
+        "support": {
+          "title": "Acompañamiento humano",
+          "description": "Conversa con especialistas que entienden el proceso y te ayudan a avanzar con más confianza."
+        }
       }
     },
     "selectionFeeShowcase": {
@@ -380,6 +400,61 @@
         "question": "¿Qué es el Proceso de Selección?",
         "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acesso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       }
+    },
+    "mockups": {
+      "mySelection": "Mi Selección",
+      "preSelectedCourses": "Cursos Preseleccionados",
+      "selectedCount": "4 / 4 Seleccionados",
+      "undergraduate": "Grado",
+      "graduate": "Maestría",
+      "year": "año",
+      "exclusive": "Exclusiva",
+      "originalTuition": "Anualidad Original",
+      "withScholarship": "Con Beca de Estudio",
+      "guaranteedDiscount": "Desconto Garantizado",
+      "approved": "Aprobado",
+      "onboarding": "Onboarding",
+      "universityDocuments": "Documentos de la Universidad",
+      "sentCount": "2 / 3 Enviados",
+      "officialPassport": "Pasaporte Oficial",
+      "approvedCheck": "Aprobado ✓",
+      "academicTranscripts": "Historial Académico",
+      "underReview": "En Análisis",
+      "financialStatement": "Comprovante Financiero",
+      "uploading": "Enviando...",
+      "officeAdmissions": "Oficina de Admisiones",
+      "congratulations": "¡Felicitaciones!",
+      "admittedMessage": "Has sido admitido oficialmente a la clase de 2026.",
+      "status": "Status",
+      "scholarshipLabel": "Beca de Estudio",
+      "startDate": "Fecha de Inicio",
+      "admittedVisa": "Admitido — Visa F-1",
+      "fall2026": "Otoño 2026"
+    },
+    "showcaseTable": {
+      "differential": "Diferencial",
+      "doItAlone": "Hacerlo solo",
+      "traditionalAgencies": "Agencias tradicionales",
+      "accessScholarships": "Acceso a becas",
+      "difficultOpportunities": "Difícil encontrar oportunidades reales",
+      "fewOptions": "Pocas opciones o descuentos limitados",
+      "exclusiveScholarships": "Becas exclusivas con grandes descuentos",
+      "supportMentorship": "Soporte y mentoría",
+      "decideAlone": "Tú decides todo por tu cuenta",
+      "genericService": "Atención genérica y poco personalizada",
+      "strategicOrientation": "Orientación estratégica con especialistas",
+      "costTransparency": "Transparencia en los costos",
+      "hiddenExpenses": "Gastos pueden aparecer en el camino",
+      "extraFees": "Tarifas extras y poca claridad",
+      "transparencyAllSteps": "Transparência em todos os passos",
+      "processOrganization": "Organización del proceso",
+      "manualConfusing": "Manual, confuso y fácil de errar",
+      "slowProcess": "Proceso lento y disperso",
+      "simplePlatform": "Todo simple en una sola plataforma",
+      "approvalSecurity": "Seguridad en la aprobación",
+      "noGuarantee": "Sin garantía si no avanza",
+      "guaranteeUnclear": "Garantía no siempre clara",
+      "refundSelection": "¿Sin aprobación? Reembolsamos el valor del Proceso de Selección"
     }
   },
 
@@ -680,5 +755,11 @@
     "3800Expired": "Agotada",
     "3800Expiring": "¡Últimas horas para postularse! El plazo vence mañana (6 de noviembre)",
     "3800ExpiringShort": "El plazo expira mañana"
+  },
+  "footerCTA": {
+    "badge": "Oferta por tiempo limitado",
+    "title": "Asegura tu lugar en el Proceso de Selección",
+    "description": "Desbloquea el acceso completo a las becas, postúlate a múltiples universidades y da el primer paso hacia los EE. UU.",
+    "priceLabel": "A partir de"
   }
 }

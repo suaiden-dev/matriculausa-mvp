@@ -64,7 +64,9 @@
       "privacy": "Política de Privacidad",
       "terms": "Términos de Servicio",
       "cookies": "Política de Cookies",
-      "manageCookies": "Gestionar Cookies"
+      "manageCookies": "Gestionar Cookies",
+      "disclaimerTitle": "Descargo de Responsabilidad Legal",
+      "disclaimerText": "MatriculaUSA no es un bufete de abogados, no ofrece asesoramiento legal, no garantiza la aprobación de visas y no representa al cliente ante consulados o USCIS. Nuestro soporte humano es únicamente operativo. Ofrecemos exclusivamente consultoría educativa y asistencia en la solicitud escolar."
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -132,7 +134,8 @@
       }
     },
     "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
-    "madeWithLove": "Hecho con ❤ para nuestros estudiantes"
+    "madeWithLove": "Hecho con ❤ para nuestros estudiantes",
+    "becomeAffiliate": "Conviértete en Afiliado"
   },
   "common": {
     "select": "Seleccione",

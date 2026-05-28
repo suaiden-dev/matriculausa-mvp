@@ -13,9 +13,9 @@ const Footer: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-16 pb-16">
         {/* Legal Disclaimer */}
         <div className="mb-8 md:mb-12 pb-6 md:pb-8 border-b border-[#05294E]/10 text-slate-600 text-xs sm:text-sm leading-relaxed">
-          <h4 className="text-slate-900 font-bold text-sm sm:text-base mb-2">Legal Disclaimer</h4>
+          <h4 className="text-slate-900 font-bold text-sm sm:text-base mb-2">{t('footer.legal.disclaimerTitle', 'Legal Disclaimer')}</h4>
           <p>
-            MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.
+            {t('footer.legal.disclaimerText', 'MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.')}
           </p>
         </div>
 
@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
               <li><Link to="/scholarships" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
               <li><Link to="/schools" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
               <li><Link to="/matricula-rewards" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.matriculaRewards')}</Link></li>
-              <li><Link to="/affiliate/register" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">Torne-se Afiliado</Link></li>
+              <li><Link to="/affiliate/register" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.becomeAffiliate')}</Link></li>
             </ul>
           </div>
 
