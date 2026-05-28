@@ -30,6 +30,8 @@ interface ScholarshipCardFullProps {
   isLocked?: boolean;
   onViewDetails?: () => void;
   isLimitReached?: boolean;
+  /** Quando fornecido, substitui o comportamento de seleção pelo label/ação customizado */
+  actionLabel?: string;
 }
 
 const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
@@ -39,7 +41,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   userProfile,
   isLocked = false,
   onViewDetails,
-  isLimitReached = false
+  isLimitReached = false,
+  actionLabel,
 }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const isExpired = scholarship.deadline ? getDaysUntilDeadline(scholarship.deadline) < 0 : false;
@@ -316,22 +319,22 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                   e.stopPropagation();
                   onToggle();
                 }}
-                disabled={isLocked || (isLimitReached && !isSelected)}
+                disabled={!actionLabel && (isLocked || (isLimitReached && !isSelected))}
                 className={`w-3/4 py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center relative overflow-hidden transition-all duration-300 active:scale-95 ${
-                  isLocked || (isLimitReached && !isSelected)
+                  !actionLabel && (isLocked || (isLimitReached && !isSelected))
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : isSelected
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20'
-                      : 'bg-gradient-to-r from-[#05294E] to-slate-700 text-white shadow-lg hover:shadow-2xl hover:scale-105'
+                    : 'bg-gradient-to-r from-[#05294E] to-slate-700 text-white shadow-lg hover:shadow-2xl hover:scale-105'
                 }`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 <span className="relative z-10 truncate">
-                  {isLocked
-                    ? (t('registration:scholarshipSelection.review.alreadySelected') || 'Já Selecionada')
-                    : isSelected
-                      ? (t('registration:studentDashboard.findScholarships.scholarshipCard.removeSelection') || 'Remover')
-                      : (t('registration:studentDashboard.findScholarships.scholarshipCard.selectScholarship') || 'Selecionar')}
+                  {actionLabel
+                    ? actionLabel
+                    : isLocked
+                      ? (t('registration:scholarshipSelection.review.alreadySelected') || 'Já Selecionada')
+                      : isSelected
+                        ? (t('registration:studentDashboard.findScholarships.scholarshipCard.removeSelection') || 'Remover')
+                        : (t('registration:studentDashboard.findScholarships.scholarshipCard.selectScholarship') || 'Selecionar')}
                 </span>
               </button>
               <button

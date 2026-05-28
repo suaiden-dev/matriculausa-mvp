@@ -220,8 +220,21 @@ export function useStudentsQuery() {
 
         const mostRecentActivity = getMostRecentActivity();
 
-        // Calculate basic documents statistics (passport only)
-        let basicDocsRequired = 1; // Only passport remains in onboarding
+        // Calculate basic documents statistics
+        // Old flow: 3 docs (passport + diploma + funds_proof)
+        // New flow: 1 doc (passport only)
+        // Detection: if student has diploma or funds_proof uploaded → old flow
+        const typeLabels: Record<string, string> = {
+          'passport': 'Passport',
+          'diploma': 'Diploma',
+          'funds_proof': 'Proof of Funds'
+        };
+
+        const allDocTypes = (lockedApplication?.documents || []).map((d: any) => d.type?.toLowerCase()).filter(Boolean);
+        const isOldFlow = allDocTypes.includes('diploma') || allDocTypes.includes('funds_proof');
+        const requiredBasicTypes = isOldFlow ? ['passport', 'diploma', 'funds_proof'] : ['passport'];
+
+        let basicDocsRequired = requiredBasicTypes.length;
         let basicDocsUploaded = 0;
         let basicDocsApproved = 0;
         let basicDocsRejected = 0;
@@ -230,23 +243,16 @@ export function useStudentsQuery() {
         const basicRejectedNames: string[] = [];
         const basicUnderReviewNames: string[] = [];
 
-        const typeLabels: Record<string, string> = {
-          'passport': 'Passport',
-          'diploma': 'Diploma',
-          'funds_proof': 'Proof of Funds'
-        };
-
         if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
-          const requiredBasicTypes = ['passport'];
           const latestStatusMap = new Map<string, string>();
-          
+
           lockedApplication.documents.forEach((doc: any) => {
             const type = doc.type?.toLowerCase();
             if (type && requiredBasicTypes.includes(type)) {
               latestStatusMap.set(type, (doc.status || 'pending').toLowerCase());
             }
           });
-          
+
           basicDocsUploaded = latestStatusMap.size;
           latestStatusMap.forEach((status, type) => {
             const label = typeLabels[type] || type;
