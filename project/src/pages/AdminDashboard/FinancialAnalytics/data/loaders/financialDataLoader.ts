@@ -58,7 +58,8 @@ async function loadApplications(): Promise<any[]> {
         reinstatement_package_payment_method,
         is_placement_fee_paid,
         has_paid_reinstatement_package,
-        seller_referral_code
+        seller_referral_code,
+        source
       ),
       scholarships (
         id,
@@ -95,7 +96,7 @@ async function loadZellePayments(): Promise<any[]> {
     const userIds = zellePaymentsRaw.map((p) => p.user_id).filter(Boolean);
     const { data: userProfiles, error: usersError } = await supabase
       .from('user_profiles')
-      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method, scholarship_package_id, dependents, seller_referral_code')
+      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method, scholarship_package_id, dependents, seller_referral_code, source')
       .in('user_id', userIds);
     
     if (usersError) {
@@ -567,10 +568,14 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
                       payment.fee_type === 'placement' || payment.fee_type === 'placement_fee' ? 'placement' : 
                       payment.fee_type === 'reinstatement' || payment.fee_type === 'reinstatement_fee' || payment.fee_type === 'reinstatement_package' ? 'reinstatement_fee' : null;
 
-    if (feeTypeKey && (userAmounts as any)[feeTypeKey] === undefined) {
-      (userAmounts as any)[feeTypeKey] = amountUSD;
+    if (feeTypeKey) {
+      if ((userAmounts as any)[feeTypeKey] === undefined) {
+        (userAmounts as any)[feeTypeKey] = amountUSD;
+      } else {
+        (userAmounts as any)[feeTypeKey] += amountUSD;
+      }
       if (import.meta.env.DEV && userId === '35ebf05b-2981-4721-9c0f-2bc5f5f02537') {
-         console.log(`[DEBUG-LOAD] ✅ Atribuído realPaymentAmount para Ágnis: ${feeTypeKey} = ${amountUSD}`);
+         console.log(`[DEBUG-LOAD] ✅ Atribuído realPaymentAmount para Ágnis: ${feeTypeKey} = ${userAmounts[feeTypeKey]}`);
       }
     }
   });

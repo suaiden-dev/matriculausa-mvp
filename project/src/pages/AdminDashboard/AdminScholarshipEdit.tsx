@@ -1413,7 +1413,10 @@ const AdminScholarshipEdit: React.FC = () => {
               </div>
             </div>
 
-            {/* Application Fee Configuration Section */}
+            {/* Application Fee Configuration Section — hidden (duplicate fields + unused fields) */}
+            {/* application_fee_amount and scholarship_fee_amount already exist in Financial Details above */}
+            {/* scholarship_type and visaassistance are stored but not used in any active view */}
+            {/* {
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
                 <DollarSign className="h-5 w-5 mr-2 text-purple-600" />
@@ -1482,6 +1485,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
               </div>
             </div>
+            } */}
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-slate-200">

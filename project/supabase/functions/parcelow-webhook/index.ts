@@ -889,6 +889,41 @@ Deno.serve(async (req: Request) => {
       }
     }
     // =========================================================================
+    // 🔀 ROTEAMENTO MIGMA (MATRICULAUSA-AF-V11- e MATRICULAUSA-AF-APP-)
+    // =========================================================================
+    if (reference.startsWith("MATRICULAUSA-AF-V11-") || reference.startsWith("MATRICULAUSA-AF-APP-")) {
+      console.log(`[router] Detectada ordem da Migma: ${reference}. Redirecionando...`);
+
+      const MIGMA_WEBHOOK_URL = Deno.env.get("MIGMA_PARCELOW_WEBHOOK_URL");
+
+      if (!MIGMA_WEBHOOK_URL) {
+        console.error("[router] ❌ MIGMA_PARCELOW_WEBHOOK_URL não configurada");
+        return new Response(JSON.stringify({ error: "Migma webhook URL not configured" }), { status: 500 });
+      }
+
+      try {
+        const response = await fetch(MIGMA_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": req.headers.get("Authorization") || "",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const resultText = await response.text();
+        console.log(`[router] Resposta da Migma (Status: ${response.status}):`, resultText);
+
+        return new Response(resultText, {
+          status: response.status,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error("[router] ❌ Falha crítica ao repassar webhook para Migma:", err);
+        return new Response(JSON.stringify({ error: "Routing failed, but received" }), { status: 200 });
+      }
+    }
+    // =========================================================================
     // 🔀 FIM DO COMPONENTE DE ROTEAMENTO
     // =========================================================================
 

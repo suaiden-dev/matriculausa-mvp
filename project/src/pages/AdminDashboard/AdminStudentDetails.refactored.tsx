@@ -275,6 +275,7 @@ const AdminStudentDetails: React.FC = () => {
         has_paid_placement: boolean;
         has_paid_reinstatement?: boolean;
         selection_process_fee_payment_method?: string;
+        source?: string | null;
       },
       applications?: any[]
     ): Record<string, number> => {
@@ -340,7 +341,7 @@ const AdminStudentDetails: React.FC = () => {
         const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
 
         let expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
-        normalized.application = expectedApplicationFee + (dependents * 100);
+        normalized.application = paymentFlags?.source === 'migma' ? expectedApplicationFee : expectedApplicationFee + (dependents * 100);
       }
 
       // Placement Fee
@@ -725,7 +726,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_i20: !!student.has_paid_i20_control_fee,
             has_paid_placement: !!student.is_placement_fee_paid,
             has_paid_reinstatement: !!student.has_paid_reinstatement_package,
-            selection_process_fee_payment_method: student.selection_process_fee_payment_method
+            selection_process_fee_payment_method: student.selection_process_fee_payment_method,
+            source: student.source
           },
           student.all_applications
         );
@@ -808,7 +810,8 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_scholarship: !!student.is_scholarship_fee_paid,
           has_paid_i20: !!student.has_paid_i20_control_fee,
           has_paid_placement: !!student.is_placement_fee_paid,
-          selection_process_fee_payment_method: student.selection_process_fee_payment_method
+          selection_process_fee_payment_method: student.selection_process_fee_payment_method,
+          source: student.source
         }
       );
 
@@ -3087,16 +3090,21 @@ const AdminStudentDetails: React.FC = () => {
   ], []);
 
   const steps = useMemo(() => allSteps.filter(step => {
+    // Migma students: only show non-fee steps + application_fee
+    if (student?.source === 'migma') {
+      return !['selection_fee', 'placement_fee', 'i20_fee', 'scholarship_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_fee'].includes(step.key);
+    }
+
     // 1. Regras para tipos de processo
     if (step.key === 'transfer_form') return student?.student_process_type === 'transfer';
     if (step.key === 'ds160_package') return student?.student_process_type === 'initial';
     if (step.key === 'i539_cos_package') return student?.student_process_type === 'change_of_status';
-    
+
     // 2. Regra especial para Reinstatement (8 passos no total para Transfer Inativo)
     const isTransferInactive = student?.student_process_type === 'transfer' && student?.visa_transfer_active === false;
-    
+
     if (step.key === 'reinstatement_fee') return isTransferInactive;
-    
+
     // Se for Transfer Inativo, removemos scholarship_fee e i20_fee para manter 8 passos no progresso
     if (isTransferInactive && ['scholarship_fee', 'i20_fee'].includes(step.key)) return false;
 
@@ -3109,7 +3117,7 @@ const AdminStudentDetails: React.FC = () => {
       // No fluxo normal, removemos a placement_fee
       return step.key !== 'placement_fee';
     }
-  }), [allSteps, student?.student_process_type, student?.visa_transfer_active, student?.placement_fee_flow]);
+  }), [allSteps, student?.student_process_type, student?.visa_transfer_active, student?.placement_fee_flow, student?.source]);
 
   // LOG DE DEPURAÇÃO
   useEffect(() => {
@@ -4094,6 +4102,7 @@ const AdminStudentDetails: React.FC = () => {
                 onDisableInstallment={handleDisableInstallment}
                 onSetInstallmentPlan={handleSetInstallmentPlan}
                 installmentPlans={installmentPlans}
+                hideSelectionFee={student?.source === 'migma'}
                 onToggleVisaStatus={async () => {
                   if (!student) return;
                   const newValue = !student.visa_transfer_active;

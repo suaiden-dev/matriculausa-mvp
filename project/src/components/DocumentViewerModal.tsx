@@ -133,6 +133,16 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
       // Se for URL completa, usar lógica existente para extrair bucket
       if (documentUrl.startsWith('http')) {
+        // URL de projeto Supabase externo (ex: Migma) — usar diretamente, sem signed URL
+        if (!documentUrl.includes('fitpynguasqqutuhzifx.supabase.co')) {
+          const detectedType = detectDocumentType(documentUrl, fileName);
+          setActualUrl(documentUrl);
+          setDocumentType(detectedType);
+          setDisplayTitle(fileName || getFriendlyName(documentUrl));
+          setLoading(false);
+          return;
+        }
+
         if (documentUrl.includes('/storage/v1/object/public/')) {
           const parts = documentUrl.split('/storage/v1/object/public/');
           if (parts.length > 1) {
