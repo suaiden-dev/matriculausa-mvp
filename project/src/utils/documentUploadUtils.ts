@@ -49,7 +49,13 @@ export function groupUploadsBySubmission(uploads: UploadRecord[]): GroupedSubmis
       u => new Date(u.uploaded_at).getTime() > minReviewedAt
     );
 
-    if (thisGroup.length === 0) break;
+    // Malformed data (e.g. uploaded_at later than reviewed_at) could make no
+    // upload fall into this round. Rather than silently dropping the records
+    // (which leaves callers with an all-empty result for a non-empty input),
+    // surface whatever is left as the current pending submission.
+    if (thisGroup.length === 0) {
+      return { closedGroups, currentGroup: remaining };
+    }
 
     const allReviewed = thisGroup.every(
       u => u.status === 'rejected' || u.status === 'approved'

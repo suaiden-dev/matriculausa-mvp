@@ -57,13 +57,22 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
                     document_requests!inner (
                         id,
                         title,
-                        is_global
+                        is_global,
+                        applicable_scholarship_levels
                     ),
                     user_profiles (
                         id,
                         user_id,
                         full_name,
-                        email
+                        email,
+                        selected_application_id,
+                        scholarship_applications!student_id (
+                            id,
+                            scholarship_id,
+                            scholarships (
+                                level
+                            )
+                        )
                     )
                 `)
                 .in('status', ['pending', 'under_review'])
@@ -75,12 +84,42 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
                 return;
             }
 
-            // Em produção, filtrar usuários de teste @uorak.com
-            const filtered = isProductionHost
-                ? (data || []).filter((u: GlobalDocumentUpload) =>
-                    !(u.user_profiles?.email || '').toLowerCase().includes('uorak')
-                  )
-                : (data || []);
+            // Filtrar por host de produção e por nível de bolsa (scholarship level)
+            const filtered = (data || []).filter((u: any) => {
+                if (isProductionHost && (u.user_profiles?.email || '').toLowerCase().includes('uorak')) {
+                    return false;
+                }
+
+                const levels = u.document_requests?.applicable_scholarship_levels;
+                if (levels && levels.length > 0) {
+                    const profile = u.user_profiles;
+                    if (!profile) return true;
+
+                    const apps = profile.scholarship_applications || [];
+                    let scholarshipLevel: string | null = null;
+
+                    if (profile.selected_application_id) {
+                        const selectedApp = apps.find((a: any) => a.id === profile.selected_application_id);
+                        if (selectedApp?.scholarships?.level) {
+                            scholarshipLevel = selectedApp.scholarships.level;
+                        }
+                    }
+
+                    if (!scholarshipLevel) {
+                        const activeApp = apps.find((a: any) => a.status === 'enrolled')
+                            || apps.find((a: any) => a.status === 'approved')
+                            || apps[0];
+                        scholarshipLevel = activeApp?.scholarships?.level || null;
+                    }
+
+                    if (scholarshipLevel) {
+                        const hasMatchingLevel = levels.includes(scholarshipLevel) || levels.includes('all');
+                        if (!hasMatchingLevel) return false;
+                    }
+                }
+
+                return true;
+            });
 
             setUploads(filtered as GlobalDocumentUpload[]);
         } catch (err) {

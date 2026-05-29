@@ -4,6 +4,7 @@ import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 // import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
 import { useAuth } from '../../hooks/useAuth';
@@ -1160,10 +1161,10 @@ const SelectionProcess: React.FC = () => {
       }
       
       // Mostrar mensagem de sucesso
-      alert('Document request created successfully! The student will be notified.');
+      toast.success('Document request created successfully! The student will be notified.');
     } catch (err: any) {
       console.error("Error creating document request:", err);
-      alert(`Failed to create document request: ${err.message}`);
+      toast.error(`Failed to create document request: ${err.message}`);
     } finally {
       setCreatingDocumentRequest(false);
     }
