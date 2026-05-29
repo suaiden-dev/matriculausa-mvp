@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
         title: 'Document re-uploaded',
         message: notifMessage,
         type: 'document_reupload',
-        link: '/school/dashboard/selection-process',
+        link: `/school/dashboard/student/${application_id}`,
         metadata: {
           user_id,
           application_id,

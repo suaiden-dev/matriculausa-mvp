@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { HelpCircle, Search, ChevronDown, ChevronUp, MessageCircle, Phone, Mail, CheckCircle, Clock } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Phone, Mail } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
-  const { t } = useTranslationWithFees(['home', 'common', 'dashboard']);
+  const { t } = useTranslationWithFees(['home', 'common', 'dashboard', 'contact']);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
@@ -97,19 +97,17 @@ const FAQ: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-16 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#05294E] rounded-lg mb-6">
-              <HelpCircle className="h-8 w-8 text-white" />
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+      {/* Header Section (Hero Banner) */}
+      <div className="bg-gradient-to-r from-[#05294E] via-[#0A3D70] to-[#05294E] text-white py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-300 via-transparent to-transparent pointer-events-none"></div>
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
               {t('home.faq.title')}
             </h1>
             
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto font-light leading-relaxed mb-8">
               {t('home.faq.subtitle')}
             </p>
             
@@ -120,34 +118,22 @@ const FAQ: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('common.search') + '...'}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-gray-900"
               />
-            </div>
-
-            {/* Stats */}
-            <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>24/7 {t('common.support') || 'support'}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
-                <span>{t('home.faq.quickAnswers') || 'Quick answers'}</span>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-4 gap-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div>
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div>
             <div className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('home.faq.badge')}</h2>
               <p className="text-gray-600">
-                {filteredItems.length} {t('home.faq.questionsFound', { count: filteredItems.length }) || (filteredItems.length !== 1 ? 'questions found' : 'question found')}
+                {t('home.faq.questionsFound', { count: filteredItems.length }) || (filteredItems.length !== 1 ? `${filteredItems.length} questions found` : `${filteredItems.length} question found`)}
                 {searchQuery && ` ${t('common.for') || 'for'} "${searchQuery}"`}
               </p>
             </div>
@@ -170,7 +156,7 @@ const FAQ: React.FC = () => {
                             {item.q}
                           </h3>
                           <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {item.category}
+                            {t('common.' + item.category.toLowerCase()) || item.category}
                           </span>
                         </div>
                       </div>
@@ -206,60 +192,44 @@ const FAQ: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Contact Options */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard:matriculaRewards.helpSupport')}</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <MessageCircle className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{t('dashboard:matriculaRewards.smartAssistant')}</p>
-                    <p className="text-sm text-gray-600">{t('dashboard:matriculaRewardsLanding.aiPoweredHelp') || 'AI-powered help'}</p>
-                  </div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                </div>
+        {/* Still have questions? Section */}
+        <div className="mt-16">
+          <h3 className="text-2xl font-semibold text-gray-900 mb-12">
+            {t('home.about.cta.questions') || 'Still have questions?'}
+          </h3>
 
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <Phone className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">WhatsApp {t('common.support') || 'Support'}</p>
-                    <p className="text-sm text-gray-600">{t('dashboard:matriculaRewardsLanding.directMessaging') || 'Direct messaging'}</p>
-                  </div>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: Contact us (Email) */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col h-full shadow-sm">
+              <a href="mailto:info@matriculausa.com" className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 group">
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
+                  <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{t('methods.email.title') || 'Contact us'}</span>
                 </div>
+                <span className="text-gray-400 text-sm font-semibold group-hover:text-blue-600 transition-colors">&gt;</span>
+              </a>
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <p className="text-gray-900 text-base leading-relaxed">
+                  {t('home.faq.footerContact') || "Got a detailed question? Shoot us an email and we'll get things smoothed out."}
+                </p>
               </div>
             </div>
 
-            {/* Contact Note */}
-            <div className="bg-[#05294E] rounded-lg p-6 text-white">
-              <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                  <Mail className="h-5 w-5 text-white" />
+            {/* Card 2: Call us */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col h-full shadow-sm">
+              <a href="tel:+12136762544" className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 group">
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
+                  <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{t('methods.phone.title') || 'Call us'}</span>
                 </div>
-                <h3 className="text-lg font-semibold">{t('home.about.cta.questions') || 'Still have questions?'}</h3>
-              </div>
-              
-              <p className="text-blue-100 mb-4 text-sm">
-                {t('home.faq.footerContact') || 'Use the floating buttons for instant help or contact us directly at info@matriculausa.com'}
-              </p>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
-                  <span>{t('home.faq.instantAiResponses') || 'Instant AI responses'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 text-blue-400 mr-2" />
-                  <span>{t('home.faq.availability') || '24/7 availability'}</span>
-                </div>
+                <span className="text-gray-400 text-sm font-semibold group-hover:text-blue-600 transition-colors">&gt;</span>
+              </a>
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <p className="text-gray-900 text-base leading-relaxed">
+                  {t('home.faq.whatsappCardDesc') || 'Get instant help through WhatsApp messaging available 24/7'}
+                </p>
               </div>
             </div>
           </div>

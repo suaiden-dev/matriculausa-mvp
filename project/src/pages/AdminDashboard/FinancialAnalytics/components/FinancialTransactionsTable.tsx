@@ -13,6 +13,7 @@ import {
 interface Transaction {
   id: string;
   user_id: string;
+  student_id?: string;
   fee_type: string;
   amount: number;
   gross_amount_usd: number | null;
@@ -83,6 +84,18 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     return email.toLowerCase().includes('@uorak.com');
   };
 
+  const getTransactionKey = (transaction: Transaction): string => {
+    return [
+      transaction.id,
+      transaction.user_id || transaction.student_id || '',
+      transaction.fee_type,
+      transaction.payment_date,
+      transaction.amount,
+      transaction.installment_info || '',
+      transaction.payment_intent_id || ''
+    ].join('|');
+  };
+
 
 
 
@@ -111,7 +124,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       setSelectedTransactions(new Set());
       setSelectAll(false);
     } else {
-      const allIds = new Set(currentTransactions.map(t => t.id));
+      const allIds = new Set(currentTransactions.map(getTransactionKey));
       setSelectedTransactions(allIds);
       setSelectAll(true);
     }
@@ -291,7 +304,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     let totalFees = 0;
 
     filteredTransactions
-      .filter(t => selectedTransactions.has(t.id))
+      .filter(t => selectedTransactions.has(getTransactionKey(t)))
       .forEach(transaction => {
         const gross = transaction.gross_amount_usd || transaction.amount || 0;
         const fees = transaction.fee_amount_usd || 0;
@@ -319,7 +332,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   // Update selectAll when currentTransactions change
   useEffect(() => {
     if (currentTransactions.length > 0) {
-      const allSelected = currentTransactions.every(t => selectedTransactions.has(t.id));
+      const allSelected = currentTransactions.every(t => selectedTransactions.has(getTransactionKey(t)));
       setSelectAll(allSelected);
     } else {
       setSelectAll(false);
@@ -579,17 +592,18 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
             {currentTransactions.length > 0 ? (
               <>
                 {currentTransactions.map((transaction) => {
+                  const transactionKey = getTransactionKey(transaction);
                   const gross = transaction.gross_amount_usd || transaction.amount;
                   const fees = transaction.fee_amount_usd || 0;
                   const net = gross - fees;
 
                   return (
-                    <tr key={transaction.id} className="hover:bg-gray-50/50 transition-colors group h-[68px]">
+                    <tr key={transactionKey} className="hover:bg-gray-50/50 transition-colors group h-[68px]">
                       <td className="px-6 py-2">
                         <input
                           type="checkbox"
-                          checked={selectedTransactions.has(transaction.id)}
-                          onChange={() => handleSelectTransaction(transaction.id)}
+                          checked={selectedTransactions.has(transactionKey)}
+                          onChange={() => handleSelectTransaction(transactionKey)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       </td>

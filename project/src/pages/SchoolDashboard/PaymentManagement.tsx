@@ -4,7 +4,6 @@ import {
   Clock, 
   CheckCircle, 
   AlertCircle, 
-  Filter, 
   Download, 
   Eye, 
   CreditCard, 
@@ -59,7 +58,6 @@ const PaymentManagement: React.FC = () => {
   } = usePayments(university?.id);
   
   // UI state
-  const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
   
   // Payment request modal state
@@ -1323,15 +1321,6 @@ const PaymentManagement: React.FC = () => {
                           Request Payment
                         </button>
                       )}
-                      {activeTab === 'student-payments' && (
-                        <button
-                          onClick={() => setShowFilters(!showFilters)}
-                          className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-all duration-200 ease-in-out"
-                        >
-                          <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-                          Filters
-                        </button>
-                      )}
                       <button
                         onClick={handleExport}
                         disabled={exporting}
@@ -1356,9 +1345,7 @@ const PaymentManagement: React.FC = () => {
       {activeTab === 'student-payments' && (
         <>
           {/* Filters */}
-          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-          }`}>
+          <div>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
@@ -1967,21 +1954,19 @@ const PaymentManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             {/* Total Revenue Card */}
             <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <p className="text-sm font-semibold uppercase tracking-wider text-emerald-100">Total Revenue</p>
-                <div className="flex items-center bg-black/10 px-2 py-0.5 rounded-full text-xs text-white">
-                  {calculatedMetrics.revenueGrowth >= 0 ? (
-                    <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 text-green-300" />
-                  ) : (
-                    <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 text-red-300" />
-                  )}
-                  <span>
-                    {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-100 mb-1">Total Revenue</p>
               <p className="text-3xl font-bold">{formatCurrency(financialStats.totalRevenue)}</p>
               <p className="text-xs text-emerald-200 mt-1">From all payment types</p>
+              <div className="flex items-center bg-black/10 px-2 py-0.5 rounded-full text-xs text-white mt-2">
+                {calculatedMetrics.revenueGrowth >= 0 ? (
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 text-green-300" />
+                ) : (
+                  <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 text-red-300" />
+                )}
+                <span>
+                  {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
+                </span>
+              </div>
             </div>
 
             {/* Reinstatement Revenue Card */}

@@ -108,6 +108,14 @@ function processApplications(
     feeTypesToProcess.forEach((cfg) => {
       if (!cfg.flagPaid) return;
 
+      const alreadyProcessedGlobalFee =
+        (cfg.key === "selection_process" && globalFeesProcessed[student.user_id].selection_process) ||
+        (cfg.key === "application" && globalFeesProcessed[student.user_id].application_fee) ||
+        (cfg.key === "i20_control_fee" && globalFeesProcessed[student.user_id].i20_control) ||
+        (cfg.key === "placement" && globalFeesProcessed[student.user_id].placement);
+
+      if (alreadyProcessedGlobalFee) return;
+
       // Buscar se temos pagamentos físicos correspondentes no individual_fee_payments
       const physicals = userPhysicalPayments.filter((p) => {
         const typeNormalized = p.fee_type === "selection_process_fee" ? "selection_process" :
@@ -127,6 +135,11 @@ function processApplications(
         // Para cada pagamento físico real, cria um record correspondente (Mapeamento de Parcelas!)
         sortedPhysicals.forEach((p, idx) => {
           const installmentInfo = sortedPhysicals.length > 1 ? ` (${idx + 1}/${sortedPhysicals.length})` : "";
+          const alreadyEmittedPhysicalPayment = paymentRecords.some(
+            (record) => record.id === p.id && record.fee_type === cfg.key
+          );
+          if (alreadyEmittedPhysicalPayment) return;
+
           paymentRecords.push({
             id: p.id, // ID real da transação no Supabase
             student_id: student.user_id,
@@ -431,6 +444,11 @@ function processStripeUsers(
 
         sortedPhysicals.forEach((p, idx) => {
           const installmentInfo = sortedPhysicals.length > 1 ? ` (${idx + 1}/${sortedPhysicals.length})` : "";
+          const alreadyEmittedPhysicalPayment = paymentRecords.some(
+            (record) => record.id === p.id && record.fee_type === cfg.key
+          );
+          if (alreadyEmittedPhysicalPayment) return;
+
           paymentRecords.push({
             id: p.id,
             student_id: stripeUser.user_id,

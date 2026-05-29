@@ -724,7 +724,7 @@ const Home: React.FC = () => {
                 >
                   {/* Heading (left) */}
                   <div className="shrink-0 text-center sm:text-left sm:pr-6 sm:border-r sm:border-slate-200">
-                    <p className="text-3xl md:text-4xl font-black text-[#05294E] leading-none">
+                    <p className="text-3xl md:text-4xl font-black text-slate-900 leading-none">
                       {t('home.features.universitiesNumber', '+500')}
                     </p>
                     <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider mt-1">

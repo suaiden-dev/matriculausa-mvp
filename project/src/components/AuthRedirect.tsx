@@ -221,7 +221,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA
+      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA - Desativado para permitir exploração livre do site
+      /*
       if (currentPath === '/') {
         if (user.role === 'school') {
           setCheckingUniversity(true);
@@ -261,6 +262,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
       }
+      */
     };
 
     checkAndRedirect();

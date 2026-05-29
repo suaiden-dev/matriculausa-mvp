@@ -731,7 +731,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
       message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}".`,
       type: isResubmission ? 'document_reupload' : 'document_upload',
-      link: '/school/dashboard/document-requests',
+      link: '/school/dashboard/scholarships/global-document-requests',
       metadata: { student_name: studentData.full_name, document_title: requestData.title, is_resubmission: isResubmission },
       idempotency_key: `${requestData.university_id}:${requestId}:${Date.now()}`
     });
@@ -833,7 +833,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
                   message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}".`,
                   type: isResubmission ? 'document_reupload' : 'document_upload',
-                  link: '/school/dashboard/document-requests',
+                  link: '/school/dashboard/scholarships/global-document-requests',
                   metadata: { student_name: studentData.full_name, document_title: requestData.title, is_resubmission: isResubmission },
                   idempotency_key: `${globalData.university_id}:${requestId}:${Date.now()}`
                 });
@@ -859,7 +859,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
                   message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}" for scholarship "${scholarship.title}".`,
                   type: isResubmission ? 'document_reupload' : 'document_upload',
-                  link: '/school/dashboard/selection-process',
+                  link: `/school/dashboard/student/${applicationData?.id}`,
                   metadata: { student_name: studentData.full_name, scholarship_title: scholarship.title, document_title: requestData.title, is_resubmission: isResubmission },
                   idempotency_key: `${university.id}:${requestId}:${Date.now()}`
                 });

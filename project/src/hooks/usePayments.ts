@@ -87,7 +87,7 @@ export const usePayments = (universityId: string | undefined) => {
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const loadPayments = async (page: number = 1, currentFilters?: PaymentFilters) => {
+  const loadPayments = async (page: number = 1, currentFilters?: PaymentFilters, sizeToUse?: number) => {
     if (!universityId) {
       return;
     }
@@ -322,8 +322,9 @@ export const usePayments = (universityId: string | undefined) => {
         }
 
         // Aplicar paginação
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
+        const pageSizeToUse = sizeToUse || pageSize;
+        const startIndex = (page - 1) * pageSizeToUse;
+        const endIndex = startIndex + pageSizeToUse;
         const paginatedPayments = finalPayments.slice(startIndex, endIndex);
         
         // Recalcular estatísticas com base nos dados filtrados
@@ -424,7 +425,7 @@ export const usePayments = (universityId: string | undefined) => {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
-    loadPayments(1);
+    loadPayments(1, undefined, newPageSize);
   };
 
   const exportPayments = async (): Promise<Blob> => {

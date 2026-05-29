@@ -54,7 +54,7 @@ serve(async (req) => {
           application_id,
           payment_method: 'stripe_connect'
         },
-        link: '/school/dashboard/transfers',
+        link: '/school/dashboard/analytics',
         idempotency_key: `stripe_connect_payment:${transfer_id}:${application_id}`
       })
       .select()
