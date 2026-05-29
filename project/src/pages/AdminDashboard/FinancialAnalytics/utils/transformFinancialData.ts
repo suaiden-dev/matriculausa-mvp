@@ -108,6 +108,10 @@ function processApplications(
     feeTypesToProcess.forEach((cfg) => {
       if (!cfg.flagPaid) return;
 
+      // Guard: não reprocessar taxas globais já contabilizadas (evita duplicação para alunos com múltiplas applications)
+      const globalKey = cfg.key === "application" ? "application_fee" : cfg.key === "i20_control_fee" ? "i20_control" : cfg.key;
+      if ((globalFeesProcessed[student.user_id] as any)?.[globalKey]) return;
+
       // Buscar se temos pagamentos físicos correspondentes no individual_fee_payments
       const physicals = userPhysicalPayments.filter((p) => {
         const typeNormalized = p.fee_type === "selection_process_fee" ? "selection_process" :
@@ -164,6 +168,7 @@ function processApplications(
       // Marcar como processado nas flags globais para evitar re-processamento
       if (cfg.key === "selection_process") globalFeesProcessed[student.user_id].selection_process = true;
       if (cfg.key === "application") globalFeesProcessed[student.user_id].application_fee = true;
+      if (cfg.key === "scholarship") (globalFeesProcessed[student.user_id] as any).scholarship = true;
       if (cfg.key === "i20_control_fee") globalFeesProcessed[student.user_id].i20_control = true;
       if (cfg.key === "placement") globalFeesProcessed[student.user_id].placement = true;
     });
