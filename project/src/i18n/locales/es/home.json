@@ -90,46 +90,50 @@
       "availability": "Disponibilidad 24/7",
       "questions": {
         "q1": {
-          "question": "¿Qué tarifas o pagos son necesarios para usar MatriculaUSA?",
-          "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión e inscripción se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
+          "question": "¿Qué es el Proceso de Selección?",
+          "answer": "El Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q2": {
-          "question": "¿Qué es el Proceso de Selección?",
-          "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
-        },
-        "q3": {
-          "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
-          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar su beca e inscripción. Cubre el trabajo profesional, incluyendo el análisis académico, la identificación de opciones universitarias, la negociación de becas y el apoyo en el proceso de inscripción. Esta cuota es variable y está directamente ligada al monto de la beca."
-        },
-        "q4": {
-          "question": "¿Qué es la Cuota de Solicitud?",
-          "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma."
-        },
-        "q5": {
           "question": "¿Existe apoyo para el proceso de visa de estudiante?",
           "answer": "¡Sí! La Cuota de Colocación incluye soporte especializado para su proceso de visa de estudiante. Nuestro equipo lo guía a través de todos los pasos necesarios para garantizar que tenga los documentos correctos para su llegada a los EE. UU."
         },
+        "q3": {
+          "question": "¿Qué pasa si no soy aprobado para ninguna beca?",
+          "answer": "Si ninguna de las becas para las que te postulaste resulta en aprobación, el monto pagado del Proceso de Selección podrá ser reembolsado."
+        },
+        "q4": {
+          "question": "¿Qué tarifas o pagos son necesarios para usar MatriculaUSA?",
+          "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión e inscripción se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
+        },
+        "q5": {
+          "question": "¿Qué es la Cuota de Solicitud?",
+          "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma."
+        },
         "q6": {
+          "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar su beca e inscripción. Cubre el trabajo profesional, incluyendo el análisis académico, la identificación de opciones universitarias, la negociación de becas y el apoyo en el proceso de inscripción. Esta cuota es variable y está directamente ligada al monto de la beca."
+        },
+        "q7": {
           "question": "¿Existen otras tarifas que deba conocer?",
           "answer": "Todas las tarifas obligatorias para su proceso de solicitud e inscripción se enumeran en su panel de control antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (por ejemplo, depósitos de alojamiento, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación."
         },
-        "q7": {
-          "question": "¿Cómo puedo pagar estas tarifas?",
-          "answer": "Puede pagar todas las tarifas directamente a través de la plataforma MatriculaUSA utilizando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura a través de Stripe y recibirá una confirmación por cada transacción."
-        },
         "q8": {
+          "question": "¿Cómo puedo pagar estas tarifas?",
+          "answer": "Puede pagar todas las tarifas directamente a través de la plataforma MatriculaUSA utilizando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura a través de Stripe, Parcelow y Zelle, y recibirá una confirmación por cada transacción. Todas las tarifas son finales y no de reembolsos."
+        },
+        "q9": {
           "question": "¿Es segura mi información de pago?",
           "answer": "Sí. MatriculaUSA utiliza procesadores de pago líderes en la industria y estándares de seguridad avanzados. Sus datos de pago nunca se almacenan en nuestros servidores, y todas las transacciones están completamente cifradas para su protección. Puede elegir entre los métodos de pago disponibles en la plataforma."
         },
-        "q9": {
-          "question": "¿Puedo obtener un reembolso?",
-          "answer": "Sí — si ninguna de las becas a las que postulaste resulta en aprobación, devolvemos el 100% del valor del Proceso de Selección. Si desistes o abandonas el proceso tras confirmar una beca aprobada, el valor no es reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
-        },
         "q10": {
+          "question": "¿Puedo obtener un reembolso?",
+          "answer": "El reembolso se aplica solo al monto del Proceso de Selección, en caso de que ninguna de las becas seleccionadas resulte en aprobación. Sin embargo, si desistes o abandonas el proceso tras confirmar una beca aprobada, el monto no será reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
+        },
+        "q11": {
           "question": "¿Tengo que pagar todas las tarifas a la vez?",
           "answer": "No. Las tarifas son compras independientes y se pagan por etapas a medida que avanzas en el proceso. Primero pagas la Cuota de Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y finalmente la Cuota de Colocación asociada a la beca elegida."
         },
-        "q11": {
+        "q12": {
           "question": "¿Con quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
           "answer": "¡Nuestro equipo de soporte está disponible a través de chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o su proceso de solicitud. Estamos aquí para ayudarle en cada paso del camino!"
         }
@@ -342,7 +346,7 @@
         "text": "\"El proceso de solicitud fue tan fácil y transparente. Me sentí apoyada en cada paso. ¡Muy recomendable!\"",
         "name": "Priya Patel",
         "major": "Negocios"
-      },
+},
       "story4": {
         "text": "\"Nunca pensé que estudiar en EE. UU. fuera posible para mí. ¡MatriculaUSA hizo mi sueño realidad!\"",
         "name": "Ahmed Hassan",
@@ -357,48 +361,52 @@
     "faq": {
       "title": "Todo lo que necesitas saber",
       "q1": {
-        "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
-        "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
+        "question": "¿Qué es el Proceso de Selección?",
+        "answer": "El Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acesso completo para ver todas las becas e iniciar tu proceso de solicitud."
       },
       "q2": {
-        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
-        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
-      },
-      "q3": {
-        "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
-        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es variable y está directamente vinculada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual (tuition)."
-      },
-      "q4": {
-        "question": "¿Qué es la Cuota de Solicitud?",
-        "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
-      },
-      "q5": {
         "question": "¿Cómo elijo mi beca?",
         "answer": "Al inscribirte en el Proceso de Selección, puedes solicitar hasta 4 becas. La plataforma muestra las opciones compatibles con tu perfil y tú decides a cuáles postularte. Si tienes dudas al elegir, nuestro equipo de soporte está listo para orientarte."
       },
+      "q3": {
+        "question": "¿Qué pasa si no soy aprobado para ninguna beca?",
+        "answer": "Si ninguna de las becas para las que te postulaste resulta en aprobación, el monto pagado del Proceso de Selección podrá ser reembolsado."
+      },
+      "q4": {
+        "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
+        "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
+      },
+      "q5": {
+        "question": "¿Qué es la Cuota de Solicitud?",
+        "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+      },
       "q6": {
+        "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es variable y está directamente vinculada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual (tuition)."
+      },
+      "q7": {
         "question": "¿Hay otras tarifas que deba conocer?",
         "answer": "Todas las tarifas obligatorias para tu proceso de solicitud y matrícula están listadas en tu panel antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (ej: depósitos de vivienda, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación. Todas las tarifas son finales y no reembolsables."
       },
-      "q7": {
-        "question": "¿Cómo puedo pagar estas tarifas?",
-        "answer": "Puedes pagar todas las tarifas directamente a través de la plataforma MatriculaUSA usando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura vía Stripe, y recibirás una confirmación por cada transacción. Todas las tarifas son finales y no reembolsables."
-      },
       "q8": {
+        "question": "¿Cómo posso pagar estas tarifas?",
+        "answer": "Puedes pagar todas las tarifas directamente a través de la plataforma MatriculaUSA usando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura vía Stripe, Parcelow y Zelle, y recibirás una confirmación por cada transacción. Todas las tarifas son finales y no reembolsables."
+      },
+      "q9": {
         "question": "¿Es segura mi información de pago?",
         "answer": "Sí. MatriculaUSA utiliza procesadores de pago líderes en la industria y estándares de seguridad avanzados. Tus datos de pago nunca se almacenan en nuestros servidores, y todas las transacciones están completamente encriptadas para tu protección. Puedes elegir entre los métodos de pago disponibles en la plataforma."
       },
-      "q9": {
-        "question": "¿Puedo obtener un reembolso?",
-        "answer": "Sí — si ninguna de las becas a las que postulaste resulta en aprobación, devolvemos el 100% del valor del Proceso de Selección. Si desistes o abandonas el proceso tras confirmar una beca aprobada, el valor no es reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
-      },
       "q10": {
+        "question": "¿Puedo obtener un reembolso?",
+        "answer": "El reembolso se aplica solo al monto del Proceso de Selección, en caso de que ninguna de las becas seleccionadas resulte en aprobación. Sin embargo, si desistes o abandonas el proceso tras confirmar una beca aprobada, el monto no será reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
+      },
+      "q11": {
         "question": "¿Tengo que pagar todas las tarifas a la vez?",
         "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero el Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
       },
-      "q11": {
-        "question": "¿Qué es el Proceso de Selección?",
-        "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acesso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+      "q12": {
+        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
       }
     },
     "mockups": {
@@ -638,7 +646,7 @@
         },
         {
           "question": "¿Qué es el Proceso de Selección?",
-          "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+          "answer": "El Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         {
           "question": "¿Cómo funciona la elección de las becas?",

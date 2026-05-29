@@ -90,46 +90,50 @@
       "availability": "24/7 availability",
       "questions": {
         "q1": {
-          "question": "What fees or payments are required to use MatriculaUSA?",
-          "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
+          "question": "What is the Selection Process?",
+          "answer": "The Selection Process is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q2": {
-          "question": "What is the Selection Process?",
-          "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
-        },
-        "q3": {
-          "question": "What is the Placement Fee?",
-          "answer": "The Placement Fee covers the specialized support to guarantee your scholarship and enrollment. It covers professional work including academic analysis, identification of university options, scholarship negotiation, and enrollment process support. This fee is variable and directly linked to the scholarship amount."
-        },
-        "q4": {
-          "question": "What is the Application Fee?",
-          "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform."
-        },
-        "q5": {
           "question": "Is there support for the student visa process?",
           "answer": "Yes! The Placement Fee includes specialized support for your student visa process. Our team guides you through all necessary steps to ensure you have the correct documents for your arrival in the US."
         },
+        "q3": {
+          "question": "What if I am not approved for any scholarship?",
+          "answer": "If none of the scholarships you applied for result in approval, the amount paid for the Selection Process may be refunded."
+        },
+        "q4": {
+          "question": "What fees or payments are required to use MatriculaUSA?",
+          "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
+        },
+        "q5": {
+          "question": "What is the Application Fee?",
+          "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform."
+        },
         "q6": {
+          "question": "What is the Placement Fee?",
+          "answer": "The Placement Fee covers the specialized support to guarantee your scholarship and enrollment. It covers professional work including academic analysis, identification of university options, scholarship negotiation, and enrollment process support. This fee is variable and directly linked to the scholarship amount."
+        },
+        "q7": {
           "question": "Are there other fees I should know about?",
           "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance."
         },
-        "q7": {
-          "question": "How can I pay these fees?",
-          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction."
-        },
         "q8": {
+          "question": "How can I pay these fees?",
+          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, Parcelow, and Zelle, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
+        },
+        "q9": {
           "question": "Is my payment information secure?",
           "answer": "Yes. All payments are processed by Stripe, a world leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
         },
-        "q9": {
-          "question": "Can I get a refund?",
-          "answer": "Yes — if none of the scholarships you applied for result in approval, we refund 100% of the Selection Process value. If you withdraw or abandon the process after confirming an approved scholarship, the amount is non-refundable, as processing and support will already be in progress."
-        },
         "q10": {
+          "question": "Can I get a refund?",
+          "answer": "The refund applies only to the Selection Process fee, in case none of the selected scholarships result in approval. However, if you withdraw or abandon the process after confirming an approved scholarship, the amount will not be refundable, as the processing and support will already be in progress."
+        },
+        "q11": {
           "question": "Do I have to pay all fees at once?",
           "answer": "No. The fees are independent purchases and are paid in stages as you advance through the process. You pay the Selection Process Fee first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship."
         },
-        "q11": {
+        "q12": {
           "question": "Who can I contact if I have questions about fees or payments?",
           "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
         }
@@ -357,48 +361,52 @@
     "faq": {
       "title": "Everything you need to know",
       "q1": {
-        "question": "What fees or payments are required to use MatriculaUSA?",
-        "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
+        "question": "What is the Selection Process?",
+        "answer": "The Selection Process is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
       },
       "q2": {
-        "question": "Who can I contact if I have questions about fees or payments?",
-        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
-      },
-      "q3": {
-        "question": "What is the Placement Fee?",
-        "answer": "The Placement Fee covers the professional work required to successfully connect and enroll a student in the right university program. This fee is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition."
-      },
-      "q4": {
-        "question": "What is the Application Fee?",
-        "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform. This fee is final and non-refundable."
-      },
-      "q5": {
         "question": "How do I choose my scholarship?",
         "answer": "By enrolling in the Selection Process, you can apply for up to 4 scholarships. The platform shows the options compatible with your profile and you decide which ones to apply for. If you have questions when choosing, our support team is ready to guide you."
       },
+      "q3": {
+        "question": "What if I am not approved for any scholarship?",
+        "answer": "If none of the scholarships you applied for result in approval, the amount paid for the Selection Process may be refunded."
+      },
+      "q4": {
+        "question": "What fees or payments are required to use MatriculaUSA?",
+        "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
+      },
+      "q5": {
+        "question": "What is the Application Fee?",
+        "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform. This fee is final and non-refundable."
+      },
       "q6": {
+        "question": "What is the Placement Fee?",
+        "answer": "The Placement Fee covers the professional work required to successfully connect and enroll a student in the right university program. This fee is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition."
+      },
+      "q7": {
         "question": "Are there other fees I should know about?",
         "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance. All fees are final and non-refundable."
       },
-      "q7": {
-        "question": "How can I pay these fees?",
-        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
-      },
       "q8": {
+        "question": "How can I pay these fees?",
+        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, Parcelow, and Zelle, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
+      },
+      "q9": {
         "question": "Is my payment information secure?",
         "answer": "Yes. MatriculaUSA uses industry-leading payment processors and security standards. Your payment details are never stored on our servers, and all transactions are fully encrypted for your protection. You can choose from the available payment methods on the platform."
       },
-      "q9": {
-        "question": "Can I get a refund?",
-        "answer": "Yes — if none of the scholarships you applied for result in approval, we refund 100% of the Selection Process value. If you withdraw or abandon the process after confirming an approved scholarship, the amount is non-refundable, as processing and support will already be in progress."
-      },
       "q10": {
+        "question": "Can I get a refund?",
+        "answer": "The refund applies only to the Selection Process fee, in case none of the selected scholarships result in approval. However, if you withdraw or abandon the process after confirming an approved scholarship, the amount will not be refundable, as the processing and support will already be in progress."
+      },
+      "q11": {
         "question": "Do I have to pay all fees at once?",
         "answer": "No. The fees are separate and paid in stages. You pay the Selection Process first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship. All are mandatory but paid at different times."
       },
-      "q11": {
-        "question": "What is the Selection Process?",
-        "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+      "q12": {
+        "question": "Who can I contact if I have questions about fees or payments?",
+        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
       }
     },
     "mockups": {
@@ -638,7 +646,7 @@
         },
         {
           "question": "What is the Selection Process?",
-          "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         {
           "question": "How does the scholarship choice work?",

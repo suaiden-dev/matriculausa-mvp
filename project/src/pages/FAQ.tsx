@@ -15,38 +15,38 @@ const FAQ: React.FC = () => {
   const faqItems = [
     {
       q: t('home.faq.questions.q1.question'),
-      a: t('home.faq.questions.q1.answer'),
-      category: 'General'
+      a: hasSellerPackage 
+        ? `The Selection Process Fee is ${selectionProcessFee} and includes access to our AI-powered scholarship discovery, personalized recommendations, and application support. This fee is final and non-refundable.`
+        : t('home.faq.questions.q1.answer'),
+      category: 'Payment'
     },
     {
       q: t('home.faq.questions.q2.question'),
       a: hasSellerPackage 
-        ? `The Selection Process Fee is ${selectionProcessFee} and includes access to our AI-powered scholarship discovery, personalized recommendations, and application support. This fee is final and non-refundable.`
+        ? `The I-20 Control Fee is ${i20ControlFee} and is essential for your F-1 student visa process. This fee must be paid within 10 days after approval and is final and non-refundable.`
         : t('home.faq.questions.q2.answer'),
       category: 'Payment'
     },
     {
       q: t('home.faq.questions.q3.question'),
-      a: hasSellerPackage 
-        ? `The Scholarship Fee is ${scholarshipFee} and covers the formalization of your scholarship grant, direct communication with your chosen university, and final documentation support. This fee is final and non-refundable.`
-        : t('home.faq.questions.q3.answer'),
+      a: t('home.faq.questions.q3.answer'),
       category: 'Payment'
     },
     {
       q: t('home.faq.questions.q4.question'),
       a: t('home.faq.questions.q4.answer'),
-      category: 'Payment'
+      category: 'General'
     },
     {
       q: t('home.faq.questions.q5.question'),
-      a: hasSellerPackage 
-        ? `The I-20 Control Fee is ${i20ControlFee} and is essential for your F-1 student visa process. This fee must be paid within 10 days after approval and is final and non-refundable.`
-        : t('home.faq.questions.q5.answer'),
+      a: t('home.faq.questions.q5.answer'),
       category: 'Payment'
     },
     {
       q: t('home.faq.questions.q6.question'),
-      a: t('home.faq.questions.q6.answer'),
+      a: hasSellerPackage 
+        ? `The Scholarship Fee is ${scholarshipFee} and covers the formalization of your scholarship grant, direct communication with your chosen university, and final documentation support. This fee is final and non-refundable.`
+        : t('home.faq.questions.q6.answer'),
       category: 'Payment'
     },
     {
@@ -57,12 +57,12 @@ const FAQ: React.FC = () => {
     {
       q: t('home.faq.questions.q8.question'),
       a: t('home.faq.questions.q8.answer'),
-      category: 'Support'
+      category: 'Payment'
     },
     {
       q: t('home.faq.questions.q9.question'),
       a: t('home.faq.questions.q9.answer'),
-      category: 'Payment'
+      category: 'Support'
     },
     {
       q: t('home.faq.questions.q10.question'),
@@ -72,6 +72,11 @@ const FAQ: React.FC = () => {
     {
       q: t('home.faq.questions.q11.question'),
       a: t('home.faq.questions.q11.answer'),
+      category: 'Payment'
+    },
+    {
+      q: t('home.faq.questions.q12.question'),
+      a: t('home.faq.questions.q12.answer'),
       category: 'Support'
     }
   ];

@@ -90,46 +90,50 @@
       "availability": "Disponibilidade 24/7",
       "questions": {
         "q1": {
-          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
-          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+          "question": "O que é o Processo Seletivo?",
+          "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q2": {
-          "question": "O que é o Processo Seletivo?",
-          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
-        },
-        "q3": {
-          "question": "O que é a Taxa de Colocação (Placement Fee)?",
-          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Cobre o trabalho profissional incluindo análise acadêmica, identificação de opções universitárias, negociação de bolsas e suporte no processo de matrícula. Esta taxa é variável e diretamente ligada ao valor da bolsa."
-        },
-        "q4": {
-          "question": "O que é a Taxa de Matrícula?",
-          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
-        },
-        "q5": {
           "question": "Existe suporte para o processo de visto?",
           "answer": "Sim! A Taxa de Colocação inclui suporte especializado para seu processo de visto de estudante. Nossa equipe guia você em todas as etapas necessárias para garantir que você tenha os documentos corretos para sua chegada nos EUA."
         },
+        "q3": {
+          "question": "E se eu não for aprovado em nenhuma bolsa?",
+          "answer": "Se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, o valor pago do Processo Seletivo poderá ser reembolsado."
+        },
+        "q4": {
+          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+        },
+        "q5": {
+          "question": "O que é a Taxa de Matrícula?",
+          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+        },
         "q6": {
+          "question": "O que é a Taxa de Colocação (Placement Fee)?",
+          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Cobre o trabalho profissional incluindo análise acadêmica, identificação de opções universitárias, negociação de bolsas e suporte no processo de matrícula. Esta taxa é variável e diretamente ligada ao valor da bolsa."
+        },
+        "q7": {
           "question": "Existem outras taxas que devo conhecer?",
           "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas sempre serão comunicadas diretamente pela universidade ou por nós antecipadamente."
         },
-        "q7": {
-          "question": "Como posso pagar essas taxas?",
-          "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação."
-        },
         "q8": {
+          "question": "Como posso pagar essas taxas?",
+          "answer": "Você pode pagar todas as taxas diretamente pela plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, Parcelow e Zelle, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+        },
+        "q9": {
           "question": "Minhas informações de pagamento estão seguras?",
           "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
         },
-        "q9": {
-          "question": "Posso obter reembolso?",
-          "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
-        },
         "q10": {
+          "question": "Posso obter reembolso?",
+          "answer": "O reembolso se aplica apenas ao valor do Processo Seletivo, caso nenhuma das bolsas selecionadas resulte em aprovação. Porém, se você desistir ou abandonar o processo após confirmar uma bolsa aprovada, o valor não será reembolsável, pois o processamento e o suporte já estarão em andamento."
+        },
+        "q11": {
           "question": "Tenho que pagar todas as taxas de uma vez?",
           "answer": "Não. As taxas são separadas e pagas em etapas conforme você avança no processo. Você paga primeiro a Taxa do Processo Seletivo, depois a Taxa de Matrícula (se aplicável) e, finalmente, a Taxa de Colocação associada à bolsa escolhida. Todas são obrigatórias, mas pagas em momentos diferentes."
         },
-        "q11": {
+        "q12": {
           "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
           "answer": "Nossa equipe de suporte está disponível via chat ou email a qualquer momento para responder a qualquer dúvida sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudá-lo a cada passo do caminho!"
         }
@@ -357,48 +361,52 @@
     "faq": {
       "title": "Tudo o que você precisa saber",
       "q1": {
-        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
-        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+        "question": "O que é o Processo Seletivo?",
+        "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
       },
       "q2": {
-        "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
-        "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
-      },
-      "q3": {
-        "question": "O que é a Taxa de Colocação (Placement Fee)?",
-        "answer": "A taxa de colocação cobre o trabalho profissional necessário para conectar e matricular com sucesso um aluno no programa universitário correto. Esta taxa é variável e está diretamente ligada ao valor da bolsa: quanto maior a taxa de colocação, menor será a sua anuidade (tuition)."
-      },
-      "q4": {
-        "question": "O que é a Taxa de Matrícula?",
-        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
-      },
-      "q5": {
         "question": "Como eu escolho minha bolsa?",
         "answer": "Ao se inscrever no Processo Seletivo, você pode se candidatar a até 4 bolsas. A plataforma mostra as opções compatíveis com seu perfil e você decide em quais se candidatar. Se tiver dúvidas na hora de escolher, nossa equipe de suporte está pronta para te orientar."
       },
+      "q3": {
+        "question": "E se eu não for aprovado em nenhuma bolsa?",
+        "answer": "Se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, o valor pago do Processo Seletivo poderá ser reembolsado."
+      },
+      "q4": {
+        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q5": {
+        "question": "O que é a Taxa de Matrícula?",
+        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+      },
       "q6": {
+        "question": "O que é a Taxa de Colocação (Placement Fee)?",
+        "answer": "A taxa de colocação cobre o trabalho profissional necessário para conectar e matricular com sucesso um aluno no programa universitário correto. Esta taxa é variável e está diretamente ligada ao valor da bolsa: quanto maior a taxa de colocação, menor será a sua anuidade (tuition)."
+      },
+      "q7": {
         "question": "Existem outras taxas que devo conhecer?",
         "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas serão sempre comunicadas diretamente pela universidade ou por nós com antecedência. Todas as taxas são finais e não reembolsáveis."
       },
-      "q7": {
-        "question": "Como posso pagar essas taxas?",
-        "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação por cada transação. Todas as taxas são finais e não reembolsáveis."
-      },
       "q8": {
+        "question": "Como posso pagar essas taxas?",
+        "answer": "Você pode pagar todas as taxas diretamente pela plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, Parcelow e Zelle, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q9": {
         "question": "Minhas informações de pagamento são seguras?",
         "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
       },
-      "q9": {
-        "question": "Posso obter reembolso?",
-        "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
-      },
       "q10": {
+        "question": "Posso obter reembolso?",
+        "answer": "O reembolso se aplica apenas ao valor do Processo Seletivo, caso nenhuma das bolsas selecionadas resulte em aprovação. Porém, se você desistir ou abandonar o processo após confirmar uma bolsa aprovada, o valor não será reembolsável, pois o processamento e o suporte já estarão em andamento."
+      },
+      "q11": {
         "question": "Tenho que pagar todas as taxas de uma vez?",
         "answer": "Não. As taxas são compras independentes e são pagas em etapas conforme você avança no processo. Você paga o Processo Seletivo primeiro, depois a Taxa de Matrícula (se aplicável) e, finalmente, a Taxa de Colocação associada à bolsa escolhida."
       },
-      "q11": {
-        "question": "O que é o Processo Seletivo?",
-        "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Este valor é final e você será reembolsado caso não seja aceito em nenhuma universidade."
+      "q12": {
+        "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
+        "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
       }
     },
     "mockups": {
@@ -638,7 +646,7 @@
         },
         {
           "question": "O que é o Processo Seletivo?",
-          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         {
           "question": "Como funciona a escolha das bolsas?",

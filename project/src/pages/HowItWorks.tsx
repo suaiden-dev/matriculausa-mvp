@@ -981,8 +981,6 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
     if (inView) controls.start('visible');
   }, [controls, inView]);
 
-  const leftFaqs = [1, 3, 5, 7, 9, 11];
-  const rightFaqs = [2, 4, 6, 8, 10];
 
   return (
     <section ref={ref} className="py-12 sm:py-16 bg-white">
@@ -994,10 +992,10 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
         >
           <h2 className="text-3xl md:text-4xl font-black mb-8 text-center text-slate-900 home-page">{t('howItWorks.faq.title')}</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 items-start">
             {/* Coluna Esquerda */}
-            <div className="flex flex-col gap-1">
-              {leftFaqs.map((num) => (
+            <div className="space-y-1">
+              {[1, 3, 5, 7, 9, 11].map((num) => (
                 <div 
                   key={num} 
                   className={`group transition-all duration-300 border-b border-slate-200 ${
@@ -1043,8 +1041,8 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
             </div>
 
             {/* Coluna Direita */}
-            <div className="flex flex-col gap-1">
-              {rightFaqs.map((num) => (
+            <div className="space-y-1 mt-1 md:mt-0">
+              {[2, 4, 6, 8, 10, 12].map((num) => (
                 <div 
                   key={num} 
                   className={`group transition-all duration-300 border-b border-slate-200 ${

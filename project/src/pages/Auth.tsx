@@ -1097,7 +1097,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   {/* Referral Code — full width */}
                   <div className="sm:col-span-2">
                     <label htmlFor="referralCode" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.referralCodeAutoApplied')} (Opcional)
+                      {t('authPage.register.referralCodeAutoApplied')}
                     </label>
                     <div className="relative group">
                       {isReferralCodeLocked ? (

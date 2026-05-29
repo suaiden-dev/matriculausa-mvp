@@ -21,6 +21,12 @@ const US_STATES = [
   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
 ];
 
+// Lista de categorias/programas acadêmicos padrão
+const DEFAULT_PROGRAMS = [
+  'STEM', 'Business', 'Arts & Humanities', 'Social Sciences', 'Health Sciences',
+  'Engineering', 'Computer Science', 'Law', 'Medicine'
+];
+
 interface Address {
   street: string;
   city: string;
@@ -58,7 +64,6 @@ const SchoolProfileSetup: React.FC = () => {
   });
   const [cities, setCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [citySearch, setCitySearch] = useState('');
   const { user } = useAuth();
 
   const navigate = useNavigate();
@@ -110,32 +115,26 @@ const SchoolProfileSetup: React.FC = () => {
     localStorage.setItem('school_setup_profile_step', String(currentStep));
   }, [currentStep]);
 
-  // Carregar cidades se já houver um estado selecionado ao iniciar
+  // Carregar cidades sempre que o estado selecionado mudar
   useEffect(() => {
-    if (formData.address.state) {
-      fetchCitiesByState(formData.address.state);
-    }
-  }, []);
+    fetchCitiesByState(formData.address.state);
+  }, [formData.address.state]);
 
   const [newProgram, setNewProgram] = useState('');
+  const [isCustomProgram, setIsCustomProgram] = useState(false);
+  const [customProgramName, setCustomProgramName] = useState('');
 
   // Interface removida - usando any[] para flexibilidade com diferentes formatos
 
-  // Função para filtrar cidades baseada na busca
-  const filteredCities = cities.filter(city =>
-    city.toLowerCase().includes(citySearch.toLowerCase())
-  );
 
   // ✅ OTIMIZAÇÃO: Busca instantânea das cidades a partir do JSON de estados dos EUA otimizado
   const fetchCitiesByState = (state: string) => {
     if (!state) {
       setCities([]);
-      setCitySearch(''); // Limpar busca quando não há estado
       return;
     }
 
     setLoadingCities(true);
-    setCitySearch(''); // Limpar busca quando estado muda
     
     try {
       const stateCode = getStateAbbreviation(state);
@@ -273,12 +272,16 @@ const SchoolProfileSetup: React.FC = () => {
   };
 
   const addProgram = () => {
-    if (newProgram.trim() && !formData.programs.includes(newProgram.trim())) {
+    const programToAdd = isCustomProgram ? customProgramName.trim() : newProgram.trim();
+    
+    if (programToAdd && !formData.programs.includes(programToAdd)) {
       setFormData(prev => ({
         ...prev,
-        programs: [...prev.programs, newProgram.trim()]
+        programs: [...prev.programs, programToAdd]
       }));
       setNewProgram('');
+      setCustomProgramName('');
+      setIsCustomProgram(false);
     }
   };
 
@@ -548,15 +551,27 @@ const SchoolProfileSetup: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.address.city}
                     onChange={(e) => handleInputChange('address.city', e.target.value)}
+                    disabled={!formData.address.state || loadingCities}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
                       errors['address.city'] ? 'border-red-300' : 'border-gray-300'
                     }`}
-                    placeholder="Enter city"
-                  />
+                  >
+                    <option value="">
+                      {!formData.address.state
+                        ? 'Select a state first'
+                        : loadingCities
+                        ? 'Loading cities...'
+                        : 'Select a city'}
+                    </option>
+                    {cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
                   {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
                 </div>
 
@@ -622,6 +637,8 @@ const SchoolProfileSetup: React.FC = () => {
                     addInternationalOption={false}
                     value={formData.contact.phone}
                     onChange={(value) => handlePhoneChange('contact.phone', value)}
+                    limitMaxLength={true}
+                    maxLength={20}
                     style={{
                       '--PhoneInputCountryFlag-height': '1.2em',
                       '--PhoneInputCountrySelectArrow-opacity': '0.8',
@@ -641,6 +658,8 @@ const SchoolProfileSetup: React.FC = () => {
                     addInternationalOption={false}
                     value={formData.contact.fax}
                     onChange={(value) => handlePhoneChange('contact.fax', value)}
+                    limitMaxLength={true}
+                    maxLength={20}
                     style={{
                       '--PhoneInputCountryFlag-height': '1.2em',
                       '--PhoneInputCountrySelectArrow-opacity': '0.8',
@@ -694,24 +713,68 @@ const SchoolProfileSetup: React.FC = () => {
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Academic Programs *</label>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newProgram}
-                        onChange={(e) => setNewProgram(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                        placeholder="Enter program name"
-                        onKeyPress={(e) => e.key === 'Enter' && addProgram()}
-                      />
-                      <button
-                        type="button"
-                        onClick={addProgram}
-                        className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <div className="space-y-3">
+                      {!isCustomProgram ? (
+                        <div className="flex gap-2">
+                          <select
+                            value={newProgram}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') {
+                                setIsCustomProgram(true);
+                                setNewProgram('');
+                              } else if (val) {
+                                if (!formData.programs.includes(val)) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    programs: [...prev.programs, val]
+                                  }));
+                                }
+                                setNewProgram('');
+                              }
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                          >
+                            <option value="">Select a program...</option>
+                            {DEFAULT_PROGRAMS.map((program) => (
+                              <option key={program} value={program}>
+                                {program}
+                              </option>
+                            ))}
+                            <option value="custom">-- Custom Program (Type manually) --</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={customProgramName}
+                            onChange={(e) => setCustomProgramName(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                            placeholder="Enter custom program name"
+                            onKeyPress={(e) => e.key === 'Enter' && addProgram()}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={addProgram}
+                            disabled={!customProgramName.trim()}
+                            className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomProgram(false);
+                              setCustomProgramName('');
+                            }}
+                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     
                     {formData.programs.length > 0 && (
                       <div className="flex flex-wrap gap-2">
