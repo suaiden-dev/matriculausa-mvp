@@ -6,12 +6,11 @@ import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
   const { t } = useTranslationWithFees(['home', 'common', 'dashboard']);
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
-  // Debug logs
-  console.log('🔍 [FAQ] Dynamic fees:', { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName });
+
 
   const faqItems = [
     {

@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import { MapPin, ExternalLink, Phone, Mail, Fan as Fax, Edit, ArrowLeft, GraduationCap } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import Header from '../components/Header';
 import { slugify } from '../utils/slugify';
 
 const UniversityDetail: React.FC = () => {
@@ -70,7 +69,7 @@ const UniversityDetail: React.FC = () => {
       contact: university.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
       programs: university.programs || []
     });
-    setImageUrl(university.banner_url || university.image_url || university.image || university.logo_url);
+    setImageUrl(university.image_url || university.logo_url || university.image || university.banner_url);
   }, [university]);
 
   const handleCancel = () => {
@@ -82,7 +81,7 @@ const UniversityDetail: React.FC = () => {
       contact: university?.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
       programs: university?.programs || []
     });
-    setImageUrl(university?.banner_url || university?.image_url || university?.image || university?.logo_url);
+    setImageUrl(university?.image_url || university?.logo_url || university?.image || university?.banner_url);
     setUploadError(null); setErrorMessage(null); setSuccessMessage(null);
   };
 
@@ -168,7 +167,6 @@ const UniversityDetail: React.FC = () => {
 
   return (
     <>
-      <Header />
       <div className="min-h-screen bg-stone-50">
 
         {/* Feedback toast */}
@@ -179,15 +177,30 @@ const UniversityDetail: React.FC = () => {
         )}
 
         {/* ── HERO — Magazine Cover ── */}
-        <section className="relative min-h-[90vh] flex flex-col overflow-hidden bg-stone-950">
-          {/* Subtle texture/glow */}
-          <div className="absolute inset-0 bg-gradient-to-br from-stone-900 via-stone-950 to-stone-950" />
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-stone-800/30 rounded-full blur-[100px] pointer-events-none" />
+        <section className={`relative min-h-[65vh] flex flex-col overflow-hidden ${university.banner_url ? 'bg-stone-100' : 'bg-stone-950'}`}>
+          {/* Background image if banner_url exists */}
+          {university.banner_url ? (
+            <div className="absolute inset-0 z-0">
+              <img 
+                src={university.banner_url} 
+                alt={`${university.name} banner`} 
+                className="w-full h-full object-cover"
+              />
+              {/* Subtle gradient to protect white text legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-stone-950/20" />
+            </div>
+          ) : (
+            <>
+              {/* Subtle texture/glow - Fallback if no banner */}
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-900 via-stone-950 to-stone-950" />
+              <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-stone-800/30 rounded-full blur-[100px] pointer-events-none" />
+            </>
+          )}
 
           {/* Top bar */}
           <div className="relative z-10 flex items-center justify-between px-6 lg:px-14 pt-24 lg:pt-28">
-            <Link to="/schools" className="flex items-center gap-2 text-white/40 hover:text-white/80 text-sm tracking-wide transition-colors">
+            <Link to="/schools" className="flex items-center gap-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white px-5 py-2.5 rounded-full text-sm font-bold tracking-wide transition-all shadow-lg hover:shadow-xl hover:scale-105 transform">
               <ArrowLeft className="w-4 h-4" />
               {t('universityDetailPage.notFound.backLink')}
             </Link>
@@ -225,37 +238,8 @@ const UniversityDetail: React.FC = () => {
           {/* Hero content — magazine layout */}
           <div className="relative z-10 mt-auto px-6 lg:px-14 pb-16 lg:pb-24">
             <div className="flex flex-col lg:flex-row items-end gap-10 lg:gap-16">
-              {/* Left: Text */}
-              <div className="flex-1">
-                <p className="text-[10px] text-white/30 tracking-[0.5em] uppercase mb-6">
-                  {university.type || 'University'}
-                </p>
-
-                {isEditing ? (
-                  <input type="text" value={formData.name}
-                    onChange={e => handleInputChange('name', e.target.value)}
-                    className="text-4xl md:text-5xl font-black w-full bg-white/10 backdrop-blur-sm text-white rounded-2xl px-6 py-4 border border-white/20 focus:outline-none focus:border-white/50 transition-all mb-6 block"
-                    placeholder={t('universityDetailPage.placeholders.universityName')}
-                  />
-                ) : (
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-none tracking-tighter mb-6">
-                    {university.name}
-                  </h1>
-                )}
-
-                <div className="flex items-center gap-2 text-white/40">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  {isEditing ? (
-                    <input type="text" value={formData.location}
-                      onChange={e => handleInputChange('location', e.target.value)}
-                      className="bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20 focus:outline-none focus:border-white/50 text-sm w-72 backdrop-blur-sm"
-                      placeholder={t('universityDetailPage.placeholders.location')}
-                    />
-                  ) : (
-                    <span className="text-sm tracking-wide">{university.location}</span>
-                  )}
-                </div>
-              </div>
+              {/* Left: Spacer to push the logo to the right */}
+              <div className="flex-1" />
 
               {/* Right: Logo/Image in controlled frame */}
               {imageUrl && !isEditing && (
@@ -273,6 +257,34 @@ const UniversityDetail: React.FC = () => {
 
         {/* ── CONTENT — Stacked Sections ── */}
         <div className="max-w-3xl mx-auto px-6 lg:px-8 pb-40">
+
+          {/* University Name & Location below Hero */}
+          <div className="py-10 border-b border-stone-200">
+            {isEditing ? (
+              <input type="text" value={formData.name}
+                onChange={e => handleInputChange('name', e.target.value)}
+                className="text-3xl md:text-4xl font-black w-full bg-white text-stone-900 rounded-2xl px-5 py-3 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900 transition-all mb-4 block"
+                placeholder={t('universityDetailPage.placeholders.universityName')}
+              />
+            ) : (
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-stone-900 leading-tight mb-4">
+                {university.name}
+              </h1>
+            )}
+
+            <div className="flex items-center gap-2 text-stone-500">
+              <MapPin className="w-4 h-4 text-stone-400 shrink-0" />
+              {isEditing ? (
+                <input type="text" value={formData.location}
+                  onChange={e => handleInputChange('location', e.target.value)}
+                  className="bg-white text-stone-900 rounded-xl px-4 py-2 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-900 text-sm w-72"
+                  placeholder={t('universityDetailPage.placeholders.location')}
+                />
+              ) : (
+                <span className="text-sm font-medium tracking-wide">{university.location}</span>
+              )}
+            </div>
+          </div>
 
           {/* About */}
           {(university.description || isEditing) && (
