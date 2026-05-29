@@ -12,23 +12,19 @@ import {
   GraduationCap,
   Download,
   Eye,
-  Inbox
+  Inbox,
+  Star
 } from 'lucide-react';
-import { ScholarshipCardFull } from '../StudentOnboarding/components/ScholarshipCardFull';
+import { getDeliveryModeLabel } from '../../utils/scholarshipHelpers';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
-import { convertCentsToDollars } from '../../utils/currency';
-import TruncatedText from '../../components/TruncatedText';
 import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotionalCouponQuery } from '../../hooks/useStudentDashboardQueries';
 import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import { useQueryClient } from '@tanstack/react-query';
-import { getPlacementFee, formatPlacementFee } from '../../utils/placementFeeCalculator';
 
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
@@ -41,11 +37,9 @@ type ApplicationWithScholarship = Application & {
 // Labels amigáveis para os documentos principais - será definido dentro do componente
 
 const MyApplications: React.FC = () => {
-  const { t } = useTranslation(['dashboard', 'common', 'registration']);
+  const { t } = useTranslation(['dashboard', 'common', 'registration', 'scholarships']);
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
-  const { getFeeAmount } = useFeeConfig(user?.id);
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const queryClient = useQueryClient();
 
   const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
@@ -55,18 +49,8 @@ const MyApplications: React.FC = () => {
   // isFetching = buscando em background (pode ter dados em cache)
   const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
   const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement', 'ds160_package', 'i539_cos_package']);
-  const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
-  const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
-  // O valor vem em centavos do banco, precisa converter para dólares primeiro
-  const getApplicationFeeWithDependents = (baseInCents: number): number => {
-    // Converter centavos para dólares
-    const baseInDollars = convertCentsToDollars(baseInCents);
-    const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
-    return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
-  };
-
+  usePromotionalCouponQuery(user?.id, 'scholarship_fee');
+  usePromotionalCouponQuery(user?.id, 'application_fee');
   // Convert query error to string for compatibility
   const error = queryError ? 'Erro ao buscar aplicações.' : null;
 
@@ -333,14 +317,7 @@ const MyApplications: React.FC = () => {
 
 
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatAmountShort = (v: number) => v?.toLocaleString('en-US', { maximumFractionDigits: 0 }) || '0';
 
   // Função para sanitizar nome do arquivo
   const sanitizeFileName = (fileName: string): string => {
@@ -614,6 +591,213 @@ const MyApplications: React.FC = () => {
   };
 
 
+  const renderApplicationCard = (application: ApplicationWithScholarship) => {
+    const scholarship = application.scholarships;
+    if (!scholarship) return null;
+
+    const annualSavings = (Number((scholarship as any).original_annual_value) || 0) - (Number(scholarship.annual_value_with_scholarship) || 0);
+    const cardImage = (scholarship as any).image_url || (scholarship as any).universities?.image_url;
+    const StatusIcon = getStatusIcon(application.status);
+
+    const handleCardClick = () => {
+      if (application.status === 'rejected') return;
+      localStorage.setItem('selected_application_id', application.id);
+      const savedStep = (userProfile as any)?.onboarding_current_step;
+      const step = (savedStep && savedStep !== 'my_applications' && savedStep !== 'completed') ? savedStep : null;
+      navigate(step ? `/student/onboarding?step=${step}` : '/student/onboarding');
+    };
+
+    return (
+      <div
+        key={application.id}
+        onClick={handleCardClick}
+        className={`group bg-white rounded-[2rem] border shadow-[0_12px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_24px_50px_rgba(5,41,78,0.12)] hover:-translate-y-1.5 transition-all duration-500 overflow-hidden flex flex-col h-full ${
+          application.status === 'rejected'
+            ? 'border-red-200 cursor-default'
+            : 'border-slate-200 hover:border-blue-200 cursor-pointer'
+        }`}
+      >
+        {/* Card Header (Cover Image) */}
+        <div className="relative h-44 w-full bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
+          <div className="absolute inset-0 z-0">
+            {cardImage ? (
+              <img src={cardImage} alt={scholarship.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+            ) : (
+              <div className="flex items-center justify-center w-full h-full bg-slate-50">
+                <Building className="h-12 w-12 text-[#05294E]/20" />
+              </div>
+            )}
+          </div>
+
+          {/* Text Overlay (Left side) */}
+          <div className="absolute inset-y-0 left-0 w-[65%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-4 pr-8">
+            <div className="absolute top-4 left-4">
+              <img src="/logo.png" alt="Matricula USA" className="h-5 w-auto object-contain mb-1.5 drop-shadow-sm" />
+            </div>
+            <p className="w-[95%] text-sm font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-8" style={{ lineHeight: 0.95 }}>
+              {(scholarship as any).field_of_study || t('scholarships:scholarshipsPage.filters.anyField', 'Qualquer Área')}
+            </p>
+          </div>
+
+          {/* Top Right: Status + Exclusive badges (hide status for rejected — shown at bottom) */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+            {application.status !== 'rejected' && (
+              <div className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1 ${
+                application.status === 'approved' || application.status === 'enrolled'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-amber-500 text-white'
+              }`}>
+                <StatusIcon className="h-3 w-3" />
+                {getStatusLabel(application.status)}
+              </div>
+            )}
+            {(scholarship as any).is_exclusive && (
+              <div className="bg-amber-500 text-white px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                <Star className="h-3 w-3 fill-white" />
+                {t('common:exclusive', 'Exclusiva')}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Right: Level + Scholarship % */}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+            <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-800 shadow-sm border border-white/20">
+              {getLevelLabel((scholarship as any).level || '')}
+            </span>
+            {(scholarship as any).scholarship_percentage && (
+              <span className="px-2.5 py-1 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                {(scholarship as any).scholarship_percentage}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Card Body */}
+        <div className="p-6 flex-1 flex flex-col justify-between">
+          <div>
+            {/* University */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative w-7 h-7 rounded-md border border-slate-100 bg-white p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {scholarship.universities?.logo_url ? (
+                  <img src={scholarship.universities.logo_url} alt={scholarship.universities.name || ''} className="w-full h-full object-contain" />
+                ) : (
+                  <Building className="w-4 h-4 text-slate-400" />
+                )}
+              </div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[85%]">
+                {scholarship.universities?.name || 'Universidade'}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-base font-black text-slate-900 line-clamp-2 leading-snug mb-2">
+              {scholarship.title}
+            </h3>
+
+            {/* Field of Study */}
+            {(scholarship as any).field_of_study && (
+              <div className="mb-2">
+                <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                  <span className="truncate">{(scholarship as any).field_of_study}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Specs: Delivery Mode + Work Permissions */}
+            {((scholarship as any).delivery_mode || ((scholarship as any).work_permissions && (scholarship as any).work_permissions.length > 0)) && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(scholarship as any).delivery_mode && (
+                  <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                    <span className="truncate">{getDeliveryModeLabel((scholarship as any).delivery_mode, t)}</span>
+                  </span>
+                )}
+                {(scholarship as any).work_permissions && (scholarship as any).work_permissions.map((perm: string, i: number) => (
+                  <span key={i} className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                    <span className="truncate">{perm}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Financial Section */}
+          <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 sm:p-5 mt-2 flex items-center justify-between gap-4">
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                {t('scholarships:scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+              </span>
+              <span className="text-sm font-bold text-slate-400 line-through leading-tight">
+                ${formatAmountShort(Number((scholarship as any).original_annual_value))}
+              </span>
+              {annualSavings > 0 && (
+                <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
+                  -{t('scholarships:scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmountShort(annualSavings)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">
+                {t('scholarships:scholarshipsPage.detail.withScholarship', 'Com Bolsa')}
+              </span>
+              <div className="flex items-baseline justify-end">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                  ${formatAmountShort(Number(scholarship.annual_value_with_scholarship))}
+                </span>
+                <span className="text-xs font-bold text-slate-500 ml-0.5">
+                  {t('scholarships:scholarshipsPage.detail.perYear', '/ano')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rejected: status + reason (after financial section, same card style) */}
+          {application.status === 'rejected' && (
+            <div className="bg-red-50/80 border border-red-100 rounded-[1.5rem] p-4 sm:p-5 mt-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                  <XCircle className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-[11px] font-extrabold text-red-500 uppercase tracking-wider">
+                  {getStatusLabel(application.status)}
+                </span>
+              </div>
+              {(application as any).notes && (
+                <p className="text-xs text-red-600/80 font-medium leading-relaxed pl-8">
+                  {(application as any).notes}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Action Button */}
+          {application.status !== 'rejected' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+              className={`mt-4 w-full py-3 px-4 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center transition-all duration-300 active:scale-95 ${
+                application.status === 'enrolled'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-gradient-to-r from-[#05294E] to-slate-700 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02]'
+              }`}
+            >
+              <span className="truncate">
+                {application.status === 'enrolled'
+                  ? t('studentDashboard.myApplications.applicationCompleted', 'Aplicação Finalizada')
+                  : t('studentDashboard.myApplications.continueApplication', 'Continuar Aplicação')}
+              </span>
+              {application.status === 'enrolled'
+                ? <CheckCircle className="ml-2 h-4 w-4 flex-shrink-0" />
+                : <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0" />
+              }
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="pt-6 sm:pt-8">
@@ -835,43 +1019,8 @@ const MyApplications: React.FC = () => {
                         <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {approvedList.map((application: ApplicationWithScholarship) => {
-                          const Icon = getStatusIcon(application.status);
-                          const scholarship = application.scholarships;
-                          
-                          const packageD160Paid = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
-                          const packageI539Paid = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
-                          const hasPaidPackage = packageD160Paid || packageI539Paid;
-                          
-                          const applicationFeePaid = !!application.is_application_fee_paid || hasPaidPackage;
-                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid || 
-                                                     !!application.acceptance_letter_url ||
-                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
-                                                     hasPaidPackage;
-                          if (!scholarship) return null;
-
-
-
-                          return (
-                            <ScholarshipCardFull
-                              key={application.id}
-                              scholarship={scholarship}
-                              isSelected={scholarshipFeePaid}
-                              onToggle={() => {
-                                localStorage.setItem('selected_application_id', application.id);
-                                const savedStep = (userProfile as any)?.onboarding_current_step;
-                                const step = (savedStep && savedStep !== 'my_applications' && savedStep !== 'completed')
-                                  ? savedStep
-                                  : null;
-                                navigate(step ? `/student/onboarding?step=${step}` : '/student/onboarding');
-                              }}
-                              userProfile={userProfile}
-                              isLocked={false}
-                              actionLabel={application.status === 'enrolled' ? 'Aplicação Finalizada' : 'Continuar Aplicação'}
-                            />
-                          );
-                        })}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {approvedList.map((application: ApplicationWithScholarship) => renderApplicationCard(application))}
                       </div>
                     </section>
                   );
@@ -887,170 +1036,8 @@ const MyApplications: React.FC = () => {
                         <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.pendingAndInProgress')}</h3>
                         <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} {t('studentDashboard.myApplications.sections.applications')}</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {otherList.map((application: ApplicationWithScholarship) => {
-                          const scholarship = application.scholarships;
-                          if (!scholarship) return null;
-
-
-                          return (
-                            <div
-                              key={application.id}
-                              className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 hover:-translate-y-0.5 transform-gpu ${
-                                application.status === 'rejected' ? 'border-red-500 bg-red-50/30' : 'border-slate-300'
-                              }`}
-                            >
-                              {/* Desktop status badge — absolute */}
-                              <div className="hidden sm:flex items-center absolute top-4 right-4 z-20">
-                                <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm border ${
-                                  application.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' : 'bg-amber-500/90 text-white border-amber-400'
-                                }`}>
-                                  {getStatusLabel(application.status)}
-                                </div>
-                              </div>
-
-                              <div className="p-4 sm:p-5 flex flex-col">
-                                {/* Mobile: logo + status row */}
-                                <div className="sm:hidden flex items-center justify-between mb-4">
-                                  <div className="flex-shrink-0">
-                                    {scholarship?.universities?.logo_url || (scholarship as any)?.image_url ? (
-                                      <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm">
-                                        <img src={scholarship?.universities?.logo_url || (scholarship as any)?.image_url} alt="" className="w-full h-full object-contain p-1.5" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
-                                      </div>
-                                    ) : (
-                                      <div className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                                        <Building className="w-6 h-6 text-slate-300" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                                    application.status === 'rejected' ? 'bg-red-500 text-white border-red-400' : 'bg-amber-500 text-white border-amber-400'
-                                  }`}>
-                                    {getStatusLabel(application.status)}
-                                  </div>
-                                </div>
-
-                                {/* Mobile: title + university */}
-                                <div className="sm:hidden mb-4">
-                                  <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight">{scholarship?.title}</h4>
-                                  <p className="text-sm font-medium text-slate-500">{scholarship?.universities?.name}</p>
-                                </div>
-
-                                {/* Desktop: logo + title */}
-                                <div className="hidden sm:flex gap-4 items-center mb-4">
-                                  <div className="flex-shrink-0">
-                                    {scholarship?.universities?.logo_url || (scholarship as any)?.image_url ? (
-                                      <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center overflow-hidden border border-gray-100/50 shadow-sm">
-                                        <img src={scholarship?.universities?.logo_url || (scholarship as any)?.image_url} alt="" className="w-full h-full object-contain p-2" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }} />
-                                      </div>
-                                    ) : (
-                                      <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center border border-gray-100/50">
-                                        <Building className="w-16 h-16 text-slate-300" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight pr-20">{scholarship?.title}</h4>
-                                    <p className="text-sm font-medium text-slate-500 truncate">{scholarship?.universities?.name}</p>
-                                  </div>
-                                </div>
-
-                                {/* Field of study */}
-                                {(scholarship as any)?.field_of_study && (
-                                  <div className="flex items-center mb-3">
-                                    <span className="px-2 py-0.5 rounded-md text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
-                                      {(scholarship as any).field_of_study}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Financial info */}
-                                <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                                  {(scholarship as any)?.original_annual_value && (
-                                    <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-200">
-                                      <span className="text-xs text-slate-500 font-medium">Valor original</span>
-                                      <span className="text-xs font-semibold text-slate-500 line-through">
-                                        ${Number((scholarship as any).original_annual_value).toLocaleString('en-US')}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-slate-500 font-medium">Com Bolsa</span>
-                                    <div className="flex items-center">
-                                      <span className="font-bold text-green-700 text-base sm:text-lg">
-                                        ${scholarship?.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') : 'N/A'}
-                                      </span>
-                                      <span className="text-[10px] text-green-600 font-semibold ml-1">/ ano</span>
-                                    </div>
-                                  </div>
-                                  {(scholarship as any)?.application_fee_amount && (
-                                    <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
-                                      <span className="text-xs text-slate-500 font-medium">Taxa de Matrícula</span>
-                                      <span className="text-blue-600 font-bold text-sm">{formatAmount(Number((scholarship as any).application_fee_amount))}</span>
-                                    </div>
-                                  )}
-                                  {(userProfile as any)?.placement_fee_flow && (() => {
-                                    const annualValue = Number(scholarship?.annual_value_with_scholarship || 0);
-                                    const pfa = (scholarship as any)?.placement_fee_amount ? Number((scholarship as any).placement_fee_amount) : null;
-                                    const pf = getPlacementFee(annualValue, pfa);
-                                    return (
-                                      <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
-                                        <span className="text-xs text-slate-500 font-medium">Placement Fee</span>
-                                        <span className="text-blue-600 font-bold text-sm">{formatAmount(pf)}</span>
-                                      </div>
-                                    );
-                                  })()}
-                                  {(() => {
-                                    const pType = userProfile?.student_process_type;
-                                    if (!pType) return null;
-                                    const fees: { name: string; amount: number }[] = [];
-                                    if (pType === 'initial') fees.push({ name: 'Control Fee', amount: 1800 });
-                                    else if (pType === 'change_of_status') fees.push({ name: 'Control Fee', amount: 1800 });
-                                    else if (pType === 'transfer' && userProfile?.visa_transfer_active === false) {
-                                      fees.push({ name: 'Control Fee', amount: 500 });
-                                      fees.push({ name: 'Control Fee', amount: 1800 });
-                                    }
-                                    if (fees.length === 0) return null;
-                                    return fees.map((f, idx) => (
-                                      <div key={idx} className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
-                                        <span className="text-xs text-slate-500 font-medium">{f.name}</span>
-                                        <span className="text-blue-600 font-bold text-sm">{formatAmount(f.amount)}</span>
-                                      </div>
-                                    ));
-                                  })()}
-                                </div>
-
-                                {/* Rejection notes */}
-                                {application.status === 'rejected' && (application as any).notes && (
-                                  <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
-                                    <p className="text-xs text-red-600 font-bold uppercase tracking-tight leading-relaxed">
-                                      <span className="text-red-400 block mb-0.5">{t('studentDashboard.myApplications.rejectedApplication.reason')}</span>
-                                      {(application as any).notes}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Continue to onboarding */}
-                                {application.status !== 'rejected' && (
-                                  <div className="mb-1">
-                                    <button
-                                      onClick={() => {
-                                        localStorage.setItem('selected_application_id', application.id);
-                                        const savedStep = (userProfile as any)?.onboarding_current_step;
-                                        const step = (savedStep && savedStep !== 'my_applications' && savedStep !== 'completed') ? savedStep : null;
-                                        navigate(step ? `/student/onboarding?step=${step}` : '/student/onboarding');
-                                      }}
-                                      className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[#05294E] hover:bg-[#041f3a] text-white font-bold text-sm transition-all"
-                                    >
-                                      Continuar Processo
-                                      <ArrowRight className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {otherList.map((application: ApplicationWithScholarship) => renderApplicationCard(application))}
                       </div>
                 </section>
               );

@@ -246,102 +246,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                 )}
               </div>
 
-              {/* Seção para gerenciar uploads do aluno */}
-              {transferFormUploads.length > 0 && (
-                <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-6">
-                  <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
-                    </svg>
-                    Student Uploads
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    {transferFormUploads.map((upload) => {
-                      const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                                        upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                                        'bg-yellow-100 text-yellow-800 border-yellow-200';
-                      
-                      return (
-                        <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div>
-                                <p className="font-medium text-slate-900">
-                                  {upload.file_url.split('/').pop()}
-                                </p>
-                                <p className="text-sm text-slate-500">
-                                  Uploaded on {new Date(upload.uploaded_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
-                              {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                            </span>
-                          </div>
-                          
-                          {upload.rejection_reason && (
-                            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                              <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
-                              <p className="text-sm text-red-700">{upload.rejection_reason}</p>
-                            </div>
-                          )}
-                          
-                          <div className="flex gap-2">
-                            <button
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                              onClick={() => {
-                                handleViewDocument({
-                                  file_url: upload.file_url,
-                                  filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
-                                });
-                              }}
-                            >
-                              View
-                            </button>
-                            <button
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                              onClick={() => {
-                                handleDownloadDocument({
-                                  file_url: upload.file_url,
-                                  filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
-                                });
-                              }}
-                            >
-                              Download
-                            </button>
-                            
-                            {upload.status === 'under_review' && isPlatformAdmin && (
-                              <>
-                                <button
-                                  className="text-green-600 hover:text-green-800 text-sm font-medium hover:underline"
-                                  onClick={() => handleApproveTransferFormUpload(upload.id)}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline"
-                                  onClick={() => {
-                                    setPendingRejectUploadId(upload.id);
-                                    setShowRejectModal(true);
-                                  }}
-                                >
-                                  Reject
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+
             </div>
           ) : (
             // Formulário não enviado - mostrar upload
@@ -399,6 +304,103 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Seção para gerenciar uploads do aluno (sempre visível se houver uploads) */}
+          {transferFormUploads.length > 0 && (
+            <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-6">
+              <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                </svg>
+                Student Uploads
+              </h4>
+              
+              <div className="space-y-4">
+                {transferFormUploads.map((upload) => {
+                  const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                    upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                    'bg-yellow-100 text-yellow-800 border-yellow-200';
+                  
+                  return (
+                    <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {upload.file_url.split('/').pop()}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              Uploaded on {new Date(upload.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
+                          {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </span>
+                      </div>
+                      
+                      {upload.rejection_reason && (
+                        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
+                          <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                          onClick={() => {
+                            handleViewDocument({
+                              file_url: upload.file_url,
+                              filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                            });
+                          }}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                          onClick={() => {
+                            handleDownloadDocument({
+                              file_url: upload.file_url,
+                              filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                            });
+                          }}
+                        >
+                          Download
+                        </button>
+                        
+                        {upload.status === 'under_review' && isPlatformAdmin && (
+                          <>
+                            <button
+                              className="text-green-600 hover:text-green-800 text-sm font-medium hover:underline"
+                              onClick={() => handleApproveTransferFormUpload(upload.id)}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline"
+                              onClick={() => {
+                                setPendingRejectUploadId(upload.id);
+                                setShowRejectModal(true);
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

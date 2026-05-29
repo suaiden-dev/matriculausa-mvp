@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
@@ -179,7 +180,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             setPreviewUrl(previewSource);
         } catch (err) {
             console.error('Error viewing document:', err);
-            alert(t('dashboard:studentDashboard.documentRequests.errors.errorViewingDocument') || 'Erro ao visualizar documento');
+            toast.error(t('dashboard:studentDashboard.documentRequests.errors.errorViewingDocument') || 'Erro ao visualizar documento');
         }
     };
 
@@ -206,7 +207,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Error downloading document:', err);
-            alert(t('dashboard:studentDashboard.documentRequests.errors.errorDownloadingDocument') || 'Erro ao baixar documento');
+            toast.error(t('dashboard:studentDashboard.documentRequests.errors.errorDownloadingDocument') || 'Erro ao baixar documento');
         }
     };
 
@@ -559,11 +560,29 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     data.i20_document_url = 'blocked';
                 }
 
+                const scholarshipLevel = data?.scholarships?.level;
+                const applicationStatus = data?.status;
+                const filteredReqs = (reqs || []).filter((req: any) => {
+                    if (req.is_global) {
+                        // Global requests só aparecem para alunos com bolsa aprovada/enrolled
+                        if (applicationStatus !== 'approved' && applicationStatus !== 'enrolled') {
+                            return false;
+                        }
+                        const levels = req.applicable_scholarship_levels;
+                        if (levels && Array.isArray(levels) && levels.length > 0) {
+                            if (scholarshipLevel && !levels.includes(scholarshipLevel)) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+
                 // ✅ ATUALIZAÇÃO ÚNICA: Consolidando todos os dados em um único render
                 setDataState(prev => ({
                     ...prev,
                     applicationDetails: data,
-                    documentRequests: reqs || [],
+                    documentRequests: filteredReqs,
                     ds160PackagePaid: ds160PaidFinal,
                     i539PackagePaid: i539PaidFinal,
                     hasPendingZelle: hasPendingZelleFinal,
@@ -671,7 +690,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             }
         } catch (err: any) {
             console.error('[Installment2Checkout] Error:', err);
-            alert(err.message || 'Erro ao processar pagamento. Tente novamente.');
+            toast.error(err.message || 'Erro ao processar pagamento. Tente novamente.');
         } finally {
             setInstallmentProcessing(null);
         }
@@ -743,7 +762,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 onView: () => {
                                                     const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
                                                     if (!urlToView) {
-                                                        alert('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
+                                                        toast.error('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
                                                         return;
                                                     }
                                                     handleViewDocument(urlToView);
@@ -970,7 +989,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 onView: () => {
                                                     const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
                                                     if (!urlToView) {
-                                                        alert('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
+                                                        toast.error('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
                                                         return;
                                                     }
                                                     handleViewDocument(urlToView);
@@ -1041,7 +1060,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                                         setBlurredPreviewUrl(objectUrl);
                                                                     } catch (err) {
                                                                         console.error('[I20Preview] Error:', err);
-                                                                        alert('Não foi possível carregar o preview. Tente novamente.');
+                                                                        toast.error('Não foi possível carregar o preview. Tente novamente.');
                                                                     } finally {
                                                                         setBlurredPreviewLoading(false);
                                                                     }
