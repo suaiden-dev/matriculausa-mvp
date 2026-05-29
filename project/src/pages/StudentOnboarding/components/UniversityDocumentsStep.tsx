@@ -559,11 +559,24 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     data.i20_document_url = 'blocked';
                 }
 
+                const scholarshipLevel = data?.scholarships?.level;
+                const filteredReqs = (reqs || []).filter((req: any) => {
+                    if (req.is_global) {
+                        const levels = req.applicable_scholarship_levels;
+                        if (levels && Array.isArray(levels) && levels.length > 0) {
+                            if (scholarshipLevel && !levels.includes(scholarshipLevel)) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+
                 // ✅ ATUALIZAÇÃO ÚNICA: Consolidando todos os dados em um único render
                 setDataState(prev => ({
                     ...prev,
                     applicationDetails: data,
-                    documentRequests: reqs || [],
+                    documentRequests: filteredReqs,
                     ds160PackagePaid: ds160PaidFinal,
                     i539PackagePaid: i539PaidFinal,
                     hasPendingZelle: hasPendingZelleFinal,

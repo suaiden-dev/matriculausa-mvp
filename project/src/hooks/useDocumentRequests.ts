@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 
 interface NewDocumentRequest {
@@ -11,6 +12,8 @@ interface NewDocumentRequest {
 interface StudentRecord {
   user_id: string;
   all_applications?: any[];
+  selected_application_id?: string | null;
+  application_id?: string | null;
 }
 
 export const useDocumentRequests = (
@@ -43,7 +46,7 @@ export const useDocumentRequests = (
     setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
   }, []);
 
-  // Atualizar campos do formulário
+  // Handler para atualizar campos do formulário
   const updateNewDocumentRequest = useCallback((updates: Partial<NewDocumentRequest>) => {
     setNewDocumentRequest(prev => ({ ...prev, ...updates }));
   }, []);
@@ -54,11 +57,17 @@ export const useDocumentRequests = (
     try {
       setCreatingDocumentRequest(true);
 
-      // Selecionar uma aplicação alvo (prioriza com acceptance letter, senão primeira)
+      // Selecionar uma aplicação alvo
       const apps = student.all_applications || [];
-      const targetApp = apps.find((a: any) => !!a.acceptance_letter_url) || apps[0];
+      const targetApp = 
+        apps.find((a: any) => a.id === student.selected_application_id) ||
+        apps.find((a: any) => a.id === student.application_id) ||
+        apps.find((a: any) => a.status === 'enrolled') ||
+        apps.find((a: any) => a.status === 'approved') ||
+        apps.find((a: any) => !!a.acceptance_letter_url) || 
+        apps[0];
       if (!targetApp) {
-        alert('No application found for this student.');
+        toast.error('No application found for this student.');
         return;
       }
 
@@ -194,10 +203,10 @@ export const useDocumentRequests = (
       
       // Limpar formulário e fechar modal
       closeNewRequestModal();
-      alert('Document request created successfully!');
+      toast.success('Document request created successfully!');
     } catch (err: any) {
       console.error('Error creating document request:', err);
-      alert(`Failed to create document request: ${err?.message || 'Unknown error'}`);
+      toast.error(`Failed to create document request: ${err?.message || 'Unknown error'}`);
     } finally {
       setCreatingDocumentRequest(false);
     }
