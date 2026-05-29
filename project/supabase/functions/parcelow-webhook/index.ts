@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
 
 const supabase = createClient(
 // @ts-ignore
@@ -134,7 +135,7 @@ async function sendTermAcceptanceNotificationAfterPayment(
     // Buscar perfil do usuário
     const { data: userProfile, error: userError } = await supabase
       .from("user_profiles")
-      .select("email, full_name, country, seller_referral_code")
+      .select("email, full_name, country, seller_referral_code, placement_fee_installment_enabled")
       .eq("user_id", userId)
       .single();
 
@@ -888,6 +889,41 @@ Deno.serve(async (req: Request) => {
       }
     }
     // =========================================================================
+    // 🔀 ROTEAMENTO MIGMA (MATRICULAUSA-AF-V11- e MATRICULAUSA-AF-APP-)
+    // =========================================================================
+    if (reference.startsWith("MATRICULAUSA-AF-V11-") || reference.startsWith("MATRICULAUSA-AF-APP-")) {
+      console.log(`[router] Detectada ordem da Migma: ${reference}. Redirecionando...`);
+
+      const MIGMA_WEBHOOK_URL = Deno.env.get("MIGMA_PARCELOW_WEBHOOK_URL");
+
+      if (!MIGMA_WEBHOOK_URL) {
+        console.error("[router] ❌ MIGMA_PARCELOW_WEBHOOK_URL não configurada");
+        return new Response(JSON.stringify({ error: "Migma webhook URL not configured" }), { status: 500 });
+      }
+
+      try {
+        const response = await fetch(MIGMA_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": req.headers.get("Authorization") || "",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const resultText = await response.text();
+        console.log(`[router] Resposta da Migma (Status: ${response.status}):`, resultText);
+
+        return new Response(resultText, {
+          status: response.status,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error("[router] ❌ Falha crítica ao repassar webhook para Migma:", err);
+        return new Response(JSON.stringify({ error: "Routing failed, but received" }), { status: 200 });
+      }
+    }
+    // =========================================================================
     // 🔀 FIM DO COMPONENTE DE ROTEAMENTO
     // =========================================================================
 
@@ -1283,7 +1319,7 @@ Deno.serve(async (req: Request) => {
       // 4.1. Buscar perfil do usuário
       const { data: userProfile, error: profileFetchError } = await supabase
         .from("user_profiles")
-        .select("id, full_name, email, seller_referral_code")
+        .select("id, full_name, email, seller_referral_code, placement_fee_installment_enabled, placement_fee_installment_number, placement_fee_pending_balance")
         .eq("user_id", userId)
         .single();
 
@@ -1570,12 +1606,47 @@ Deno.serve(async (req: Request) => {
         case "placement":
           console.log("[parcelow-webhook] 🔄 Processando placement_fee...");
 
+          // Resolver installment plan (novo sistema dinâmico)
+          // Parcelow não retorna metadata → metadataNum = null → usa installments_paid do plano
+          const placementPaymentDate = new Date().toISOString();
+          const { installmentNumber: placementInstallmentNum, plan: placementPlan } =
+            await resolveInstallmentNumber(supabase, userId, "placement_fee", null);
+
+          let placementIsFullyPaid = true;
+          let placementRemainingAmount = 0;
+
+          if (placementPlan) {
+            const placementResult = await recordInstallmentPayment(
+              supabase, placementPlan, netAmount, placementPaymentDate,
+            );
+            placementIsFullyPaid = placementResult.isFullyPaid;
+            placementRemainingAmount = placementResult.remainingAmount;
+            console.log(
+              `[parcelow-webhook] 📦 Installment ${placementInstallmentNum} of ${placementPlan.total_installments}`,
+              placementIsFullyPaid ? "— Plan COMPLETED" : `— $${placementRemainingAmount} remaining`,
+            );
+
+            // Linkar individual_fee_payment ao plano
+            if (payment?.id) {
+              await linkPaymentToPlan(supabase, payment.id, placementPlan.id);
+            }
+          }
+
+          const placementUpdateFields: Record<string, unknown> = {
+            is_placement_fee_paid: true,
+            placement_fee_payment_method: "parcelow",
+            ...buildLegacyProfileMirror(
+              "placement_fee",
+              placementInstallmentNum,
+              placementPlan?.total_installments ?? 1,
+              placementRemainingAmount,
+              placementIsFullyPaid,
+            ),
+          };
+
           const { error: placementUpdateError } = await supabase
             .from("user_profiles")
-            .update({
-              is_placement_fee_paid: true,
-              placement_fee_payment_method: "parcelow",
-            })
+            .update(placementUpdateFields)
             .eq("user_id", userId);
 
           if (placementUpdateError) {

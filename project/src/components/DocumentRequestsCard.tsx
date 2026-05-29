@@ -19,6 +19,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 
+import { groupUploadsBySubmission, getFileName } from '../utils/documentUploadUtils';
+
 interface DocumentRequest {
   id: string;
   title: string;
@@ -45,8 +47,8 @@ interface DocumentRequestsCardProps {
   currentUserId: string;
   studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
-  onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean) => void; // Callback para logging
-
+  onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean, requestTitle?: string) => void; // Callback para logging
+  applicationStatus?: string; // ✅ SEGURANÇA: Status da scholarship_application para bloquear uploads
 }
 
 const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
@@ -55,7 +57,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   currentUserId,
   studentType,
   studentUserId,
-  onDocumentUploaded
+  onDocumentUploaded,
+  applicationStatus
 }) => {
   const { t } = useTranslation('dashboard');
 
@@ -83,6 +86,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [loadingAttachmentUrls, setLoadingAttachmentUrls] = useState<{ [requestId: string]: boolean }>({});
   const [acceptanceLetterSignedUrls, setAcceptanceLetterSignedUrls] = useState<{ [key: string]: string | null }>({});
   const [viewingRejectionReason, setViewingRejectionReason] = useState<string | null>(null);
+  const [stagedFiles, setStagedFiles] = useState<{ [requestId: string]: File[] }>({});
+  const [submitting, setSubmitting] = useState<{ [requestId: string]: boolean }>({});
+  const [stagingErrors, setStagingErrors] = useState<{ [requestId: string]: string | null }>({});
 
   // Função para sanitizar nome do arquivo
   const handleProofUpload = async (file: File) => {
@@ -220,6 +226,43 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     fetchRequests();
   }, [applicationId]);
 
+  // Realtime: re-fetch uploads when any upload for the current requests changes (e.g. admin approval/rejection)
+  useEffect(() => {
+    if (requests.length === 0) return;
+    const ids = new Set(requests.map(r => r.id));
+    const channel = supabase
+      .channel(`doc-uploads-${applicationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'document_request_uploads' },
+        (payload) => {
+          if (ids.has((payload.new as any)?.document_request_id)) {
+            fetchRequests();
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line
+  }, [requests.length, applicationId]);
+
+  // Realtime: re-fetch requests when document_requests are updated (e.g. admin hides/restores for student)
+  useEffect(() => {
+    if (!applicationId) return;
+    const channel = supabase
+      .channel(`doc-requests-${applicationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'document_requests' },
+        () => {
+          fetchRequests();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  // eslint-disable-next-line
+  }, [applicationId]);
+
   useEffect(() => {
     // Logar uploads carregados para debug
     if (Object.keys(uploads).length > 0) {
@@ -247,15 +290,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       // Buscar a aplicação para obter o university_id e logo
       const { data: appData, error: appError } = await supabase
         .from('scholarship_applications')
-        .select('id, scholarship_id, scholarships(university_id, universities(logo_url, name)), student_process_type, student_id')
+        .select('id, scholarship_id, scholarships(university_id, level, universities(logo_url, name)), student_process_type, student_id')
         .eq('id', applicationId)
         .maybeSingle();
       if (appError || !appData) throw new Error('Failed to fetch application data');
       let universityId: any = undefined;
+      let scholarshipLevel: string | undefined = undefined;
       if (Array.isArray(appData.scholarships) && appData.scholarships.length > 0) {
         universityId = appData.scholarships[0]?.university_id;
+        scholarshipLevel = appData.scholarships[0]?.level;
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
         universityId = (appData.scholarships as any).university_id;
+        scholarshipLevel = (appData.scholarships as any).level;
       }
       // console.log('[DEBUG] appData:', appData);
       // console.log('[DocumentRequestsCard] universityId:', universityId);
@@ -274,20 +320,24 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           .from('document_requests')
           .select('*')
           .eq('is_global', true)
-          .eq('university_id', universityId)
+          .or(`university_id.eq.${universityId},university_id.is.null`)
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         globalRequests = (globalData || []).filter((req: any) => {
           // Ocultar para estudantes quando status estiver fechado
           if (!isSchool && (req.status || '').toLowerCase() === 'closed') return false;
-          // Se não houver applicable_student_types ou não for array, não mostra para ninguém (segurança)
+          // Ocultar requests escondidos para este aluno
+          if (!isSchool && currentUser?.id && req.hidden_for_students?.includes(currentUser.id)) return false;
+          // Filtro por process type
           if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return false;
-          // Se o tipo do estudante estiver incluso, mostra
-          if (req.applicable_student_types.includes(studentType)) return true;
-          // Suporte legado: se o array inclui 'all', mostra para todos
-          if (req.applicable_student_types.includes('all')) return true;
-          // Caso contrário, não mostra
-          return false;
+          const passesStudentType = req.applicable_student_types.includes(studentType) || req.applicable_student_types.includes('all');
+          if (!passesStudentType) return false;
+          // Filtro por nível de bolsa
+          const levels = req.applicable_scholarship_levels;
+          if (!levels || !Array.isArray(levels) || levels.length === 0) return true; // retrocompatível
+          if (!scholarshipLevel) return true; // sem nível definido, não bloqueia
+          return levels.includes(scholarshipLevel);
         });
         // console.log('[DocumentRequestsCard] universityId usado:', universityId);
         // console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
@@ -353,13 +403,83 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
 
-  const handleFileSelect = (requestId: string, file: File | null) => {
+  // ✅ SEGURANÇA: Verificar se o aluno pode fazer upload
+  const canUploadDocuments = !applicationStatus || ['approved', 'enrolled'].includes(applicationStatus);
+
+  const handleFileSelect = (requestId: string, file: File | null, isGlobal?: boolean, inputEl?: HTMLInputElement) => {
+    if (!canUploadDocuments) {
+      console.log('[DocumentRequestsCard] ⛔ Upload bloqueado - application status:', applicationStatus);
+      return;
+    }
     if (!file) return;
     if (file.type !== 'application/pdf') {
       alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
       return;
     }
-    handleSendUpload(requestId, file);
+    if (isGlobal) {
+      const current = stagedFiles[requestId] || [];
+      if (current.length >= 10) {
+        alert('Máximo de 10 arquivos por envio.');
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        alert('Arquivo muito grande. Tamanho máximo: 20 MB.');
+        return;
+      }
+      setStagedFiles(prev => ({ ...prev, [requestId]: [...(prev[requestId] || []), file] }));
+      setStagingErrors(prev => ({ ...prev, [requestId]: null }));
+      // Reset o input para que o mesmo arquivo possa ser selecionado novamente
+      if (inputEl) inputEl.value = '';
+    } else {
+      handleSendUpload(requestId, file);
+    }
+  };
+
+  const handleRemoveFromStaging = (requestId: string, index: number) => {
+    setStagedFiles(prev => ({
+      ...prev,
+      [requestId]: (prev[requestId] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSubmitStaging = async (requestId: string) => {
+    const files = stagedFiles[requestId] || [];
+    if (files.length === 0) return;
+    setSubmitting(prev => ({ ...prev, [requestId]: true }));
+    setStagingErrors(prev => ({ ...prev, [requestId]: null }));
+
+    // Calcula isResubmission 1x via estado local (sem query ao banco por arquivo)
+    const existingUploads = uploads[requestId] || [];
+    const isResubmission = existingUploads.some((u: any) => u.status === 'rejected');
+
+    const failedFiles: File[] = [];
+    let successCount = 0;
+
+    for (const file of files) {
+      try {
+        await handleSendUpload(requestId, file, { skipNotification: true, isResubmission });
+        successCount++;
+      } catch {
+        failedFiles.push(file);
+      }
+    }
+
+    // Notificação única para o batch inteiro (Fix 3)
+    if (successCount > 0) {
+      try { await notifyGlobalUploadBatch(requestId, isResubmission); } catch { /* silencia */ }
+    }
+
+    // Mantém em staging apenas os arquivos que falharam
+    setStagedFiles(prev => ({ ...prev, [requestId]: failedFiles }));
+
+    if (failedFiles.length > 0) {
+      setStagingErrors(prev => ({
+        ...prev,
+        [requestId]: `${failedFiles.length} arquivo(s) não puderam ser enviados. Tente novamente.`
+      }));
+    }
+
+    setSubmitting(prev => ({ ...prev, [requestId]: false }));
   };
 
   // ✅ Função auxiliar para notificar admins (movida para fora do handleSendUpload para melhor escopo)
@@ -589,11 +709,54 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       });
     } catch (adminError) {
       console.error('[NOTIFICAÇÃO ADMIN] ❌ Erro geral ao notificar admins:', adminError);
-      // Não falhar o processo se a notificação para admins falhar
     }
   };
 
-  const handleSendUpload = async (requestId: string, fileOverride?: File) => {
+  // Notificação única disparada após todo o batch de global requests ser enviado
+  const notifyGlobalUploadBatch = async (requestId: string, isResubmission: boolean) => {
+    const { data: requestData } = await supabase
+      .from('document_requests')
+      .select('title, university_id, universities(name)')
+      .eq('id', requestId)
+      .single();
+    if (!requestData?.university_id) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: studentProfile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('user_id', user?.id)
+      .single();
+
+    const studentData = {
+      full_name: user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuário',
+      email: user?.email || 'email@exemplo.com',
+    };
+    const universityName = (requestData.universities as any)?.name || 'Universidade';
+
+    await supabase.from('university_notifications').insert({
+      university_id: requestData.university_id,
+      title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
+      message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}".`,
+      type: isResubmission ? 'document_reupload' : 'document_upload',
+      link: '/school/dashboard/document-requests',
+      metadata: { student_name: studentData.full_name, document_title: requestData.title, is_resubmission: isResubmission },
+      idempotency_key: `${requestData.university_id}:${requestId}:${Date.now()}`
+    });
+
+    await notifyAdmins(
+      studentData.full_name,
+      studentData.email,
+      requestData.title,
+      'Documento Global',
+      universityName,
+      null,
+      isResubmission,
+      studentProfile?.id || user?.id || ''
+    );
+  };
+
+  const handleSendUpload = async (requestId: string, fileOverride?: File, options?: { skipNotification?: boolean; isResubmission?: boolean }) => {
     if (uploading[requestId]) return;
 
     console.log('[UPLOAD] 🚀 Iniciando upload de documento', { requestId });
@@ -602,32 +765,34 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       console.log('[UPLOAD] ⚠️ Nenhum arquivo selecionado');
       return;
     }
-    
+
     setUploading(prev => ({ ...prev, [requestId]: true }));
-    
+
     try {
       if (!currentUserId) throw new Error('User ID not found');
       const sanitizedName = sanitizeFileName(file.name);
-      // Use user ID folder to ensure RLS access
       const filePath = `${currentUserId}/${Date.now()}_${sanitizedName}`;
+
       let file_url: string;
       try {
         file_url = await startUpload(requestId, file, filePath);
       } catch (err: any) {
-        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + err.message);
-        setUploading(prev => ({ ...prev, [requestId]: false }));
-        return;
+        // Lança para que o chamador (handleSubmitStaging) possa rastrear quais arquivos falharam
+        throw new Error((t('studentDashboard.documentRequests.messages.errorUploadingFile') || 'Erro ao enviar arquivo') + ': ' + err.message);
       }
 
-      // Verificar se é um reenvio (já existe upload rejeitado para este request)
-      const { data: existingUploads } = await supabase
-        .from('document_request_uploads')
-        .select('id, status')
-        .eq('document_request_id', requestId)
-        .eq('uploaded_by', currentUserId);
-
-      const hasRejectedUpload = existingUploads?.some(upload => upload.status === 'rejected');
-      const isResubmission = hasRejectedUpload;
+      // Verificar se é um reenvio — usa valor pré-calculado se fornecido (evita N queries no batch)
+      let isResubmission: boolean;
+      if (options?.isResubmission !== undefined) {
+        isResubmission = options.isResubmission;
+      } else {
+        const { data: existingUploads } = await supabase
+          .from('document_request_uploads')
+          .select('id, status')
+          .eq('document_request_id', requestId)
+          .eq('uploaded_by', currentUserId);
+        isResubmission = existingUploads?.some(upload => upload.status === 'rejected') || false;
+      }
 
       const { data: insertedUpload } = await supabase.from('document_request_uploads').insert({
         document_request_id: requestId,
@@ -636,551 +801,110 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         status: 'under_review',
       }).select('id').single();
 
-      // Notificar universidade - diferenciando entre novo upload e reenvio
-      try {
-        if (isResubmission) {
-          // Notificação específica para reenvio de documento rejeitado
-          // console.log('[REENVIO] Enviando notificação de reenvio de documento rejeitado');
-
-          // Buscar dados da aplicação e universidade para notificação
-          const { data: requestData, error: requestError } = await supabase
+      // Notificar universidade e admins (skipped para global batches — notificado 1x pelo handleSubmitStaging)
+      if (!options?.skipNotification) {
+        try {
+          const { data: requestData } = await supabase
             .from('document_requests')
-            .select(`
-              title,
-              scholarship_application_id
-            `)
+            .select('title, scholarship_application_id')
             .eq('id', requestId)
             .single();
 
-          if (requestError) {
-            console.error('[REENVIO] Erro ao buscar dados do request:', requestError);
-            return;
-          }
-
-          // Buscar dados do aluno através do contexto de autenticação
-          const { data: { user } } = await supabase.auth.getUser();
-
-          if (!user) {
-            console.error('[REENVIO] Usuário não autenticado');
-            return;
-          }
-
-          // Buscar o ID do perfil do aluno (user_profiles.id)
-          const { data: studentProfile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-          const studentProfileId = studentProfile?.id || user.id;
-
-          if (profileError) {
-            console.error('[REENVIO] Erro ao buscar perfil do aluno:', profileError);
-          }
-
-          // Usar dados do usuário autenticado
-          const studentData = {
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
-            email: user.email || 'email@exemplo.com'
-          };
-
-          // Verificar se é um documento global (sem scholarship_application_id)
-          if (!requestData.scholarship_application_id) {
-            // console.log('[REENVIO] Documento global - usando dados da universidade diretamente');
-
-            // Buscar dados da universidade diretamente do document_request
-            const { data: globalRequestData, error: globalError } = await supabase
-              .from('document_requests')
-              .select(`
-                title,
-                university_id,
-                universities!inner(
-                  name,
-                  contact
-                )
-              `)
-              .eq('id', requestId)
+          if (requestData) {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data: studentProfile } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('user_id', user?.id)
               .single();
 
-            if (globalError) {
-              console.error('[REENVIO] Erro ao buscar dados globais:', globalError);
-              return;
-            }
+            const studentData = {
+              full_name: user?.user_metadata?.full_name || user?.user_metadata?.name || 'Usuário',
+              email: user?.email || 'email@exemplo.com'
+            };
+            const studentProfileId = studentProfile?.id || user?.id || '';
 
-            if (globalRequestData?.universities) {
-              const university = Array.isArray(globalRequestData.universities) 
-                ? globalRequestData.universities[0] 
-                : globalRequestData.universities as any;
-              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
+            if (!requestData.scholarship_application_id) {
+              // Documento Global
+              const { data: globalData } = await supabase
+                .from('document_requests')
+                .select('university_id, universities(name)')
+                .eq('id', requestId)
+                .single();
 
-              if (emailUniversidade) {
-                const payload = {
-                  tipo_notf: 'Documento reenviado após rejeição',
-                  email_aluno: studentData.email,
-                  nome_aluno: studentData.full_name,
-                  nome_bolsa: 'Documento Global',
-                  nome_universidade: university.name,
-                  email_universidade: emailUniversidade,
-                  o_que_enviar: `O aluno ${studentData.full_name} reenviou o documento "${requestData.title}" (documento global) que foi previamente rejeitado. Acesse o painel para revisar a nova versão.`,
-                  notification_target: 'university'
-                };
+              if (globalData?.university_id) {
+                const universityName = (globalData.universities as any)?.name || 'Universidade';
 
-                // console.log('[REENVIO] Payload para n8n (global):', payload);
-                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'PostmanRuntime/7.36.3',
-                  },
-                  body: JSON.stringify(payload),
+                // In-app Notification
+                await supabase.from('university_notifications').insert({
+                  university_id: globalData.university_id,
+                  title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
+                  message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}".`,
+                  type: isResubmission ? 'document_reupload' : 'document_upload',
+                  link: '/school/dashboard/document-requests',
+                  metadata: { student_name: studentData.full_name, document_title: requestData.title, is_resubmission: isResubmission },
+                  idempotency_key: `${globalData.university_id}:${requestId}:${Date.now()}`
                 });
-                // console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
+
+                // Admin Notification
+                await notifyAdmins(studentData.full_name, studentData.email, requestData.title, 'Documento Global', universityName, null, isResubmission, studentProfileId);
               }
+            } else {
+              // Documento de Bolsa
+              const { data: applicationData } = await supabase
+                .from('scholarship_applications')
+                .select('id, scholarships(title, universities(id, name))')
+                .eq('id', requestData.scholarship_application_id)
+                .single();
 
-              // ✅ Notificar universidade in-app para documento global reenviado
-              console.log('[REENVIO] 🔔 Enviando notificação in-app para universidade sobre documento global reenviado');
-              try {
-                const { data: globalRequestData } = await supabase
-                  .from('document_requests')
-                  .select('university_id')
-                  .eq('id', requestId)
-                  .single();
+              const scholarship = Array.isArray(applicationData?.scholarships) ? (applicationData?.scholarships[0] as any) : (applicationData?.scholarships as any);
+              const university = Array.isArray(scholarship?.universities) ? scholarship.universities[0] : scholarship?.universities;
 
-                if (globalRequestData?.university_id) {
-                  const { error: universityNotifError } = await supabase
-                    .from('university_notifications')
-                    .insert({
-                      university_id: globalRequestData.university_id,
-                      title: 'Document Re-uploaded',
-                      message: `Student ${studentData.full_name} has re-uploaded the document "${requestData.title}" after previous rejection.`,
-                      type: 'document_reupload',
-                      link: '/school/dashboard/document-requests',
-                      metadata: {
-                        student_name: studentData.full_name,
-                        student_email: studentData.email,
-                        document_title: requestData.title,
-                        request_id: requestId,
-                        is_global: true,
-                        is_resubmission: true
-                      },
-                      idempotency_key: `${globalRequestData.university_id}:${requestId}:${Date.now()}`
-                    });
-
-                  if (universityNotifError) {
-                    console.error('[REENVIO] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
-                  } else {
-                    console.log('[REENVIO] ✅ Notificação in-app criada com sucesso para universidade');
-                  }
-                }
-              } catch (inAppError) {
-                console.error('[REENVIO] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
-              }
-
-              // ✅ Notificar admins para documento global reenviado
-              console.log('[REENVIO] 📧 Chamando notifyAdmins para documento global reenviado');
-              await notifyAdmins(
-                studentData.full_name,
-                studentData.email,
-                requestData.title,
-                'Documento Global',
-                university.name,
-                null,
-                true,
-                studentProfileId
-              );
-            }
-          } else {
-            // Buscar dados da aplicação separadamente
-            const { data: applicationData, error: appError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                id,
-                scholarship_id,
-                scholarships!inner(
-                  title,
-                  universities!inner(
-                    id,
-                    name,
-                    contact
-                  )
-                )
-              `)
-              .eq('id', requestData.scholarship_application_id)
-              .single();
-
-            if (appError) {
-              console.error('[REENVIO] Erro ao buscar dados da aplicação:', appError);
-              return;
-            }
-
-            const scholarship = Array.isArray(applicationData?.scholarships)
-              ? applicationData?.scholarships[0]
-              : applicationData?.scholarships;
-
-            if (scholarship?.universities) {
-              const university = Array.isArray(scholarship.universities)
-                ? scholarship.universities[0]
-                : scholarship.universities;
-              // const scholarship is already defined above
-              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
-
-              // Buscar dados do aluno através do contexto de autenticação (mesma abordagem do documento global)
-              const { data: { user } } = await supabase.auth.getUser();
-
-              if (!user) {
-                console.error('[REENVIO] Usuário não autenticado');
-                return;
-              }
-
-              // Usar dados do usuário autenticado
-              const studentData = {
-                full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
-                email: user.email || 'email@exemplo.com'
-              };
-
-              if (emailUniversidade) {
-                const payload = {
-                  tipo_notf: 'Documento reenviado após rejeição',
-                  email_aluno: studentData.email,
-                  nome_aluno: studentData.full_name,
-                  nome_bolsa: scholarship.title,
-                  nome_universidade: university.name,
-                  email_universidade: emailUniversidade,
-                  o_que_enviar: `O aluno ${studentData.full_name} reenviou o documento "${requestData.title}" que foi previamente rejeitado para a bolsa "${scholarship.title}". Acesse o painel para revisar a nova versão.`,
-                  notification_target: 'university'
-                };
-
-                // console.log('[REENVIO] Payload para n8n:', payload);
-                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'PostmanRuntime/7.36.3',
-                  },
-                  body: JSON.stringify(payload),
+              if (university?.id && scholarship) {
+                // In-app Notification
+                await supabase.from('university_notifications').insert({
+                  university_id: university.id,
+                  title: isResubmission ? 'Document Re-uploaded' : 'New Document Uploaded',
+                  message: `Student ${studentData.full_name} has ${isResubmission ? 're-uploaded' : 'uploaded'} the document "${requestData.title}" for scholarship "${scholarship.title}".`,
+                  type: isResubmission ? 'document_reupload' : 'document_upload',
+                  link: '/school/dashboard/selection-process',
+                  metadata: { student_name: studentData.full_name, scholarship_title: scholarship.title, document_title: requestData.title, is_resubmission: isResubmission },
+                  idempotency_key: `${university.id}:${requestId}:${Date.now()}`
                 });
-                // console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
+
+                // Admin Notification
+                await notifyAdmins(studentData.full_name, studentData.email, requestData.title, scholarship.title, university.name, applicationData?.id || null, isResubmission, studentProfileId);
               }
-
-              // ✅ Notificar universidade in-app para documento reenviado
-              console.log('[REENVIO] 🔔 Enviando notificação in-app para universidade sobre documento reenviado');
-              try {
-                const { error: universityNotifError } = await supabase
-                  .from('university_notifications')
-                  .insert({
-                    university_id: university.id,
-                    title: 'Document Re-uploaded',
-                    message: `Student ${studentData.full_name} has re-uploaded the document "${requestData.title}" for scholarship "${scholarship.title}" after previous rejection.`,
-                    type: 'document_reupload',
-                    link: '/school/dashboard/selection-process',
-                    metadata: {
-                      student_name: studentData.full_name,
-                      student_email: studentData.email,
-                      document_title: requestData.title,
-                      scholarship_title: scholarship.title,
-                      application_id: requestData.scholarship_application_id,
-                      request_id: requestId,
-                      is_global: false,
-                      is_resubmission: true
-                    },
-                    idempotency_key: `${university.id}:${requestId}:${Date.now()}`
-                  });
-
-                if (universityNotifError) {
-                  console.error('[REENVIO] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
-                } else {
-                  console.log('[REENVIO] ✅ Notificação in-app criada com sucesso para universidade');
-                }
-              } catch (inAppError) {
-                console.error('[REENVIO] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
-              }
-
-              // ✅ Notificar admins para documento reenviado
-              console.log('[REENVIO] 📧 Chamando notifyAdmins para documento reenviado');
-              await notifyAdmins(
-                studentData.full_name,
-                studentData.email,
-                requestData.title,
-                scholarship.title,
-                university.name,
-                requestData.scholarship_application_id,
-                true,
-                studentProfileId
-              );
             }
           }
-        } else {
-          // Notificação padrão para novo upload - DIRETO VIA WEBHOOK
-          // console.log('[NOVO UPLOAD] Enviando notificação de novo documento via webhook direto');
-
-          // Buscar dados básicos do document_request
-          const { data: requestData, error: requestError } = await supabase
-            .from('document_requests')
-            .select(`
-              title,
-              description,
-              scholarship_application_id,
-              university_id,
-              universities!inner(
-                name,
-                contact
-              )
-            `)
-            .eq('id', requestId)
-            .single();
-
-          if (requestError) {
-            console.error('[NOVO UPLOAD] Erro ao buscar dados do request:', requestError);
-            return;
-          }
-
-          // Buscar dados do aluno através do contexto de autenticação
-          const { data: { user } } = await supabase.auth.getUser();
-
-          if (!user) {
-            console.error('[NOVO UPLOAD] Usuário não autenticado');
-            return;
-          }
-
-          // Buscar o ID do perfil do aluno (user_profiles.id)
-          const { data: studentProfile, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-          const studentProfileId = studentProfile?.id || user.id;
-
-          if (profileError) {
-            console.error('[NOVO UPLOAD] Erro ao buscar perfil do aluno:', profileError);
-          }
-
-          // Usar dados do usuário autenticado
-          const studentData = {
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
-            email: user.email || 'email@exemplo.com'
-          };
-
-          // Verificar se é um documento global (sem scholarship_application_id)
-          if (!requestData.scholarship_application_id) {
-            // console.log('[NOVO UPLOAD] Documento global - usando dados da universidade diretamente');
-
-            if (requestData?.universities) {
-              const university = Array.isArray(requestData.universities)
-                ? requestData.universities[0]
-                : requestData.universities as any;
-              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
-
-              if (emailUniversidade) {
-                const payload = {
-                  tipo_notf: 'Novo documento enviado para análise',
-                  email_aluno: studentData.email,
-                  nome_aluno: studentData.full_name,
-                  nome_bolsa: 'Documento Global',
-                  nome_universidade: university.name,
-                  email_universidade: emailUniversidade,
-                  o_que_enviar: `O aluno ${studentData.full_name} enviou o documento "${requestData.title}" (documento global). Acesse o painel para revisar e analisar o documento.`,
-                  notification_target: 'university'
-                };
-
-                // console.log('[NOVO UPLOAD] Payload para n8n (global):', payload);
-                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'PostmanRuntime/7.36.3',
-                  },
-                  body: JSON.stringify(payload),
-                });
-                // console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
-              }
-
-              // ✅ Notificar universidade in-app para documento global novo
-              console.log('[NOVO UPLOAD] 🔔 Enviando notificação in-app para universidade sobre documento global novo');
-              try {
-                const { data: globalRequestData } = await supabase
-                  .from('document_requests')
-                  .select('university_id')
-                  .eq('id', requestId)
-                  .single();
-
-                if (globalRequestData?.university_id) {
-                  const { error: universityNotifError } = await supabase
-                    .from('university_notifications')
-                    .insert({
-                      university_id: globalRequestData.university_id,
-                      title: 'New Document Uploaded',
-                      message: `Student ${studentData.full_name} has uploaded the document "${requestData.title}".`,
-                      type: 'document_upload',
-                      link: '/school/dashboard/document-requests',
-                      metadata: {
-                        student_name: studentData.full_name,
-                        student_email: studentData.email,
-                        document_title: requestData.title,
-                        request_id: requestId,
-                        is_global: true,
-                        is_resubmission: false
-                      },
-                      idempotency_key: `${globalRequestData.university_id}:${requestId}:${Date.now()}`
-                    });
-
-                  if (universityNotifError) {
-                    console.error('[NOVO UPLOAD] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
-                  } else {
-                    console.log('[NOVO UPLOAD] ✅ Notificação in-app criada com sucesso para universidade');
-                  }
-                }
-              } catch (inAppError) {
-                console.error('[NOVO UPLOAD] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
-              }
-
-              // ✅ Notificar admins para documento global novo
-              console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para documento global novo');
-              await notifyAdmins(
-                studentData.full_name,
-                studentData.email,
-                requestData.title,
-                'Documento Global',
-                university.name,
-                null,
-                false,
-                studentProfileId
-              );
-            }
-          } else {
-            // Buscar dados da aplicação separadamente
-            const { data: applicationData, error: appError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                id,
-                scholarship_id,
-                scholarships!inner(
-                  title,
-                  universities!inner(
-                    id,
-                    name,
-                    contact
-                  )
-                )
-              `)
-              .eq('id', requestData.scholarship_application_id)
-              .single();
-
-            if (appError) {
-              console.error('[NOVO UPLOAD] Erro ao buscar dados da aplicação:', appError);
-              return;
-            }
-
-            const scholarship = Array.isArray(applicationData?.scholarships)
-              ? applicationData?.scholarships[0]
-              : applicationData?.scholarships;
-
-            if (scholarship?.universities) {
-              const university = Array.isArray(scholarship.universities)
-                ? scholarship.universities[0]
-                : scholarship.universities;
-              // const scholarship is already defined above
-              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
-
-              if (emailUniversidade) {
-                const payload = {
-                  tipo_notf: 'Novo documento enviado para análise',
-                  email_aluno: studentData.email,
-                  nome_aluno: studentData.full_name,
-                  nome_bolsa: scholarship.title,
-                  nome_universidade: university.name,
-                  email_universidade: emailUniversidade,
-                  o_que_enviar: `O aluno ${studentData.full_name} enviou o documento "${requestData.title}" para a bolsa "${scholarship.title}". Acesse o painel para revisar e analisar o documento.`,
-                  notification_target: 'university'
-                };
-
-                // console.log('[NOVO UPLOAD] Payload para n8n:', payload);
-                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'PostmanRuntime/7.36.3',
-                  },
-                  body: JSON.stringify(payload),
-                });
-                // console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
-              }
-
-              // ✅ Notificar universidade in-app para novo documento
-              console.log('[NOVO UPLOAD] 🔔 Enviando notificação in-app para universidade sobre novo documento');
-              try {
-                const { error: universityNotifError } = await supabase
-                  .from('university_notifications')
-                  .insert({
-                    university_id: university.id,
-                    title: 'New Document Uploaded',
-                    message: `Student ${studentData.full_name} has uploaded the document "${requestData.title}" for scholarship "${scholarship.title}".`,
-                    type: 'document_upload',
-                    link: '/school/dashboard/selection-process',
-                    metadata: {
-                      student_name: studentData.full_name,
-                      student_email: studentData.email,
-                      document_title: requestData.title,
-                      scholarship_title: scholarship.title,
-                      application_id: requestData.scholarship_application_id,
-                      request_id: requestId,
-                      is_global: false,
-                      is_resubmission: false
-                    },
-                    idempotency_key: `${university.id}:${requestId}:${Date.now()}`
-                  });
-
-                if (universityNotifError) {
-                  console.error('[NOVO UPLOAD] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
-                } else {
-                  console.log('[NOVO UPLOAD] ✅ Notificação in-app criada com sucesso para universidade');
-                }
-              } catch (inAppError) {
-                console.error('[NOVO UPLOAD] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
-              }
-
-              // ✅ Notificar admins para novo documento
-              console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para novo documento');
-              await notifyAdmins(
-                studentData.full_name,
-                studentData.email,
-                requestData.title,
-                scholarship.title,
-                university.name,
-                requestData.scholarship_application_id,
-                false,
-                studentProfileId
-              );
-            }
-          }
+        } catch (notifErr) {
+          console.error('Erro ao processar notificações:', notifErr);
         }
-      } catch (e) {
-        console.error('Erro ao notificar universidade:', e);
       }
 
-      // Atualização otimista — sem re-fetch das 4 queries
+      // Atualização otimista
       const newUpload = {
         id: insertedUpload?.id ?? crypto.randomUUID(),
         document_request_id: requestId,
         uploaded_by: currentUserId!,
-        file_url: file_url!,
+        file_url,
         uploaded_at: new Date().toISOString(),
-        status: 'under_review',
-        reviewed_by: null,
-        reviewed_at: null,
-        rejection_reason: null,
-        review_notes: null,
+        status: 'under_review' as const,
       };
+
       setUploads(prev => ({
         ...prev,
-        [requestId]: [...(prev[requestId] || []), newUpload],
+        [requestId]: [...(prev[requestId] || []), newUpload as any]
       }));
-      setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));
+      setSelectedFiles(prev => ({ ...prev, [requestId]: null }));
 
-      // Chamar callback de logging se fornecido
       if (onDocumentUploaded) {
-        await onDocumentUploaded(requestId, file.name, isResubmission || false);
+        const request = requests.find(r => r.id === requestId);
+        await onDocumentUploaded(requestId, file.name, isResubmission, request?.title);
       }
+    } catch (err: any) {
+      console.error('Erro fatal no upload:', err);
+      setError(err.message || 'Erro ao realizar upload');
     } finally {
       setUploading(prev => ({ ...prev, [requestId]: false }));
     }
@@ -1843,8 +1567,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
         <div className="space-y-6">
-          {/* Item Especial: Transfer Form (Apenas para Transfer) */}
-          {studentType === 'transfer' && (
+          {/* Item Especial: Transfer Form (Apenas para Transfer se o admin já tiver disponibilizado o template) */}
+          {studentType === 'transfer' && transferForm?.transfer_form_url && (
             <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-blue-300 transition-all hover:bg-white text-left">
               <div className="flex flex-col gap-4">
                 <div className="flex gap-4 md:gap-5 items-center">
@@ -1978,122 +1702,111 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                })()}
             </div>
           )}
-               {/* Histórico de Envios (Transfer Form) */}
-               {transferFormUploads.length > 1 && (
-                 <div className="mt-6 pt-6 border-t border-slate-100">
-                    <DocumentHistoryAccordion
-                      uploads={transferFormUploads}
-                      skipFirst={true}
-                      documentLabel={t('studentDashboard.documentRequests.forms.transferForm')}
-                      onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
-                    />
-                 </div>
-               )}
 
           {requests.map(req => {
             const allUploads = uploads[req.id] || [];
-            const latestUpload = allUploads.slice().sort((a, b) =>
-              new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-            )[0];
-            const status = latestUpload ? normalizeStatus(latestUpload.status) : null;
-            const isApproved = status === 'approved';
-            const isRejected = status === 'rejected';
-            const isReview = status === 'under_review';
+            const isGlobal = !!(req as any).is_global;
 
-            return (
-              <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
-                <div className="flex flex-col gap-4">
-                  <div className="flex gap-4 md:gap-5 items-center">
-                     <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
-                        <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
-                     </div>
-                     <div className="min-w-0 flex-1 overflow-hidden">
-                        <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
-                        <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
-                     </div>
+            if (isGlobal) {
+              // ── GLOBAL REQUEST: staging + submit flow ──────────────────────
+              const { closedGroups, currentGroup } = groupUploadsBySubmission(allUploads as any);
+              const lastClosedGroup = closedGroups.length > 0 ? closedGroups[closedGroups.length - 1] : null;
+              const lastClosedUpload = lastClosedGroup ? lastClosedGroup[lastClosedGroup.length - 1] : null;
+              const isPending = currentGroup.length > 0;
+              const isGlobalApproved = !isPending && lastClosedUpload?.status === 'approved';
+              const isGlobalRejected = !isPending && lastClosedUpload?.status === 'rejected';
+              const staged = stagedFiles[req.id] || [];
+              const isSubmitting = submitting[req.id] || false;
+              const historyGroups = isPending ? closedGroups : closedGroups.slice(0, -1);
+
+              return (
+                <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
+                  {/* Header */}
+                  <div className="flex gap-4 md:gap-5 items-center mb-4">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
+                      <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
+                    </div>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-                     {/* Status Atual do Documento - apenas o upload mais recente */}
-                     {latestUpload && (() => {
-                        const statusLabel = isReview ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.underReview') : (status || '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  {/* Current submission files or last closed group status */}
+                  {isPending ? (
+                    <div className="space-y-2 mb-4">
+                      {currentGroup.map((upload: any) => {
+                        const uploadStatus = normalizeStatus(upload.status);
+                        const isUploadApproved = uploadStatus === 'approved';
+                        const isUploadRejected = uploadStatus === 'rejected';
+
                         return (
-                          <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm flex-shrink-0 self-start sm:self-auto transition-all ${
-                            isApproved ? 'bg-emerald-50 border-emerald-200' :
-                            isRejected ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
-                          }`}>
-                             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                isApproved ? 'bg-emerald-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'
-                             }`}>
-                                {isApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
-                                 isRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
+                          <div
+                            key={upload.id}
+                            className={`flex items-center justify-between px-4 py-3 border rounded-xl transition-all ${
+                              isUploadApproved ? 'bg-emerald-50 border-emerald-100' :
+                              isUploadRejected ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                isUploadApproved ? 'bg-emerald-500' :
+                                isUploadRejected ? 'bg-red-500' : 'bg-blue-500'
+                              }`}>
+                                {isUploadApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                                 isUploadRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
                                  <Clock className="w-4 h-4 text-white" />}
-                             </div>
-                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Status</p>
-                                <p className={`font-bold text-sm ${
-                                  isApproved ? 'text-emerald-700' : isRejected ? 'text-red-700' : 'text-blue-700'
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
+                                  isUploadApproved ? 'text-emerald-600' :
+                                  isUploadRejected ? 'text-red-600' : 'text-blue-600'
                                 }`}>
-                                   {statusLabel}
+                                  {isUploadApproved ? 'Aprovado' :
+                                   isUploadRejected ? 'Correção Solicitada' : 'Em Análise'}
                                 </p>
-                             </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setPreviewUrl(upload.file_url)}
+                              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Ver
+                            </button>
                           </div>
                         );
-                     })()}
-
-                     {/* Ação de Upload - Oculta se já estiver aprovado */}
-                     {!isSchool && !isApproved && (
-                        <div className="flex flex-col gap-1.5 sm:ml-auto w-full sm:w-auto">
-                           <label className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95 ${uploading[req.id] ? 'border-emerald-300 text-emerald-600 cursor-wait opacity-70' : 'border-slate-200 hover:border-emerald-600 hover:text-emerald-600 cursor-pointer'}`}>
-                              <Paperclip className="w-4 h-4 shrink-0" />
-                              {tusUploading[req.id] ? (
-                                <span className="truncate max-w-[80px]">{uploadProgress[req.id] ?? 0}%</span>
-                              ) : uploading[req.id] ? (
-                                <span className="truncate max-w-[80px]">{t('studentDashboard.documentRequests.forms.sendingButton')}</span>
-                              ) : t('studentDashboard.documentRequests.forms.attachPdf')}
-                              <input
-                                 type="file"
-                                 className="sr-only"
-                                 accept=".pdf"
-                                 disabled={uploading[req.id]}
-                                 onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
-                              />
-                           </label>
-                           {tusUploading[req.id] && (
-                             <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                               <div
-                                 className="h-full bg-emerald-500 transition-all duration-300"
-                                 style={{ width: `${uploadProgress[req.id] ?? 0}%` }}
-                               />
-                             </div>
-                           )}
-                        </div>
-                     )}
-                  </div>
-                </div>
-
-                 {/* Feedback de Rejeição - apenas se o upload mais recente foi rejeitado */}
-                 {isRejected && latestUpload && (
-                   <div className="w-full">
-                      {/* Desktop View */}
-                      <div className="hidden md:flex mt-4 md:mt-6 p-5 bg-red-50 rounded-[1.5rem] border border-red-100 gap-3 items-start">
-                         <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <AlertCircle className="w-4 h-4 text-red-600" />
-                         </div>
-                         <div className="flex-1 min-w-0">
-                            <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1 text-left">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
-                            <div className="max-h-32 overflow-y-auto pr-2">
-                              <p className="text-red-900 font-medium text-sm leading-relaxed text-left break-words">
-                                {latestUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
-                              </p>
-                            </div>
-                         </div>
+                      })}
+                    </div>
+                  ) : isGlobalApproved && lastClosedUpload ? (
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm bg-emerald-50 border-emerald-200 mb-4 self-start">
+                      <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="w-4 h-4 text-white" />
                       </div>
-
-                      {/* Mobile View */}
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Status</p>
+                        <p className="font-bold text-sm text-emerald-700">Aprovado</p>
+                      </div>
+                    </div>
+                  ) : isGlobalRejected && lastClosedUpload ? (
+                    <>
+                      <div className="hidden md:flex mb-4 p-5 bg-red-50 rounded-[1.5rem] border border-red-100 gap-3 items-start">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
+                          <div className="max-h-32 overflow-y-auto pr-2">
+                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                              {lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                       <button
-                        onClick={() => setViewingRejectionReason(latestUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'))}
-                        className="flex md:hidden mt-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
+                        onClick={() => setViewingRejectionReason(lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'))}
+                        className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -2105,23 +1818,384 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                           </div>
                         </div>
                         <div className="w-8 h-8 bg-red-100/50 rounded-full flex items-center justify-center flex-shrink-0">
-                           <ChevronDown className="w-4 h-4 text-red-600" />
+                          <ChevronDown className="w-4 h-4 text-red-600" />
                         </div>
                       </button>
-                   </div>
-                 )}
+                    </>
+                  ) : null}
 
-              {/* Histórico de envios anteriores */}
-              {allUploads.length > 1 && (
-                <div className="px-0 pb-2">
-                  <DocumentHistoryAccordion
-                    uploads={allUploads}
-                    skipFirst
-                    documentLabel={req.title}
-                    onViewDocument={({ file_url }) => setPreviewUrl(file_url)}
-                  />
+                  {/* Staging area — hidden when approved or school view */}
+                  {!isSchool && !isGlobalApproved && (
+                    <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-white">
+                      {staged.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {staged.map((file, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                <span className="text-sm text-slate-700 font-medium truncate">{file.name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveFromStaging(req.id, idx)}
+                                className="flex-shrink-0 p-1 text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <label className={`flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95 ${isSubmitting ? 'opacity-50 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:border-emerald-600 hover:text-emerald-600 cursor-pointer'}`}>
+                          <Paperclip className="w-4 h-4 shrink-0" />
+                          Adicionar mais um documento
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept=".pdf"
+                            disabled={isSubmitting}
+                            onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null, true, e.target)}
+                          />
+                        </label>
+
+                        {staged.length > 0 && (
+                          <button
+                            onClick={() => handleSubmitStaging(req.id)}
+                            disabled={isSubmitting}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95"
+                          >
+                            {isSubmitting ? (
+                              <>Enviando...</>
+                            ) : (
+                              <>Enviar {staged.length} arquivo{staged.length > 1 ? 's' : ''} para revisão →</>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {staged.length === 0 && !isPending && !isGlobalApproved && (
+                        <p className="text-xs text-slate-400 mt-2 text-center">
+                          Adicione os arquivos e clique em "Enviar para revisão"
+                        </p>
+                      )}
+
+                      {stagingErrors[req.id] && (
+                        <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+                          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <p className="text-xs font-semibold text-red-700">{stagingErrors[req.id]}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Grouped history */}
+                  {historyGroups.length > 0 && (
+                    <div className="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+                      <details className="group/hist">
+                        <summary className="flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-sm font-medium text-slate-600 list-none">
+                          <span>
+                            Histórico de envios
+                            <span className="text-slate-800 font-semibold"> — {req.title}</span>
+                            <span className="ml-1 text-slate-400">({historyGroups.length} tentativa{historyGroups.length > 1 ? 's' : ''} anterior{historyGroups.length > 1 ? 'es' : ''})</span>
+                          </span>
+                          <ChevronDown className="w-4 h-4 group-open/hist:rotate-180 transition-transform" />
+                        </summary>
+                        <ul className="divide-y divide-slate-100">
+                          {[...historyGroups].reverse().map((group: any[], groupIdx: number) => {
+                            const groupNumber = historyGroups.length - groupIdx;
+                            const lastUpload = group[group.length - 1];
+                            const isGroupRejected = lastUpload.status === 'rejected';
+                            const isGroupApproved = lastUpload.status === 'approved';
+                            return (
+                              <li key={groupIdx} className="px-4 py-3 bg-white">
+                                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400 font-medium">Tentativa #{groupNumber}</span>
+                                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${isGroupApproved ? 'bg-green-100 text-green-700 border-green-200' : isGroupRejected ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                                      {isGroupApproved ? <CheckCircle className="w-3 h-3" /> : isGroupRejected ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                      {isGroupApproved ? 'Aprovado' : isGroupRejected ? 'Rejeitado' : 'Em revisão'}
+                                    </span>
+                                    <span className="text-xs text-slate-400">{group.length} arquivo{group.length > 1 ? 's' : ''}</span>
+                                  </div>
+                                </div>
+                                {lastUpload.rejection_reason && (
+                                  <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
+                                    <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                  </p>
+                                )}
+                                <div className="space-y-1">
+                                  {group.map((upload: any) => (
+                                    <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                        <span className="text-xs text-slate-600 truncate">{getFileName(upload.file_url)}</span>
+                                      </div>
+                                      {upload.file_url && (
+                                        <button
+                                          onClick={() => setPreviewUrl(upload.file_url)}
+                                          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                          Ver
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </details>
+                    </div>
+                  )}
                 </div>
-              )}
+              );
+            }
+
+            // ── NON-GLOBAL REQUEST: same staging + submit flow as global ──
+            const { closedGroups: indClosedGroups, currentGroup: indCurrentGroup } = groupUploadsBySubmission(allUploads as any);
+            const indLastClosedGroup = indClosedGroups.length > 0 ? indClosedGroups[indClosedGroups.length - 1] : null;
+            const indLastClosedUpload = indLastClosedGroup ? indLastClosedGroup[indLastClosedGroup.length - 1] : null;
+            const indIsPending = indCurrentGroup.length > 0;
+            const indIsApproved = !indIsPending && indLastClosedUpload?.status === 'approved';
+            const indIsRejected = !indIsPending && indLastClosedUpload?.status === 'rejected';
+            const indStaged = stagedFiles[req.id] || [];
+            const indIsSubmitting = submitting[req.id] || false;
+            const indHistoryGroups = indIsPending ? indClosedGroups : indClosedGroups.slice(0, -1);
+
+            return (
+              <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
+                {/* Header */}
+                <div className="flex gap-4 md:gap-5 items-center mb-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
+                    <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
+                    <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
+                  </div>
+                </div>
+
+                {/* Current submission files or last closed group status */}
+                {indIsPending ? (
+                  <div className="space-y-2 mb-4">
+                    {indCurrentGroup.map((upload: any) => {
+                      const uploadStatus = normalizeStatus(upload.status);
+                      const isUploadApproved = uploadStatus === 'approved';
+                      const isUploadRejected = uploadStatus === 'rejected';
+
+                      return (
+                        <div
+                          key={upload.id}
+                          className={`flex items-center justify-between px-4 py-3 border rounded-xl transition-all ${
+                            isUploadApproved ? 'bg-emerald-50 border-emerald-100' :
+                            isUploadRejected ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isUploadApproved ? 'bg-emerald-500' :
+                              isUploadRejected ? 'bg-red-500' : 'bg-blue-500'
+                            }`}>
+                              {isUploadApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                               isUploadRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
+                               <Clock className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                              <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
+                                isUploadApproved ? 'text-emerald-600' :
+                                isUploadRejected ? 'text-red-600' : 'text-blue-600'
+                              }`}>
+                                {isUploadApproved ? 'Aprovado' :
+                                 isUploadRejected ? 'Correção Solicitada' : 'Em Análise'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setPreviewUrl(upload.file_url)}
+                            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Ver
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : indIsApproved && indLastClosedUpload ? (
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm bg-emerald-50 border-emerald-200 mb-4 self-start">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Status</p>
+                      <p className="font-bold text-sm text-emerald-700">Aprovado</p>
+                    </div>
+                  </div>
+                ) : indIsRejected && indLastClosedUpload ? (
+                  <>
+                    <div className="hidden md:flex mb-4 p-5 bg-red-50 rounded-[1.5rem] border border-red-100 gap-3 items-start">
+                      <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <AlertCircle className="w-4 h-4 text-red-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
+                        <div className="max-h-32 overflow-y-auto pr-2">
+                          <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                            {indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setViewingRejectionReason(indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'))}
+                      className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="font-black uppercase tracking-widest text-[10px] text-red-600 leading-tight">{t('studentDashboard.documentRequests.modals.adminNotice')}</p>
+                          <p className="font-bold text-xs text-red-900 mt-0.5 truncate max-w-[170px]">{t('studentDashboard.documentRequests.modals.viewCorrectionReason')}</p>
+                        </div>
+                      </div>
+                      <div className="w-8 h-8 bg-red-100/50 rounded-full flex items-center justify-center flex-shrink-0">
+                        <ChevronDown className="w-4 h-4 text-red-600" />
+                      </div>
+                    </button>
+                  </>
+                ) : null}
+
+                {/* Staging area — hidden when approved or school view */}
+                {!isSchool && !indIsApproved && (
+                  <div className="border border-dashed border-slate-300 rounded-2xl p-4 bg-white">
+                    {indStaged.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {indStaged.map((file, idx) => (
+                          <div key={idx} className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                              <span className="text-sm text-slate-700 font-medium truncate">{file.name}</span>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveFromStaging(req.id, idx)}
+                              className="flex-shrink-0 p-1 text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <label className={`flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95 ${indIsSubmitting ? 'opacity-50 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:border-emerald-600 hover:text-emerald-600 cursor-pointer'}`}>
+                        <Paperclip className="w-4 h-4 shrink-0" />
+                        Adicionar mais um documento
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf"
+                          disabled={indIsSubmitting}
+                          onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null, true, e.target)}
+                        />
+                      </label>
+
+                      {indStaged.length > 0 && (
+                        <button
+                          onClick={() => handleSubmitStaging(req.id)}
+                          disabled={indIsSubmitting}
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] transition-all active:scale-95"
+                        >
+                          {indIsSubmitting ? (
+                            <>Enviando...</>
+                          ) : (
+                            <>Enviar {indStaged.length} arquivo{indStaged.length > 1 ? 's' : ''} para revisão →</>
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {indStaged.length === 0 && !indIsPending && !indIsApproved && (
+                      <p className="text-xs text-slate-400 mt-2 text-center">
+                        Adicione os arquivos e clique em "Enviar para revisão"
+                      </p>
+                    )}
+
+                    {stagingErrors[req.id] && (
+                      <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-red-700">{stagingErrors[req.id]}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Grouped history */}
+                {indHistoryGroups.length > 0 && (
+                  <div className="mt-3 border border-slate-200 rounded-xl overflow-hidden">
+                    <details className="group/hist">
+                      <summary className="flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors text-sm font-medium text-slate-600 list-none">
+                        <span>
+                          Histórico de envios
+                          <span className="text-slate-800 font-semibold"> — {req.title}</span>
+                          <span className="ml-1 text-slate-400">({indHistoryGroups.length} tentativa{indHistoryGroups.length > 1 ? 's' : ''} anterior{indHistoryGroups.length > 1 ? 'es' : ''})</span>
+                        </span>
+                        <ChevronDown className="w-4 h-4 group-open/hist:rotate-180 transition-transform" />
+                      </summary>
+                      <ul className="divide-y divide-slate-100">
+                        {[...indHistoryGroups].reverse().map((group: any[], groupIdx: number) => {
+                          const groupNumber = indHistoryGroups.length - groupIdx;
+                          const lastUpload = group[group.length - 1];
+                          const isGroupRejected = lastUpload.status === 'rejected';
+                          const isGroupApproved = lastUpload.status === 'approved';
+                          return (
+                            <li key={groupIdx} className="px-4 py-3 bg-white">
+                              <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-400 font-medium">Tentativa #{groupNumber}</span>
+                                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${isGroupApproved ? 'bg-green-100 text-green-700 border-green-200' : isGroupRejected ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                                    {isGroupApproved ? <CheckCircle className="w-3 h-3" /> : isGroupRejected ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                    {isGroupApproved ? 'Aprovado' : isGroupRejected ? 'Rejeitado' : 'Em revisão'}
+                                  </span>
+                                  <span className="text-xs text-slate-400">{group.length} arquivo{group.length > 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
+                              {lastUpload.rejection_reason && (
+                                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
+                                  <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                </p>
+                              )}
+                              <div className="space-y-1">
+                                {group.map((upload: any) => (
+                                  <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                      <span className="text-xs text-slate-600 truncate">{getFileName(upload.file_url)}</span>
+                                    </div>
+                                    {upload.file_url && (
+                                      <button
+                                        onClick={() => setPreviewUrl(upload.file_url)}
+                                        className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Ver
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
+                  </div>
+                )}
               </div>
             );
           })}

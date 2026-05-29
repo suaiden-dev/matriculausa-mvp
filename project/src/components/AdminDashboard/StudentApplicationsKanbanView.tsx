@@ -63,7 +63,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return studentsWithDocs.filter(s =>
       !s.is_dropped &&
       !s.has_paid_selection_process_fee &&
-      s.status !== 'enrolled' &&
+      s.application_status !== 'enrolled' &&
       s.source !== 'migma'
     );
   }, [studentsWithDocs]);
@@ -72,7 +72,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   const displayStudents = useMemo(() => {
     return studentsWithDocs.filter(s =>
       !s.is_dropped &&
-      (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')
+      (s.has_paid_selection_process_fee || s.application_status === 'enrolled' || s.source === 'migma')
     );
   }, [studentsWithDocs]);
 
@@ -93,8 +93,11 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     });
 
     displayStudents.forEach(student => {
-      // Alunos legados (enrolados antes da plataforma) → vão direto para Enrollment
-      if (student.student_process_type === 'enrolled' && stageMap.has('enrollment')) {
+      // Alunos já matriculados → vão direto para Enrollment
+      // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+      const isTransferPendingSevis =
+        student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+      if (student.application_status === 'enrolled' && !isTransferPendingSevis && stageMap.has('enrollment')) {
         stageMap.get('enrollment')!.push(student);
         return;
       }
@@ -142,7 +145,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       {/* Summary Stats + Color Legend */}
       <div className="px-1 pb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-gray-500">
-          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma')).length} students in pipeline
+          {studentsWithDocs.filter(s => !s.is_dropped && (s.has_paid_selection_process_fee || s.application_status === 'enrolled' || s.source === 'migma')).length} students in pipeline
           {registeredStudents.length > 0 && (
             <span className="ml-2 text-blue-400">· {registeredStudents.length} registered</span>
           )}

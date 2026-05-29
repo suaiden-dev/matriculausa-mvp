@@ -11,7 +11,7 @@ export default defineConfig({
       './tests/integration/mocks/server.ts',
       './tests/setup.ts'
     ],
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.tsx'],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

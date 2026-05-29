@@ -58,7 +58,8 @@ async function loadApplications(): Promise<any[]> {
         reinstatement_package_payment_method,
         is_placement_fee_paid,
         has_paid_reinstatement_package,
-        seller_referral_code
+        seller_referral_code,
+        source
       ),
       scholarships (
         id,
@@ -95,7 +96,7 @@ async function loadZellePayments(): Promise<any[]> {
     const userIds = zellePaymentsRaw.map((p) => p.user_id).filter(Boolean);
     const { data: userProfiles, error: usersError } = await supabase
       .from('user_profiles')
-      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method, scholarship_package_id, dependents, seller_referral_code')
+      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method, scholarship_package_id, dependents, seller_referral_code, source')
       .in('user_id', userIds);
     
     if (usersError) {
@@ -118,7 +119,7 @@ async function loadZellePayments(): Promise<any[]> {
 async function loadAllStudents(): Promise<any[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, user_id, email, full_name, dependents, system_type, seller_referral_code, created_at')
+    .select('id, user_id, email, full_name, dependents, system_type, seller_referral_code, created_at, has_paid_reinstatement_package, reinstatement_package_payment_method, updated_at')
     .eq('role', 'student');
   
   if (error) throw error;
@@ -480,7 +481,7 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
     applicationsRaw,
     zellePaymentsRaw,
     allStudentsRaw,
-    individualFeePayments
+    individualFeePaymentsRaw
   ] = await Promise.all([
     loadApplications(),
     loadZellePayments(),
@@ -490,7 +491,7 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
   const filterActive = shouldFilter();
-  
+
   const applications = filterActive
     ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
     : applicationsRaw;
@@ -502,6 +503,18 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
   const allStudents = filterActive
     ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
     : allStudentsRaw;
+
+  // Filtrar individualFeePayments excluindo @uorak.com via set de user_ids excluídos
+  const excludedUserIds = filterActive
+    ? new Set(allStudentsRaw
+        .filter((student: any) => shouldExcludeStudent(student.email))
+        .map((student: any) => student.user_id)
+        .filter(Boolean))
+    : new Set();
+
+  const individualFeePayments = filterActive
+    ? individualFeePaymentsRaw.filter((p: any) => !excludedUserIds.has(p.user_id))
+    : individualFeePaymentsRaw;
 
   // Carregar usuários Stripe (depende de applications já filtradas)
   const stripeUsersRaw = await loadStripeUsers(applications);
@@ -555,10 +568,14 @@ export async function loadFinancialData(): Promise<LoadedFinancialData> {
                       payment.fee_type === 'placement' || payment.fee_type === 'placement_fee' ? 'placement' : 
                       payment.fee_type === 'reinstatement' || payment.fee_type === 'reinstatement_fee' || payment.fee_type === 'reinstatement_package' ? 'reinstatement_fee' : null;
 
-    if (feeTypeKey && (userAmounts as any)[feeTypeKey] === undefined) {
-      (userAmounts as any)[feeTypeKey] = amountUSD;
+    if (feeTypeKey) {
+      if ((userAmounts as any)[feeTypeKey] === undefined) {
+        (userAmounts as any)[feeTypeKey] = amountUSD;
+      } else {
+        (userAmounts as any)[feeTypeKey] += amountUSD;
+      }
       if (import.meta.env.DEV && userId === '35ebf05b-2981-4721-9c0f-2bc5f5f02537') {
-         console.log(`[DEBUG-LOAD] ✅ Atribuído realPaymentAmount para Ágnis: ${feeTypeKey} = ${amountUSD}`);
+         console.log(`[DEBUG-LOAD] ✅ Atribuído realPaymentAmount para Ágnis: ${feeTypeKey} = ${userAmounts[feeTypeKey]}`);
       }
     }
   });

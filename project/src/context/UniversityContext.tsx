@@ -109,7 +109,9 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
               is_placement_fee_paid, placement_fee_flow, 
               placement_fee_pending_balance, placement_fee_due_date, 
               placement_fee_installment_number, placement_fee_installment_enabled,
-              source, student_process_type
+              source, student_process_type, visa_transfer_active,
+              has_paid_reinstatement_package, has_paid_ds160_package, has_paid_i539_cos_package,
+              has_paid_i20_control_fee, selected_scholarship_id, selected_application_id
             )
           `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
@@ -139,11 +141,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
 
           if (uploadsError) console.error('[UNI_CONTEXT_DEBUG] Uploads Error:', uploadsError);
 
-          console.log('[UNI_CONTEXT_DEBUG]', {
-            reqsFound: allReqs?.length,
-            uploadsFound: allUploads?.length,
-            appIds: appIds.length
-          });
+
 
           // 3. Mapear para cada aplicação
           const enrichedApps = (applicationsData || []).map(app => {
@@ -181,7 +179,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
             };
           });
 
-          console.log('[UNI_CONTEXT_DEBUG] Enriched Apps Sample:', enrichedApps[0]?.university_document_stats);
+
 
           setApplications(enrichedApps);
         } else {
@@ -361,6 +359,40 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
       loadData();
     }
   }, [user, hasLoadedData]);
+
+  // Sincronização em tempo real (Supabase Realtime)
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('university-dashboard-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'scholarship_applications' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_profiles' },
+        () => {
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'document_request_uploads' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const value: UniversityContextType = {
     university,

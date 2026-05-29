@@ -34,14 +34,26 @@ export const useAdminNotes = (
         if (Array.isArray(student.admin_notes)) {
           setAdminNotes(student.admin_notes);
         } else if (typeof student.admin_notes === 'string') {
-          const parsed = JSON.parse(student.admin_notes);
+          // Tenta parse direto
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(student.admin_notes);
+          } catch {
+            // JSON inválido (ex: array + objeto concatenado) — extrai objetos por regex
+            const matches = student.admin_notes.match(/\{[^{}]*\}/gs);
+            if (matches) {
+              parsed = matches.map((m: string) => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);
+            }
+          }
+
           if (Array.isArray(parsed)) {
-            setAdminNotes(parsed);
+            setAdminNotes(parsed.filter((n: any) => n && n.id && n.content));
+          } else if (parsed && typeof parsed === 'object') {
+            setAdminNotes([parsed]);
           } else {
-            // Fallback: criar array com nota única
             setAdminNotes([{
               id: `note-${Date.now()}`,
-              content: parsed,
+              content: student.admin_notes,
               created_by: 'unknown',
               created_by_name: 'Admin',
               created_at: new Date().toISOString()
@@ -52,14 +64,7 @@ export const useAdminNotes = (
         }
       } catch (error) {
         console.error('Error parsing admin notes:', error);
-        // Se não conseguir fazer parse, criar array com nota única
-        setAdminNotes([{
-          id: `note-${Date.now()}`,
-          content: student.admin_notes,
-          created_by: 'unknown',
-          created_by_name: 'Admin',
-          created_at: new Date().toISOString()
-        }]);
+        setAdminNotes([]);
       }
     } else {
       setAdminNotes([]);
@@ -76,11 +81,22 @@ export const useAdminNotes = (
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email || 'Admin';
 
+      // Buscar nome completo do admin no user_profiles
+      let authorName = userEmail;
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (profile?.full_name) authorName = profile.full_name;
+      }
+
       const newNote = {
         id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
         content: newNoteContent.trim(),
         created_by: userId || user?.id || 'unknown',
-        created_by_name: userEmail,
+        created_by_name: authorName,
         created_at: new Date().toISOString()
       };
 

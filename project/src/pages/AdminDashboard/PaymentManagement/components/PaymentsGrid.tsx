@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Building2, DollarSign, Calendar } from 'lucide-react';
 import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
+import { formatPaymentDate } from '../utils/dateFormatter';
 
 export interface PaymentsGridProps {
 	currentPayments: any[];
@@ -25,7 +26,7 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoa
 							<span className="text-gray-900">{payment.university_name}</span>
 						</div>
 						<div className="flex items-center gap-2 mb-1">
-							<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'}`}>{FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type}</span>
+							<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'}`}>{(() => { const label = FEE_TYPES.find((ft: any) => ft.value === payment.fee_type)?.label || payment.fee_type; return payment.installment_number && payment.total_installments ? `${label} — ${payment.installment_number}/${payment.total_installments}` : label; })()}</span>
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<DollarSign className="h-4 w-4 text-green-500" />
@@ -37,7 +38,7 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoa
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<Calendar className="h-4 w-4 text-gray-400" />
-							<span className="text-gray-900">{payment.payment_date ? new Date(payment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+							<span className="text-gray-900">{formatPaymentDate(payment.payment_date)}</span>
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>

@@ -4,20 +4,24 @@ import type { Scholarship } from "../types";
 
 export function useScholarships() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Inicia como true para evitar o flash de lista vazia antes do fetch começar
+  const [loading, setLoading] = useState(true);
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   useEffect(() => {
-    // Evitar loop infinito - só executar se ainda não carregou
+    // Se já carregou os dados, apenas garante que loading está false e sai
     if (hasLoadedData) {
+      setLoading(false);
       return;
     }
 
     // Debounce: evitar múltiplas chamadas em sequência
     const now = Date.now();
-    if (now - lastFetchTime < 5000) { // 5 segundos de debounce
+    if (now - lastFetchTime < 5000) {
+      // Fetch suprimido por debounce, mas ainda sem dados: deixa loading true
+      // e aguarda o próximo ciclo disparar o fetch
       return;
     }
     setLastFetchTime(now);

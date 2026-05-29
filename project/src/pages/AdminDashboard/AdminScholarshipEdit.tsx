@@ -37,6 +37,15 @@ const ALLOWED_UNIVERSITIES = [
   }
 ];
 
+const FREQUENCY_OPTIONS = [
+  { value: 'One-time', label: 'One-time' },
+  { value: 'Per Semester', label: 'Per Semester' },
+  { value: 'Per Year', label: 'Per Year' },
+  { value: 'Per Credit', label: 'Per Credit' },
+  { value: 'Per Course', label: 'Per Course' },
+  { value: 'Monthly', label: 'Monthly' }
+];
+
 const AdminScholarshipEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -1078,13 +1087,41 @@ const AdminScholarshipEdit: React.FC = () => {
                           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                             Frequency / Detail
                           </label>
-                          <input
-                            type="text"
-                            value={fee.details}
-                            onChange={(e) => handleInternalFeeChange(index, 'details', e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
-                            placeholder="e.g. One-time fee"
-                          />
+                          {(() => {
+                            const isStandardOption = !fee.details || FREQUENCY_OPTIONS.some(opt => opt.value === fee.details);
+                            const selectValue = isStandardOption ? fee.details : 'Other';
+                            return (
+                              <>
+                                <select
+                                  value={selectValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleInternalFeeChange(index, 'details', val === 'Other' ? '' : val);
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] text-slate-800"
+                                >
+                                  <option value="">Select frequency...</option>
+                                  {FREQUENCY_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                  <option value="Other">Other (Specify...)</option>
+                                </select>
+
+                                {selectValue === 'Other' && (
+                                  <input
+                                    type="text"
+                                    value={fee.details}
+                                    onChange={(e) => handleInternalFeeChange(index, 'details', e.target.value)}
+                                    className="w-full mt-2 px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] text-slate-800"
+                                    placeholder="Enter custom frequency (e.g. Per Quarter)"
+                                    required
+                                  />
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1376,7 +1413,10 @@ const AdminScholarshipEdit: React.FC = () => {
               </div>
             </div>
 
-            {/* Application Fee Configuration Section */}
+            {/* Application Fee Configuration Section — hidden (duplicate fields + unused fields) */}
+            {/* application_fee_amount and scholarship_fee_amount already exist in Financial Details above */}
+            {/* scholarship_type and visaassistance are stored but not used in any active view */}
+            {/* {
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
                 <DollarSign className="h-5 w-5 mr-2 text-purple-600" />
@@ -1445,6 +1485,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
               </div>
             </div>
+            } */}
 
             {/* Submit Button */}
             <div className="flex justify-end pt-6 border-t border-slate-200">

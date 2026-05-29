@@ -79,13 +79,10 @@ import PaymentManagementSkeleton from '../../components/PaymentManagementSkeleto
 
 const FEE_TYPES = [
   { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
-  { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
-  { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
-  { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
-  { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-800' },
-  { value: 'ds160_package', label: 'Control Fee', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'i539_cos_package', label: 'Control Fee', color: 'bg-rose-100 text-rose-800' },
-  { value: 'reinstatement_fee', label: 'Reinstatement Fee', color: 'bg-amber-100 text-amber-800' },
+  { value: 'application',       label: 'Application Fee',       color: 'bg-green-100 text-green-800' },
+  { value: 'placement',         label: 'Placement Fee',         color: 'bg-purple-100 text-purple-800' },
+  { value: 'control_fee',       label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'reinstatement_fee', label: 'Reinstatement Fee',     color: 'bg-amber-100 text-amber-800' },
 ];
 
 const STATUS_OPTIONS = [
@@ -1075,6 +1072,7 @@ const PaymentManagement = (): React.JSX.Element => {
           onApprove={
             selectedZellePayment &&
             ((selectedZellePayment.fee_type as any) === 'placement') &&
+            selectedStudentInstallmentEnabled &&
             selectedStudentInstallmentNumber === 1
               ? approveSecondInstallmentPayment
               : approveZellePayment

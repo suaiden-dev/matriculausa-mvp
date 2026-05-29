@@ -14,8 +14,7 @@ import {
   Plus,
   Trash2,
   Globe,
-  MapPin,
-  Eye
+  MapPin
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -25,7 +24,7 @@ import { profileFieldsConfig } from '../../config/profileFields';
 import FormSection from '../../components/ProfileForm/FormSection';
 
 const ProfileManagement: React.FC = () => {
-  const { university, refreshData } = useUniversity();
+  const { university, scholarships = [], applications = [], refreshData } = useUniversity();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -655,7 +654,7 @@ const ProfileManagement: React.FC = () => {
                   <Award className="h-5 w-5 text-[#05294E] mr-3" />
                   <span className="font-medium text-slate-700">Scholarships Created</span>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">0</span>
+                <span className="text-2xl font-bold text-slate-900">{scholarships.length}</span>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
@@ -663,15 +662,17 @@ const ProfileManagement: React.FC = () => {
                   <Users className="h-5 w-5 text-blue-600 mr-3" />
                   <span className="font-medium text-slate-700">Applicants</span>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">0</span>
+                <span className="text-2xl font-bold text-slate-900">{applications.length}</span>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <div className="flex items-center">
-                  <Eye className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="font-medium text-slate-700">Profile Views</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                  <span className="font-medium text-slate-700">Approved Students</span>
                 </div>
-                <span className="text-2xl font-bold text-slate-900">0</span>
+                <span className="text-2xl font-bold text-slate-900">
+                  {applications.filter(a => a.status === 'approved' || a.status === 'enrolled').length}
+                </span>
               </div>
             </div>
           </div>

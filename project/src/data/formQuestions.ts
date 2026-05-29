@@ -60,7 +60,15 @@ export const questions: Question[] = [
     placeholder: '0.0', prompt: '0.0 - 4.0'
   },
   {
-    id: 4, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.4.text', type: 'yesno', required: true,
+    id: 4, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.4.text', type: 'radio', required: true,
+    options: [
+      { label: 'selectionSurvey.questions.4.options.0', value: '0', correct: null },
+      { label: 'selectionSurvey.questions.4.options.1', value: '1', correct: null },
+      { label: 'selectionSurvey.questions.4.options.2', value: '2', correct: null },
+      { label: 'selectionSurvey.questions.4.options.3', value: '3', correct: null },
+      { label: 'selectionSurvey.questions.4.options.4', value: '4', correct: null },
+      { label: 'selectionSurvey.questions.4.options.5', value: '5', correct: null },
+    ]
   },
   {
     id: 5, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5.text', type: 'radio', required: true,
@@ -86,6 +94,10 @@ export const questions: Question[] = [
   },
   {
     id: 5.3, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5_3.text', type: 'text', required: true, scored: false,
+    conditionalOn: { questionId: 5, value: 'cos' },
+  },
+  {
+    id: 5.4, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5_4.text', type: 'date', required: true, scored: false,
     conditionalOn: { questionId: 5, value: 'cos' },
   },
   {

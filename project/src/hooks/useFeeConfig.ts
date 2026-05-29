@@ -7,6 +7,7 @@ export interface FeeConfig {
   application_fee_default: number;
   scholarship_fee_default: number;
   i20_control_fee: number;
+  reinstatement_fee_default: number;
 }
 
 const DEFAULT_FEE_CONFIG: FeeConfig = {
@@ -14,6 +15,7 @@ const DEFAULT_FEE_CONFIG: FeeConfig = {
   application_fee_default: 350,
   scholarship_fee_default: 900,
   i20_control_fee: 900,
+  reinstatement_fee_default: 500,
 };
 
 interface UserFeeOverrides {
@@ -24,6 +26,7 @@ interface UserFeeOverrides {
   placement_fee?: number;
   ds160_package_fee?: number;
   i539_cos_package_fee?: number;
+  reinstatement_fee?: number;
 }
 
 export const useFeeConfig = (userId?: string) => {
@@ -114,6 +117,7 @@ export const useFeeConfig = (userId?: string) => {
         placement_fee: data.placement_fee != null ? Number(data.placement_fee) : undefined,
         ds160_package_fee: data.ds160_package_fee != null ? Number(data.ds160_package_fee) : undefined,
         i539_cos_package_fee: data.i539_cos_package_fee != null ? Number(data.i539_cos_package_fee) : undefined,
+        reinstatement_fee: data.reinstatement_fee != null ? Number(data.reinstatement_fee) : undefined,
       } : null;
 
       setState(prev => ({ ...prev, userFeeOverrides: normalized }));
@@ -182,6 +186,7 @@ export const useFeeConfig = (userId?: string) => {
             placement_fee: data.user_fee_overrides.placement_fee != null ? Number(data.user_fee_overrides.placement_fee) : undefined,
             ds160_package_fee: data.user_fee_overrides.ds160_package_fee != null ? Number(data.user_fee_overrides.ds160_package_fee) : undefined,
             i539_cos_package_fee: data.user_fee_overrides.i539_cos_package_fee != null ? Number(data.user_fee_overrides.i539_cos_package_fee) : undefined,
+            reinstatement_fee: data.user_fee_overrides.reinstatement_fee != null ? Number(data.user_fee_overrides.reinstatement_fee) : undefined,
           };
         } else {
           updates.userFeeOverrides = null;
@@ -262,6 +267,8 @@ export const useFeeConfig = (userId?: string) => {
         case "ds160_package_fee": override = userFeeOverrides.ds160_package_fee; break;
         case "i539_cos_package":
         case "i539_cos_package_fee": override = userFeeOverrides.i539_cos_package_fee; break;
+        case "reinstatement_fee":
+        case "reinstatement_package": override = userFeeOverrides.reinstatement_fee; break;
       }
       baseAmount = (override !== undefined && override !== null) ? override : getDefaultBaseAmount(feeType);
     } else {
@@ -293,7 +300,7 @@ export const useFeeConfig = (userId?: string) => {
     if (feeType === "placement_fee" || feeType === "placement") return 1200;
     if (feeType === "ds160_package" || feeType === "i539_cos_package") return 1800;
     if (feeType === "application_fee") return feeConfig.application_fee_default;
-    if (feeType === "reinstatement_fee") return 500;
+    if (feeType === "reinstatement_fee" || feeType === "reinstatement_package") return feeConfig.reinstatement_fee_default;
     return feeConfig.application_fee_default;
   };
 
@@ -328,6 +335,8 @@ export const useFeeConfig = (userId?: string) => {
       case "ds160_package_fee": return userFeeOverrides.ds160_package_fee != null;
       case "i539_cos_package":
       case "i539_cos_package_fee": return userFeeOverrides.i539_cos_package_fee != null;
+      case "reinstatement_fee":
+      case "reinstatement_package": return userFeeOverrides.reinstatement_fee != null;
       default: return false;
     }
   };

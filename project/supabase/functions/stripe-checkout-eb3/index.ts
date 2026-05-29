@@ -97,8 +97,7 @@ Deno.serve(async (req) => {
         description: 'Pré Candidatura Vagas EB3 - MatriculaUSA',
         metadata: sessionMetadata,
       },
-      // Permite promo codes se necessário
-      allow_promotion_codes: true,
+      allow_promotion_codes: false,
     });
 
     console.log('[stripe-checkout-eb3] Created Stripe session:', {

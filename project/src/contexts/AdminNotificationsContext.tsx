@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { channelManager } from '../lib/supabaseChannelManager';
 import { throttle } from '../utils/debounce';
 import { useUnreadMessages } from './UnreadMessagesContext';
 
@@ -223,22 +222,23 @@ export const AdminNotificationsProvider: React.FC<{ children: ReactNode }> = ({ 
     if (!user || (user.role !== 'admin' && user.role !== 'post_sales')) return;
 
     const channelName = `admin-merged-notifications-ctx-${user.id}`;
-    channelManager.subscribe(channelName)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+    const channel = supabase.channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'admin_student_chat_notifications',
         filter: `recipient_id=eq.${user.id}`
       }, () => throttledFetch.current())
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'admin_notifications',
         filter: `user_id=eq.${user.id}`
-      }, () => throttledFetch.current());
+      }, () => throttledFetch.current())
+      .subscribe();
 
     return () => {
-      channelManager.unsubscribe(channelName);
+      supabase.removeChannel(channel);
     };
   }, [user?.id, user?.role]);
 

@@ -26,10 +26,21 @@ export function filterPayments(
     })();
 
     const matchesFeeType = (() => {
+      const CONTROL_FEE_TYPES = ['ds160_package', 'i539_cos_package', 'i539_package'];
+      const PLACEMENT_FEE_TYPES = ['placement', 'placement_fee', 'i20_control', 'i20_control_fee', 'scholarship', 'scholarship_fee'];
+      const REINSTATEMENT_FEE_TYPES = ['reinstatement_fee', 'reinstatement', 'reinstatement_package'];
+
+      const matchesValue = (filterVal: string): boolean => {
+        if (filterVal === 'control_fee')      return payment.fee_type === 'control_fee' || CONTROL_FEE_TYPES.includes(payment.fee_type);
+        if (filterVal === 'placement')        return PLACEMENT_FEE_TYPES.includes(payment.fee_type);
+        if (filterVal === 'reinstatement_fee') return REINSTATEMENT_FEE_TYPES.includes(payment.fee_type);
+        return payment.fee_type === filterVal;
+      };
+
       if (Array.isArray(filters.feeType)) {
-        return filters.feeType.length === 0 || filters.feeType.includes('all') || filters.feeType.includes(payment.fee_type);
+        return filters.feeType.length === 0 || filters.feeType.includes('all') || filters.feeType.some(matchesValue);
       }
-      return filters.feeType === 'all' || payment.fee_type === filters.feeType;
+      return filters.feeType === 'all' || matchesValue(filters.feeType);
     })();
 
     const matchesStatus = (() => {

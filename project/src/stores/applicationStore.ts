@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Scholarship } from '../types';
 import { supabase } from '../lib/supabase';
-import NotificationService from '../services/NotificationService';
 import { is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
 
 interface ApplicationStore {
@@ -198,69 +197,9 @@ export const useCartStore = create<CartState>((set, get) => ({
         return;
       }
       
-      set((state) => ({ 
-        cart: [...state.cart, { cart_id: data.id, scholarships: scholarship }] 
+      set((state) => ({
+        cart: [...state.cart, { cart_id: data.id, scholarships: scholarship }]
       }));
-
-      // Enviar notificação para a universidade
-      try {
-        // Buscar dados do aluno
-        const { data: userProfile, error: userError } = await supabase
-          .from('user_profiles')
-          .select('full_name, email')
-          .eq('user_id', userId)
-          .single();
-
-        if (userError || !userProfile) {
-          console.error('Error fetching user profile for notification:', userError);
-          return;
-        }
-
-        // Buscar dados da universidade
-        const universityId = scholarship.universities?.id || scholarship.university_id;
-        if (!universityId) {
-          console.error('University ID not found for notification');
-          return;
-        }
-
-        const { data: university, error: univError } = await supabase
-          .from('universities')
-          .select('id, name, contact')
-          .eq('id', universityId)
-          .single();
-
-        if (univError || !university) {
-          console.error('Error fetching university for notification:', univError);
-          return;
-        }
-
-        const contact = university.contact || {};
-        const universityEmail = contact.admissionsEmail || contact.email || '';
-
-        if (!universityEmail) {
-          console.warn('University email not found for notification - continuing without notification');
-        } else {
-          // Criar e enviar notificação
-          const payload = NotificationService.createUniversityConfirmationPayload(
-            userProfile.full_name || 'Aluno',
-            userProfile.email || '',
-            university.name,
-            universityEmail,
-            scholarship.title
-          );
-
-          const result = await NotificationService.sendUniversityNotification(payload);
-          
-          if (result.success) {
-            console.log('University notification sent successfully');
-          } else {
-            console.error('Failed to send university notification:', result.error);
-          }
-        }
-      } catch (notificationError) {
-        console.error('Error sending university notification:', notificationError);
-        // Não falhar a operação principal por causa da notificação
-      }
     } catch (error) {
       console.error('Error in addToCart:', error);
     }

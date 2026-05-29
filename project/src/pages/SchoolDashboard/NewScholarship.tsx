@@ -28,6 +28,15 @@ const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const FORM_STORAGE_KEY = 'new_scholarship_form_data';
 
+const FREQUENCY_OPTIONS = [
+  { value: 'One-time', label: 'One-time' },
+  { value: 'Per Semester', label: 'Per Semester' },
+  { value: 'Per Year', label: 'Per Year' },
+  { value: 'Per Credit', label: 'Per Credit' },
+  { value: 'Per Course', label: 'Per Course' },
+  { value: 'Monthly', label: 'Monthly' }
+];
+
 const NewScholarship: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1449,25 +1458,6 @@ const NewScholarship: React.FC = () => {
                       Set the application fee amount for this scholarship. Students will see this value when applying.
                     </p>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Placement Fee Amount (USD) <span className="text-slate-400 font-normal">(Optional)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="placement_fee_amount"
-                      value={formData.placement_fee_amount}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="e.g., 1450.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Optional custom Placement Fee. If left blank, standard table rates will apply.
-                    </p>
-                  </div>
                 </div>
 
                 {/* Information about application fees */}
@@ -1563,13 +1553,41 @@ const NewScholarship: React.FC = () => {
                             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
                               Frequency / Detail
                             </label>
-                            <input
-                              type="text"
-                              value={fee.details}
-                              onChange={(e) => handleInternalFeeChange(index, 'details', e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
-                              placeholder="e.g. One-time fee"
-                            />
+                            {(() => {
+                              const isStandardOption = !fee.details || FREQUENCY_OPTIONS.some(opt => opt.value === fee.details);
+                              const selectValue = isStandardOption ? fee.details : 'Other';
+                              return (
+                                <>
+                                  <select
+                                    value={selectValue}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      handleInternalFeeChange(index, 'details', val === 'Other' ? '' : val);
+                                    }}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] text-slate-800"
+                                  >
+                                    <option value="">Select frequency...</option>
+                                    {FREQUENCY_OPTIONS.map(opt => (
+                                      <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                    <option value="Other">Other (Specify...)</option>
+                                  </select>
+
+                                  {selectValue === 'Other' && (
+                                    <input
+                                      type="text"
+                                      value={fee.details}
+                                      onChange={(e) => handleInternalFeeChange(index, 'details', e.target.value)}
+                                      className="w-full mt-2 px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] text-slate-800"
+                                      placeholder="Enter custom frequency (e.g. Per Quarter)"
+                                      required
+                                    />
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>

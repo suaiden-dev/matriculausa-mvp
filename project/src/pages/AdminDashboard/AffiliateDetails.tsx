@@ -192,19 +192,20 @@ const AffiliateDetails: React.FC = () => {
         const referredIds = referrals.map((r: any) => r.referred_id).filter(Boolean);
         const { data: refProfiles } = await supabase
           .from('user_profiles')
-          .select('user_id, full_name, email')
+          .select('id, user_id, full_name, email')
           .in('user_id', referredIds);
 
-        const profMap: Record<string, { full_name: string; email: string }> = {};
+        const profMap: Record<string, { id: string; full_name: string; email: string }> = {};
         (refProfiles || []).forEach((p: any) => {
-          profMap[p.user_id] = { full_name: p.full_name || '', email: p.email || '' };
+          profMap[p.user_id] = { id: p.id, full_name: p.full_name || '', email: p.email || '' };
         });
 
         setStudents(referrals.map((r: any) => {
-          const prof = profMap[r.referred_id] || { full_name: '', email: '' };
+          const prof = profMap[r.referred_id] || { id: '', full_name: '', email: '' };
           return {
             referral_id: r.id,
             referred_id: r.referred_id,
+            profile_id: prof.id,
             full_name: prof.full_name || prof.email || r.referred_id?.slice(0, 8),
             email: prof.email,
             selection_process_paid_at: r.selection_process_paid_at,
@@ -582,7 +583,7 @@ const AffiliateDetails: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <button
-                        onClick={() => navigate(`/admin/dashboard/students/${student.referred_id}`)}
+                        onClick={() => navigate(`/admin/dashboard/students/${student.profile_id || student.referred_id}`)}
                         className="flex items-center gap-1.5 font-semibold text-slate-900 text-sm hover:text-blue-600 transition-colors group"
                       >
                         {student.full_name}

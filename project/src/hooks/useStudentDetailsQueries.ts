@@ -36,7 +36,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               const { data: extraProfile, error: extraError } = await supabase
                 .from("user_profiles")
                 .select(
-                  "placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, source, identity_photo_path, identity_photo_status, identity_photo_rejection_reason, has_paid_reinstatement_package, visa_transfer_active, reinstatement_package_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method, student_process_type",
+                  "placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, source, identity_photo_path, identity_photo_status, identity_photo_rejection_reason, has_paid_reinstatement_package, visa_transfer_active, reinstatement_package_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method, student_process_type, is_application_fee_paid, selected_application_id",
                 )
                 .eq("id", profileId)
                 .single();
@@ -44,6 +44,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               if (!extraError && extraProfile) {
                 s = {
                   ...s,
+                  selected_application_id: s.selected_application_id ??
+                    extraProfile.selected_application_id,
                   placement_fee_flow: s.placement_fee_flow ??
                     extraProfile.placement_fee_flow,
                   is_placement_fee_paid: s.is_placement_fee_paid ??
@@ -64,6 +66,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                   placement_fee_installment_number:
                     (extraProfile as any).placement_fee_installment_number ?? 0,
                   source: s.source ?? extraProfile.source,
+                  is_application_fee_paid: s.is_application_fee_paid || extraProfile.is_application_fee_paid,
                   identity_photo_path:
                     (extraProfile as any).identity_photo_path ?? null,
                   identity_photo_status:
@@ -167,6 +170,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             identity_photo_status,
             identity_photo_rejection_reason,
             source,
+            is_application_fee_paid,
+            selected_application_id,
             scholarship_applications (
               id,
               scholarship_id,
@@ -192,6 +197,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               scholarships (
                 title,
                 university_id,
+                level,
                 field_of_study,
                 annual_value_with_scholarship,
                 application_fee_amount,
@@ -294,6 +300,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
       // ✅ CORREÇÃO: Verificar se ALGUMA aplicação tem os fees pagos (priorizando enrolled)
       const is_application_fee_paid = enrolledApp?.is_application_fee_paid ||
         applications.some((app: any) => app.is_application_fee_paid) ||
+        s.is_application_fee_paid ||
         false;
       const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid ||
         mainApp?.is_scholarship_fee_paid ||
@@ -384,6 +391,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         identity_photo_rejection_reason:
           (s as any).identity_photo_rejection_reason ?? null,
         source: s.source || null,
+        selected_application_id: s.selected_application_id || null,
       };
 
       return formatted;

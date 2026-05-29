@@ -88,8 +88,7 @@ export interface CohortRetentionData {
   cohortSize: number;        // alunos que pagaram selection_process neste mês
   // Fluxo atual
   application: number;
-  ds160_package: number;
-  i539_package: number;
+  control_fee: number;
   placement: number;
   // Legado (pode ser 0 para cohorts novos)
   i20_control: number;
@@ -114,6 +113,7 @@ export interface FinancialDataInputs {
   userSystemTypesMap: Map<string, string>;
   realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number }>;
   individualPaymentDates: Map<string, Map<string, string>>;
+  individualFeePayments: any[];
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
 }
 

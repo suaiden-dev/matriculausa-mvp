@@ -17,22 +17,25 @@ interface StudentCardProps {
   unreadMessages?: number;
   showSelectionTags?: boolean;
   currentStageKey?: ApplicationFlowStageKey;
+  onMarkLost?: (studentId: string) => void;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey, onMarkLost }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
-  const currentAdminProfileId = (userProfile?.role === 'admin' || userProfile?.role === 'post_sales') ? userProfile.id : null;
   
   // Lógica de Débito Proativa
   const totalDebt = React.useMemo(() => {
+    // Alunos MIGMA gerenciam taxas no próprio sistema — sem exibição de débito
+    if ((student as any).source === 'migma') return 0;
+
     try {
       let total = 0;
-      
+
       // 1. Balanço pendente direto do banco (Placement Fee parcial ou outras)
       const pendingBalance = Number(student.placement_fee_pending_balance || 0);
       total += pendingBalance;
@@ -77,17 +80,28 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         }
       }
 
-      // D. I-20 Control Fee
-      const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
-      const isI20Applicable =
-          student.student_process_type === 'initial' ||
-          student.student_process_type === 'change_of_status' ||
-          (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
-
-      const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+      // D. Control Fee / I-20 Fee
+      const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
       const i20Index = stages.indexOf('i20_fee');
-      if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
-        total += i20Amount;
+
+      if (isTransferInactiveVisa) {
+        // Transfer com visa inativo: Reinstatement Fee ($500) + Control Fee ($1800)
+        if (!student.has_paid_reinstatement_package && currentIndex > i20Index && i20Index !== -1) {
+          total += 500;
+        }
+        if (!student.has_paid_i539_cos_package && currentIndex > i20Index && i20Index !== -1) {
+          total += 1800;
+        }
+      } else {
+        // Outros (initial, change_of_status): I-20 / DS-160 fee
+        const isI20Applicable =
+          student.student_process_type === 'initial' ||
+          student.student_process_type === 'change_of_status';
+        const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+        const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
+        if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
+          total += i20Amount;
+        }
       }
 
       return total;
@@ -99,9 +113,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   
   // Pode editar se: não for admin (super) ou se o admin não for restrito
   // Post Sales sempre pode editar (parity)
-  const canEdit = !currentAdminProfileId ||
-    userProfile?.role === 'post_sales' ||
-    userProfile?.is_restricted_admin === false;
+  // canEdit disponível para uso futuro se necessário
 
   const currentStageKey = propCurrentStageKey;
 
@@ -121,6 +133,13 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     if (student.is_dropped) {
       setShowRestoreModal(true);
       return;
+    }
+  };
+
+  const handleMarkLostClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onMarkLost) {
+      onMarkLost(student.student_id);
     }
   };
 
@@ -155,7 +174,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         isDropped: true,
         reason,
         adminId: userProfile?.user_id,
-        adminName: userProfile?.full_name
+        adminName: userProfile?.full_name ?? undefined
       });
       
       await logAction(
@@ -355,21 +374,31 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             </div>
           )}
         </div>
-        {/* Drop button */}
-        <button
-          onClick={handleToggleDrop}
-          title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
-          className={`flex-shrink-0 p-1 rounded transition-colors ${
-            student.is_dropped
-              ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
-              : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
-          }`}
-        >
-          {student.is_dropped
-            ? <RotateCcw className="w-3.5 h-3.5" />
-            : <UserX className="w-3.5 h-3.5" />
-          }
-        </button>
+        {/* Drop / Mark as Lost button */}
+        {onMarkLost ? (
+          <button
+            onClick={handleMarkLostClick}
+            title="Mover para Lost"
+            className="flex-shrink-0 p-1 rounded transition-colors text-gray-300 hover:text-red-400 hover:bg-red-50"
+          >
+            <UserX className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleToggleDrop}
+            title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
+            className={`flex-shrink-0 p-1 rounded transition-colors ${
+              student.is_dropped
+                ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+            }`}
+          >
+            {student.is_dropped
+              ? <RotateCcw className="w-3.5 h-3.5" />
+              : <UserX className="w-3.5 h-3.5" />
+            }
+          </button>
+        )}
       </div>
 
       {/* Course / Scholarship info */}
@@ -411,7 +440,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_rejected} documento(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>
@@ -453,7 +482,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_rejected} documento(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>

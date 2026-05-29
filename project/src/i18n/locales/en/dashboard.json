@@ -259,8 +259,8 @@
         "studyMode": "Course Modality",
         "workAuthorization": "Work Authorization",
         "financialOverview": "Financial Overview",
-        "originalPrice": "Original Price:",
-        "withScholarship": "With Scholarship:",
+        "originalPrice": "Original Price per year:",
+        "withScholarship": "With Scholarship per year:",
         "perCredit": "Per Credit:",
         "level": "Level",
         "deadline": "Deadline",
@@ -436,6 +436,9 @@
     "myApplications": {
       "title": "My Applications",
       "subtitle": "Track the progress of all your scholarship applications",
+      "placementFee": {
+        "installmentStepTitle": "Placement Fee — Installment {{n}} of {{total}} — ${{amount}}"
+      },
       "totalApplications": "Total Applications",
       "approved": "Approved",
       "pending": "Pending",
@@ -909,7 +912,7 @@
           "view": "View",
           "download": "Download",
           "finance": {
-            "originalAnnualCost": "Original Annual Cost",
+            "originalAnnualCost": "Original Annual Investment",
             "withExclusiveScholarship": "With Exclusive Scholarship",
             "perYear": "/year",
             "perCredit": "Per Credit",

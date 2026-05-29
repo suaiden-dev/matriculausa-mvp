@@ -254,17 +254,33 @@ export async function approveZelleFlow(params: {
     }
 
     // 🔍 Prioridade 2: Fallback para detecção via perfil (se metadata estiver ausente)
-    const currentInstallmentNumber = profileData?.placement_fee_installment_number ?? 0;
+    // Para evitar race conditions com os triggers de banco de dados (que já inserem o registro na
+    // tabela individual_fee_payments antes de executarmos este fluxo), contamos os pagamentos anteriores
+    // excluindo este pagamento atual.
+    const { data: placementPayments, error: placementError } = await supabase
+      .from("individual_fee_payments")
+      .select("id, zelle_payment_id")
+      .eq("user_id", payment.user_id)
+      .eq("fee_type", "placement");
+
+    if (placementError) {
+      console.error("❌ [approveZelleFlow] Erro ao buscar pagamentos de placement anteriores:", placementError);
+    }
+
+    const previousPayments = placementPayments 
+      ? placementPayments.filter(p => p.zelle_payment_id !== payment.id)
+      : [];
+    const actualInstallmentNumber = previousPayments.length;
 
     // Se parcelamento estava habilitado e é a 1ª parcela → redirecionar para approvePartialZelleFlow
-    if (isInstallmentEnabled && currentInstallmentNumber === 0) {
+    if (isInstallmentEnabled && actualInstallmentNumber === 0) {
       console.log("📝 [approveZelleFlow] Detectada 1ª Parcela via Profile Fallback");
       await approvePartialZelleFlow({ supabase, adminUserId, payment });
       return;
     }
 
-    // Se é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
-    if (currentInstallmentNumber === 1) {
+    // Se parcelamento estava habilitado e é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
+    if (isInstallmentEnabled && actualInstallmentNumber === 1) {
       console.log("📝 [approveZelleFlow] Detectada 2ª Parcela via Profile Fallback");
       await approveSecondInstallmentFlow({ supabase, adminUserId, payment });
       return;
@@ -500,6 +516,38 @@ export async function approveZelleFlow(params: {
     });
   }
 
+  // Migma application fee: update scholarship_applications via user_id (student_profile_id/scholarships_ids are null for Migma)
+  if (payment.fee_type === "application_fee_migma") {
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(supabase, {
+      userId: payment.user_id,
+      feeType: "application" as any,
+      amount: payment.amount,
+      paymentDate: approvedAt,
+      paymentMethod: "zelle",
+      zellePaymentId: payment.id,
+    });
+
+    // Find user_profiles.id from user_id, then update scholarship_applications via student_id
+    const { data: profileRow } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .maybeSingle();
+
+    if (profileRow?.id) {
+      await supabase
+        .from("scholarship_applications")
+        .update({
+          is_application_fee_paid: true,
+          application_fee_payment_method: "zelle",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("student_id", profileRow.id)
+        .neq("status", "rejected");
+    }
+  }
+
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (
     payment.fee_type === "application_fee" ||
@@ -532,12 +580,12 @@ export async function approveZelleFlow(params: {
         .from("scholarship_applications")
         .update({
           [
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "is_application_fee_paid"
               : "is_scholarship_fee_paid"
           ]: true,
           [
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "application_fee_payment_method"
               : "scholarship_fee_payment_method"
           ]: "zelle",
@@ -551,14 +599,14 @@ export async function approveZelleFlow(params: {
           p_student_id: finalStudentId,
           p_action_type: "fee_payment",
           p_action_description: `${
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "Application Fee"
               : "Scholarship Fee"
           } paid via Zelle (approved by admin)`,
           p_performed_by: adminUserId,
           p_performed_by_type: "admin",
           p_metadata: {
-            fee_type: payment.fee_type === "application_fee"
+            fee_type: ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "application"
               : "scholarship",
             payment_method: "zelle",
@@ -576,12 +624,12 @@ export async function approveZelleFlow(params: {
         .from("scholarship_applications")
         .update({
           [
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "is_application_fee_paid"
               : "is_scholarship_fee_paid"
           ]: true,
           [
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "application_fee_payment_method"
               : "scholarship_fee_payment_method"
           ]: "zelle",
@@ -597,14 +645,14 @@ export async function approveZelleFlow(params: {
           p_student_id: finalStudentId,
           p_action_type: "fee_payment",
           p_action_description: `${
-            payment.fee_type === "application_fee"
+            ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "Application Fee"
               : "Scholarship Fee"
           } paid via Zelle (approved by admin) - fallback mode`,
           p_performed_by: adminUserId,
           p_performed_by_type: "admin",
           p_metadata: {
-            fee_type: payment.fee_type === "application_fee"
+            fee_type: ["application_fee", "application_fee_migma"].includes(payment.fee_type)
               ? "application"
               : "scholarship",
             payment_method: "zelle",
@@ -661,15 +709,26 @@ export async function approveZelleFlow(params: {
   }
 
   // Update user_profiles for application_fee flag
-  if (payment.fee_type === "application_fee") {
-    await supabase
+  if (payment.fee_type === "application_fee" || payment.fee_type === "application_fee_migma") {
+    const { data: updatedProfiles } = await supabase
       .from("user_profiles")
       .update({
         is_application_fee_paid: true,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", payment.user_id)
-      .select();
+      .select("id");
+
+    // Fallback: if no profile found via user_id, try by email (covers Migma students without MatriculaUSA auth entry)
+    if ((!updatedProfiles || updatedProfiles.length === 0) && payment.student_email) {
+      await supabase
+        .from("user_profiles")
+        .update({
+          is_application_fee_paid: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("email", payment.student_email);
+    }
   }
 
   // Prepare notification data
@@ -679,6 +738,42 @@ export async function approveZelleFlow(params: {
     .eq("user_id", adminUserId)
     .single();
   const adminName = adminProfile?.full_name || "Admin";
+
+  // Migma callback: if payment originated from Migma, notify migma-approve-application-fee
+  if (payment.fee_type === "application_fee_migma" && payment.metadata?.source === 'migma') {
+    const migmaFunctionsUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
+    const migmaWebhookSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
+
+    if (migmaFunctionsUrl && payment.metadata?.migma_application_id && payment.metadata?.migma_profile_id) {
+      try {
+        const response = await fetch(`${migmaFunctionsUrl}/migma-approve-application-fee`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-migma-webhook-secret': migmaWebhookSecret || '',
+          },
+          body: JSON.stringify({
+            action: 'approved',
+            migma_application_id: payment.metadata.migma_application_id,
+            migma_profile_id: payment.metadata.migma_profile_id,
+            migma_user_id: payment.metadata.migma_user_id,
+            matriculausa_payment_id: payment.id,
+            approved_by: adminName,
+          }),
+        });
+        if (response.ok) {
+          console.log('✅ [zelleOrchestrator] Migma callback enviado com sucesso');
+        } else {
+          console.error('❌ [zelleOrchestrator] Migma callback falhou:', response.status, await response.text());
+        }
+      } catch (migmaErr) {
+        console.error('❌ [zelleOrchestrator] Erro ao chamar Migma callback:', migmaErr);
+      }
+    } else {
+      console.warn('[zelleOrchestrator] Migma callback ignorado: dados insuficientes no metadata', payment.metadata);
+    }
+  }
+
   const feeTypeDisplay = payment.fee_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const feeTypeDisplayForNotif = (payment.fee_type === 'ds160_package' || payment.fee_type === 'i539_cos_package') ? 'Control Fee' : feeTypeDisplay;
 
@@ -1171,6 +1266,40 @@ export async function rejectZelleFlow(params: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rejectionPayload),
     });
+
+    // Migma callback: if payment originated from Migma, notify migma-approve-application-fee (rejected)
+    if (payment.fee_type === "application_fee_migma" && payment.metadata?.source === 'migma') {
+      const migmaFunctionsUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
+      const migmaWebhookSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
+
+      if (migmaFunctionsUrl && payment.metadata?.migma_application_id && payment.metadata?.migma_profile_id) {
+        try {
+          const response = await fetch(`${migmaFunctionsUrl}/migma-approve-application-fee`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-migma-webhook-secret': migmaWebhookSecret || '',
+            },
+            body: JSON.stringify({
+              action: 'rejected',
+              migma_application_id: payment.metadata.migma_application_id,
+              migma_profile_id: payment.metadata.migma_profile_id,
+              migma_user_id: payment.metadata.migma_user_id,
+              matriculausa_payment_id: payment.id,
+              rejected_by: adminName,
+              rejection_reason: reason,
+            }),
+          });
+          if (response.ok) {
+            console.log('✅ [zelleOrchestrator] Migma rejection callback enviado com sucesso');
+          } else {
+            console.error('❌ [zelleOrchestrator] Migma rejection callback falhou:', response.status, await response.text());
+          }
+        } catch (migmaErr) {
+          console.error('❌ [zelleOrchestrator] Erro ao chamar Migma rejection callback:', migmaErr);
+        }
+      }
+    }
   } catch (_) {}
 
   // Criar notificação in-app para o aluno
@@ -1407,6 +1536,7 @@ export async function approveSecondInstallmentFlow(params: {
   await supabase
     .from("user_profiles")
     .update({
+      placement_fee_payment_method: "zelle",
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", payment.user_id);

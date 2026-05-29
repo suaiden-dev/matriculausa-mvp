@@ -409,7 +409,12 @@ Deno.serve(async (req) => {
 
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
     // NOTA: Se houver cupom promocional, o frontend já envia o valor com desconto aplicado
-    if (amount && typeof amount === "number" && amount > 0) {
+    if (typeof amount === "number") {
+      if (amount === 0) {
+        console.log("[stripe-checkout-selection-process-fee] 🎁 Amount is 0 - Stripe does not support 0 amount checkouts");
+        return corsResponse({ error: "Stripe does not support $0.00 payments. Please use the 'Free' option or Zelle." }, 400);
+      }
+      
       // Valor base (sem markup) - usado para comissões
       // Usar o amount do frontend diretamente (já vem com desconto se houver cupom)
       const baseAmount = amount;
@@ -682,110 +687,18 @@ Deno.serve(async (req) => {
           "[stripe-checkout-selection-process-fee] ✅ Informações do desconto adicionadas ao metadata (sem aplicar cupom)",
         );
       } else {
+        // Desconto não veio pré-calculado do frontend — registrar apenas no metadata, nunca via cupom Stripe
         console.log(
-          "[stripe-checkout-selection-process-fee]    APLICANDO DESCONTO",
+          "[stripe-checkout-selection-process-fee] ⚠️ Desconto de referência detectado mas não pré-aplicado pelo frontend — ignorando cupom Stripe",
         );
+        sessionMetadata.referral_discount = true;
+        sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
+        sessionMetadata.referrer_id = activeDiscount.referrer_id;
+        sessionMetadata.discount_amount = activeDiscount.discount_amount;
         console.log(
-          "[stripe-checkout-selection-process-fee] Coupon ID:",
-          activeDiscount.stripe_coupon_id,
+          "[stripe-checkout-selection-process-fee] 📋 Metadata atualizada (sem cupom Stripe):",
+          sessionMetadata,
         );
-        console.log(
-          "[stripe-checkout-selection-process-fee] Discount Amount:",
-          activeDiscount.discount_amount,
-        );
-
-        let couponId = activeDiscount.stripe_coupon_id;
-        let discountAmount = activeDiscount.discount_amount;
-
-        // ✅ NOVO: Se for PIX, criar cupom em BRL
-        if (payment_method === "pix") {
-          console.log("[PIX] 💰 Criando cupom específico para BRL");
-          couponId = `MATR_BRL_${activeDiscount.affiliate_code}`;
-          discountAmount = Math.round(
-            activeDiscount.discount_amount * exchangeRate,
-          ); // USD → BRL
-
-          console.log("[PIX] 💰 Desconto USD:", activeDiscount.discount_amount);
-          console.log("[PIX] 💰 Desconto BRL:", discountAmount);
-          console.log("[PIX] 💰 Taxa de câmbio:", exchangeRate);
-        }
-
-        // Verificar se o cupom existe no Stripe antes de usar
-        let couponExists = false;
-        try {
-          await stripe.coupons.retrieve(couponId);
-          couponExists = true;
-          console.log(
-            "[stripe-checkout-selection-process-fee] ✅ Cupom existe no Stripe",
-          );
-        } catch (couponError: any) {
-          console.log(
-            "[stripe-checkout-selection-process-fee] ⚠️ Cupom não existe no Stripe:",
-            couponError.message,
-          );
-
-          // Se o cupom não existe, criar um novo
-          try {
-            console.log(
-              "[stripe-checkout-selection-process-fee] 🔧 Criando novo cupom no Stripe...",
-            );
-            const newCoupon = await stripe.coupons.create({
-              id: couponId,
-              amount_off: discountAmount * 100,
-              currency: payment_method === "pix" ? "brl" : "usd",
-              duration: "once",
-              name: `Matricula Rewards - ${activeDiscount.affiliate_code}${
-                payment_method === "pix" ? " (BRL)" : ""
-              }`,
-              metadata: {
-                affiliate_code: activeDiscount.affiliate_code,
-                user_id: user.id,
-                referrer_id: activeDiscount.referrer_id,
-                payment_method: payment_method || "stripe",
-                original_amount_usd: activeDiscount.discount_amount,
-              },
-            });
-
-            console.log(
-              "[stripe-checkout-selection-process-fee] ✅ Novo cupom criado:",
-              newCoupon.id,
-            );
-            couponExists = true;
-          } catch (createError: any) {
-            console.error(
-              "[stripe-checkout-selection-process-fee] ❌ Erro ao criar cupom:",
-              createError.message,
-            );
-            // Se não conseguir criar o cupom, continua sem desconto
-          }
-        }
-
-        if (couponExists) {
-          sessionConfig.discounts = [{ coupon: couponId }];
-          // Remove allow_promotion_codes quando há desconto aplicado
-          delete sessionConfig.allow_promotion_codes;
-
-          sessionMetadata.referral_discount = true;
-          sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
-          sessionMetadata.referrer_id = activeDiscount.referrer_id;
-          sessionMetadata.discount_amount = activeDiscount.discount_amount; // Manter USD original
-
-          if (payment_method === "pix") {
-            sessionMetadata.discount_amount_brl = discountAmount;
-          }
-
-          console.log(
-            "[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!",
-          );
-          console.log(
-            "[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:",
-            sessionMetadata,
-          );
-        } else {
-          console.log(
-            "[stripe-checkout-selection-process-fee] ⚠️ Não foi possível aplicar desconto - cupom não disponível",
-          );
-        }
       }
     } else {
       console.log(

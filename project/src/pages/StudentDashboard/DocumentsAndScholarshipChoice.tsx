@@ -32,10 +32,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [isSavingType, setIsSavingType] = useState(false);
   
   // Estados para upload de documentos
-  const [files, setFiles] = useState<Record<string, File | File[] | null>>({ 
-    passport: null, 
-    diploma: null, 
-    funds_proof: [] 
+  const [files, setFiles] = useState<Record<string, File | File[] | null>>({
+    passport: null,
   });
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -48,11 +46,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   
   const navigate = useNavigate();
 
-  // Documentos obrigatórios - mantendo exatamente os mesmos documentos
+  // Documentos obrigatórios - apenas passport
   const DOCUMENT_TYPES = [
     { key: 'passport', label: t('studentDashboard.documentsAndScholarshipChoice.passport'), icon: User, description: t('studentDashboard.documentsAndScholarshipChoice.passportDescription') },
-    { key: 'diploma', label: t('studentDashboard.documentsAndScholarshipChoice.diploma'), icon: GraduationCap, description: t('studentDashboard.documentsAndScholarshipChoice.diplomaDescription') },
-    { key: 'funds_proof', label: t('studentDashboard.documentsAndScholarshipChoice.fundsProof'), icon: DollarSign, description: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') },
   ];
 
   // Carregar cart quando componente monta
@@ -324,8 +320,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || 
                      (user as any)?.user_metadata?.name || user.email || '',
         passport_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['passport']).data.publicUrl),
-        diploma_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['diploma']).data.publicUrl),
-        funds_proof_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['funds_proof']).data.publicUrl),
       };
       
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 
@@ -998,8 +992,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             const currentDocs: any[] = Array.isArray(existingAppData?.documents) ? existingAppData.documents : [];
             const newEntries = [
               { type: 'passport', url: docUrls['passport'] },
-              { type: 'diploma', url: docUrls['diploma'] },
-              { type: 'funds_proof', url: docUrls['funds_proof'] },
             ].filter(d => d.url);
             const now = new Date().toISOString();
             const mergedDocs = [...currentDocs];
@@ -1026,8 +1018,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         if (existingApps && existingApps.length > 0) {
           const newEntries = [
             { type: 'passport', url: docUrls['passport'] },
-            { type: 'diploma', url: docUrls['diploma'] },
-            { type: 'funds_proof', url: docUrls['funds_proof'] },
           ].filter(d => d.url);
           const now = new Date().toISOString();
           for (const app of existingApps) {
@@ -1044,6 +1034,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               }
             }
             await supabase.from('scholarship_applications').update({ documents: mergedDocs }).eq('id', app.id);
+
           }
         }
       }

@@ -357,7 +357,7 @@ export async function getDisplayAmounts(
     // Selection Process Fee - Prioridade: Valor Real Pago (se trustRealPaidAmounts) > override > cupom promocional > cálculo fixo
     // ✅ NOVO: Se trustRealPaidAmounts for true, aceitamos o valor real do banco (ex: Zelle manual)
     if (feeTypes.includes("selection_process")) {
-      if (trustRealPaidAmounts && realPaidMap.selection_process) {
+      if (trustRealPaidAmounts && realPaidMap.selection_process !== undefined) {
         amounts.selection_process = realPaidMap.selection_process;
       } else if (overrides.selection_process_fee != null) {
         amounts.selection_process = Number(overrides.selection_process_fee);
@@ -486,7 +486,9 @@ export async function getRealPaidAmounts(
         "fee_type, amount, payment_method, payment_intent_id, payment_date, gross_amount_usd, parcelow_status",
       )
       .eq("user_id", userId)
-      .in("fee_type", feeTypes);
+      .in("fee_type", feeTypes)
+      .order("payment_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("[paymentConverter] Erro ao buscar pagamentos:", error);
@@ -586,12 +588,8 @@ export async function getRealPaidAmounts(
       } else if (
         payment.payment_method === "stripe" && !payment.payment_intent_id
       ) {
-        // ✅ Stripe sem payment_intent_id: não podemos determinar moeda, IGNORAR
-        // Isso evita contar valores BRL antigos como USD quando não temos metadados
-        console.warn(
-          `[paymentConverter] ⚠️ Stripe payment sem payment_intent_id para ${payment.fee_type}, não é possível determinar moeda - IGNORANDO (use valores fixos como fallback)`,
-        );
-        continue;
+        // Pagamento manual do admin (sem payment_intent_id real do Stripe): usar amount diretamente em USD
+        amountUSD = payment.gross_amount_usd ? Number(payment.gross_amount_usd) : Number(payment.amount);
       } else if (payment.payment_method === "parcelow") {
         // ✅ Parcelow: usar o valor bruto conforme recebido $350.00
         // Para a Stephanie, o valor real pago é 350
@@ -622,9 +620,14 @@ export async function getRealPaidAmounts(
           : null;
 
       if (feeTypeKey) {
-        // Se já existe um valor para este fee_type, usar o maior (mais recente)
-        if (!amounts[feeTypeKey] || amountUSD > amounts[feeTypeKey]) {
-          amounts[feeTypeKey] = amountUSD;
+        if (feeTypeKey === 'placement') {
+          // Placement fee pode ter 2 parcelas — somar todos os registros
+          amounts[feeTypeKey] = (amounts[feeTypeKey] || 0) + amountUSD;
+        } else {
+          // Outras taxas: usar apenas o primeiro (mais recente) registro
+          if (!(feeTypeKey in amounts)) {
+            amounts[feeTypeKey] = amountUSD;
+          }
         }
       }
     }
@@ -804,6 +807,89 @@ export async function getGrossPaidAmountsBatch(
       "[paymentConverter] Exceção ao buscar batch de pagamentos:",
       error,
     );
+    return new Map();
+  }
+}
+
+export interface PlacementInstallmentRow {
+  id: string;
+  user_id: string;
+  fee_type: string;
+  amount: number;
+  gross_amount_usd: number | null;
+  payment_method: string | null;
+  payment_date: string | null;
+  parcelow_status: string | null;
+  installment_plan_id: string | null;
+}
+
+/**
+ * Busca todas as rows de individual_fee_payments para fee_type = 'placement',
+ * retornando uma lista por userId (ordenada por payment_date ASC = parcela 1 primeiro).
+ * Usada para mostrar múltiplas linhas no Payment Management quando há parcelamento.
+ */
+export async function getPlacementInstallmentRowsBatch(
+  userIds: string[],
+): Promise<Map<string, PlacementInstallmentRow[]>> {
+  if (userIds.length === 0) return new Map();
+
+  try {
+    const { data, error } = await supabase
+      .from("individual_fee_payments")
+      .select("id, user_id, fee_type, amount, gross_amount_usd, payment_method, payment_date, parcelow_status, installment_plan_id")
+      .in("user_id", userIds)
+      .eq("fee_type", "placement")
+      .order("payment_date", { ascending: true }); // mais antiga primeiro = installment 1
+
+    const result = new Map<string, PlacementInstallmentRow[]>();
+
+    if (error) {
+      console.error("[paymentConverter] Erro ao buscar placement installment rows:", error);
+      return result;
+    }
+
+    for (const row of data || []) {
+      // Ignorar parcelow não pago
+      if (row.payment_method === "parcelow" && row.parcelow_status && row.parcelow_status !== "paid") continue;
+
+      if (!result.has(row.user_id)) result.set(row.user_id, []);
+      result.get(row.user_id)!.push(row as PlacementInstallmentRow);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("[paymentConverter] Exceção ao buscar placement installment rows:", error);
+    return new Map();
+  }
+}
+
+/**
+ * Busca fee_installment_plans para fee_type = 'placement_fee' em batch,
+ * retornando o total_installments real do plano por userId.
+ */
+export async function getPlacementInstallmentPlansBatch(
+  userIds: string[],
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+
+  try {
+    const { data, error } = await supabase
+      .from("fee_installment_plans")
+      .select("user_id, total_installments")
+      .in("user_id", userIds)
+      .eq("fee_type", "placement_fee");
+
+    const result = new Map<string, number>();
+    if (error) {
+      console.error("[paymentConverter] Erro ao buscar placement installment plans:", error);
+      return result;
+    }
+    for (const row of data || []) {
+      result.set(row.user_id, row.total_installments);
+    }
+    return result;
+  } catch (error) {
+    console.error("[paymentConverter] Exceção ao buscar placement installment plans:", error);
     return new Map();
   }
 }

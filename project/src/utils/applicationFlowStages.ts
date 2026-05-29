@@ -88,6 +88,7 @@ export interface StudentRecord {
   docs_total_uploaded?: number;
   docs_total_approved?: number;
   docs_total_rejected?: number;
+  docs_total_rejected_files?: number;
   docs_total_under_review?: number;
 
   // Basic docs aggregation fields (passport, diploma, funds_proof)
@@ -119,10 +120,10 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
   },
   {
     key: 'bdp_collection',
-    label: 'BDP Collection',
-    shortLabel: 'BDP',
+    label: 'Passport Collection',
+    shortLabel: 'Passport',
     icon: FileText,
-    description: 'Pending: Bank Statement, Diploma & Passport upload',
+    description: 'Pending: Passport upload',
     actor: 'student',
     team: 'Document Specialist'
   },
@@ -277,7 +278,10 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
 /**
  * Determina o status de um estágio específico para um estudante
  */
-export function getStepStatus(
+/**
+ * Determina o status de um estágio específico de forma puramente individual (sem linearização)
+ */
+function getRawStepStatus(
   student: StudentRecord,
   step: ApplicationFlowStageKey
 ): StageStatus {
@@ -285,8 +289,8 @@ export function getStepStatus(
 
   switch (step) {
     case 'selection_fee':
-      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       if (student.application_status === 'enrolled') return 'completed';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
       return student.has_submitted_form ? 'completed' : 'in_progress';
 
     case 'apply':
@@ -295,6 +299,8 @@ export function getStepStatus(
 
     case 'bdp_collection':
       if (student.application_status === 'enrolled') return 'completed';
+      // If student has progressed past BDP (approved or app fee paid), consider complete
+      if (student.application_status === 'approved' || student.is_application_fee_paid) return 'completed';
       return student.documents_uploaded ? 'completed' : 'pending';
 
     case 'review':
@@ -318,8 +324,8 @@ export function getStepStatus(
       return student.is_application_fee_paid ? 'completed' : 'pending';
 
     case 'placement_fee':
-      if (!student.placement_fee_flow) return 'skipped';
-      return (student.is_placement_fee_paid || isMigma) ? 'completed' : 'pending';
+      if (!student.placement_fee_flow || isMigma) return 'skipped';
+      return student.is_placement_fee_paid ? 'completed' : 'pending';
 
     case 'reinstatement_fee':
       if (student.student_process_type !== 'transfer' || student.visa_transfer_active !== false) return 'skipped';
@@ -338,7 +344,7 @@ export function getStepStatus(
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-      
+
       if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
       if (total === 0) return 'pending';
 
@@ -385,17 +391,35 @@ export function getStepStatus(
       // Só completa quando admin fez upload da carta (URL existe)
       return (student.acceptance_letter_url || student.application_status === 'enrolled') ? 'completed' : 'pending';
 
-    case 'send_acceptance_letter':
-      // Show as completed if sent or URL exists (depending on school preference)
-      if (student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled') return 'completed';
-      return student.acceptance_letter_url ? 'in_progress' : 'pending';
+    case 'send_acceptance_letter': {
+      const alreadyProgressed =
+        student.acceptance_letter_status === 'sent' ||
+        student.application_status === 'enrolled' ||
+        student.has_paid_i20_control_fee ||
+        student.has_paid_ds160_package ||
+        student.has_paid_i539_cos_package ||
+        student.sevis_transfer_completed ||
+        student.visa_approved;
 
-    case 'student_sends_letter':
+      if (alreadyProgressed) return 'completed';
+      return student.acceptance_letter_url ? 'in_progress' : 'pending';
+    }
+
+    case 'student_sends_letter': {
       if (student.student_process_type !== 'transfer') return 'skipped';
-      if (student.transfer_form_status === 'approved') return 'completed';
+      // If SEVIS is done, this step is clearly complete
+      if (student.sevis_transfer_completed) return 'completed';
+
+      const isExpiredVisaTransfer = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+      const i20FeePaid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+
+      if (student.transfer_form_status === 'approved') {
+        return (isExpiredVisaTransfer && !i20FeePaid) ? 'in_progress' : 'completed';
+      }
       if (student.transfer_form_status === 'returned') return 'in_progress';
       if (student.transfer_form_status === 'sent') return 'in_progress';
       return 'pending';
+    }
 
     case 'sevis_transfer':
       if (student.student_process_type !== 'transfer') return 'skipped';
@@ -407,6 +431,14 @@ export function getStepStatus(
         student.student_process_type === 'change_of_status' ||
         (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
       if (!isApplicable) return 'skipped';
+
+      const alreadyProgressed =
+        student.application_status === 'enrolled' ||
+        student.sevis_transfer_completed ||
+        student.visa_approved;
+
+      if (alreadyProgressed) return 'completed';
+
       // Retrocompatibilidade: aceita pagamento via qualquer um dos campos antigos
       const hasPaid = student.has_paid_i20_control_fee ||
                       student.has_paid_ds160_package ||
@@ -421,6 +453,9 @@ export function getStepStatus(
       return 'skipped';
 
     case 'visa_approval':
+      // Visa approval only applies to initial (new F-1) students.
+      // COS students do status change via I-539; transfer students use SEVIS transfer.
+      if (student.student_process_type !== 'initial') return 'skipped';
       return student.visa_approved ? 'completed' : 'pending';
 
     // Legacy stages — kept for backward compat, no longer in flow array
@@ -438,11 +473,61 @@ export function getStepStatus(
       return 'pending';
 
     case 'enrollment':
+      // Transfer students must complete SEVIS before being considered enrolled
+      if (student.student_process_type === 'transfer' && !student.sevis_transfer_completed) {
+        return 'pending';
+      }
       return student.application_status === 'enrolled' ? 'completed' : 'pending';
 
     default:
       return 'pending';
   }
+}
+
+/**
+ * Determina o status de um estágio específico para um estudante (com linearização robusta)
+ */
+export function getStepStatus(
+  student: StudentRecord,
+  step: ApplicationFlowStageKey
+): StageStatus {
+  // 1. Se o status bruto for 'skipped', mantemos 'skipped'
+  const rawStatus = getRawStepStatus(student, step);
+  if (rawStatus === 'skipped') {
+    return 'skipped';
+  }
+
+  // 2. Se o status da matrícula for 'enrolled', todas as etapas ativas são marcadas como 'completed'
+  // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+  if (student.application_status === 'enrolled') {
+    const isTransferPendingSevis =
+      student.student_process_type === 'transfer' &&
+      !student.sevis_transfer_completed &&
+      (step === 'sevis_transfer' || step === 'student_sends_letter');
+    if (!isTransferPendingSevis) {
+      return 'completed';
+    }
+  }
+
+  // 4. Obter a ordem das etapas a partir do array oficial do fluxo
+  // Encontramos o maior índice de etapa que está marcada como 'completed' (individualmente)
+  let maxCompletedIndex = -1;
+  for (let i = 0; i < APPLICATION_FLOW_STAGES.length; i++) {
+    const stageKey = APPLICATION_FLOW_STAGES[i].key;
+    const stageRaw = getRawStepStatus(student, stageKey);
+    if (stageRaw === 'completed') {
+      maxCompletedIndex = i;
+    }
+  }
+
+  // 5. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
+  // nós a promovemos automaticamente a 'completed' para garantir a linearidade visual.
+  const currentStepIndex = APPLICATION_FLOW_STAGES.findIndex(s => s.key === step);
+  if (currentStepIndex !== -1 && currentStepIndex <= maxCompletedIndex) {
+    return 'completed';
+  }
+
+  return rawStatus;
 }
 
 /**
@@ -467,6 +552,15 @@ export function getCurrentStage(student: StudentRecord): {
   stage: ApplicationFlowStageKey | null;
   status: StageStatus;
 } {
+  // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
+  // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
+  // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
+  const isTransferPendingSevis =
+    student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+  if (student.application_status === 'enrolled' && !isTransferPendingSevis) {
+    return { stage: 'enrollment', status: 'completed' };
+  }
+
   for (const stageDef of APPLICATION_FLOW_STAGES) {
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;

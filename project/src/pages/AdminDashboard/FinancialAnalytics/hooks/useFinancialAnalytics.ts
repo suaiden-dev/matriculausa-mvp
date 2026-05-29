@@ -113,7 +113,47 @@ export function useFinancialAnalytics() {
     const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
 
     // 1. Definir os registros de pagamento base e mapas
-    const paymentRecords = processedData.paymentRecords || [];
+    // Suplementar com registros de fee types que vivem fora de transformFinancialData:
+    // a) control_fee (ds160/i539) — somente em individual_fee_payments
+    const CONTROL_FEE_TYPES = ['ds160_package', 'i539_cos_package', 'i539_package'];
+    const controlFeeSupplements = (loadedData.individualFeePayments || [])
+      .filter((p: any) => CONTROL_FEE_TYPES.includes(p.fee_type))
+      .map((p: any) => ({ ...p, amount: Math.round(parseFloat(p.amount) * 100), status: 'paid', student_id: p.user_id }));
+    // b) reinstatement — rastreado em user_profiles.has_paid_reinstatement_package
+    //    sem registro em individual_fee_payments
+    //    Zelle: usar zelle_payments (tem valor real); Stripe: usar allStudents (amount desconhecido)
+    const zelleReinstatementUserIds = new Set<string>();
+    const zelleReinstatements = (loadedData.zellePayments || [])
+      .filter((p: any) => (p.fee_type === 'reinstatement_package' || p.fee_type === 'reinstatement') && p.status === 'approved')
+      .map((p: any) => {
+        zelleReinstatementUserIds.add(p.user_id);
+        return {
+          user_id: p.user_id,
+          student_id: p.user_id,
+          fee_type: 'reinstatement_fee',
+          amount: Math.round(parseFloat(p.amount) * 100),
+          status: 'paid',
+          payment_date: p.admin_approved_at || p.created_at,
+          payment_method: 'zelle',
+        };
+      });
+    const nonZelleReinstatements = (loadedData.allStudents || [])
+      .filter((s: any) => s.has_paid_reinstatement_package === true && !zelleReinstatementUserIds.has(s.user_id))
+      .map((s: any) => ({
+        user_id: s.user_id,
+        student_id: s.user_id,
+        fee_type: 'reinstatement_fee',
+        amount: 0,
+        status: 'paid',
+        payment_date: s.updated_at || s.created_at,
+        payment_method: s.reinstatement_package_payment_method || 'manual',
+      }));
+    const reinstatementSupplements = [...zelleReinstatements, ...nonZelleReinstatements];
+    const paymentRecords = [
+      ...(processedData.paymentRecords || []),
+      ...controlFeeSupplements,
+      ...reinstatementSupplements,
+    ];
     const individualFeePaymentsList = loadedData.individualFeePayments || [];
     const individualFeePaymentsMap = new Map();
     const individualFeePaymentsByIntentId = new Map();
@@ -133,8 +173,13 @@ export function useFinancialAnalytics() {
       const FEE_CANONICAL_FILTER: Record<string, string> = {
         selection_process_fee: 'selection_process',
         application_fee: 'application',
-        scholarship_fee: 'scholarship',
-        i20_control: 'i20_control_fee',
+        scholarship_fee: 'placement',
+        scholarship: 'placement',
+        i20_control: 'placement',
+        i20_control_fee: 'placement',
+        ds160_package: 'control_fee',
+        i539_package: 'control_fee',
+        i539_cos_package: 'control_fee',
         placement_fee: 'placement',
         reinstatement: 'reinstatement_fee',
         reinstatement_package: 'reinstatement_fee',
@@ -287,9 +332,13 @@ export function useFinancialAnalytics() {
     const FEE_CANONICAL: Record<string, string> = {
       selection_process_fee: 'selection_process',
       application_fee: 'application',
-      scholarship_fee: 'scholarship',
-      i20_control: 'i20_control_fee',
-      // ds160_package e i539_package são categorias separadas — não normalizar
+      scholarship_fee: 'placement',
+      scholarship: 'placement',
+      i20_control: 'placement',
+      i20_control_fee: 'placement',
+      ds160_package: 'control_fee',
+      i539_package: 'control_fee',
+      i539_cos_package: 'control_fee',
       placement_fee: 'placement',
       reinstatement: 'reinstatement_fee',
       reinstatement_package: 'reinstatement_fee',
@@ -334,6 +383,7 @@ export function useFinancialAnalytics() {
         ...loadedData,
         currentRange,
         individualPaymentDates: loadedData.individualPaymentDates,
+        individualFeePayments: loadedData.individualFeePayments,
         getFeeAmount
       });
 

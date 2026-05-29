@@ -25,7 +25,8 @@ interface Submission {
 }
 
 const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surveyPassed }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('registration');
+    const tEn = (key: string) => t(key, { lng: 'en' });
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -124,7 +125,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
 
         if (question.options) {
             const option = (question.options as unknown as any[]).find(o => o.value === answerValue);
-            return option ? t(option.label) : answerValue;
+            return option ? tEn(option.label) : answerValue;
         }
 
         if (question.type === 'yesno') {
@@ -133,7 +134,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
 
         if (question.type === 'truefalse') {
             const option = (question.options as unknown as any[])?.find(o => o.value === answerValue);
-            return option ? t(option.label) : answerValue;
+            return option ? tEn(option.label) : answerValue;
         }
 
         return answerValue;
@@ -147,7 +148,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
     };
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto">
+        <div className="space-y-6 w-full">
             {/* Header Summary Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className={`px-6 py-4 ${submission.passed ? 'bg-gradient-to-r from-[#05294E] to-[#0A4A8B]' : 'bg-gradient-to-r from-red-700 to-red-800'}`}>
@@ -157,34 +158,34 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                                 <Award className="w-6 h-6" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold">Resumo do Questionário</h2>
-                                <p className="text-white/70 text-sm">Atualizado em {new Date(submission.updated_at || submission.created_at).toLocaleDateString()}</p>
+                                <h2 className="text-xl font-bold">Survey Summary</h2>
+                                <p className="text-white/70 text-sm">Updated on {new Date(submission.updated_at || submission.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
                         <div className={`px-4 py-1.5 rounded-full text-sm font-bold border ${submission.passed ? 'bg-green-500/20 border-green-400 text-green-100' : 'bg-red-500/20 border-red-400 text-red-100'}`}>
-                            {submission.passed ? 'APROVADO' : 'REPROVADO'}
+                            {submission.passed ? 'PASSED' : 'REVIEW'}
                         </div>
                     </div>
                 </div>
 
                 <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Pontuação</p>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Score</p>
                         <p className="text-2xl font-black text-[#05294E]">{submission.score} <span className="text-lg font-normal text-slate-400">/ {submission.total}</span></p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Percentual</p>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Percentage</p>
                         <p className={`text-2xl font-black ${submission.passed ? 'text-green-600' : 'text-red-600'}`}>{submission.percentage}%</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</p>
                         <div className="flex items-center gap-2">
                             {submission.passed ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
-                            <span className="font-bold text-slate-700">{submission.passed ? 'Aprovado' : 'Revisar'}</span>
+                            <span className="font-bold text-slate-700">{submission.passed ? 'Passed' : 'Review'}</span>
                         </div>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Data</p>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Date</p>
                         <div className="flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-slate-400" />
                             <span className="font-bold text-slate-700">{new Date(submission.created_at).toLocaleDateString()}</span>
@@ -198,7 +199,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center">
                         <ListChecks className="w-5 h-5 mr-2 text-[#05294E]" />
-                        Detalhamento das Respostas
+                        Detailed Answers
                     </h3>
                     <div className="flex gap-2">
                         <button
@@ -208,14 +209,14 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                             }}
                             className="text-xs font-medium text-[#05294E] hover:underline"
                         >
-                            Expandir tudo
+                            Expand all
                         </button>
                         <span className="text-slate-300">|</span>
                         <button
                             onClick={() => setExpandedSections({})}
                             className="text-xs font-medium text-slate-500 hover:underline"
                         >
-                            Recolher tudo
+                            Collapse all
                         </button>
                     </div>
                 </div>
@@ -240,8 +241,8 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                                         <FileText className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-slate-900">{t(section.title)}</h4>
-                                        <p className="text-xs text-slate-500">{answeredCount} perguntas respondidas</p>
+                                        <h4 className="font-bold text-slate-900">{tEn(section.title)}</h4>
+                                        <p className="text-xs text-slate-500">{answeredCount} questions answered</p>
                                     </div>
                                 </div>
                                 {isExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
@@ -268,25 +269,25 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
 
                                                     <div className="flex flex-col gap-2">
                                                         <div className="flex items-center gap-3">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Questão {question.id}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Question {question.id}</span>
                                                             {question.scored && (
                                                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                                    {correct ? 'CORRETA' : 'INCORRETA'}
+                                                                    {correct ? 'CORRECT' : 'INCORRECT'}
                                                                 </span>
                                                             )}
                                                         </div>
 
-                                                        <p className="text-slate-900 font-bold leading-relaxed">{t(question.text)}</p>
+                                                        <p className="text-slate-900 font-bold leading-relaxed">{tEn(question.text)}</p>
 
                                                         <div className="mt-1 flex flex-col gap-2">
                                                             <div className={`px-4 py-3 rounded-xl border ${correct === false ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
-                                                                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Resposta do Aluno</span>
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Student's Answer</span>
                                                                 <p className="text-slate-800 font-medium">{getAnswerLabel(question.id, answer)}</p>
                                                             </div>
 
                                                             {extraAnswer && (
                                                                 <div className="px-4 py-3 rounded-xl bg-blue-50/30 border border-blue-100/50">
-                                                                    <span className="text-[10px] font-bold text-blue-400 uppercase block mb-1">Informações Adicionais</span>
+                                                                    <span className="text-[10px] font-bold text-blue-400 uppercase block mb-1">Additional Information</span>
                                                                     <p className="text-slate-700 text-sm italic">"{extraAnswer}"</p>
                                                                 </div>
                                                             )}
@@ -304,7 +305,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
             </div>
 
             <div className="text-center py-8">
-                <p className="text-xs text-slate-400">Fim do relatório de questionário de alinhamento.</p>
+                <p className="text-xs text-slate-400">End of alignment survey report.</p>
             </div>
         </div>
     );

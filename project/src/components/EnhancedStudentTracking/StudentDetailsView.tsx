@@ -42,12 +42,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Estado para armazenar as taxas do pacote do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [studentDependents, setStudentDependents] = useState<number>(0);
-  
+
   // Estados para edição de pacote
   const [isEditingPackage, setIsEditingPackage] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
-  
+
   // Sincronizar dependentes
   useEffect(() => {
     if (studentDetails?.dependents !== undefined) {
@@ -71,17 +71,17 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       }
 
       setStudentDependents(Number(profileData.dependents) || 0);
-      
+
       const dependents = Number(profileData.dependents) || 0;
       const systemType = (studentDetails as any)?.system_type || 'legacy';
       const isSimplified = systemType === 'simplified';
-      
+
       const baseSelectionFee = isSimplified ? 350 : 400;
       const selectionProcessFee = isSimplified ? baseSelectionFee : baseSelectionFee + (dependents * 150);
       const desiredRange = Number(profileData.desired_scholarship_range);
       const scholarshipFee = isSimplified ? 550 : 900;
       const i20ControlFee = 900;
-      
+
       setStudentPackageFees({
         id: `range-${desiredRange}`,
         selection_process_fee: selectionProcessFee,
@@ -97,7 +97,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       setStudentPackageFees(null);
     }
   };
-  
+
   useEffect(() => {
     if (studentDetails?.profile_id) {
       loadStudentPackageFees(studentDetails.profile_id);
@@ -150,19 +150,19 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                 </div>
                 <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <PersonalInfoSection 
+                    <PersonalInfoSection
                       fullName={studentDetails.full_name}
                       email={studentDetails.email}
                       phone={studentDetails.phone}
                       country={studentDetails.country}
                     />
-                    <AcademicProfileSection 
+                    <AcademicProfileSection
                       fieldOfInterest={studentDetails.field_of_interest}
                       academicLevel={studentDetails.academic_level}
                       gpa={studentDetails.gpa}
                       englishProficiency={studentDetails.english_proficiency}
                     />
-                    <ApplicationStatusSection 
+                    <ApplicationStatusSection
                       studentProcessType={studentDetails.student_process_type}
                       isApplicationFeePaid={studentDetails.is_application_fee_paid}
                       documentsStatus={studentDetails.documents_status}
@@ -174,13 +174,13 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                 </div>
               </div>
 
-              <ScholarshipDetailsSection 
+              <ScholarshipDetailsSection
                 scholarshipTitle={studentDetails.scholarship_title}
                 universityName={studentDetails.university_name}
                 applicationStatus={studentDetails.application_status}
               />
 
-              <DocumentsListSection 
+              <DocumentsListSection
                 studentDocuments={studentDocuments}
                 onViewDocument={onViewDocument}
                 onDownloadDocument={onDownloadDocument}
@@ -189,12 +189,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
 
             {/* Sidebar */}
             <div className="xl:col-span-4 space-y-4">
-              <SummarySidebar 
+              <SummarySidebar
                 registrationDate={studentDetails.registration_date}
                 onTabChange={onTabChange}
               />
 
-              <PackageManagementSection 
+              <PackageManagementSection
                 isEditingPackage={isEditingPackage}
                 selectedPackageId={selectedPackageId}
                 isUpdatingPackage={isUpdatingPackage}
@@ -205,7 +205,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                 onSelectPackage={setSelectedPackageId}
               />
 
-              <FeeStatusSection 
+              <FeeStatusSection
                 hasPaidSelectionProcessFee={studentDetails.has_paid_selection_process_fee}
                 isScholarshipFeePaid={studentDetails.is_scholarship_fee_paid}
                 hasPaidI20ControlFee={studentDetails.has_paid_i20_control_fee}
@@ -220,79 +220,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            <DocumentsListSection 
+            <DocumentsListSection
               studentDocuments={studentDocuments}
               onViewDocument={onViewDocument}
               onDownloadDocument={onDownloadDocument}
             />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default StudentDetailsView;
-
-                    {/* Scholarship Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
-                          </span>
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou base)
-                               const systemType = (studentDetails as any)?.system_type || 'legacy';
-                               const isSimplified = systemType === 'simplified';
-                               const originalAmount = studentDetails?.scholarship_fee_amount != null
-                                 ? studentDetails.scholarship_fee_amount
-                                 : (isSimplified ? 550 : 900);
-                               return formatFeeAmount(originalAmount);
-                             })()}
-                           </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* I-20 Control Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentDetails?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentDetails?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou 900)
-                              const originalAmount = studentDetails?.i20_control_fee_amount != null
-                                ? studentDetails.i20_control_fee_amount
-                                : 900;
-                              return formatFeeAmount(originalAmount);
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* I-20 Control Fee Deadline Timer */}
-                    <I20DeadlineTimer 
-                      deadline={i20ControlFeeDeadline} 
-                      hasPaid={studentDetails?.has_paid_i20_control_fee || false} 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>

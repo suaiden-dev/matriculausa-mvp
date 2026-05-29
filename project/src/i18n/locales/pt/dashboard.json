@@ -255,8 +255,8 @@
         "studyMode": "Modalidade do Curso",
         "workAuthorization": "Autorização de Trabalho",
         "financialOverview": "Visão Geral Financeira",
-        "originalPrice": "Preço Original:",
-        "withScholarship": "Com Bolsa:",
+        "originalPrice": "Preço Original por ano:",
+        "withScholarship": "Com Bolsa por ano:",
         "perCredit": "Por Crédito:",
         "level": "Nível",
         "deadline": "Prazo",
@@ -434,6 +434,9 @@
     "myApplications": {
       "title": "Minhas Aplicações",
       "subtitle": "Acompanhe o progresso de todas as suas aplicações para bolsas de estudo",
+      "placementFee": {
+        "installmentStepTitle": "Taxa de Colocação — Parcela {{n}} de {{total}} — ${{amount}}"
+      },
       "totalApplications": "Total de Aplicações",
       "approved": "Aprovadas",
       "pending": "Pendentes",
@@ -919,7 +922,7 @@
         "view": "Visualizar",
         "download": "Baixar",
         "finance": {
-          "originalAnnualCost": "Custo Anual Original",
+          "originalAnnualCost": "Investimento Anual Original",
           "withExclusiveScholarship": "Com Bolsa Exclusiva",
           "perYear": "/ano",
           "perCredit": "Por Crédito",

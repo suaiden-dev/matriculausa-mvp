@@ -18,6 +18,7 @@ import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { getPlacementFee, formatPlacementFee } from '../../../utils/placementFeeCalculator';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
+import { computeInstallmentAmounts, InstallmentPlan } from '../../../config/installmentConfig';
 
 interface ApplicationWithScholarship {
     id: string;
@@ -108,8 +109,22 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
     const isAlreadyPaid = !!(userProfile as any)?.is_placement_fee_paid;
 
-    // Parcelamento habilitado pelo admin
-    const installmentEnabled = !!(userProfile as any)?.placement_fee_installment_enabled;
+    // Plano de parcelamento ativo (novo sistema dinâmico)
+    const [activePlan, setActivePlan] = useState<InstallmentPlan | null>(null);
+    useEffect(() => {
+        if (!userProfile?.user_id) return;
+        supabase
+            .from('fee_installment_plans')
+            .select('*')
+            .eq('user_id', userProfile.user_id)
+            .eq('fee_type', 'placement_fee')
+            .eq('status', 'active')
+            .maybeSingle()
+            .then(({ data }) => setActivePlan(data ?? null));
+    }, [userProfile?.user_id]);
+
+    // Backward compat: also accept legacy flag if no plan found yet
+    const installmentEnabled = !!activePlan || !!(userProfile as any)?.placement_fee_installment_enabled;
 
     const fetchApplications = useCallback(async () => {
         if (!userProfile?.id) return;
@@ -254,10 +269,15 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             const fullAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
 
             // Usar valor com desconto do cupom se aplicado
-            const finalAmount = couponFinalAmount !== undefined ? couponFinalAmount
+            const baseFinalAmount = couponFinalAmount !== undefined ? couponFinalAmount
                 : (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                     ? couponValidation.finalAmount
                     : fullAmount;
+            // Se installment ativo, cobrar a 1ª parcela (dividir igualmente entre N parcelas)
+            const totalInstallments = activePlan?.total_installments ?? 2;
+            const finalAmount = installmentEnabled
+                ? computeInstallmentAmounts(baseFinalAmount, totalInstallments)[0]
+                : baseFinalAmount;
 
             const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
                 ? promotionalCoupon.trim().toUpperCase()
@@ -276,8 +296,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 },
                 body: JSON.stringify({
                     scholarships_ids: [application.scholarship_id],
-                    // Sempre envia o valor original — a Edge Function usa metadata.final_amount para o desconto
-                    amount: fullAmount,
+                    amount: finalAmount,
                     payment_method: method,
                     success_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
                     cancel_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=cancelled`,
@@ -290,7 +309,13 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         exchange_rate: exchangeRate.toString(),
                         // final_amount = valor com desconto do cupom (ou valor cheio se sem cupom)
                         final_amount: finalAmount.toString(),
-                        promotional_coupon: appliedCoupon
+                        promotional_coupon: appliedCoupon,
+                        // Installment metadata (empty string = no plan = single payment)
+                        ...(installmentEnabled ? {
+                            installment_number: '1',
+                            total_installments: String(totalInstallments),
+                            is_installment: 'true',
+                        } : {}),
                     },
                     ...(method === 'parcelow' && payerInfo && { payer_info: payerInfo }),
                     payment_type: 'placement_fee',
@@ -434,11 +459,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                             const couponEffectiveBase = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
                                 ? couponValidation.finalAmount
                                 : baseAmount;
-                            // Se o admin habilitou parcelamento, o aluno paga 50% agora
-                            const effectiveAmount = installmentEnabled ? Math.ceil(couponEffectiveBase / 2 * 100) / 100 : couponEffectiveBase;
-                            // Stripe/PIX/Parcelow sempre cobram valor cheio; só Zelle usa effectiveAmount (parcela)
-                            const cardAmount = calculateCardAmountWithFees(couponEffectiveBase);
-                            const pixInfo = calculatePIXTotalWithIOF(couponEffectiveBase, exchangeRate);
+                            // Se o admin habilitou parcelamento, cobrar 1ª parcela de N (dinâmico)
+                            const totalInstallments = activePlan?.total_installments ?? 2;
+                            const effectiveAmount = installmentEnabled ? computeInstallmentAmounts(couponEffectiveBase, totalInstallments)[0] : couponEffectiveBase;
+                            // Todos os métodos usam effectiveAmount quando installment está ativo
+                            const cardAmount = calculateCardAmountWithFees(effectiveAmount);
+                            const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
 
                             return (
                                 <div
@@ -488,7 +514,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
 
                                             <div className="flex flex-col items-center md:items-end">
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
-                                                    {installmentEnabled ? '1st Installment (50%)' : t('placementFeeStep.title')}
+                                                    {installmentEnabled ? `1st Installment (1/${totalInstallments})` : t('placementFeeStep.title')}
                                                 </span>
                                                 {couponValidation?.isValid ? (
                                                     <div className="flex flex-col items-end">
@@ -521,7 +547,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                 <div>
                                                     <p className="text-sm font-black text-amber-800 uppercase tracking-tight">Installment Plan Available</p>
                                                     <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                                                        Pay <strong>{formatPlacementFee(effectiveAmount)}</strong> now (1st installment) and the remaining <strong>{formatPlacementFee(baseAmount - effectiveAmount)}</strong> within 30 days. Your documents will be released after full payment.
+                                                        Pay <strong>{formatPlacementFee(effectiveAmount)}</strong> now (1/{totalInstallments}) and the remaining <strong>{formatPlacementFee(couponEffectiveBase - effectiveAmount)}</strong> in {totalInstallments - 1} more installment{totalInstallments - 1 > 1 ? 's' : ''}. Your documents will be released after full payment.
                                                     </p>
                                                 </div>
                                             </div>
@@ -764,7 +790,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right flex flex-col items-end shrink-0">
-                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(couponEffectiveBase, true)}</div>
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(effectiveAmount, true)}</div>
                                                                         <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                                                     </div>
                                                                 </div>

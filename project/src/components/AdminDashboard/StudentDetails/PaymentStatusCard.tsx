@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
+import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType, computeInstallmentAmounts } from '../../../config/installmentConfig';
 
 interface PaymentStatusCardProps {
   student: StudentRecord;
@@ -31,8 +33,12 @@ interface PaymentStatusCardProps {
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
   overridesRefreshKey?: number;
+  /** @deprecated use onSetInstallmentPlan */
   onEnableInstallment?: () => Promise<void>;
+  /** @deprecated use onSetInstallmentPlan */
   onDisableInstallment?: () => Promise<void>;
+  onSetInstallmentPlan?: (feeType: SupportedInstallmentFeeType, totalInstallments: number | null) => Promise<void>;
+  installmentPlans?: Record<string, InstallmentPlan | null>;
   onToggleVisaStatus?: () => Promise<void>;
   hideSelectionFee?: boolean;
 }
@@ -64,6 +70,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onMarkAsPaid,
     onEnableInstallment,
     onDisableInstallment,
+    onSetInstallmentPlan,
+    installmentPlans = {},
     onEditPaymentMethod,
     onUpdatePaymentMethod,
     onCancelPaymentMethod,
@@ -75,6 +83,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   } = props;
 
   const [savingInstallment, setSavingInstallment] = useState(false);
+  const [showCancelPlanModal, setShowCancelPlanModal] = useState(false);
+  const [pendingInstallmentN, setPendingInstallmentN] = useState<number | null>(null);
 
   // ✅ Buscar affiliate admin email do aluno para verificar se é do Brant
   const [studentAffiliateAdminEmail, setStudentAffiliateAdminEmail] = React.useState<string | null>(null);
@@ -90,6 +100,17 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     i539_cos_package_fee?: number;
   } | null>(null);
   const [loadingOverrides, setLoadingOverrides] = React.useState<boolean>(true);
+
+  // Valor real da placement fee — mesma lógica do calcTotalFee inline, mas acessível no modal
+  const placementFeeTotalAmount = React.useMemo(() => {
+    if (currentOverrides?.placement_fee != null) return Number(currentOverrides.placement_fee);
+    if ((student as any).placement_fee_amount) return Number((student as any).placement_fee_amount);
+    const apps = student.all_applications || [];
+    const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
+    const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+    if (sch?.placement_fee_amount) return Number(sch.placement_fee_amount);
+    return getFeeAmount('placement_fee');
+  }, [currentOverrides, student, getFeeAmount]);
 
   React.useEffect(() => {
     const fetchStudentAffiliateAdmin = async () => {
@@ -166,25 +187,107 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com"
   const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
 
-  // ✅ Debug: Log quando editingFees mudar
-  React.useEffect(() => {
-    console.log('🔍 [PaymentStatusCard] editingFees mudou:', editingFees);
-    if (editingFees) {
-      console.log('✅ [PaymentStatusCard] Valores de editingFees:', {
-        selection_process: editingFees.selection_process,
-        scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control,
-        placement: editingFees.placement,
-        ds160_package: editingFees.ds160_package,
-        i539_cos_package: editingFees.i539_cos_package
-      });
-    } else {
-      console.log('ℹ️ [PaymentStatusCard] editingFees é null/undefined');
-    }
-  }, [editingFees]);
+
 
   // This is a simplified version - full implementation would include all fee types
   return (
+    <>
+    {/* Cancel Installment Plan Modal */}
+    {showCancelPlanModal && onSetInstallmentPlan && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">Cancel installment plan?</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                The current plan will be cancelled. The student will need a new plan to continue paying in installments. Payments already made are preserved.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={() => setShowCancelPlanModal(false)}
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+            >
+              Keep plan
+            </button>
+            <button
+              onClick={async () => {
+                setShowCancelPlanModal(false);
+                setSavingInstallment(true);
+                try { await onSetInstallmentPlan('placement_fee', null); }
+                finally { setSavingInstallment(false); }
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              Cancel plan
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    {pendingInstallmentN !== null && onSetInstallmentPlan && (() => {
+      const totalAmount = placementFeeTotalAmount;
+      const amounts = computeInstallmentAmounts(totalAmount, pendingInstallmentN);
+      return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">
+                  Create {pendingInstallmentN}× installment plan?
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  The placement fee of <span className="font-semibold text-slate-700">{formatFeeAmount(totalAmount, true)}</span> will be split into {pendingInstallmentN} installments:
+                </p>
+              </div>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 divide-y divide-slate-200">
+              {amounts.map((amt, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                  <span className="text-sm text-slate-600">
+                    {i === 0 ? '1st installment' : i === 1 ? '2nd installment' : `${i + 1}th installment`}
+                    {i === 0 && <span className="ml-1.5 text-xs text-amber-600 font-medium">(due at checkout)</span>}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800">{formatFeeAmount(amt, true)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400">
+              The student's onboarding will show the installment amounts in sequence. Each payment is processed individually.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setPendingInstallmentN(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const n = pendingInstallmentN;
+                  setPendingInstallmentN(null);
+                  setSavingInstallment(true);
+                  try { await onSetInstallmentPlan('placement_fee', n); }
+                  finally { setSavingInstallment(false); }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+              >
+                Confirm {pendingInstallmentN}× plan
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      );
+    })()}
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
       <div className="bg-gradient-to-r from-[#05294E] rounded-t-2xl to-[#0a4a7a] px-6 py-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white flex items-center">
@@ -422,7 +525,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
                     const expectedAmount = scholarship?.application_fee_amount || (student as any).application_fee_amount || 100;
                     let finalExpected = Number(expectedAmount);
-                    if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                    if (dependents > 0 && (userSystemType || 'legacy') === 'legacy' && student.source !== 'migma') {
                       finalExpected += dependents * 100;
                     }
                     
@@ -438,7 +541,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                       if (scholarship?.application_fee_amount) {
                         let amount = Number(scholarship.application_fee_amount);
-                        if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                        if (dependents > 0 && (userSystemType || 'legacy') === 'legacy' && student.source !== 'migma') {
                           amount += dependents * 100;
                         }
                         return formatFeeAmount(amount, true);
@@ -530,7 +633,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         </div>
 
         {/* Flag de fluxo do aluno: se placement_fee_flow, mostrar Placement Fee em vez de Scholarship + I-20 */}
-        {(() => {
+        {student.source !== 'migma' && (() => {
           const isPlacementFeeFlow = !!(student as any).placement_fee_flow;
 
           if (isPlacementFeeFlow) {
@@ -581,8 +684,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                             const apps = student.all_applications || [];
                             const app = apps.find((a: any) => a.status === 'enrolled') ||
-                                        apps.find((a: any) => a.status === 'approved') ||
-                                        apps[0];
+                                        apps.find((a: any) => a.status === 'approved');
                             const sch = app?.scholarships
                               ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships)
                               : null;
@@ -591,21 +693,19 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                               return Number(sch.placement_fee_amount);
                             }
 
-                            if (sch?.annual_value_with_scholarship) {
-                              const customAmt = sch.placement_fee_amount ? Number(sch.placement_fee_amount) : null;
-                              return getPlacementFee(Number(sch.annual_value_with_scholarship), customAmt);
-                            }
                             return null;
                           };
 
                           if (student?.is_placement_fee_paid) {
-                            // When installment partial: show total = paid so far + pending balance
+                            // When installment partial: show the full scholarship placement fee as total
                             if (isInstallmentPartial) {
+                              const total = calcTotalFee();
+                              if (total != null && total > 0) return formatFeeAmount(total, true);
+                              // fallback: paid so far + pending balance
                               const paid = (realPaidAmounts?.placement && realPaidAmounts.placement > 0)
                                 ? realPaidAmounts.placement
-                                : (calcTotalFee() || 2100) / 2;
-                              const total = paid + pendingBalance;
-                              return formatFeeAmount(total, true);
+                                : 0;
+                              return formatFeeAmount(paid + pendingBalance, true);
                             }
                             // Fully paid: show what was paid
                             if (realPaidAmounts?.placement != null && realPaidAmounts.placement > 0) {
@@ -619,9 +719,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             return formatFeeAmount(2100, true);
                           }
 
-                          // Not paid: always show the expected total fee
+                          // Not paid: always show the full total fee
                           const total = calcTotalFee();
-                          if (total != null) return formatFeeAmount(total, true);
+                          if (total != null) {
+                            return formatFeeAmount(total, true);
+                          }
                           return 'N/A';
                         })()}
                         {currentOverrides?.placement_fee !== undefined && (
@@ -638,15 +740,22 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           {isInstallmentPartial ? (
                             <>
                               <AlertCircle className="h-5 w-5 text-amber-500" />
-                              <span className="text-sm font-medium text-amber-600">1/2 Paid</span>
+                              <span className="text-sm font-medium text-amber-600">
+                                {installmentPlans?.['placement_fee']?.installments_paid ?? 1}/{installmentPlans?.['placement_fee']?.total_installments ?? 2} Paid
+                              </span>
                               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                                2nd installment pending: ${pendingBalance.toFixed(0)}
+                                Installment {(installmentPlans?.['placement_fee']?.installments_paid ?? 1) + 1} of {installmentPlans?.['placement_fee']?.total_installments ?? 2} pending: ${pendingBalance.toFixed(0)}
                               </span>
                             </>
                           ) : (
                             <>
                               <CheckCircle className="h-5 w-5 text-green-600" />
                               <span className="text-sm font-medium text-green-600">Paid</span>
+                              {installmentPlans?.['placement_fee']?.total_installments && installmentPlans['placement_fee'].total_installments > 1 && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                                  {installmentPlans['placement_fee'].total_installments}x installments
+                                </span>
+                              )}
                             </>
                           )}
                         </div>
@@ -700,9 +809,26 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center flex-wrap gap-2">
                           <XCircle className="h-5 w-5 text-red-600" />
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
+                          {(() => {
+                            const plan = installmentPlans?.['placement_fee'] ?? null;
+                            if (!plan) return null;
+                            // Only show when the fee amount is actually derivable from scholarship data
+                            const apps = student.all_applications || [];
+                            const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
+                            const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                            const feeKnown = currentOverrides?.placement_fee != null || (student as any).placement_fee_amount || sch?.placement_fee_amount || sch?.annual_value_with_scholarship;
+                            if (!feeKnown) return null;
+                            const n = plan.total_installments;
+                            const perInstallment = n > 0 ? formatFeeAmount(placementFeeTotalAmount / n, true) : '—';
+                            return (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                {n}× installments — {perInstallment} each
+                              </span>
+                            );
+                          })()}
                         </div>
                         {isPlatformAdmin && (() => {
                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
@@ -718,40 +844,57 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   <span>Mark as Paid</span>
                                 </button>
                               )}
-                              {/* Toggle de parcelamento */}
-                              {onEnableInstallment && onDisableInstallment && (
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-semibold text-slate-600">Installment (50%)</span>
-                                  <button
-                                    onClick={async () => {
-                                      setSavingInstallment(true);
-                                      try {
-                                        if (installmentEnabled) {
-                                          await onDisableInstallment();
-                                        } else {
-                                          await onEnableInstallment();
-                                        }
-                                      } finally {
-                                        setSavingInstallment(false);
-                                      }
-                                    }}
-                                    disabled={savingInstallment}
-                                    title={installmentEnabled ? 'Desabilitar parcelamento' : 'Habilitar parcelamento — aluno paga 50% agora e 50% em 30 dias'}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
-                                      installmentEnabled ? 'bg-amber-500' : 'bg-slate-300'
-                                    }`}
-                                  >
-                                    <span
-                                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                                        installmentEnabled ? 'translate-x-6' : 'translate-x-1'
-                                      }`}
-                                    />
-                                  </button>
-                                  <span className={`text-xs font-bold ${installmentEnabled ? 'text-amber-600' : 'text-slate-400'}`}>
-                                    {savingInstallment ? '...' : installmentEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </div>
-                              )}
+                              {/* Seletor de parcelamento dinâmico — só exibir quando há application aprovada */}
+                              {onSetInstallmentPlan && approvedApp && (() => {
+                                const activePlan = installmentPlans?.['placement_fee'] ?? null;
+                                const options = INSTALLMENT_CONFIG.INSTALLMENT_OPTIONS.placement_fee;
+                                return (
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-xs font-semibold text-slate-600">Installment plan</span>
+                                    {activePlan && activePlan.status === 'active' ? (
+                                      <div className="flex flex-col gap-1">
+                                        {/* Progresso do plano ativo */}
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                            {activePlan.installments_paid}/{activePlan.total_installments} paid
+                                          </span>
+                                          <span className="text-xs text-slate-500">
+                                            ${Math.max(0, placementFeeTotalAmount - activePlan.amount_paid).toFixed(0)} remaining
+                                          </span>
+                                        </div>
+                                        {/* Barra de progresso */}
+                                        <div className="w-32 bg-slate-200 rounded-full h-1.5">
+                                          <div
+                                            className="bg-amber-500 h-1.5 rounded-full transition-all"
+                                            style={{ width: `${(activePlan.installments_paid / activePlan.total_installments) * 100}%` }}
+                                          />
+                                        </div>
+                                        <button
+                                          onClick={() => setShowCancelPlanModal(true)}
+                                          disabled={savingInstallment}
+                                          className="text-xs text-red-500 hover:text-red-700 underline w-fit disabled:opacity-50"
+                                        >
+                                          {savingInstallment ? 'Saving...' : 'Cancel plan'}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-slate-400 italic">No plan</span>
+                                        {options.map((n) => (
+                                          <button
+                                            key={n}
+                                            onClick={() => setPendingInstallmentN(n)}
+                                            disabled={savingInstallment}
+                                            className="text-xs px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md font-semibold disabled:opacity-50 transition-colors"
+                                          >
+                                            {savingInstallment ? '...' : `${n}×`}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })()}
@@ -1204,7 +1347,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
-        {student.student_process_type === 'initial' && (() => {
+        {student.student_process_type === 'initial' && student.source !== 'migma' && (() => {
           const isPaid = !!student.has_paid_ds160_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
@@ -1329,7 +1472,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* I-539 COS Package — apenas para alunos change_of_status */}
-        {student.student_process_type === 'change_of_status' && (() => {
+        {student.student_process_type === 'change_of_status' && student.source !== 'migma' && (() => {
           const isPaid = !!student.has_paid_i539_cos_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
@@ -1454,6 +1597,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
       </div>
     </div>
+    </>
   );
 });
 

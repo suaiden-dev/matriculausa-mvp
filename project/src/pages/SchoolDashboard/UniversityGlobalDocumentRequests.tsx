@@ -13,6 +13,7 @@ interface DocumentRequest {
   created_at: string;
   created_by?: string;
   applicable_student_types?: string[];
+  applicable_scholarship_levels?: string[];
 }
 
 interface UniversityGlobalDocumentRequestsProps {
@@ -51,17 +52,25 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
     { value: 'initial', label: 'Initial (F-1 Visa Required)' },
     { value: 'change_of_status', label: 'Change of Status (From Other Visa)' },
     { value: 'transfer', label: 'Transfer (Current F-1 Student)' },
+    { value: 'resident', label: 'Resident (U.S. Citizen / Green Card)' },
     { value: 'all', label: 'All Student Types' },
   ];
-  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: [] as string[] });
+  const SCHOLARSHIP_LEVEL_OPTIONS = [
+    { value: 'undergraduate', label: 'Undergraduate' },
+    { value: 'graduate',      label: 'Graduate' },
+    { value: 'doctorate',     label: 'Doctorate' },
+    { value: 'all',           label: 'All Levels' },
+  ];
+  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: [] as string[], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[] });
   const [creating, setCreating] = useState(false);
   // Edição
   const [editingRequest, setEditingRequest] = useState<DocumentRequest | null>(null);
-  const [editForm, setEditForm] = useState<{ title: string; description: string; attachment: File | null; applicable_student_types: string[]; status: 'open' | 'closed' }>({
+  const [editForm, setEditForm] = useState<{ title: string; description: string; attachment: File | null; applicable_student_types: string[]; applicable_scholarship_levels: string[]; status: 'open' | 'closed' }>({
     title: '',
     description: '',
     attachment: null,
     applicable_student_types: [],
+    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'],
     status: 'open',
   });
 
@@ -97,6 +106,9 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
       description: request.description || '',
       attachment: null,
       applicable_student_types: sanitizedTypes,
+      applicable_scholarship_levels: request.applicable_scholarship_levels?.length
+        ? request.applicable_scholarship_levels
+        : ['undergraduate', 'graduate', 'doctorate'],
       status: (request.status as 'open' | 'closed') || 'open',
     });
   };
@@ -159,6 +171,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
         created_by: userProfile?.user_id || university.user_id, // Usar university.user_id como fallback
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types,
+        applicable_scholarship_levels: newRequest.applicable_scholarship_levels,
         attachment_url
       };
       console.log('[DEBUG] Enviando para Edge Function create-document-request (global)', payload);
@@ -185,7 +198,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
         return;
       }
       setShowNewModal(false);
-      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: [] });
+      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: [], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
       // Recarregar lista
       const { data: updated, error: fetchError } = await supabase
         .from('document_requests')
@@ -517,14 +530,27 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                                 const option = STUDENT_TYPE_OPTIONS.find(opt => opt.value === type);
                                 const label = option ? option.label.split(' (')[0] : type;
                                 return (
-                                  <span 
-                                    key={type} 
+                                  <span
+                                    key={type}
                                     className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wider"
                                   >
                                     {label}
                                   </span>
                                 );
                               })}
+                            </div>
+                          )}
+                          {/* Scholarship Level Tags — só mostra quando não é "todos os níveis" */}
+                          {req.applicable_scholarship_levels && req.applicable_scholarship_levels.length > 0 && req.applicable_scholarship_levels.length < 3 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {req.applicable_scholarship_levels.map((level: string) => (
+                                <span
+                                  key={level}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider"
+                                >
+                                  {level}
+                                </span>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -679,9 +705,45 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Scholarship Level <span className="text-red-500">*</span></label>
+                <div className="flex flex-col gap-2">
+                  {SCHOLARSHIP_LEVEL_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? newRequest.applicable_scholarship_levels.length === SCHOLARSHIP_LEVEL_OPTIONS.length - 1
+                            : newRequest.applicable_scholarship_levels.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setNewRequest(r => ({ ...r, applicable_scholarship_levels: SCHOLARSHIP_LEVEL_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
+                            } else {
+                              setNewRequest(r => ({ ...r, applicable_scholarship_levels: [] }));
+                            }
+                          } else {
+                            setNewRequest(r => {
+                              const updated = r.applicable_scholarship_levels.includes(opt.value)
+                                ? r.applicable_scholarship_levels.filter(v => v !== opt.value)
+                                : [...r.applicable_scholarship_levels, opt.value];
+                              return { ...r, applicable_scholarship_levels: updated };
+                            });
+                          }
+                        }}
+                        disabled={creating}
+                        className={opt.value === 'all' ? 'accent-blue-600 font-bold' : newRequest.applicable_scholarship_levels.includes(opt.value) ? 'accent-blue-600' : ''}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 mt-6 sm:mt-8 flex-col sm:flex-row justify-center">
-              <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 justify-center" onClick={handleNewRequest} disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0}>
+              <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 justify-center" onClick={handleNewRequest} disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0 || newRequest.applicable_scholarship_levels.length === 0}>
                 {creating ? (
                   <svg className="animate-spin h-5 w-5 mr-1 text-white" viewBox="0 0 24 24"></svg>
                 ) : null}
@@ -762,6 +824,42 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Scholarship Level <span className="text-red-500">*</span></label>
+                <div className="flex flex-col gap-2">
+                  {SCHOLARSHIP_LEVEL_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? editForm.applicable_scholarship_levels.length === SCHOLARSHIP_LEVEL_OPTIONS.length - 1
+                            : editForm.applicable_scholarship_levels.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setEditForm(r => ({ ...r, applicable_scholarship_levels: SCHOLARSHIP_LEVEL_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
+                            } else {
+                              setEditForm(r => ({ ...r, applicable_scholarship_levels: [] }));
+                            }
+                          } else {
+                            setEditForm(r => {
+                              const updated = r.applicable_scholarship_levels.includes(opt.value)
+                                ? r.applicable_scholarship_levels.filter(v => v !== opt.value)
+                                : [...r.applicable_scholarship_levels, opt.value];
+                              return { ...r, applicable_scholarship_levels: updated };
+                            });
+                          }
+                        }}
+                        disabled={creating}
+                        className={opt.value === 'all' ? 'accent-blue-600 font-bold' : editForm.applicable_scholarship_levels.includes(opt.value) ? 'accent-blue-600' : ''}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-status">Status</label>
                 <select
                   id="edit-status"
@@ -798,7 +896,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
               </div>
             </div>
             <div className="flex gap-3 mt-8 justify-center">
-              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => { setEditingRequest(null); setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], status: 'open' }); }} disabled={creating}>
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => { setEditingRequest(null); setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'], status: 'open' }); }} disabled={creating}>
                 Cancel
               </button>
               <button
@@ -823,6 +921,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                       title: editForm.title,
                       description: editForm.description,
                       applicable_student_types: editForm.applicable_student_types,
+                      applicable_scholarship_levels: editForm.applicable_scholarship_levels,
                       attachment_url,
                       status: editForm.status,
                     };
@@ -847,7 +946,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                       .order('created_at', { ascending: false });
                     setRequests(updated || []);
                     setEditingRequest(null);
-                    setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], status: 'open' });
+                    setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'], status: 'open' });
                   } catch (e: any) {
                     setError('Unexpected error: ' + (e.message || e));
                   } finally {

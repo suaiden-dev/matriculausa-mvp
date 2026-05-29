@@ -1,7 +1,8 @@
 import React from 'react';
-import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot, Upload } from 'lucide-react';
-import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
+import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot } from 'lucide-react';
 import { useDocumentRejectionDetails } from '../../../hooks/useDocumentRejectionDetails';
+import { useDocumentUploaderMap } from '../../../hooks/useDocumentUploaderMap';
+import { useDocumentRejectionTimestamps } from '../../../hooks/useDocumentRejectionTimestamps';
 import DocumentHistoryAccordion from '../../DocumentHistoryAccordion';
 
 interface DocumentHistoryEntry {
@@ -12,6 +13,8 @@ interface DocumentHistoryEntry {
   rejected_at?: string;
   rejection_reason?: string;
   saved_at?: string;
+  uploaded_by_type?: 'student' | 'admin' | 'university';
+  uploaded_by_name?: string;
 }
 
 interface Document {
@@ -25,6 +28,8 @@ interface Document {
   changes_requested_at?: string;
   review_notes?: string;
   history?: DocumentHistoryEntry[];
+  uploaded_by_type?: 'student' | 'admin' | 'university';
+  uploaded_by_name?: string;
 }
 
 interface Application {
@@ -60,7 +65,6 @@ interface StudentDocumentsCardProps {
   onRejectDocument: (appId: string, docType: string) => void;
   onApproveApplication?: (appId: string) => void;
   onRejectApplication?: (appId: string) => void;
-  onUploadAttachment?: (appId: string, title: string, file: File) => Promise<void>;
 }
 
 /**
@@ -85,22 +89,28 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   onRejectDocument,
   onApproveApplication,
   onRejectApplication,
-  onUploadAttachment,
 }) => {
   const [expandedAI, setExpandedAI] = React.useState<Record<string, boolean>>({});
   const { rejectionDetails } = useDocumentRejectionDetails(studentId);
+  const { getUploader } = useDocumentUploaderMap(studentId);
+  const { getRejectionForEntry } = useDocumentRejectionTimestamps(studentId);
+
+  // Fallback: extract Unix timestamp from filename (e.g. "passport_1778604646049_name.pdf")
+  const inferUploadDate = (url: string | undefined): string | undefined => {
+    if (!url) return undefined;
+    const filename = url.split('/').pop() || '';
+    const match = filename.match(/_(\d{13})_/);
+    if (match) {
+      const ts = parseInt(match[1], 10);
+      if (!isNaN(ts)) return new Date(ts).toISOString();
+    }
+    return undefined;
+  };
 
   const toggleAI = (id: string) => {
     setExpandedAI(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
-  const [activeAppForUpload, setActiveAppForUpload] = React.useState<{ id: string, title: string } | null>(null);
-
-  const handleOpenUploadModal = (appId: string, title: string) => {
-    setActiveAppForUpload({ id: appId, title });
-    setIsUploadModalOpen(true);
-  };
   if (applications.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -147,30 +157,28 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
             const scholarship = app.scholarships;
             const fieldOfStudy = scholarship?.field_of_study || 'N/A';
             const annualValue = scholarship?.annual_value_with_scholarship;
-            const formattedValue = typeof annualValue === 'number' 
-              ? `$${annualValue.toLocaleString()}` 
+            const formattedValue = typeof annualValue === 'number'
+              ? `$${annualValue.toLocaleString()}`
               : (annualValue ? `$${Number(annualValue).toLocaleString()}` : 'N/A');
 
             return (
               <div
                 key={appKey}
-                className={`border rounded-xl overflow-hidden ${
-                  app.status === 'approved' || app.status === 'enrolled'
+                className={`border rounded-xl overflow-hidden ${app.status === 'approved' || app.status === 'enrolled'
                     ? 'border-green-200 bg-green-50'
                     : app.status === 'rejected'
-                    ? 'border-red-200 bg-red-50'
-                    : 'border-slate-200'
-                }`}
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-slate-200'
+                  }`}
               >
                 <button
                   onClick={() => onToggleExpand(appKey)}
-                  className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${
-                    app.status === 'approved' || app.status === 'enrolled'
+                  className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${app.status === 'approved' || app.status === 'enrolled'
                       ? 'bg-green-50 hover:bg-green-100'
                       : app.status === 'rejected'
-                      ? 'bg-red-50 hover:bg-red-100'
-                      : 'bg-slate-50 hover:bg-slate-100'
-                  }`}
+                        ? 'bg-red-50 hover:bg-red-100'
+                        : 'bg-slate-50 hover:bg-slate-100'
+                    }`}
                 >
                   <div className="flex items-center space-x-3">
                     {(app.status === 'approved' || app.status === 'enrolled') && (
@@ -230,7 +238,25 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                     {(doc.type || '').replace('_', ' ').replace(/^./, (c: string) => c.toUpperCase())}
                                   </h5>
                                 </div>
-                                <p className="text-xs text-slate-600 mb-2">Document submitted by student</p>
+                                {(() => {
+                                  const uploader = doc.uploaded_by_type
+                                    ? { by_type: doc.uploaded_by_type, by_name: doc.uploaded_by_name || '' }
+                                    : getUploader(doc.url);
+                                  const label = uploader?.by_type === 'admin'
+                                    ? `Uploaded by admin${uploader.by_name ? ` (${uploader.by_name})` : ''}`
+                                    : uploader?.by_name
+                                      ? `Submitted by ${uploader.by_name}`
+                                      : 'Submitted by student';
+                                  const displayDate = doc.uploaded_at || inferUploadDate(doc.url);
+                                  return (
+                                    <p className="text-xs text-slate-500 mb-2">
+                                      {label}
+                                      {displayDate && (
+                                        <> · {new Date(displayDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                                      )}
+                                    </p>
+                                  );
+                                })()}
                               </div>
                               <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                 <button
@@ -275,11 +301,10 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                       <button
                                         onClick={() => onApproveDocument(app.id, doc.type)}
                                         disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
-                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${
-                                          approvingDocs[`${app.id}:${doc.type}`]
+                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`]
                                             ? 'text-slate-400 border-slate-200 bg-slate-50'
                                             : 'text-green-700 border-green-300 hover:bg-green-50'
-                                        }`}
+                                          }`}
                                       >
                                         <CheckCircle className="w-3 h-3" />
                                         <span className="hidden md:inline">Approve</span>
@@ -287,11 +312,10 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                       <button
                                         onClick={() => onRejectDocument(app.id, doc.type)}
                                         disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
-                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${
-                                          rejectingDocs[`${app.id}:${doc.type}`]
+                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`]
                                             ? 'text-slate-400 border-slate-200 bg-slate-50'
                                             : 'text-red-700 border-red-300 hover:bg-red-50'
-                                        }`}
+                                          }`}
                                       >
                                         <XCircle className="w-3 h-3" />
                                         <span className="hidden md:inline">Reject</span>
@@ -302,23 +326,25 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                               <span
-                                className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                                  (doc.status || 'pending').toLowerCase() === 'approved'
+                                className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${(doc.status || 'pending').toLowerCase() === 'approved'
                                     ? 'text-green-700 bg-green-100'
                                     : (doc.status || 'pending').toLowerCase() === 'under_review'
-                                    ? 'text-blue-700 bg-blue-100'
-                                    : (doc.status || 'pending').toLowerCase() === 'changes_requested'
-                                    ? 'text-red-700 bg-red-100'
-                                    : 'text-amber-700 bg-amber-100'
-                                }`}
+                                      ? 'text-blue-700 bg-blue-100'
+                                      : (doc.status || 'pending').toLowerCase() === 'changes_requested'
+                                        ? 'text-red-700 bg-red-100'
+                                        : 'text-amber-700 bg-amber-100'
+                                  }`}
                               >
                                 {(doc.status || 'pending').replace('_', ' ').replace(/^./, (c: string) => c.toUpperCase())}
                               </span>
-                              {doc.uploaded_at && (
-                                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                                  Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
-                                </span>
-                              )}
+                              {(() => {
+                                const d = doc.uploaded_at || inferUploadDate(doc.url);
+                                return d ? (
+                                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                                    Uploaded {new Date(d).toLocaleDateString()}
+                                  </span>
+                                ) : null;
+                              })()}
                               {doc.approved_at && (
                                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">
                                   Approved {new Date(doc.approved_at).toLocaleDateString()}
@@ -345,15 +371,15 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                             {(() => {
                               const docTypeKey = doc.type.toLowerCase() as keyof typeof rejectionDetails;
                               const aiError = rejectionDetails ? (rejectionDetails[docTypeKey] as string) : null;
-                              
+
                               if (!aiError) return null;
-                              
+
                               const aiId = `${app.id}-${doc.type}-ai`;
                               const isAIExpanded = expandedAI[aiId];
 
                               return (
                                 <div className="mt-2 border border-slate-200 rounded-md overflow-hidden bg-slate-50/50">
-                                  <button 
+                                  <button
                                     onClick={() => toggleAI(aiId)}
                                     className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-slate-100 transition-colors"
                                   >
@@ -408,13 +434,46 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                             {/* Histórico de versões anteriores */}
                             {(() => {
                               // Histórico explícito (uploads futuros após a implementação)
-                              const explicitHistory = (doc.history || []).map((h: DocumentHistoryEntry, i: number) => ({
-                                id: `${doc.type}-history-${i}`,
-                                file_url: h.url || '',
-                                status: (h.status === 'approved' ? 'approved' : h.status === 'rejected' ? 'rejected' : 'under_review') as 'approved' | 'rejected' | 'under_review',
-                                uploaded_at: h.uploaded_at || h.saved_at || '',
-                                rejection_reason: h.rejection_reason,
-                              }));
+                              const explicitHistory = (doc.history || []).map((h: DocumentHistoryEntry, i: number) => {
+                                const histUploader = h.uploaded_by_type
+                                  ? { by_type: h.uploaded_by_type, by_name: h.uploaded_by_name || '' }
+                                  : getUploader(h.url);
+                                
+                                const uAt = h.uploaded_at || h.saved_at || inferUploadDate(h.url) || '';
+                                
+                                let nextUAt = undefined;
+                                if (i < (doc.history || []).length - 1) {
+                                  const nextH = doc.history![i + 1];
+                                  nextUAt = nextH.uploaded_at || nextH.saved_at || inferUploadDate(nextH.url);
+                                } else {
+                                  nextUAt = doc.uploaded_at || inferUploadDate(doc.url);
+                                }
+
+                                let rejAt = h.rejected_at || null;
+                                let rejReason = h.rejection_reason || null;
+
+                                // Fallback retroativo se for status 'rejected' mas sem rejected_at no histórico antigo
+                                if (h.status === 'rejected' && !rejAt) {
+                                  const fallbackRej = getRejectionForEntry(doc.type, uAt, nextUAt);
+                                  if (fallbackRej) {
+                                    rejAt = fallbackRej.created_at;
+                                    if (!rejReason) rejReason = fallbackRej.rejection_reason || null;
+                                  }
+                                }
+
+                                return {
+                                  id: `${doc.type}-history-${i}`,
+                                  file_url: h.url || '',
+                                  status: (h.status === 'approved' ? 'approved' : h.status === 'rejected' ? 'rejected' : 'under_review') as 'approved' | 'rejected' | 'under_review',
+                                  uploaded_at: uAt,
+                                  rejected_at: rejAt,
+                                  approved_at: h.approved_at || null,
+                                  rejection_reason: rejReason,
+                                  is_admin_upload: histUploader?.by_type === 'admin',
+                                  uploaded_by_name: histUploader?.by_name || undefined,
+                                  uploaded_by_type: histUploader?.by_type,
+                                };
+                              });
 
                               // Histórico sintético: para docs existentes que têm rejected_at
                               // mas o status atual não é "rejected" (rejeição de ciclo anterior)
@@ -455,72 +514,14 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                       </div>
                     )}
 
-                    {/* Admin Attachments Section */}
-                    <div className="mt-6 border-t border-slate-100 pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-bold text-slate-900 flex items-center">
-                          <Upload className="w-4 h-4 mr-2 text-[#05294E]" />
-                          Admin Attachments
-                        </h4>
-                        {canUniversityManage && (
-                          <button
-                            onClick={() => handleOpenUploadModal(app.id, scholarship?.title || 'Application')}
-                            className="text-xs font-bold text-[#05294E] hover:text-[#0a4a7a] flex items-center space-x-1 px-3 py-1.5 bg-blue-50 rounded-lg transition-all hover:bg-blue-100 border border-blue-100"
-                          >
-                            <Upload className="w-3 h-3" />
-                            <span>Add Attachment</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {(() => {
-                        const adminDocs = (app.documents || []).filter((d: any) => d.source === 'admin');
-                        if (adminDocs.length === 0) {
-                          return (
-                            <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-200 text-center">
-                              <p className="text-xs text-slate-500 italic">No admin attachments uploaded yet.</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="grid gap-2">
-                            {adminDocs.map((doc: any, idx: number) => (
-                              <div key={`admin-doc-${idx}`} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-all">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900">{doc.title || doc.type}</p>
-                                    <p className="text-[10px] text-slate-500">
-                                      {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => onViewDocument({ file_url: doc.url, filename: doc.title || doc.type })}
-                                  className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
-                                  title="View Attachment"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    
                     {/* Application Approval Section - Only for Platform Admins */}
                     {canPlatformAdmin && (
-                      <div className={`mt-4 p-4 rounded-lg border ${
-                        app.status === 'approved' || app.status === 'enrolled'
-                          ? 'bg-green-50 border-green-200' 
+                      <div className={`mt-4 p-4 rounded-lg border ${app.status === 'approved' || app.status === 'enrolled'
+                          ? 'bg-green-50 border-green-200'
                           : app.status === 'rejected'
-                          ? 'bg-red-50 border-red-200'
-                          : 'bg-slate-50 border-slate-200'
-                      }`}>
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-slate-50 border-slate-200'
+                        }`}>
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h4 className="font-semibold text-slate-900">Application Approval</h4>
@@ -529,21 +530,21 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                                 if (app.status === 'approved') return 'This application has been approved.';
                                 if (app.status === 'enrolled') return 'This student has been enrolled.';
                                 if (app.status === 'rejected') return 'This application has been rejected.';
-                                
+
                                 const docs = app.documents || [];
-                                const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+                                const requiredTypes = ['passport'];
                                 const presentTypes = docs.map(d => (d.type || '').toLowerCase());
                                 const missingRequired = requiredTypes.filter(t => !presentTypes.includes(t));
-                                
+
                                 if (missingRequired.length > 0) {
                                   return `Missing required documents: ${missingRequired.join(', ')}.`;
                                 }
-                                
+
                                 const allApproved = docs.every(d => (d.status || '').toLowerCase() === 'approved');
                                 if (!allApproved) {
                                   return 'All documents must be approved before you can approve the application.';
                                 }
-                                
+
                                 return 'All documents are approved. You can now approve this application.';
                               })()}
                             </p>
@@ -565,17 +566,16 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                           <button
                             onClick={() => onRejectApplication && onRejectApplication(app.id)}
                             disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
-                            className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
-                              app.status === 'rejected' 
-                                ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
+                            className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${app.status === 'rejected'
+                                ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed'
                                 : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                            }`}
+                              }`}
                           >
                             {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
                           </button>
                           {(() => {
                             const docs = app.documents || [];
-                            const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+                            const requiredTypes = ['passport'];
                             const presentTypes = docs.map(d => (d.type || '').toLowerCase());
                             const hasAllRequired = requiredTypes.every(t => presentTypes.includes(t));
                             const allApproved = docs.length > 0 && docs.every(d => (d.status || '').toLowerCase() === 'approved');
@@ -585,15 +585,14 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                               <button
                                 disabled={!canApprove || approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                 onClick={() => onApproveApplication && onApproveApplication(app.id)}
-                                className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
-                                  app.status === 'approved' || app.status === 'enrolled'
+                                className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${app.status === 'approved' || app.status === 'enrolled'
                                     ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
                                     : app.status === 'rejected'
-                                    ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
-                                    : canApprove
-                                    ? 'bg-[#05294E] hover:bg-[#041f38]'
-                                    : 'bg-slate-300 cursor-not-allowed'
-                                }`}
+                                      ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                      : canApprove
+                                        ? 'bg-[#05294E] hover:bg-[#041f38]'
+                                        : 'bg-slate-300 cursor-not-allowed'
+                                  }`}
                               >
                                 {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                               </button>
@@ -610,12 +609,6 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
         </div>
       </div>
 
-      <AdminUploadAttachmentModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        onUpload={(title, file) => onUploadAttachment?.(activeAppForUpload?.id || '', title, file) || Promise.resolve()}
-        applicationTitle={activeAppForUpload?.title}
-      />
     </div>
   );
 }, (prevProps, nextProps) => {
@@ -625,7 +618,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
       const nextApp = nextProps.applications[index];
       return !nextApp || app.id !== nextApp.id || app.status !== nextApp.status;
     });
-  
+
   return (
     !appsChanged &&
     prevProps.studentId === nextProps.studentId &&

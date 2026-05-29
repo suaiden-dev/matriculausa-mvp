@@ -37,6 +37,7 @@ interface Transaction {
   original_amount?: number | null;
   discount_type?: string | null;
   discount_value?: number | null;
+  installment_info?: string | null;
 }
 
 interface FinancialTransactionsTableProps {
@@ -139,11 +140,16 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       case 'application_fee':
       case 'application':
         return 'Application Fee';
+      case 'control_fee':
+      case 'ds160_package':
+      case 'i539_package':
+      case 'i539_cos_package':
+        return 'Control Fee';
       case 'scholarship_fee':
       case 'scholarship':
-        return 'Scholarship Fee';
       case 'i20_control_fee':
-        return 'I-20 Control Fee';
+      case 'i20_control':
+        return 'Placement Fee';
       case 'placement':
       case 'placement_fee':
         return 'Placement Fee';
@@ -345,7 +351,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
       return [
         transaction.student_name || '',
-        formatFeeType(transaction.fee_type),
+        formatFeeType(transaction.fee_type) + (transaction.installment_info || ''),
         transaction.standard_amount?.toFixed(2) || '0.00',
         transaction.payment_method === 'manual' ? 'Outside Payments' : (transaction.payment_method || ''),
         gross.toFixed(2),
@@ -588,9 +594,16 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                         />
                       </td>
                       <td className="px-6 py-2">
-                        <div className="flex items-center gap-1 text-sm text-gray-700">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          {formatDate(transaction.payment_date)}
+                        <div className="flex items-start gap-1.5 text-sm text-gray-700">
+                          <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
+                          <div className="flex flex-col">
+                            <span>{formatDate(transaction.payment_date)}</span>
+                            {transaction.installment_info && (
+                              <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 w-fit">
+                                Installment{transaction.installment_info}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-2">

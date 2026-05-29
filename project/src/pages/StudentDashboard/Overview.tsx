@@ -60,7 +60,7 @@ const Overview: React.FC = () => {
     const dbStep = (userProfile as any)?.onboarding_current_step;
 
     if (dbStep && validSteps.includes(dbStep)) {
-      // Único bloqueio de segurança: sem taxa de seleção paga, não avança
+      // Bloqueio: sem taxa de seleção paga, não avança
       if (userProfile && !userProfile.has_paid_selection_process_fee) {
         const stepsAfterSelection = [
           'scholarship_selection', 'process_type', 'documents_upload',
@@ -71,6 +71,19 @@ const Overview: React.FC = () => {
           return 'selection_fee';
         }
       }
+
+      // Bloqueio: step salvo pode estar stale após mudança de fluxo pelo admin.
+      // Ex: aluno era old flow (scholarship_fee salvo) e virou new flow (placement_fee_flow=true).
+      // Validar se o step ainda existe no conjunto de steps válidos para o perfil atual.
+      if (userProfile && dbStep === 'scholarship_fee') {
+        const isNewFlow = !!(userProfile as any).placement_fee_flow;
+        const isTransferInactive = userProfile.student_process_type === 'transfer' && (userProfile as any).visa_transfer_active === false;
+        if (isNewFlow || isTransferInactive) {
+          // Step stale — cai para o fallback
+          return null;
+        }
+      }
+
       return dbStep;
     }
 
@@ -109,7 +122,7 @@ const Overview: React.FC = () => {
         calculatedStep = 'documents_upload';
       } else if (!hasGlobalFeePaid) {
         calculatedStep = 'payment';
-      } else if (!anyScholarshipFeePaid) {
+      } else if (!anyScholarshipFeePaid && !(userProfile.student_process_type === 'transfer' && (userProfile as any).visa_transfer_active === false)) {
         calculatedStep = 'scholarship_fee';
       } else {
         calculatedStep = 'my_applications';
