@@ -21,12 +21,20 @@ import {
 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import InputMask from 'react-input-mask';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { validateCPF } from '../../utils/cpfValidation';
 
 interface ProfileManagementProps {}
+
+const formatCPF = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    .substring(0, 14);
+};
 
 const ProfileManagement: React.FC<ProfileManagementProps> = () => {
   const { t } = useTranslation(['dashboard', 'common']);
@@ -262,7 +270,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
               setSaveError(null);
               setSuccessMessage(null);
             }}
-            className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full sm:w-auto bg-[#05294E] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-[#041f3f] transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
             {t('profileManagement.editProfile')}
@@ -271,17 +279,17 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
       </div>
 
       {/* Profile Completeness */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#05294E] to-[#0b3a66] rounded-2xl p-8 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-2xl font-bold mb-2">{t('profileManagement.profileCompleteness.title')}</h3>
-              <p className="text-blue-100">{t('profileManagement.profileCompleteness.subtitle')}</p>
+              <p className="text-slate-200">{t('profileManagement.profileCompleteness.subtitle')}</p>
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold mb-2">{completeness}%</div>
-              <div className="text-blue-100 text-sm">{t('profileManagement.profileCompleteness.complete')}</div>
+              <div className="text-slate-200 text-sm">{t('profileManagement.profileCompleteness.complete')}</div>
             </div>
           </div>
           
@@ -293,7 +301,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
           </div>
           
           {completeness < 100 && (
-            <div className="flex items-center text-blue-100">
+            <div className="flex items-center text-slate-200">
               <AlertCircle className="h-4 w-4 mr-2" />
               <span className="text-sm">{t('profileManagement.profileCompleteness.improveMatching')}</span>
             </div>
@@ -311,7 +319,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-[#05294E] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-[#041f3f] transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
@@ -344,7 +352,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   maxLength={100}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.enterFullName')}
                 />
               </div>
@@ -357,7 +365,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                   value={formData.phone}
                   onChange={(value) => handleInputChange('phone', value || '')}
                   maxLength={25}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.phoneExample')}
                   limitMaxLength
                 />
@@ -370,7 +378,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                   value={formData.country}
                   onChange={(e) => handleInputChange('country', e.target.value)}
                   maxLength={50}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.yourCountry')}
                 />
               </div>
@@ -380,7 +388,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <select
                   value={formData.field_of_interest}
                   onChange={(e) => handleInputChange('field_of_interest', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                 >
                   <option value="">{t('profileManagement.form.placeholders.selectField')}</option>
                   <option value="engineering">{t('profileManagement.form.fields.engineering')}</option>
@@ -399,7 +407,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <select
                   value={formData.academic_level}
                   onChange={(e) => handleInputChange('academic_level', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                 >
                   <option value="">{t('profileManagement.form.placeholders.selectLevel')}</option>
                   <option value="high-school">{t('profileManagement.form.fields.highSchool')}</option>
@@ -418,7 +426,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                   max="4"
                   value={formData.gpa}
                   onChange={(e) => handleInputChange('gpa', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   placeholder="0.0"
                 />
               </div>
@@ -428,7 +436,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <select
                   value={formData.english_proficiency}
                   onChange={(e) => handleInputChange('english_proficiency', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                 >
                   <option value="">{t('profileManagement.form.placeholders.selectProficiency')}</option>
                   <option value="beginner">{t('profileManagement.form.fields.beginner')}</option>
@@ -442,14 +450,15 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.cpfDocument')}</label>
-                <InputMask
-                  mask="999.999.999-99"
+                <input
+                  type="text"
                   value={formData.cpf_document}
-                  onChange={(e) => handleInputChange('cpf_document', e.target.value)}
+                  onChange={(e) => handleInputChange('cpf_document', formatCPF(e.target.value))}
                   className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    cpfError ? 'border-red-500 focus:ring-red-600 focus:border-red-600' : 'border-slate-200 focus:ring-blue-600 focus:border-blue-600'
+                    cpfError ? 'border-red-500 focus:ring-red-600 focus:border-red-600' : 'border-slate-200 focus:ring-[#05294E] focus:border-[#05294E]'
                   }`}
                   placeholder="000.000.000-00"
+                  maxLength={14}
                 />
                 {cpfError && (
                   <p className="mt-1 text-sm text-red-600">{cpfError}</p>
@@ -463,7 +472,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
             {/* Profile Header */}
             <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0 mb-6 sm:mb-8">
               <div className="relative">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#05294E] to-[#0b3a66] rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
                   {user?.avatar_url ? (
                     <img 
                       src={user.avatar_url} 
@@ -477,11 +486,11 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <button 
                   onClick={handleCameraClick}
                   disabled={uploading}
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('profileManagement.messages.changeProfilePicture')}
                 >
                   {uploading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#05294E]"></div>
                   ) : (
                     <Camera className="h-4 w-4" />
                   )}
@@ -499,7 +508,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = () => {
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">{profile?.name || t('profileManagement.status.studentName')}</h3>
                 <p className="text-slate-600 mb-3">{profile?.email}</p>
                 <div className="flex items-center space-x-4">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#05294E]/10 text-[#05294E]">
                     <Star className="h-3 w-3 mr-1" />
                     {t('profileManagement.status.activeStudent')}
                   </span>

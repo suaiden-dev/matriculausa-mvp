@@ -254,6 +254,7 @@ const PendingDocumentsOverview: React.FC = () => {
                     }
                 }
             );
+        });
 
         // Cleanup: remover subscription quando componente desmontar
         return () => {

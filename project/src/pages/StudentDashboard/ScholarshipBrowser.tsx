@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import {
   Search,
   Filter,
-  ChevronDown,
   Star,
   Award,
   Building,
@@ -71,7 +70,6 @@ const ScholarshipBrowser: React.FC = () => {
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const [selectedUniversity, setSelectedUniversity] = useState('all');
   const [sortBy] = useState('deadline');
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const navigate = useNavigate();
   const [maxValue, setMaxValue] = useState('');
   const [featuredScholarships, setFeaturedScholarships] = useState<any[]>([]);
@@ -799,23 +797,8 @@ const ScholarshipBrowser: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="rounded-[28px] bg-white p-4 sm:p-5">
-        {/* Mobile Filter Toggle */}
-        <div className="block md:hidden mb-4">
-          <button
-            type="button"
-            onClick={() => setFiltersExpanded(!filtersExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 font-medium"
-          >
-            <span className="flex items-center">
-              <Filter className="h-4 w-4 mr-2" />
-              {t('common.filter')} ({Object.values({ searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, ...(userProfile?.has_paid_selection_process_fee ? { selectedUniversity } : {}), maxValue }).filter(Boolean).length} {t('studentDashboard.findScholarships.filters.active')})
-            </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-
         {/* Filters Container */}
-        <div className={`${filtersExpanded ? 'block' : 'hidden'} md:block space-y-4`}>
+        <div className="block space-y-4">
           {/* Search */}
           <div className="bg-white rounded-[28px] p-3 sm:p-4 border border-slate-200 w-full">
             <div className="flex flex-col w-full px-2 sm:px-3 py-1 justify-center">

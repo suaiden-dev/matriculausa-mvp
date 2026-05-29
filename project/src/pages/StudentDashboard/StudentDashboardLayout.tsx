@@ -317,7 +317,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
           </div>
 
           {/* Sign Out - Bottom of Sidebar */}
-          <div className="px-3 sm:px-4 py-4 border-t border-slate-200">
+          <div className="px-3 sm:px-4 py-4">
             <button
               onClick={handleLogout}
               className="group flex items-center w-full px-3 sm:px-4 py-3 sm:py-3.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-semibold"
