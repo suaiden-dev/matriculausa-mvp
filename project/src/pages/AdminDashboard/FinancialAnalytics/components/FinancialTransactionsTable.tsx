@@ -678,7 +678,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   Fill empty rows to maintain stable height based on current itemsPerPage.
                   This prevents the pagination footer from jumping up and down.
                 */}
-                {currentTransactions.length < itemsPerPage && 
+                {currentTransactions.length < itemsPerPage && itemsPerPage <= 100 &&
                  Array.from({ length: itemsPerPage - currentTransactions.length }).map((_, i) => (
                   <tr key={`empty-${i}`} className="border-none h-[68px]">
                     <td colSpan={9} className="px-6 py-2"></td>
@@ -725,6 +725,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 <option value={25}>25</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
+                <option value={9999}>All</option>
               </select>
             </div>
           </div>
