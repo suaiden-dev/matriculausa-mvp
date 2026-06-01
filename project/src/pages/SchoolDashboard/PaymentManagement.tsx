@@ -222,21 +222,26 @@ const PaymentManagement: React.FC = () => {
       setLoadingUniversityRequests(true);
       
       // Buscar todas as universidades do usuário para garantir que todos os payment requests sejam exibidos
-      const { data: userUniversities, error: universitiesError } = await supabase
-        .from('universities')
-        .select('id')
-        .eq('user_id', user.id);
-      
-      if (universitiesError) {
-        console.error('Error fetching user universities:', universitiesError);
-        // Fallback: usar apenas a universidade do contexto
-        const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
-        setUniversityPaymentRequests(requests);
-        return;
+      let userUniversityIds: string[] = [];
+      if (user.role === 'school_manager' && user.university_id) {
+        userUniversityIds = [user.university_id];
+      } else {
+        const { data: userUniversities, error: universitiesError } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id);
+
+        if (universitiesError) {
+          console.error('Error fetching user universities:', universitiesError);
+          const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
+          setUniversityPaymentRequests(requests);
+          return;
+        }
+        userUniversityIds = (userUniversities || []).map(u => u.id);
       }
-      
+
       // Buscar payment requests de todas as universidades do usuário
-      const universityIds = (userUniversities || []).map(u => u.id);
+      const universityIds = userUniversityIds;
       if (universityIds.length === 0) {
         setUniversityPaymentRequests([]);
         return;
@@ -455,12 +460,16 @@ const PaymentManagement: React.FC = () => {
     
     try {
       // Buscar todas as universidades do usuário
-      const { data: userUniversities } = await supabase
-        .from('universities')
-        .select('id')
-        .eq('user_id', user.id);
-      
-      const universityIds = (userUniversities || []).map(u => u.id);
+      let universityIds: string[] = [];
+      if (user.role === 'school_manager' && user.university_id) {
+        universityIds = [user.university_id];
+      } else {
+        const { data: userUniversities } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id);
+        universityIds = (userUniversities || []).map(u => u.id);
+      }
       if (universityIds.length === 0) return;
 
       // Buscar aplicações dos últimos 365 dias para análise temporal abranger 12 meses históricos

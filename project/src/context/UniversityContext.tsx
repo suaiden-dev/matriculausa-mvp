@@ -48,12 +48,13 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
       setError(null);
       
       // Load university data - ensure only one result
-      const { data: universityData, error: universityError } = await supabase
-        .from('universities')
-        .select('*')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+      // school_manager: load by university_id from profile
+      // school (owner): load by user_id as before
+      const universityQuery = (user.role === 'school_manager' && user.university_id)
+        ? supabase.from('universities').select('*').eq('id', user.university_id).limit(1).maybeSingle()
+        : supabase.from('universities').select('*').eq('user_id', user.id).limit(1).maybeSingle();
+
+      const { data: universityData, error: universityError } = await universityQuery;
 
       if (universityError) throw universityError;
       setUniversity(universityData);
@@ -67,9 +68,12 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           .order('created_at', { ascending: false });
 
         if (scholarshipsError) throw scholarshipsError;
-        
+
+        // Filtrar bolsas Migma — não devem aparecer no dashboard da universidade
+        const filteredScholarships = (scholarshipsData || []).filter(s => !s.title?.includes('(Migma)'));
+
         // Load application counts for all scholarships in a single query (otimizado)
-        const scholarshipIds = (scholarshipsData || []).map(s => s.id);
+        const scholarshipIds = filteredScholarships.map(s => s.id);
         let applicationCounts: Record<string, number> = {};
         
         if (scholarshipIds.length > 0) {
@@ -86,7 +90,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           }
         }
         
-        const scholarshipsWithCounts = (scholarshipsData || []).map(scholarship => ({
+        const scholarshipsWithCounts = filteredScholarships.map(scholarship => ({
           ...scholarship,
           application_count: applicationCounts[scholarship.id] || 0
         }));
@@ -114,7 +118,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
               has_paid_i20_control_fee, selected_scholarship_id, selected_application_id
             )
           `)
-          .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
+          .in('scholarship_id', filteredScholarships.map((s: any) => s.id));
 
         if (applicationsError) {
           console.error('Error loading applications:', applicationsError);
