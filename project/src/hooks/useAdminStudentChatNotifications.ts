@@ -219,31 +219,36 @@ export const useAdminStudentChatNotifications = () => {
 
     const channelName = `admin-merged-notifications-${user.id}`;
 
-    const channel = channelManager.subscribe(channelName)
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'admin_student_chat_notifications',
-          filter: `recipient_id=eq.${user.id}`
-        },
-        () => {
-          throttledFetchNotifications.current();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'admin_notifications',
-          filter: `user_id=eq.${user.id}`  // Atenção: aqui na nova tabela é user_id
-        },
-        () => {
-          throttledFetchNotifications.current();
-        }
-      );
+    channelManager.subscribe(
+      channelName,
+      {},
+      (ch) => {
+        ch.on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'admin_student_chat_notifications',
+            filter: `recipient_id=eq.${user.id}`
+          },
+          () => {
+            throttledFetchNotifications.current();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'admin_notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            throttledFetchNotifications.current();
+          }
+        );
+      }
+    );
 
     return () => {
       channelManager.unsubscribe(channelName);

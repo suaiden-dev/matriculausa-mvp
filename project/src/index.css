@@ -121,13 +121,13 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    height: 100%;
-    overflow-y: auto;
     overflow-x: hidden;
     position: relative;
   }
 
   html {
+    color-scheme: light;
+    background-color: white;
     scroll-behavior: smooth;
     height: 100%;
     overflow-y: auto;
@@ -668,4 +668,244 @@ select:focus,
 
 .animate-bounce-subtle {
   animation: bounce-subtle 2s infinite ease-in-out;
-}
+}
+/* ======================================================
+   Efeito de 'acender e apagar' para grid de universidades
+   ====================================================== */
+@keyframes university-glow {
+  0%, 100% {
+    opacity: 0.45;
+    box-shadow: none;
+    filter: grayscale(100%);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(5, 41, 78, 0.12), 0 8px 32px rgba(5, 41, 78, 0.12);
+    filter: grayscale(0%);
+  }
+}
+
+.university-card-glow {
+  animation: university-glow var(--glow-duration, 4s) ease-in-out infinite;
+  animation-delay: var(--glow-delay, 0s);
+}
+
+.university-card-glow img {
+  filter: inherit !important;
+  opacity: inherit !important;
+  transition: none !important;
+}
+
+/* ======================================================
+   Carrossel Infinito Suave (Marquee) para Logos
+   ====================================================== */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 100s linear infinite;
+  will-change: transform;
+}
+
+/* ======================================================
+   Footer Typography Standard (14px)
+   ====================================================== */
+.footer-custom-14,
+.footer-custom-14 h3,
+.footer-custom-14 h4,
+.footer-custom-14 p,
+.footer-custom-14 span,
+.footer-custom-14 a {
+  font-size: 14px !important;
+}
+
+/* ======================================================
+   Home Page Typography & Commercial Elements Standard
+   Only applies when the element has NO Tailwind text-size class.
+   ====================================================== */
+.home-page h1:not([class*="text-"]) {
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.home-page h2:not([class*="text-"]) {
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.home-page h3:not([class*="text-"]) {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.home-page h4:not([class*="text-"]) {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.home-page p.lead:not([class*="text-"]) {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.home-page p:not([class*="text-"]) {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.home-page .eyebrow {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+}
+
+.home-page .stat {
+  font-size: 48px !important;
+  line-height: 1 !important;
+  letter-spacing: -0.03em !important;
+  font-weight: 800 !important;
+}
+
+/* Mobile Typography */
+@media (max-width: 768px) {
+  .home-page h1:not([class*="text-"]) {
+    font-size: 40px;
+    line-height: 1.05;
+  }
+
+  .home-page h2:not([class*="text-"]) {
+    font-size: 28px;
+    line-height: 1.15;
+  }
+
+  .home-page h3:not([class*="text-"]) {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .home-page h4:not([class*="text-"]) {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .home-page p.lead:not([class*="text-"]) {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .home-page p:not([class*="text-"]) {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .home-page .eyebrow {
+    font-size: 11px !important;
+  }
+
+  .home-page .stat {
+    font-size: 36px !important;
+    line-height: 1 !important;
+  }
+}
+
+/* Commercial Elements - Desktop */
+.home-page .price {
+  font-size: 40px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.home-page .price-large {
+  font-size: 48px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.home-page .price-currency {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  vertical-align: top !important;
+}
+
+.home-page .price-period {
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+}
+
+.home-page .price-description {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.home-page .old-price {
+  font-size: 16px !important;
+  line-height: 1.4 !important;
+  text-decoration: line-through !important;
+  opacity: 0.65 !important;
+}
+
+.home-page .price-badge {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+/* Commercial Elements - Mobile */
+@media (max-width: 768px) {
+  .home-page .price {
+    font-size: 32px !important;
+  }
+
+  .home-page .price-large {
+    font-size: 40px !important;
+  }
+
+  .home-page .price-currency {
+    font-size: 16px !important;
+  }
+
+  .home-page .price-period {
+    font-size: 13px !important;
+  }
+
+  .home-page .price-description {
+    font-size: 13px !important;
+  }
+
+  .home-page .old-price {
+    font-size: 14px !important;
+  }
+
+  .home-page .price-badge {
+    font-size: 11px !important;
+  }
+}
+
+/* Utility: hide scrollbar but keep scroll behavior */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+

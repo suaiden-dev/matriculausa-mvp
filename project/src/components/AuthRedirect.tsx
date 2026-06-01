@@ -22,7 +22,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         .from('universities')
         .select('terms_accepted, profile_completed')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       const result = {
         error: error && error.code !== 'PGRST116' ? error : null,
@@ -150,7 +150,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // REDIRECIONAMENTO APÓS LOGIN
       // REDIRECIONAMENTO APÓS LOGIN (REMOVIDO PARA MOSTRAR MENSAGEM NO COMPONENTE)
-      const isRegistrationPath = false;
+      const isRegistrationPath = currentPath === '/login' || currentPath === '/register' || currentPath === '/auth';
 
       if (isRegistrationPath) {
         const searchParams = new URLSearchParams(location.search);
@@ -221,7 +221,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA
+      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA - Desativado para permitir exploração livre do site
+      /*
       if (currentPath === '/') {
         if (user.role === 'school') {
           setCheckingUniversity(true);
@@ -261,6 +262,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
       }
+      */
     };
 
     checkAndRedirect();

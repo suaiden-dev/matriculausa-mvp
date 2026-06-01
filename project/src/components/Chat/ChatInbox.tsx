@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import MessageReadStatus from './MessageReadStatus';
@@ -24,6 +25,7 @@ interface ConversationItemProps {
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSelected, onClick, getGlobalUnreadCount }) => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
 
   // Determine recipient based on current user role
@@ -51,7 +53,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
     if (days === 0) {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     } else if (days === 1) {
-      return 'Yesterday';
+      return t('studentDashboard.chat.yesterday');
     } else if (days < 7) {
       return date.toLocaleDateString('en-US', { weekday: 'short' });
     } else {
@@ -93,7 +95,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
                 recipient.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
               }`}>
-                {recipient.role === 'admin' ? 'Support' : 'University'}
+                {recipient.role === 'admin' ? t('studentDashboard.chat.supportTab') : t('studentDashboard.chat.universitiesTab')}
               </span>
             )}
           </div>
@@ -117,7 +119,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
                 />
               )}
             <p className={`text-sm text-slate-600 truncate ${hasEffectiveUnread ? 'font-medium' : ''}`}>
-              {conversation.last_message || 'No messages yet'}
+              {conversation.last_message || t('studentDashboard.chat.noMessagesYet')}
             </p>
           </div>
           {hasEffectiveUnread && (
@@ -136,6 +138,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   onConversationSelect,
   selectedConversationId
 }) => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
   const { isDevelopment } = useEnvironment();
   const { conversations, loading, error, isInitialLoad, refetchConversations, updateConversationUnreadCount } = useAdminStudentConversations();
@@ -424,7 +427,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
             onClick={() => refetchConversations(true)}
             className="mt-2 text-sm text-blue-600 hover:text-blue-700"
           >
-            Try again
+            {t('studentDashboard.chat.tryAgain')}
           </button>
         </div>
       </div>
@@ -438,13 +441,13 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
             <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
-            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Student Conversations' : 'Messages'}
+            {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? t('studentDashboard.chat.studentConversations') : t('studentDashboard.chat.messages')}
           </h2>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => refetchConversations(false)}
               className="text-slate-500 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-full transition-colors"
-              title="Refresh conversations"
+              title={t('studentDashboard.chat.refreshConversations')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -464,7 +467,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Support
+              {t('studentDashboard.chat.supportTab')}
               {tabUnreadCounts.support > 0 && (
                 <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                   {tabUnreadCounts.support}
@@ -479,7 +482,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Universities
+              {t('studentDashboard.chat.universitiesTab')}
               {tabUnreadCounts.universities > 0 && (
                 <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                   {tabUnreadCounts.universities}
@@ -493,7 +496,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         <div className="relative">
           <input
             type="text"
-            placeholder={(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? 'Search students...' : 'Search conversations...'}
+            placeholder={(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'school') ? t('studentDashboard.chat.searchStudents') : t('studentDashboard.chat.searchConversations')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -511,13 +514,13 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-sm text-slate-500">
               {conversations.length === 0
-                ? 'No conversations yet'
-                : 'No conversations match your search'
+                ? t('studentDashboard.chat.noConversationsYet')
+                : t('studentDashboard.chat.noConversationsMatch')
               }
             </p>
             {userProfile?.role === 'student' && conversations.length === 0 && (
               <p className="text-xs text-slate-400 mt-1">
-                Start a conversation with an admin to get help
+                {t('studentDashboard.chat.startConversationHelp')}
               </p>
             )}
           </div>
@@ -542,10 +545,10 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
           <button
             onClick={() => setShowStudentSelector(true)}
             className="w-full bg-[#05294E] hover:bg-[#041f3f] text-white text-sm px-3 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
-            title="Start new conversation"
+            title={t('studentDashboard.chat.startNewConversation')}
           >
             <Plus className="w-4 h-4" />
-            Start new conversation
+            {t('studentDashboard.chat.startNewConversation')}
           </button>
         </div>
       )}

@@ -49,7 +49,6 @@
     "@tiptap/starter-kit": "^3.17.1",
     "@types/pg": "^8.15.5",
     "chart.js": "4.5.0",
-    "cities.json": "^1.1.50",
     "class-variance-authority": "^0.7.1",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",

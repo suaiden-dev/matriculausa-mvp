@@ -770,6 +770,9 @@
       "redirecting": "Espere, redireccionando al pago"
     }
   },
+  "onboarding": {
+    "secureEnvironmentDisclaimer": "Estás en un entorno seguro. Tu información está protegida durante todo el proceso."
+  },
   "reinstatementFeeStep": {
     "title": "Cuota de Reintegración",
     "subtitle": "Para continuar con su proceso de transferencia, se requiere el pago de la tarifa de reintegración.",

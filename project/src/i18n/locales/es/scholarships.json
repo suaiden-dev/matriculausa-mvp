@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Scholarships",
-    "subtitle": "Find the perfect scholarship for your academic journey",
+    "title": "Tu futuro en Estados Unidos no tiene que parecer distante",
+    "subtitle": "Conoce becas que te acercan a universidades estadounidenses.",
     "searchPlaceholder": "Search scholarships...",
     "filterBy": "Filter by",
     "amount": "Amount",
@@ -20,7 +20,7 @@
     "featuredSection": {
       "title": "Becas Destacadas",
       "subtitle": "Lo Más Destacado de la Semana",
-      "description": "Becas seleccionadas por nuestros expertos para usted"
+      "description": "Becas más buscadas en este momento"
     },
     "allScholarships": {
       "title": "Todas las Becas",
@@ -181,7 +181,7 @@
       "applicationFeeDetail": "Tarifa cobrada directamente por la institución para la emisión del I-20 oficial",
       "placementFeeLabel": "Placement Fee",
       "placementFeeDetail": "",
-      "controlFeeDetail": "Tarifa requerida para estudiantes que solicitan la visa de tipo Inicial/Cambio de Estatus (COS)",
+      "controlFeeDetail": "Tarifa requerida para estudiantes que solicitan la visa de tipo Inicial/Cambio de Estatus (COS)/Transferencia - visa vencida",
       "internalFeesDescription": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma.",
       "regularAnnualCost": "Inversión Anual (Sin Beca)",
       "exclusiveScholarshipPrice": "Inversión con Beca Exclusiva",
@@ -311,13 +311,17 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Universidades Asociadas",
-      "title": "Universidades Americanas",
-      "subtitle": "Descubra instituciones de clase mundial que ofrecen educación excepcional y oportunidades de becas."
+      "title": "Tu próximo capítulo comienza en un campus estadounidense",
+      "subtitle": "Encuentra oportunidades para estudiar, crecer y vivir una experiencia internacional."
     },
     "loginRequired": {
       "title": "Inicio de Sesión Requerido",
       "message": "Inicie sesión para ver los detalles de las universidades y acceder a todas las funciones"
+    },
+    "unlockAccess": {
+      "title": "Desbloquea el Acceso",
+      "message": "Inicie el Proceso de Selección para ver todos los detalles de las universidades.",
+      "button": "Iniciar Proceso de Selección"
     },
     "search": {
       "placeholder": "Buscar universidades...",
@@ -332,9 +336,7 @@
     },
     "loading": "Cargando universidades...",
     "featured": {
-      "title": "Universidades Destacadas",
       "subtitle": "Lo Más Destacado de la Semana",
-      "description": "Descubra las universidades seleccionadas por nuestros expertos para usted",
       "featured": "Destacada",
       "more": "más"
     },
@@ -354,7 +356,7 @@
     "callToAction": {
       "title": "¿Listo para Aplicar a tu",
       "titleHighlight": "Universidad de Ensueño?",
-      "description": "Comience su viaje con nuestra plataforma impulsada por IA y desbloquee oportunidades exclusivas de becas.",
+      "description": "A través de nuestras alianzas directas con universidades estadounidenses, ofrecemos becas exclusivas con valores significativamente más bajos que la competencia.",
       "findScholarships": "Encontrar Becas",
       "learnMore": "Más Información"
     }

@@ -1238,7 +1238,7 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
   return (
     <section className="bg-slate-50 py-24 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 text-center mb-16 md:mb-20">
-        <h2 className="text-4xl md:text-5xl font-black text-[#05294E] tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
           Relatos de quem já foi <span className="text-[#D0151C] italic">Aprovado.</span>
         </h2>
       </div>
