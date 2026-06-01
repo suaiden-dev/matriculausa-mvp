@@ -83,6 +83,8 @@ const PaymentManagement: React.FC = () => {
   const hasLoadedRequestsForUser = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [forceReloadToken, setForceReloadToken] = useState(0);
+  const [showRequestDetails, setShowRequestDetails] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   // Definir handleRefresh
   const handleRefresh = useCallback(async () => {

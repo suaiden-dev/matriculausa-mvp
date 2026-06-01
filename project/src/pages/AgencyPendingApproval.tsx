@@ -1,19 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, ArrowLeft, Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
+import { CheckCircle, Clock, Mail } from 'lucide-react';
 
 const AffiliateAdminPendingApproval: React.FC = () => {
-  const navigate = useNavigate();
-  const { signOut } = useAuth();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    signOut();
-    navigate('/login');
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -51,13 +40,6 @@ const AffiliateAdminPendingApproval: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center w-full gap-2 px-6 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Voltar para o Login
-        </button>
       </motion.div>
     </div>
   );

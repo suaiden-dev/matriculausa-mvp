@@ -91,7 +91,7 @@ export const queryKeys = {
     feeOverrides: (userIds: string[]) => ['agency', 'fee-overrides', ...userIds] as const,
     realPaidAmounts: (userIds: string[]) => ['agency', 'real-paid-amounts', ...userIds] as const,
     paymentMethods: (profileIds: string[]) => ['agency', 'payment-methods', ...profileIds] as const,
-    revenueCalculation: (userId?: string, profileCount?: number) => ['agency', 'revenue-calculation', userId, profileCount] as const,
+    revenueCalculation: (userId?: string, profileCount?: number, commissionCount?: number) => ['agency', 'revenue-calculation', userId, profileCount, commissionCount] as const,
     // Enhanced Student Tracking específicos
     studentOverrides: (userIds: string[]) => ['agency', 'student-overrides', ...userIds] as const,
     studentDependents: (profileIds: string[]) => ['agency', 'student-dependents', ...profileIds] as const,
@@ -101,10 +101,12 @@ export const queryKeys = {
     studentApplications: (profileId?: string) => ['agency', 'student-applications', profileId] as const,
     studentDocuments: (profileId?: string) => ['agency', 'student-documents', profileId] as const,
     studentFeeHistory: (studentUserId?: string) => ['agency', 'student-fee-history', studentUserId] as const,
+    // Commissions
+    commissions: (userId?: string) => ['agency', 'commissions', userId] as const,
     // Financial Overview Cache
     financialOverview: {
       all: (userId?: string) => ['agency', 'financial-overview', userId] as const,
-      stats: (userId?: string) => ['agency', 'financial-overview', 'stats', userId] as const,
+      stats: (userId?: string, profileCount?: number, commissionCount?: number) => ['agency', 'financial-overview', 'stats', userId, profileCount, commissionCount] as const,
       analytics: (userId?: string) => ['agency', 'financial-overview', 'analytics', userId] as const,
       paymentRequests: (userId?: string) => ['agency', 'financial-overview', 'payment-requests', userId] as const,
     },
