@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Share2,
   Play,
-  Sparkles,
   DollarSign,
   BookOpen,
   Copy
@@ -236,7 +235,7 @@ const MatriculaRewardsLanding: React.FC = () => {
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
+      <section className="relative min-h-[450px] lg:h-[600px] flex items-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
         {/* Background Image - University campus scene to reinforce educational context */}
         <div className="absolute inset-0 overflow-hidden">
           {/* University campus image */}
@@ -266,11 +265,7 @@ const MatriculaRewardsLanding: React.FC = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-2xl border border-blue-100/50">
-              <Sparkles className="h-4 w-4 animate-pulse" />
-              {t('matriculaRewardsLanding.badge')}
-            </div>
+
 
             {/* Main Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-8 leading-tight">
