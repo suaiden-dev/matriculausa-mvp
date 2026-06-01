@@ -337,11 +337,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               .limit(1);
             
             if (!enrolledError && enrolledApp && enrolledApp.length > 0) {
-              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found enrolled application:', enrolledApp[0]);
+              // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found enrolled application:', enrolledApp[0]);
               studentApp = enrolledApp;
               studentAppError = null;
             } else {
-              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] No enrolled application found, searching approved...');
+              // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] No enrolled application found, searching approved...');
               // Se não encontrou enrolled, buscar approved
               const { data: approvedApp, error: approvedError } = await supabase
                 .from('scholarship_applications')
@@ -363,7 +363,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               
               studentApp = approvedApp || [];
               studentAppError = approvedError;
-              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found approved application:', approvedApp?.[0]);
+              // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found approved application:', approvedApp?.[0]);
             }
           
             if (!studentAppError && studentApp && studentApp.length > 0) {
@@ -451,7 +451,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     if (currentApp?.id && studentId) {
       const universityId = currentApp.scholarships?.universities?.id || 
                           currentApp.university_id;
-      console.log('🔍 [DOCUMENTS VIEW] Fetching document requests for application:', currentApp.id, 'university:', universityId, 'studentId:', studentId);
+      // console.log('🔍 [DOCUMENTS VIEW] Fetching document requests for application:', currentApp.id, 'university:', universityId, 'studentId:', studentId);
       fetchDocumentRequests(currentApp.id, universityId);
     }
   }, [realScholarshipApplication?.id, scholarshipApplication?.id, studentId]);
@@ -460,11 +460,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
   // Debug: Verificar dados da acceptance letter
-  console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] currentApplication:', currentApplication);
+  // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] currentApplication:', currentApplication);
   if (currentApplication) {
-    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_status:', currentApplication.acceptance_letter_status);
-    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_url:', currentApplication.acceptance_letter_url);
-    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_sent_at:', currentApplication.acceptance_letter_sent_at);
+    // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_status:', currentApplication.acceptance_letter_status);
+    // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_url:', currentApplication.acceptance_letter_url);
+    // console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_sent_at:', currentApplication.acceptance_letter_sent_at);
   }
   
   const getDocumentInfo = (upload: any) => {

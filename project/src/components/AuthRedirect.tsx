@@ -12,26 +12,27 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
 
-  const checkUniversityStatus = useCallback(async (userId: string) => {
-    if (universityCache.current[userId]) {
-      return universityCache.current[userId];
+  const checkUniversityStatus = useCallback(async (userId: string, universityId?: string) => {
+    const cacheKey = universityId || userId;
+    if (universityCache.current[cacheKey]) {
+      return universityCache.current[cacheKey];
     }
 
     try {
-      const { data: university, error } = await supabase
-        .from('universities')
-        .select('terms_accepted, profile_completed')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // school_manager: query by university id; school: query by user_id
+      const query = universityId
+        ? supabase.from('universities').select('terms_accepted, profile_completed').eq('id', universityId).maybeSingle()
+        : supabase.from('universities').select('terms_accepted, profile_completed').eq('user_id', userId).maybeSingle();
+      const { data: university, error } = await query;
 
       const result = {
         error: error && error.code !== 'PGRST116' ? error : null,
         university: university || null
       };
 
-      universityCache.current[userId] = result;
+      universityCache.current[cacheKey] = result;
       setTimeout(() => {
-        delete universityCache.current[userId];
+        delete universityCache.current[cacheKey];
       }, 30000);
 
       return result;
@@ -82,7 +83,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 navigate('/admin/dashboard', { replace: true });
               } else if (userRole === 'seller') {
                 navigate('/seller/dashboard', { replace: true });
-              } else if (userRole === 'school') {
+              } else if (userRole === 'school' || userRole === 'school_manager') {
                 navigate('/school/dashboard', { replace: true });
               } else if (userRole === 'affiliate') {
                 navigate('/affiliate/dashboard', { replace: true });
@@ -180,12 +181,15 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
 
-        if (user.role === 'school') {
+        if (user.role === 'school' || user.role === 'school_manager') {
           setCheckingUniversity(true);
-          const { error, university } = await checkUniversityStatus(user.id);
+          const { error, university } = await checkUniversityStatus(user.id, user.role === 'school_manager' ? user.university_id : undefined);
           if (error) { navigate('/school/dashboard', { replace: true }); setCheckingUniversity(false); return; }
-          if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
-          if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
+          // school_manager skips terms/profile checks (university already configured)
+          if (user.role === 'school') {
+            if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
+            if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
+          }
           navigate('/school/dashboard', { replace: true });
           setCheckingUniversity(false);
           return;
@@ -196,7 +200,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
 
       // PROTEÇÃO DE ROTAS POR ROLE
-      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+      if ((user.role === 'school' || user.role === 'school_manager') && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
         navigate('/school/dashboard', { replace: true }); return;
       }
 
@@ -224,12 +228,14 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA - Desativado para permitir exploração livre do site
       /*
       if (currentPath === '/') {
-        if (user.role === 'school') {
+        if (user.role === 'school' || user.role === 'school_manager') {
           setCheckingUniversity(true);
-          const { error, university } = await checkUniversityStatus(user.id);
+          const { error, university } = await checkUniversityStatus(user.id, user.role === 'school_manager' ? user.university_id : undefined);
           if (error) { setCheckingUniversity(false); return; }
-          if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
-          if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
+          if (user.role === 'school') {
+            if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
+            if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
+          }
           navigate('/school/dashboard', { replace: true });
           setCheckingUniversity(false);
           return;
