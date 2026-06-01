@@ -2,17 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import TruncatedText from '../../components/TruncatedText';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   DollarSign,
-  Building, 
-  MapPin, 
-  Globe, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  CheckCircle, 
-  Clock, 
+  Building,
+  MapPin,
+  Globe,
+  Mail,
+  Phone,
+  Calendar,
+  CheckCircle,
+  Clock,
   AlertTriangle,
   Edit,
   Save,
@@ -23,7 +23,10 @@ import {
   BookOpen,
   Shield,
   Info,
-  ExternalLink
+  ExternalLink,
+  UserPlus,
+  Trash2,
+  Search
 } from 'lucide-react';
 
 interface DocumentRequest {
@@ -82,6 +85,16 @@ const UniversityDetails: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Estado para school managers
+  const [schoolManagers, setSchoolManagers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [showAddManagerModal, setShowAddManagerModal] = useState(false);
+  const [managerSearchEmail, setManagerSearchEmail] = useState('');
+  const [managerSearchResult, setManagerSearchResult] = useState<{ user_id: string; full_name: string; email: string; role: string } | null>(null);
+  const [managerSearchError, setManagerSearchError] = useState('');
+  const [addingManager, setAddingManager] = useState(false);
+  const [removingManagerId, setRemovingManagerId] = useState<string | null>(null);
+
   // Estado para edição da universidade
   const [editForm, setEditForm] = useState({
     name: '',
@@ -128,6 +141,7 @@ const UniversityDetails: React.FC = () => {
     if (universityId) {
       fetchUniversityDetails();
       fetchDocumentRequests();
+      fetchSchoolManagers();
     }
   }, [universityId]);
 
@@ -208,6 +222,84 @@ const UniversityDetails: React.FC = () => {
     } catch (err) {
       console.error('Unexpected error fetching document requests:', err);
     }
+  };
+
+  const fetchSchoolManagers = async () => {
+    if (!universityId) return;
+    setLoadingManagers(true);
+    try {
+      const { data, error: err } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'school_manager')
+        .eq('university_id', universityId);
+
+      if (!err && data) setSchoolManagers(data.map(d => ({ user_id: d.user_id, full_name: d.full_name || '', email: d.email || '' })));
+    } catch { /* ignore */ }
+    setLoadingManagers(false);
+  };
+
+  const handleSearchManager = async () => {
+    if (!managerSearchEmail.trim()) return;
+    setManagerSearchError('');
+    setManagerSearchResult(null);
+
+    const { data, error: err } = await supabase
+      .from('user_profiles')
+      .select('user_id, full_name, email, role')
+      .eq('email', managerSearchEmail.trim().toLowerCase())
+      .single();
+
+    if (err || !data) {
+      setManagerSearchError('User not found with this email.');
+      return;
+    }
+
+    if (data.role === 'school_manager' && schoolManagers.some(m => m.user_id === data.user_id)) {
+      setManagerSearchError('This user is already a manager for this university.');
+      return;
+    }
+
+    if (data.role === 'admin' || data.role === 'post_sales') {
+      setManagerSearchError('Cannot convert admin/post_sales users to school manager.');
+      return;
+    }
+
+    setManagerSearchResult({ user_id: data.user_id, full_name: data.full_name || '', email: data.email || '', role: data.role || 'student' });
+  };
+
+  const handleAddManager = async () => {
+    if (!managerSearchResult || !universityId) return;
+    setAddingManager(true);
+
+    const { error: err } = await supabase
+      .from('user_profiles')
+      .update({ role: 'school_manager', university_id: universityId })
+      .eq('user_id', managerSearchResult.user_id);
+
+    if (err) {
+      setManagerSearchError('Failed to assign manager: ' + err.message);
+      setAddingManager(false);
+      return;
+    }
+
+    setShowAddManagerModal(false);
+    setManagerSearchEmail('');
+    setManagerSearchResult(null);
+    setManagerSearchError('');
+    setAddingManager(false);
+    fetchSchoolManagers();
+  };
+
+  const handleRemoveManager = async (userId: string) => {
+    setRemovingManagerId(userId);
+    await supabase
+      .from('user_profiles')
+      .update({ role: 'student', university_id: null })
+      .eq('user_id', userId);
+
+    setRemovingManagerId(null);
+    fetchSchoolManagers();
   };
 
   const handleSaveUniversity = async () => {
@@ -830,6 +922,52 @@ const UniversityDetails: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* School Managers Card */}
+            <div className="bg-white rounded-xl border shadow-sm">
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-indigo-600" />
+                    School Managers
+                  </h2>
+                  <button
+                    onClick={() => { setShowAddManagerModal(true); setManagerSearchEmail(''); setManagerSearchResult(null); setManagerSearchError(''); }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Add
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Users who can access this university's dashboard</p>
+              </div>
+              <div className="p-6">
+                {loadingManagers ? (
+                  <p className="text-sm text-gray-500">Loading...</p>
+                ) : schoolManagers.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No school managers assigned</p>
+                ) : (
+                  <div className="space-y-3">
+                    {schoolManagers.map(m => (
+                      <div key={m.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{m.full_name || 'No name'}</p>
+                          <p className="text-xs text-gray-500 truncate">{m.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveManager(m.user_id)}
+                          disabled={removingManagerId === m.user_id}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
+                          title="Remove manager"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Main Content - Document Requests */}
@@ -1319,6 +1457,84 @@ const UniversityDetails: React.FC = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add School Manager Modal */}
+      {showAddManagerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-slate-200">
+            <h3 className="font-bold text-lg mb-2 text-slate-900">Add School Manager</h3>
+            <p className="text-sm text-gray-500 mb-6">Search by email to assign a user as manager for this university.</p>
+
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="email"
+                  placeholder="user@email.com"
+                  value={managerSearchEmail}
+                  onChange={e => setManagerSearchEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSearchManager()}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition text-sm"
+                />
+              </div>
+              <button
+                onClick={handleSearchManager}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+              >
+                Search
+              </button>
+            </div>
+
+            {managerSearchError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-700">{managerSearchError}</p>
+              </div>
+            )}
+
+            {managerSearchResult && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{managerSearchResult.full_name || 'No name'}</p>
+                    <p className="text-xs text-gray-500">{managerSearchResult.email}</p>
+                    <p className="text-xs text-gray-400 mt-1">Current role: <span className="font-medium">{managerSearchResult.role}</span></p>
+                  </div>
+                </div>
+                {managerSearchResult.role !== 'student' && managerSearchResult.role !== 'school_manager' && (
+                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    This will change their role from "{managerSearchResult.role}" to "school_manager"
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition text-sm"
+                onClick={() => setShowAddManagerModal(false)}
+              >
+                Cancel
+              </button>
+              {managerSearchResult && (
+                <button
+                  onClick={handleAddManager}
+                  disabled={addingManager}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg font-medium transition text-sm flex items-center gap-2"
+                >
+                  {addingManager && (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {addingManager ? 'Assigning...' : 'Assign as Manager'}
+                </button>
+              )}
             </div>
           </div>
         </div>

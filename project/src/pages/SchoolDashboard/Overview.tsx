@@ -55,12 +55,17 @@ const Overview: React.FC = () => {
         setLoadingActions(true);
 
         // 1. Fetch all universities associated with the current user
-        const { data: userUniversities } = await supabase
-          .from('universities')
-          .select('id')
-          .eq('user_id', user.id);
-
-        const universityIds = (userUniversities || []).map(u => u.id);
+        // school_manager: use university_id from profile; school: query by user_id
+        let universityIds: string[] = [];
+        if (user.role === 'school_manager' && user.university_id) {
+          universityIds = [user.university_id];
+        } else {
+          const { data: userUniversities } = await supabase
+            .from('universities')
+            .select('id')
+            .eq('user_id', user.id);
+          universityIds = (userUniversities || []).map(u => u.id);
+        }
         if (universityIds.length === 0) {
           setPendingActions([]);
           setLoadingActions(false);
@@ -237,12 +242,16 @@ const Overview: React.FC = () => {
         setLoadingFinancial(true);
 
         // Buscar todas as universidades do usuário
-        const { data: userUniversities } = await supabase
-          .from('universities')
-          .select('id')
-          .eq('user_id', user.id);
-
-        const universityIds = (userUniversities || []).map(u => u.id);
+        let universityIds: string[] = [];
+        if (user.role === 'school_manager' && user.university_id) {
+          universityIds = [user.university_id];
+        } else {
+          const { data: userUniversities } = await supabase
+            .from('universities')
+            .select('id')
+            .eq('user_id', user.id);
+          universityIds = (userUniversities || []).map(u => u.id);
+        }
         if (universityIds.length === 0) {
           setTotalBalance(0);
           setTotalAvailable(0);

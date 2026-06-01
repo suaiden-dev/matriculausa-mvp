@@ -65,6 +65,7 @@
     "i18next-http-backend": "^3.0.2",
     "i18next-resources-to-backend": "^1.2.1",
     "jspdf": "^3.0.3",
+    "jszip": "^3.10.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.344.0",
     "motion": "^12.23.12",
