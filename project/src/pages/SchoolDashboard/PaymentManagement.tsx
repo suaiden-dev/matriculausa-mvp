@@ -1194,24 +1194,7 @@ const PaymentManagement: React.FC = () => {
     );
   };
 
-  const getApplicationStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
-      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Approved' },
-      rejected: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Rejected' },
-      under_review: { color: 'bg-blue-100 text-blue-800', icon: Eye, label: 'Under Review' },
-    };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
-
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {config.label}
-      </span>
-    );
-  };
 
   return (
     <ProfileCompletionGuard 
@@ -1510,7 +1493,10 @@ const PaymentManagement: React.FC = () => {
                         Scholarship Details
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Application Status
+                        Fee Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fee Amount
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Payment Status
@@ -1551,31 +1537,27 @@ const PaymentManagement: React.FC = () => {
                             </div> */}
                           </div>
                         </td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getApplicationStatusBadge(payment.application_status)}
+                          {payment.payment_type === 'application_fee' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                              Application Fee
+                            </span>
+                          ) : payment.payment_type === 'reinstatement_fee' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                              Reinstatement Fee
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              Scholarship Fee
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">
+                          {formatCurrency(payment.amount_charged)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col gap-1.5">
-                            <div>{getStatusBadge(payment.status)}</div>
-                            <div>
-                              {payment.payment_type === 'application_fee' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                                  Application Fee
-                                </span>
-                              ) : payment.payment_type === 'reinstatement_fee' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100">
-                                  Reinstatement Fee
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                  Scholarship Fee
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs font-bold text-slate-800">
-                              {formatCurrency(payment.amount_charged)}
-                            </div>
-                          </div>
+                          {getStatusBadge(payment.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(payment.applied_at)}

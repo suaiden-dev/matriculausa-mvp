@@ -97,6 +97,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Definir activeTab com base no query parameter 'tab'
+  useEffect(() => {
+    if (mode === 'register') {
+      const params = new URLSearchParams(location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'student' || tabParam === 'university') {
+        setActiveTab(tabParam);
+      }
+    }
+  }, [location.search, mode]);
+
   // ✅ NOVA: Função de validação unificada (movida para cima para estar disponível)
   const validateReferralCode = async (code: string) => {
     if (!code || code.length < 4) {
