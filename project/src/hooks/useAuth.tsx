@@ -8,7 +8,7 @@ interface User {
   avatar_url: string | null;
   email: string;
   name?: string;
-  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager';
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
@@ -42,7 +42,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   is_placement_fee_paid?: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -91,8 +91,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
-  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales') => void;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
+  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager') => void;
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -116,7 +116,7 @@ interface AuthProviderProps {
 
 interface SignUpOptions {
   referralCode?: string;
-  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager';
   utm?: StoredUtmAttribution | null;
 }
 
@@ -660,8 +660,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         // Garantir que o campo role do perfil esteja alinhado com o metadata e com dados de universidade
         try {
-          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined;
-          let finalRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined = profile?.role || metadataRole;
+          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | undefined;
+          let finalRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | undefined = profile?.role || metadataRole;
 
           if (!finalRole || (finalRole === 'student' && metadataRole === 'school')) {
             // Se tiver universidade vinculada, forçar role 'school'
@@ -1056,7 +1056,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, setUser, setUserProfile, setSupabaseUser]);
 
   // Função para registrar usuário
-  const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
+  const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
 
@@ -1390,7 +1390,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)
-  const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => {
+  const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales') => {
     if (!user || !userProfile) return;
 
     // Atualizar estado local temporariamente

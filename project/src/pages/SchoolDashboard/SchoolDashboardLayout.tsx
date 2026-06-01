@@ -24,7 +24,6 @@ import {
   Gift,
   Bell,
   // CreditCard, // Stripe Connect comentado
-  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -204,18 +203,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'application-tracking', label: 'Application Tracking', icon: LayoutGrid, path: '/school/dashboard/application-tracking', badge: null },
     { id: 'messages', label: 'Student Messages', icon: MessageSquare, path: '/school/dashboard/messages', badge: null },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
-    {
-      id: 'payments',
-      label: 'Payments',
-      icon: DollarSign,
-      path: '/school/dashboard/analytics',
-      badge: null,
-      dropdown: [
-        { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
-        // COMENTADO: Stripe Connect - Funcionalidade removida temporariamente
-        // { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-      ]
-    },
+    { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     {

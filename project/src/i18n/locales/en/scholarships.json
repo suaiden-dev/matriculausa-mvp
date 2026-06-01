@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Scholarships",
-    "subtitle": "Find the perfect scholarship for your academic journey",
+    "title": "Your future in the US does not have to feel distant",
+    "subtitle": "Discover scholarships that bring you closer to American universities.",
     "searchPlaceholder": "Search scholarships...",
     "filterBy": "Filter by",
     "amount": "Amount",
@@ -20,7 +20,7 @@
     "featuredSection": {
       "title": "Featured Scholarships",
       "subtitle": "Weekly Highlights",
-      "description": "Scholarships selected by our experts for you"
+      "description": "Most sought-after scholarships at the moment"
     },
     "allScholarships": {
       "title": "All Scholarships",
@@ -184,7 +184,7 @@
       "applicationFeeDetail": "Fee charged directly by the institution for issuing the official I-20",
       "placementFeeLabel": "Placement Fee",
       "placementFeeDetail": "",
-      "controlFeeDetail": "Fee required for students requesting an Initial/Change of Status (COS) visa",
+      "controlFeeDetail": "Fee required for students requesting an Initial/Change of Status (COS)/Transfer - expired visa",
       "internalFeesDescription": "Some fees are paid directly to the university, while others are processed through our platform.",
       "regularAnnualCost": "Annual Investment (Without Scholarship)",
       "exclusiveScholarshipPrice": "Exclusive Scholarship Investment",
@@ -314,13 +314,17 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Partner Universities",
-      "title": "American Universities",
-      "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+      "title": "Your next chapter begins on an American campus",
+      "subtitle": "Find opportunities to study, grow, and live an international experience."
     },
     "loginRequired": {
       "title": "Login Required",
       "message": "Please log in to view university details and access all features"
+    },
+    "unlockAccess": {
+      "title": "Unlock Access",
+      "message": "Start the Selection Process to see all university details.",
+      "button": "Start Selection Process"
     },
     "search": {
       "placeholder": "Search universities...",
@@ -335,9 +339,7 @@
     },
     "loading": "Loading universities...",
     "featured": {
-      "title": "Featured Universities",
       "subtitle": "Weekly Highlights",
-      "description": "Discover the universities selected by our experts for you",
       "featured": "Featured",
       "more": "more"
     },
@@ -357,7 +359,7 @@
     "callToAction": {
       "title": "Ready to Apply to Your",
       "titleHighlight": "Dream University?",
-      "description": "Start your journey with our AI-powered platform and unlock exclusive scholarship opportunities.",
+      "description": "Through our direct partnerships with American universities, we offer exclusive scholarships with values significantly lower than the competition.",
       "findScholarships": "Find Scholarships",
       "learnMore": "Learn More"
     }

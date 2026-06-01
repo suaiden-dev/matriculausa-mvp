@@ -87,7 +87,7 @@ export const usePayments = (universityId: string | undefined) => {
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const loadPayments = async (page: number = 1, currentFilters?: PaymentFilters) => {
+  const loadPayments = async (page: number = 1, currentFilters?: PaymentFilters, sizeToUse?: number) => {
     if (!universityId) {
       return;
     }
@@ -198,6 +198,7 @@ export const usePayments = (universityId: string | undefined) => {
         const scholarshipsMap = new Map(scholarships?.map(scholarship => [scholarship.id, scholarship]) || []);
 
         // Transformar aplicações
+        const addedReinstatementStudents = new Set<string>();
         for (const application of applications) {
           const userProfile = userProfilesMap.get(application.student_id);
           const scholarship = scholarshipsMap.get(application.scholarship_id);
@@ -248,8 +249,9 @@ export const usePayments = (universityId: string | undefined) => {
               scholarship_fee_amount: scholarshipAmount,
             });
 
-            // 2. Registro da Reinstatement Fee separada (se paga)
-            if ((userProfile as any)?.has_paid_reinstatement_package) {
+            // 2. Registro da Reinstatement Fee separada (se paga e ainda não adicionada para este estudante)
+            if ((userProfile as any)?.has_paid_reinstatement_package && !addedReinstatementStudents.has(application.student_id)) {
+              addedReinstatementStudents.add(application.student_id);
               const reinstatementFeeAmt = getFeeAmount('reinstatement_fee');
               transformedPayments.push({
                 id: `${application.id}-reinstatement`,
@@ -320,8 +322,9 @@ export const usePayments = (universityId: string | undefined) => {
         }
 
         // Aplicar paginação
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
+        const pageSizeToUse = sizeToUse || pageSize;
+        const startIndex = (page - 1) * pageSizeToUse;
+        const endIndex = startIndex + pageSizeToUse;
         const paginatedPayments = finalPayments.slice(startIndex, endIndex);
         
         // Recalcular estatísticas com base nos dados filtrados
@@ -422,7 +425,7 @@ export const usePayments = (universityId: string | undefined) => {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setCurrentPage(1);
-    loadPayments(1);
+    loadPayments(1, undefined, newPageSize);
   };
 
   const exportPayments = async (): Promise<Blob> => {

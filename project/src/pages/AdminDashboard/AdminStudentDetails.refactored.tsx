@@ -22,11 +22,13 @@ import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
 import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType, computeInstallmentAmounts } from '../../config/installmentConfig';
 import { toast } from 'react-hot-toast';
+import { downloadAllDocumentsAsZip } from '../../utils/downloadAllDocumentsAsZip';
 
 // Componentes de UI Base
 import {
   Clock,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { useFilterDataQuery } from '../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
@@ -384,6 +386,9 @@ const AdminStudentDetails: React.FC = () => {
     handleMarkTransferProofViewed
   } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
 
+  // Estado para Download All Documents
+  const [downloadingAllDocs, setDownloadingAllDocs] = useState(false);
+
   // Estados para Preview de Documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFileName, setPreviewFileName] = useState<string | undefined>(undefined);
@@ -434,6 +439,35 @@ const AdminStudentDetails: React.FC = () => {
     handleHideDocumentRequest,
     handleRestoreDocumentRequest
   } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests, logAction, student?.student_id);
+
+  const handleDownloadAllDocs = useCallback(async () => {
+    if (!student || downloadingAllDocs) return;
+    setDownloadingAllDocs(true);
+    try {
+      // Usar apenas a application escolhida (mesma lógica do DocumentsView)
+      const apps = student.all_applications || [];
+      const chosenApp = apps.find((app: any) => app.is_application_fee_paid) || apps[0];
+      const result = await downloadAllDocumentsAsZip({
+        studentName: student.student_name || 'Student',
+        studentUserId: student.user_id || '',
+        applications: chosenApp ? [chosenApp] : [],
+        documentRequests,
+        transferFormUploads,
+      });
+      if (!result.success) {
+        toast.error('No documents found to download.');
+      } else if (result.failedFiles > 0) {
+        toast.success(`Downloaded ${result.totalFiles - result.failedFiles} of ${result.totalFiles} files. ${result.failedFiles} failed.`);
+      } else {
+        toast.success(`All ${result.totalFiles} documents downloaded successfully!`);
+      }
+    } catch (err: any) {
+      console.error('Error downloading all documents:', err);
+      toast.error('Failed to download documents.');
+    } finally {
+      setDownloadingAllDocs(false);
+    }
+  }, [student, documentRequests, transferFormUploads, downloadingAllDocs]);
 
   // Outros estados locais
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -1880,11 +1914,24 @@ const AdminStudentDetails: React.FC = () => {
         }
       }
 
+      // Helper para obter o nome amigável da taxa no log
+      const feeLabels: Record<string, string> = {
+        selection_process: 'Selection Process Fee',
+        application: 'Application Fee',
+        scholarship: 'Scholarship Fee',
+        i20_control: 'I-20 Control Fee',
+        placement: 'Placement Fee',
+        ds160_package: 'DS-160 Package',
+        i539_cos_package: 'I-539 COS Package',
+        reinstatement_fee: 'Reinstatement Fee'
+      };
+      const feeLabel = feeLabels[feeType] || feeType;
+
       // Log the action
       try {
         await logAction(
           'fee_payment',
-          `${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid via ${paymentMethodValue} payment`,
+          `${feeLabel} marked as paid via ${paymentMethodValue} payment`,
           user?.id || '',
           'admin',
           {
@@ -4223,17 +4270,25 @@ const AdminStudentDetails: React.FC = () => {
       {/* Documents Tab */}
       {activeTab === 'documents' && (
         <div className="space-y-6">
-          {/* Botão para criar novo Document Request (somente Admin) */}
-          {isPlatformAdmin && (
-            <div className="flex justify-end">
+          {/* Botões de ação: Download All + New Request */}
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={handleDownloadAllDocs}
+              disabled={downloadingAllDocs}
+              className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              {downloadingAllDocs ? 'Downloading...' : 'Download All Documents'}
+            </button>
+            {isPlatformAdmin && (
               <button
                 onClick={openNewRequestModal}
                 className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium"
               >
                 New Request
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* I-20 Document Section - Only for COS students */}
           {student?.student_process_type === 'change_of_status' && (

@@ -1,134 +1,93 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap } from 'lucide-react';
+import { Facebook, Instagram } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation(['common']);
-  
+
   // Footer links rely on global scroll-to-top in App
 
   return (
-    <footer className="bg-[#05294E] text-white relative overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-      </div>
-      
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <footer className="bg-white text-[#05294E] relative overflow-hidden footer-custom-14">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 md:pt-16 pb-16">
         {/* Legal Disclaimer */}
-        <div className="mb-12 pb-8 border-b border-white/10">
-          <h4 className="text-base font-bold text-slate-200 mb-2">Legal Disclaimer</h4>
-          <p className="text-sm text-slate-300 leading-relaxed max-w-4xl">
-            MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.
+        <div className="mb-8 md:mb-12 pb-6 md:pb-8 border-b border-[#05294E]/10 text-slate-600 text-xs sm:text-sm leading-relaxed">
+          <h4 className="text-slate-900 font-bold text-sm sm:text-base mb-2">{t('footer.legal.disclaimerTitle', 'Legal Disclaimer')}</h4>
+          <p>
+            {t('footer.legal.disclaimerText', 'MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only.')}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Company Info */}
-          <div className="space-y-6">
-            <div className="flex items-center">
-              <img 
-                src="/favicon-branco.png" 
-                alt="Matrícula USA" 
-                className="h-10 w-auto"
-              />
-            </div>
-            <p className="text-slate-300 leading-relaxed">
-              {t('footer.company.description')}
-            </p>
-            
-            <div className="flex space-x-4">
-              <a href="https://facebook.com/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
-                <Facebook className="h-5 w-5 text-slate-300 group-hover:text-white" />
-              </a>
-              <a href="https://twitter.com/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
-                <Twitter className="h-5 w-5 text-slate-300 group-hover:text-white" />
-              </a>
-              <a href="https://www.instagram.com/matriculausa?igsh=MWJram91MGhxMXloOQ==" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
-                <Instagram className="h-5 w-5 text-slate-300 group-hover:text-white" />
-              </a>
-              <a href="https://linkedin.com/company/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
-                <Linkedin className="h-5 w-5 text-slate-300 group-hover:text-white" />
-              </a>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 md:gap-12">
 
-          {/* Platform */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white flex items-center">
-              <Zap className="h-5 w-5 mr-2 text-[#D0151C]" />
-              {t('footer.company.title')}
-            </h3>
+          {/* Coluna 1: A Plataforma */}
+          <div className="space-y-6 col-start-1 lg:col-auto">
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.platform')}</h3>
             <ul className="space-y-3">
-              <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
-              <li><Link to="/schools" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
-              <li><Link to="/for-universities" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.title')}</Link></li>
-              <li><Link to="/for-students" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.forStudents')}</Link></li>
-              <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
-                {t('footer.students.scholarships')} <Zap className="ml-1 h-3 w-3 text-yellow-400" />
-              </Link></li>
-              <li><Link to="/matricula-rewards" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
-                {t('footer.students.matriculaRewards')} <Zap className="ml-1 h-3 w-3 text-yellow-400" />
-              </Link></li>
-              <li><Link to="/affiliate/register" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
-                Torne-se Afiliado <Zap className="ml-1 h-3 w-3 text-yellow-400" />
-              </Link></li>
-              <li><Link to="/how-it-works" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
+              <li><Link to="/about" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
+              <li><Link to="/how-it-works" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
+              <li><Link to="/for-students" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.forStudents')}</Link></li>
+              <li><Link to="/for-universities" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.title')}</Link></li>
             </ul>
           </div>
 
-          {/* Support */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white">{t('footer.students.support')}</h3>
+          {/* Coluna 2: Ajuda e Contato */}
+          <div className="space-y-6 col-start-2 lg:col-auto">
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.helpContact')}</h3>
             <ul className="space-y-3">
-              <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.faq')}</Link></li>
-              <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
-              <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
-              <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.privacy')}</Link></li>
-              <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.terms')}</Link></li>
-              <li>
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-cookie-settings'))}
-                  className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block text-left w-full"
-                >
-                  {t('footer.legal.manageCookies')}
-                </button>
-              </li>
-              <li><Link to="/selection-fee-registration?ref=TFOE" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Checkout</Link></li>
+              <li><Link to="/help" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
+              <li><Link to="/faq" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.faq')}</Link></li>
+              <li><Link to="/contact" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
+              <li><Link to="/selection-fee-registration?ref=TFOE" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">Checkout</Link></li>
             </ul>
           </div>
 
-          {/* Contact Info */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white">{t('footer.company.contact')}</h3>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 group">
-                <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
-                  <Mail className="h-5 w-5 text-[#D0151C]" />
-                </div>
-                <span className="text-slate-300">{t('footer.contact.email')}</span>
-              </div>
-              <div className="flex items-center space-x-3 group">
-                <div className="bg-green-600/20 p-2 rounded-lg group-hover:bg-green-600/30 transition-colors">
-                  <Phone className="h-5 w-5 text-green-400" />
-                </div>
-                <span className="text-slate-300">{t('footer.contact.phone')}</span>
-              </div>
-              <div className="flex items-center space-x-3 group">
-                <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
-                  <MapPin className="h-5 w-5 text-[#D0151C]" />
-                </div>
-                <span className="text-slate-300">{t('footer.contact.address')}</span>
-              </div>
+          {/* Coluna 3: Explore */}
+          <div className="space-y-6 col-start-1 lg:col-auto">
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.explore')}</h3>
+            <ul className="space-y-3">
+              <li><Link to="/scholarships" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
+              <li><Link to="/schools" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
+              <li><Link to="/matricula-rewards" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.matriculaRewards')}</Link></li>
+              <li><Link to="/affiliate/register" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.becomeAffiliate')}</Link></li>
+            </ul>
+          </div>
+
+          {/* Coluna 4: Redes Sociais */}
+          <div className="space-y-6 col-start-1 lg:col-auto">
+            <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.followUs')}</h3>
+            <div className="flex space-x-5">
+              <a href="https://facebook.com/matriculausa" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-[#05294E] transition-all duration-300">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="https://www.instagram.com/matriculausa?igsh=MWJram91MGhxMXloOQ==" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-[#05294E] transition-all duration-300">
+                <Instagram className="h-5 w-5" />
+              </a>
             </div>
           </div>
+
         </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-slate-400 text-sm">
-              {t('footer.copyright')}
+        {/* Barra inferior */}
+        <div className="border-t border-[#05294E]/10 mt-12 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2">
+              <img src="/favicon-branco.png" alt="Matrícula USA" className="h-7 w-auto" />
+              <p className="text-center md:text-left">
+                {t('footer.copyright')}
+              </p>
+              <div className="flex space-x-6">
+                <Link to="/privacy-policy" className="hover:text-[#05294E] transition-colors duration-200">
+                  {t('footer.legal.privacy')}
+                </Link>
+                <Link to="/terms-of-service" className="hover:text-[#05294E] transition-colors duration-200">
+                  {t('footer.legal.terms')}
+                </Link>
+              </div>
+            </div>
+            <p className="text-center md:text-right font-medium text-slate-500 text-sm">
+              {t('footer.madeWithLove')}
             </p>
           </div>
         </div>

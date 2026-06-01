@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, Sparkles, Building, GraduationCap, ArrowRight, Star, Lock } from 'lucide-react';
+import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
-import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { useAuth } from '../hooks/useAuth';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 21;
 
 const Universities: React.FC = () => {
-  const { t } = useTranslation(['school', 'scholarships', 'common']);
+  const { t } = useTranslation(['scholarships', 'school', 'common', 'home']);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, userProfile, loading } = useAuth();
@@ -29,6 +27,15 @@ const Universities: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [allUniversities, setAllUniversities] = useState<any[]>([]);
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
+  const gridSectionRef = useRef<HTMLDivElement>(null);
+  const featuredSectionRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToGrid = (nextPage: number) => {
+    const targetRef = nextPage === 0 ? featuredSectionRef : gridSectionRef;
+    if (targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   
   // TODOS OS useEffect DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   useEffect(() => {
@@ -140,10 +147,9 @@ const Universities: React.FC = () => {
     );
   }
   
-  // Check if user needs to pay selection process fee (only for authenticated students)
-  if (isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee) {
-    return <PaymentRequiredBlocker pageType="universities" />;
-  }
+  // Check if user needs to pay selection process fee
+  const needsToPaySelectionFee = isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee;
+  const isLocked = !isAuthenticated || needsToPaySelectionFee;
 
   // Get unique states for filter a partir de allUniversities
   const states = Array.from(new Set(allUniversities.map(school => {
@@ -178,124 +184,150 @@ const Universities: React.FC = () => {
 
   return (
     <>
-      <Header />
-      <div className="bg-white min-h-screen">
-        {/* Header */}
-        <section className="bg-[#05294E] text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1 mb-6">
-              <Sparkles className="h-3 w-3 mr-2 text-white" />
-              <span className="text-xs font-medium text-white">{t('universitiesPage.header.partnerUniversities')}</span>
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
-              <span className="text-white">{t('universitiesPage.header.title')}</span>
-            </h1>
-            
-            <p className="text-lg text-slate-200 max-w-2xl mx-auto">
-              {t('universitiesPage.header.subtitle')}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder={t('universitiesPage.search.placeholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+      <div className="bg-white min-h-screen home-page">
+        {/* Hero Section */}
+        <section className="relative pt-20 pb-20 lg:pt-0 lg:pb-0 overflow-hidden bg-[#05294E] min-h-[450px] lg:h-[600px] flex items-center">
+          {/* Background Image Layer */}
+          <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 lg:left-0 lg:w-[65%]">
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/university-library-white-columns.webp" 
+                alt="University Library" 
+                className="w-full h-full object-cover lg:object-center"
               />
-            </div>
-
-            {/* Type Filter */}
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
-            >
-              <option value="all">{t('universitiesPage.search.allTypes')}</option>
-              <option value="Private University">{t('universitiesPage.search.private')}</option>
-              <option value="Public University">{t('universitiesPage.search.public')}</option>
-            </select>
-
-            {/* Location Filter */}
-            <select
-              value={selectedLocation}
-              onChange={(e) => {
-                setSelectedLocation(e.target.value);
-              }}
-              className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              title="Filtrar por estado da universidade"
-            >
-              <option value="all">{t('universitiesPage.search.allStates')}</option>
-              {states.map((state: string) => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-
-            {/* Results Count */}
-            <div className="flex items-center justify-center bg-white border border-slate-300 rounded-xl px-3 py-3">
-              <span className="text-sm text-slate-600">
-                <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> {t('universitiesPage.search.universitiesCount')}
-                {filteredFeaturedUniversities.length > 0 && (
-                  <span className="text-sm text-slate-500 ml-2">
-                    + {filteredFeaturedUniversities.length} {t('universitiesPage.search.featured')}
-                  </span>
-                )}
-              </span>
+              {/* Mobile Overlay */}
+              <div className="absolute inset-0 bg-[#05294E]/85 lg:hidden"></div>
+              
+              {/* Desktop Transition: Solid blue on right to transparent on left */}
+              <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
             </div>
           </div>
-        </div>
+
+          {/* Decorative Glows */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 -right-24 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+            <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 sm:px-6 lg:px-8 w-full">
+            <div className="max-w-xl lg:max-w-[630px] lg:ml-auto">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-center lg:text-right"
+              >
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+                  {t('universitiesPage.header.title')}
+                </h1>
+                
+                <p className="text-lg lg:text-xl text-white mb-8 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
+                  {t('universitiesPage.header.subtitle')}
+                </p>
+
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+          {/* Search and Filters */}
+          {isAuthenticated && (
+            <div id="university-search" className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={t('universitiesPage.search.placeholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  />
+                </div>
+
+                {/* Type Filter */}
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
+                >
+                  <option value="all">{t('universitiesPage.search.allTypes')}</option>
+                  <option value="Private University">{t('universitiesPage.search.private')}</option>
+                  <option value="Public University">{t('universitiesPage.search.public')}</option>
+                </select>
+
+                {/* Location Filter */}
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => {
+                    setSelectedLocation(e.target.value);
+                  }}
+                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  title="Filtrar por estado da universidade"
+                >
+                  <option value="all">{t('universitiesPage.search.allStates')}</option>
+                  {states.map((state: string) => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
 
         {/* Featured Universities Section */}
-        {filteredFeaturedUniversities.length > 0 && (
-          <div className="mb-12">
+        {page === 0 && filteredFeaturedUniversities.length > 0 && (
+          <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
-              <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-4">
-                <Star className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-[#05294E]">{t('universitiesPage.featured.title')}</span>
-              </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">{t('universitiesPage.featured.subtitle')}</span>
+                <span className="text-slate-900">{t('universitiesPage.featured.subtitle')}</span>
               </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                {t('universitiesPage.featured.description')}
-              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
               {filteredFeaturedUniversities.map((school) => (
-                <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
-                  {/* Overlay de blur quando não autenticado */}
-                  {!isAuthenticated && (
+                <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
+                  {/* Overlay de blur quando não autenticado ou pendente pagamento */}
+                  {isLocked && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                       <div className="text-center p-6">
                         <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                           <Lock className="h-8 w-8 text-[#05294E]" />
                         </div>
-                        <h4 className="text-lg font-bold text-slate-900 mb-2">
-                          {t('home.featuredUniversities.lockedTitle')}
-                        </h4>
-                        <p className="text-sm text-slate-600 mb-4">
-                          {t('home.featuredUniversities.lockedDescription')}
-                        </p>
-                        <button
-                          onClick={() => navigate(`/login${location.search}`)}
-                          className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
-                        >
-                          {t('home.featuredUniversities.loginToView')}
-                        </button>
+                        {needsToPaySelectionFee ? (
+                          <>
+                            <h4 className="text-lg font-bold text-slate-900 mb-2">
+                              {t('universitiesPage.unlockAccess.title')}
+                            </h4>
+                            <p className="text-sm text-slate-600 mb-4">
+                              {t('universitiesPage.unlockAccess.message')}
+                            </p>
+                            <button
+                              onClick={() => navigate(`/student/onboarding`)}
+                              className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
+                            >
+                              {t('universitiesPage.unlockAccess.button')}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <h4 className="text-lg font-bold text-slate-900 mb-2">
+                              {t('home.featuredUniversities.lockedTitle')}
+                            </h4>
+                            <p className="text-sm text-slate-600 mb-4">
+                              {t('home.featuredUniversities.lockedDescription')}
+                            </p>
+                            <button
+                              onClick={() => navigate(`/login${location.search}`)}
+                              className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                            >
+                              {t('home.featuredUniversities.loginToView')}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -314,7 +346,7 @@ const Universities: React.FC = () => {
                         src={school.image_url || school.logo_url}
                         alt={`${school.name} campus`}
                         className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${
-                          !isAuthenticated ? 'blur-lg' : ''
+                          isLocked ? 'blur-lg' : ''
                         }`}
                         onError={(e) => {
                           // Fallback para div com ícone se a imagem falhar
@@ -348,24 +380,24 @@ const Universities: React.FC = () => {
 
                   {/* University Info */}
                   <div className="flex flex-col flex-1 p-6">
-                    <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
-                      !isAuthenticated ? 'blur-sm' : ''
+                    <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
+                      isLocked ? 'blur-sm' : ''
                     }`}>
                       {school.name}
                     </h3>
                     
                     {/* Location */}
-                    <div className={`flex items-center text-slate-600 mb-4 ${
-                      !isAuthenticated ? 'blur-sm' : ''
+                    <div className={`flex items-center text-slate-600 mb-4 h-6 ${
+                      isLocked ? 'blur-sm' : ''
                     }`}>
-                      <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
-                      <span className="text-sm">{school.location}</span>
+                      <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
+                      <span className="text-sm truncate">{school.location}</span>
                     </div>
 
                     {/* Programs Preview */}
-                    <div className="mb-6 flex-1">
+                    <div className="mb-6 h-[52px] overflow-hidden">
                       <div className={`flex flex-wrap gap-2 ${
-                        !isAuthenticated ? 'blur-sm' : ''
+                        isLocked ? 'blur-sm' : ''
                       }`}>
                         {school.programs?.slice(0, 3).map((program: string, index: number) => (
                           <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
@@ -397,33 +429,61 @@ const Universities: React.FC = () => {
           </div>
         )}
 
-        {/* Universities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Universities Grid Section */}
+        <div className="mb-12 scroll-mt-24" ref={gridSectionRef}>
+          {!isLoadingUniversities && filteredSchools.length > 0 && (
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                <span className="text-slate-900">{t('scholarships:scholarshipsPage.allScholarships.title')}</span>
+              </h2>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoadingUniversities ? (
             skeletonArray.map((_, idx) => (
-              <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
+              <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-[480px]" />
             ))
           ) : filteredSchools.map((school) => (
-            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
-              {/* Overlay de blur quando não autenticado */}
-              {!isAuthenticated && (
+            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
+              {/* Overlay de blur quando não autenticado ou pendente pagamento */}
+              {isLocked && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                   <div className="text-center p-6">
                     <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Lock className="h-8 w-8 text-[#05294E]" />
                     </div>
-                    <h4 className="text-lg font-bold text-slate-900 mb-2">
-                      {t('home.featuredUniversities.lockedTitle')}
-                    </h4>
-                    <p className="text-sm text-slate-600 mb-4">
-                      {t('home.featuredUniversities.lockedDescription')}
-                    </p>
-                    <button
-                      onClick={() => navigate(`/login${location.search}`)}
-                      className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
-                    >
-                      {t('home.featuredUniversities.loginToView')}
-                    </button>
+                    {needsToPaySelectionFee ? (
+                      <>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">
+                          {t('universitiesPage.unlockAccess.title')}
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4">
+                          {t('universitiesPage.unlockAccess.message')}
+                        </p>
+                        <button
+                          onClick={() => navigate(`/student/onboarding`)}
+                          className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          {t('universitiesPage.unlockAccess.button')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">
+                          {t('home.featuredUniversities.lockedTitle')}
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4">
+                          {t('home.featuredUniversities.lockedDescription')}
+                        </p>
+                        <button
+                          onClick={() => navigate(`/login${location.search}`)}
+                          className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                        >
+                          {t('home.featuredUniversities.loginToView')}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -434,7 +494,7 @@ const Universities: React.FC = () => {
                     src={school.image_url || school.logo_url}
                     alt={`${school.name} campus`}
                     className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
-                      !isAuthenticated ? 'blur-lg' : ''
+                      isLocked ? 'blur-lg' : ''
                     }`}
                     onError={(e) => {
                       // Fallback para div com ícone se a imagem falhar
@@ -466,24 +526,24 @@ const Universities: React.FC = () => {
 
               {/* University Info */}
               <div className="flex flex-col flex-1 p-6">
-                <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
-                  !isAuthenticated ? 'blur-sm' : ''
+                <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
+                  isLocked ? 'blur-sm' : ''
                 }`}>
                   {school.name}
                 </h3>
                 
                 {/* Location */}
-                <div className={`flex items-center text-slate-600 mb-4 ${
-                  !isAuthenticated ? 'blur-sm' : ''
+                <div className={`flex items-center text-slate-600 mb-4 h-6 ${
+                  isLocked ? 'blur-sm' : ''
                 }`}>
-                  <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
-                  <span className="text-sm">{school.location}</span>
+                  <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
+                  <span className="text-sm truncate">{school.location}</span>
                 </div>
 
                 {/* Programs Preview */}
-                <div className="mb-6 flex-1">
+                <div className="mb-6 h-[52px] overflow-hidden">
                   <div className={`flex flex-wrap gap-2 ${
-                    !isAuthenticated ? 'blur-sm' : ''
+                    isLocked ? 'blur-sm' : ''
                   }`}>
                     {school.programs?.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
@@ -512,23 +572,32 @@ const Universities: React.FC = () => {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Paginação */}
-        <div className="flex justify-center items-center gap-4 mt-8">
+        {/* Paginação Premium */}
+        <div className="flex justify-center items-center gap-16 sm:gap-24 mt-16 mb-8">
           <button
-            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-                            disabled={page === 0 || isLoadingUniversities}
+            className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-[#05294E] hover:text-white hover:border-[#05294E] hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:hover:shadow-none"
+            onClick={() => { const next = Math.max(0, page - 1); scrollToGrid(next); setPage(next); }}
+            disabled={page === 0 || isLoadingUniversities}
           >
-            {t('universitiesPage.pagination.previous')}
+            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">{t('universitiesPage.pagination.previous')}</span>
           </button>
-          <span className="text-slate-600 font-medium">{t('universitiesPage.pagination.page')} {page + 1} {t('universitiesPage.pagination.of')} {Math.max(1, totalPages)}</span>
+          
+          <div className="flex items-center">
+            <span className="text-slate-500 font-medium text-sm sm:text-base">
+              <span className="hidden sm:inline">{t('universitiesPage.pagination.page')}</span> <span className="text-[#05294E] font-black mx-1 text-base sm:text-lg">{page + 1}</span> <span className="hidden sm:inline">{t('universitiesPage.pagination.of')}</span><span className="sm:hidden">/</span> <span className="text-[#05294E] font-black ml-1 text-base sm:text-lg">{Math.max(1, totalPages)}</span>
+            </span>
+          </div>
+
           <button
-            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                            disabled={page >= totalPages - 1 || isLoadingUniversities}
+            className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-[#05294E] border border-[#05294E] text-white font-bold hover:bg-[#05294E]/90 hover:shadow-lg hover:shadow-[#05294E]/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#05294E] disabled:hover:shadow-none"
+            onClick={() => { const next = Math.min(totalPages - 1, page + 1); scrollToGrid(next); setPage(next); }}
+            disabled={page >= totalPages - 1 || isLoadingUniversities}
           >
-            {t('universitiesPage.pagination.next')}
+            <span className="hidden sm:inline">{t('universitiesPage.pagination.next')}</span>
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
@@ -542,33 +611,9 @@ const Universities: React.FC = () => {
           </div>
         )}
 
-        {/* Call to Action */}
-        <div className="mt-12 bg-[#05294E] rounded-2xl p-8 text-white text-center">
-          <h2 className="text-2xl font-bold mb-3">
-            {t('universitiesPage.callToAction.title')} <span className="text-[#D0151C]">{t('universitiesPage.callToAction.titleHighlight')}</span>
-          </h2>
-          <p className="text-sm text-slate-200 mb-6 max-w-2xl mx-auto">
-            {t('universitiesPage.callToAction.description')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link 
-              to="/scholarships"
-              className="bg-[#D0151C] text-white px-6 py-2 rounded-lg hover:bg-[#B01218] transition-all duration-300 text-sm font-medium"
-            >
-              {t('universitiesPage.callToAction.findScholarships')}
-            </Link>
-            <Link 
-              to="/how-it-works"
-              className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-lg hover:bg-white/20 transition-all duration-300 text-sm font-medium"
-            >
-              {t('universitiesPage.callToAction.learnMore')}
-            </Link>
-          </div>
-        </div>
       </div>
-      <SmartChat />
-      <Footer />
     </div>
+    <SmartChat />
     </>
   );
 };

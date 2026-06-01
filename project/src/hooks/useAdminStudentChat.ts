@@ -355,17 +355,17 @@ export const useAdminStudentChat = (
                 uploaded_at: att.created_at,
               })) || [];
 
-            const newMessage = formatMessage({
-              id: fullMessage.id,
-              sender_id: fullMessage.sender_id,
-              recipient_id: fullMessage.recipient_id,
-              message: fullMessage.message,
-              created_at: fullMessage.created_at,
-              read_at: fullMessage.read_at,
-              edited_at: fullMessage.edited_at,
-              is_deleted: fullMessage.is_deleted,
-              attachments,
-            });
+              const newMessage = formatMessage({
+                id: fullMessage.id,
+                sender_id: fullMessage.sender_id,
+                recipient_id: fullMessage.recipient_id,
+                message: fullMessage.message,
+                created_at: fullMessage.created_at,
+                read_at: fullMessage.read_at,
+                edited_at: fullMessage.edited_at,
+                is_deleted: fullMessage.is_deleted,
+                attachments,
+              });
 
             // Only add if it's not from current user (avoid duplicates)
             if (newMessage.senderId !== user?.id) {
@@ -403,17 +403,17 @@ export const useAdminStudentChat = (
                 uploaded_at: att.created_at,
               })) || [];
 
-            const formattedMessage = formatMessage({
-              id: updatedMessage.id,
-              sender_id: updatedMessage.sender_id,
-              recipient_id: updatedMessage.recipient_id,
-              message: updatedMessage.message,
-              created_at: updatedMessage.created_at,
-              read_at: updatedMessage.read_at,
-              edited_at: updatedMessage.edited_at,
-              is_deleted: updatedMessage.is_deleted,
-              attachments,
-            });
+              const formattedMessage = formatMessage({
+                id: updatedMessage.id,
+                sender_id: updatedMessage.sender_id,
+                recipient_id: updatedMessage.recipient_id,
+                message: updatedMessage.message,
+                created_at: updatedMessage.created_at,
+                read_at: updatedMessage.read_at,
+                edited_at: updatedMessage.edited_at,
+                is_deleted: updatedMessage.is_deleted,
+                attachments,
+              });
 
             setMessages((prevMessages) =>
               prevMessages.map((msg) =>

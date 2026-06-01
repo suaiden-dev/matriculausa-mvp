@@ -21,7 +21,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   defaultRecipientId,
   defaultConversationId
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(defaultRecipientId || null);
@@ -194,7 +194,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   if (!user || !userProfile) {
     return (
       <div className={`bg-white rounded-lg shadow-sm border border-slate-200 p-6 ${className}`}>
-        <p className="text-slate-500">Please log in to access chat.</p>
+        <p className="text-slate-500">{t('studentDashboard.chat.pleaseLogin')}</p>
       </div>
     );
   }
@@ -210,8 +210,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime', { defaultValue: 'Tempo de resposta: 1-2 horas úteis' })}</p>
+                  <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.chat.supportTeam')}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.chat.responseTime')}</p>
               </div>
             </div>
             <button
@@ -337,8 +337,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Support Team' })}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime')}</p>
+                <h3 className="font-medium text-gray-900 truncate">{selectedRecipientName || t('studentDashboard.chat.supportTeam')}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.chat.responseTime')}</p>
               </div>
             </div>
             <button
@@ -428,9 +428,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     <Link
                       to={userProfile.role === 'school' ? `/school/dashboard/student/${selectedRecipientProfileId}` : `/admin/dashboard/students/${selectedRecipientProfileId}`}
                       className="text-xs bg-[#05294E] text-white hover:bg-[#041f3f] px-3 py-1.5 rounded-md font-medium whitespace-nowrap"
-                      title="Open student details"
+                      title={t('studentDashboard.chat.openStudentDetails')}
                     >
-                      View student details
+                      {t('studentDashboard.chat.viewStudentDetails')}
                     </Link>
                   )}
                 </div>
@@ -460,14 +460,14 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                 <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-900 mb-2">
                   {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school') 
-                    ? 'Select a student to chat with' 
-                    : 'Start a conversation'
+                    ? t('studentDashboard.chat.selectStudentToChat') 
+                    : t('studentDashboard.chat.startConversation')
                   }
                 </h3>
                 <p className="text-slate-500">
                   {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school')
-                    ? 'Choose a conversation from the sidebar to begin messaging'
-                    : 'Select a conversation or start a new one with support'
+                    ? t('studentDashboard.chat.chooseConversationSidebar')
+                    : t('studentDashboard.chat.selectConversationOrNew')
                   }
                 </p>
                 <div className="mt-4 text-center">
@@ -475,8 +475,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     <Users className="w-4 h-4 text-blue-600 mr-2" />
                     <span className="text-sm text-blue-700">
                       {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin' || userProfile.role === 'post_sales' || userProfile.role === 'school')
-                        ? 'No student conversations yet'
-                        : 'No conversations yet'
+                        ? t('studentDashboard.chat.noStudentConversationsYet')
+                        : t('studentDashboard.chat.noConversationsYet')
                       }
                     </span>
                   </div>

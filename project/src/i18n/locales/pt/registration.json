@@ -774,6 +774,9 @@
       "redirecting": "Aguarde, estamos redirecionando para o checkout"
     }
   },
+  "onboarding": {
+    "secureEnvironmentDisclaimer": "Você está em um ambiente seguro. Suas informações são protegidas durante todo o processo."
+  },
   "reinstatementFeeStep": {
     "title": "Taxa de Reintegração",
     "subtitle": "Para prosseguir com seu processo de transferência, é necessário o pagamento da taxa de reintegração (reinstatement).",

@@ -240,37 +240,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     });
   };
 
-    // Adicionar transações recentes de créditos
-    transactionsData?.forEach(transaction => {
-      recentActivity.push({
-        date: transaction.created_at,
-        type: transaction.type,
-        amount: transaction.amount,
-        description: transaction.description || 'Credit transaction'
-      });
-    });
-
-    // Ordenar por data e pegar os 10 mais recentes
-    recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    // Agora sim, pegar apenas os 10 primeiros APÓS ordenar tudo
-    const finalRecentActivity = recentActivity.slice(0, 10);
-
-
-    setFinancialAnalytics({
-      dailyRevenue,
-      monthlyRevenue,
-      referralTrends: {
-        totalReferrals,
-        completedReferrals,
-        conversionRate,
-        averageCommission
-      },
-      paymentMethodBreakdown,
-      recentActivity: finalRecentActivity
-    });
-  };
-
   // Create revenue chart
   const createRevenueChart = () => {
     if (!revenueChartRef.current || !window.Chart) return;

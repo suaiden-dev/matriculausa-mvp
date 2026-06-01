@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  DollarSign, 
   TrendingUp, 
   Clock, 
   CheckCircle, 
   AlertCircle, 
-  Filter, 
   Download, 
   Eye, 
   CreditCard, 
@@ -16,13 +14,10 @@ import {
   FileText,
   Plus,
   XCircle,
-  Shield,
   BarChart3,
   PieChart,
-  Calendar,
   ArrowUpRight,
-  ArrowDownRight,
-  Coins
+  ArrowDownRight
 } from 'lucide-react';
 
 // Declare Chart.js types
@@ -63,7 +58,6 @@ const PaymentManagement: React.FC = () => {
   } = usePayments(university?.id);
   
   // UI state
-  const [showFilters, setShowFilters] = useState(false);
   const [exporting, setExporting] = useState(false);
   
   // Payment request modal state
@@ -228,21 +222,26 @@ const PaymentManagement: React.FC = () => {
       setLoadingUniversityRequests(true);
       
       // Buscar todas as universidades do usuário para garantir que todos os payment requests sejam exibidos
-      const { data: userUniversities, error: universitiesError } = await supabase
-        .from('universities')
-        .select('id')
-        .eq('user_id', user.id);
-      
-      if (universitiesError) {
-        console.error('Error fetching user universities:', universitiesError);
-        // Fallback: usar apenas a universidade do contexto
-        const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
-        setUniversityPaymentRequests(requests);
-        return;
+      let userUniversityIds: string[] = [];
+      if (user.role === 'school_manager' && user.university_id) {
+        userUniversityIds = [user.university_id];
+      } else {
+        const { data: userUniversities, error: universitiesError } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id);
+
+        if (universitiesError) {
+          console.error('Error fetching user universities:', universitiesError);
+          const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
+          setUniversityPaymentRequests(requests);
+          return;
+        }
+        userUniversityIds = (userUniversities || []).map(u => u.id);
       }
-      
+
       // Buscar payment requests de todas as universidades do usuário
-      const universityIds = (userUniversities || []).map(u => u.id);
+      const universityIds = userUniversityIds;
       if (universityIds.length === 0) {
         setUniversityPaymentRequests([]);
         return;
@@ -461,12 +460,16 @@ const PaymentManagement: React.FC = () => {
     
     try {
       // Buscar todas as universidades do usuário
-      const { data: userUniversities } = await supabase
-        .from('universities')
-        .select('id')
-        .eq('user_id', user.id);
-      
-      const universityIds = (userUniversities || []).map(u => u.id);
+      let universityIds: string[] = [];
+      if (user.role === 'school_manager' && user.university_id) {
+        universityIds = [user.university_id];
+      } else {
+        const { data: userUniversities } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id);
+        universityIds = (userUniversities || []).map(u => u.id);
+      }
       if (universityIds.length === 0) return;
 
       // Buscar aplicações dos últimos 365 dias para análise temporal abranger 12 meses históricos
@@ -798,21 +801,19 @@ const PaymentManagement: React.FC = () => {
 
     const ctx = paymentStatusChartRef.current.getContext('2d');
     
-    // Calculate payment status distribution
-    const totalPaid = universityPaymentRequests.filter((r: any) => r.status === 'paid' || r.status === 'approved').length;
-    const totalPending = universityPaymentRequests.filter((r: any) => r.status === 'pending').length;
-    const totalRejected = universityPaymentRequests.filter((r: any) => r.status === 'rejected').length;
+    // Calculate application fee payment status distribution (student payments)
+    const totalPaid = financialAnalytics.applicationTrends.paidApplications;
+    const totalPending = financialAnalytics.applicationTrends.totalApplications - financialAnalytics.applicationTrends.paidApplications;
 
     const chart = new window.Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Paid', 'Pending', 'Rejected'],
+        labels: ['Paid', 'Pending'],
         datasets: [{
-          data: [totalPaid, totalPending, totalRejected],
+          data: [totalPaid, totalPending],
           backgroundColor: [
             '#10B981', // Green for paid
             '#F59E0B', // Yellow for pending
-            '#EF4444'  // Red for rejected
           ],
           borderColor: '#ffffff',
           borderWidth: 2,
@@ -1242,13 +1243,6 @@ const PaymentManagement: React.FC = () => {
                     Monitor and manage all scholarship payment requests and application fees.
                   </p>
                 </div>
-
-                <div className="flex items-center space-x-3">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
-                    <DollarSign className="w-5 h-5 mr-2" />
-                    {formatCurrency(universityBalance)} Available
-                  </div>
-                </div>
               </div>
 
               {/* Tabs Section */}
@@ -1336,15 +1330,6 @@ const PaymentManagement: React.FC = () => {
                           Request Payment
                         </button>
                       )}
-                      {activeTab === 'student-payments' && (
-                        <button
-                          onClick={() => setShowFilters(!showFilters)}
-                          className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-all duration-200 ease-in-out"
-                        >
-                          <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-                          Filters
-                        </button>
-                      )}
                       <button
                         onClick={handleExport}
                         disabled={exporting}
@@ -1369,11 +1354,9 @@ const PaymentManagement: React.FC = () => {
       {activeTab === 'student-payments' && (
         <>
           {/* Filters */}
-          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-          }`}>
+          <div>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                   <label htmlFor="search-query" className="block text-sm font-medium text-slate-700 mb-2">Search</label>
                   <div className="relative">
@@ -1420,23 +1403,24 @@ const PaymentManagement: React.FC = () => {
                     <option value="scholarship_fee">Scholarship Fee</option>
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="date-from" className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
-                  <div className="space-y-2">
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
+                  <div className="flex items-center gap-2">
                     <input
                       id="date-from"
                       type="date"
                       value={filters.date_from}
                       onChange={(e) => updateFilters({ date_from: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests from date"
                     />
+                    <span className="text-slate-400 text-sm font-medium shrink-0">→</span>
                     <input
                       id="date-to"
                       type="date"
                       value={filters.date_to}
                       onChange={(e) => updateFilters({ date_to: e.target.value })}
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests to date"
                     />
                   </div>
@@ -1455,65 +1439,30 @@ const PaymentManagement: React.FC = () => {
 
           {/* Student Payment Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Applications</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.total_applications}</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-blue-100 mb-1">Total Applications</p>
+              <p className="text-3xl font-bold">{stats.total_applications}</p>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-xl">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Paid Application Fees</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.paid_application_fees}</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-100 mb-1">Paid Application Fees</p>
+              <p className="text-3xl font-bold">{stats.paid_application_fees}</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-xl">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Pending Application Fees</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.pending_application_fees}</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-amber-100 mb-1">Pending Application Fees</p>
+              <p className="text-3xl font-bold">{stats.pending_application_fees}</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-violet-100 rounded-xl">
-                  <Coins className="w-6 h-6 text-violet-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Paid Reinstatements</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.paid_reinstatement_fees}</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-purple-100 mb-1">Paid Reinstatements</p>
+              <p className="text-3xl font-bold">{stats.paid_reinstatement_fees}</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-xl">
-                  <DollarSign className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
-                  <p className="text-xs text-slate-500">From all payment types</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-rose-100 mb-1">Total Revenue</p>
+              <p className="text-3xl font-bold">{formatCurrency(stats.total_revenue)}</p>
+              <p className="text-xs text-rose-200 mt-1">From all payment types</p>
             </div>
           </div>
 
@@ -1790,99 +1739,64 @@ const PaymentManagement: React.FC = () => {
 
           {/* University Requests Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-xl">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {loadingUniversityRequests ? (
-                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                     ) : (
-                       formatCurrency(financialStats.totalRevenue)
-                     )}
-                   </p>
-                   <p className="text-xs text-slate-500">From all payment types</p>
-                 </div>
-              </div>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-100 mb-1">Total Revenue</p>
+              <p className="text-3xl font-bold">
+                {loadingUniversityRequests ? (
+                  <div className="animate-pulse bg-emerald-400 h-8 w-20 rounded"></div>
+                ) : (
+                  formatCurrency(financialStats.totalRevenue)
+                )}
+              </p>
+              <p className="text-xs text-emerald-200 mt-1">From all payment types</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-violet-100 rounded-xl">
-                  <Coins className="w-6 h-6 text-violet-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Reinstatement Revenue</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(financialStats.totalReinstatementRevenue)
-                    )}
-                  </p>
-                  <p className="text-xs text-slate-500">From {financialStats.paidReinstatementsCount} students</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-violet-500 to-violet-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-violet-100 mb-1">Reinstatement Revenue</p>
+              <p className="text-3xl font-bold">
+                {loadingUniversityRequests ? (
+                  <div className="animate-pulse bg-violet-400 h-8 w-20 rounded"></div>
+                ) : (
+                  formatCurrency(financialStats.totalReinstatementRevenue)
+                )}
+              </p>
+              <p className="text-xs text-violet-200 mt-1">From {financialStats.paidReinstatementsCount} students</p>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <CreditCard className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Requested</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))
-                    )}
-                  </p>
-                  <p className="text-xs text-slate-500">All payment requests</p>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-blue-100 mb-1">Total Requested</p>
+              <p className="text-3xl font-bold">
+                {loadingUniversityRequests ? (
+                  <div className="animate-pulse bg-blue-400 h-8 w-20 rounded"></div>
+                ) : (
+                  formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))
+                )}
+              </p>
+              <p className="text-xs text-blue-200 mt-1">All payment requests</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-xl">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Pending Payment Requests</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {loadingUniversityRequests ? (
-                       <div className="animate-pulse bg-slate-200 h-8 w-8 rounded"></div>
-                     ) : (
-                       financialStats.pendingRequests
-                     )}
-                   </p>
-                   <p className="text-xs text-slate-500">Awaiting approval</p>
-                 </div>
-              </div>
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-amber-100 mb-1">Pending Payment Requests</p>
+              <p className="text-3xl font-bold">
+                {loadingUniversityRequests ? (
+                  <div className="animate-pulse bg-amber-400 h-8 w-8 rounded"></div>
+                ) : (
+                  financialStats.pendingRequests
+                )}
+              </p>
+              <p className="text-xs text-amber-200 mt-1">Awaiting approval</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-xl">
-                  <Shield className="w-6 h-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Available Balance</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {loadingUniversityRequests ? (
-                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                     ) : (
-                       formatCurrency(universityBalance)
-                     )}
-                   </p>
-                   <p className="text-xs text-slate-500">All revenues - active payment requests</p>
-                 </div>
-              </div>
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-rose-100 mb-1">Available Balance</p>
+              <p className="text-3xl font-bold">
+                {loadingUniversityRequests ? (
+                  <div className="animate-pulse bg-rose-400 h-8 w-20 rounded"></div>
+                ) : (
+                  formatCurrency(universityBalance)
+                )}
+              </p>
+              <p className="text-xs text-rose-200 mt-1">All revenues - active payment requests</p>
             </div>
           </div>
 
@@ -2048,98 +1962,53 @@ const PaymentManagement: React.FC = () => {
           {/* Key Financial Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
             {/* Total Revenue Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-                <div className={`flex items-center ${calculatedMetrics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {calculatedMetrics.revenueGrowth >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4 mr-1" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900 mb-1">
-                  {formatCurrency(financialStats.totalRevenue)}
-                </p>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-100 mb-1">Total Revenue</p>
+              <p className="text-3xl font-bold">{formatCurrency(financialStats.totalRevenue)}</p>
+              <p className="text-xs text-emerald-200 mt-1">From all payment types</p>
+              <div className="flex items-center bg-black/10 px-2 py-0.5 rounded-full text-xs text-white mt-2">
+                {calculatedMetrics.revenueGrowth >= 0 ? (
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 text-green-300" />
+                ) : (
+                  <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 text-red-300" />
+                )}
+                <span>
+                  {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
+                </span>
               </div>
             </div>
 
             {/* Reinstatement Revenue Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-violet-100 to-violet-50 rounded-xl">
-                  <Coins className="w-6 h-6 text-violet-600" />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Reinstatement Revenue</p>
-                <p className="text-3xl font-bold text-slate-900 mb-1">
-                  {formatCurrency(financialStats.totalReinstatementRevenue)}
-                </p>
-                <p className="text-xs text-slate-500">From {financialStats.paidReinstatementsCount} students</p>
-              </div>
+            <div className="bg-gradient-to-br from-violet-500 to-violet-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-violet-100 mb-1">Reinstatement Revenue</p>
+              <p className="text-3xl font-bold">{formatCurrency(financialStats.totalReinstatementRevenue)}</p>
+              <p className="text-xs text-violet-200 mt-1">From {financialStats.paidReinstatementsCount} students</p>
             </div>
 
             {/* Conversion Rate Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
-                  <TrendingUp className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Conversion Rate</p>
-                <p className="text-3xl font-bold text-slate-900 mb-1">
-                  {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
-                </p>
-                <p className="text-xs text-slate-500">Applications to payments</p>
-              </div>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-blue-100 mb-1">Conversion Rate</p>
+              <p className="text-3xl font-bold">
+                {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+              </p>
+              <p className="text-xs text-blue-200 mt-1">Applications to payments</p>
             </div>
 
             {/* Available Balance Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
-                  <Shield className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>
-                <p className="text-3xl font-bold text-slate-900 mb-1">
-                  {formatCurrency(universityBalance)}
-                </p>
-                <p className="text-xs text-slate-500">Ready for withdrawal</p>
-              </div>
+            <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <p className="text-sm font-semibold uppercase tracking-wider text-rose-100 mb-1">Available Balance</p>
+              <p className="text-3xl font-bold">{formatCurrency(universityBalance)}</p>
+              <p className="text-xs text-rose-200 mt-1">Ready for withdrawal</p>
             </div>
 
             {/* Average Fee Card */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl">
-                  <FileText className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div className="flex items-center text-yellow-600">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">
-                    {calculatedMetrics.totalApplications} apps
-                  </span>
-                </div>
+            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-2xl shadow-md text-white flex flex-col items-center text-center transition-transform hover:scale-[1.02]">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <p className="text-sm font-semibold uppercase tracking-wider text-yellow-100">Avg. Application Fee</p>
+                <span className="text-xs text-yellow-100">{calculatedMetrics.totalApplications}</span>
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 mb-1">Avg. Application Fee</p>
-                <p className="text-3xl font-bold text-slate-900 mb-1">
-                  {formatCurrency(financialAnalytics.applicationTrends.averageFee)}
-                </p>
-                <p className="text-xs text-slate-500">Per application</p>
-              </div>
+              <p className="text-3xl font-bold">{formatCurrency(financialAnalytics.applicationTrends.averageFee)}</p>
+              <p className="text-xs text-yellow-200 mt-1">Per application</p>
             </div>
           </div>
 
@@ -2284,7 +2153,7 @@ const PaymentManagement: React.FC = () => {
             {/* Payment Status Distribution */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Payment Status</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Application Fee Status</h3>
                 <PieChart className="w-5 h-5 text-slate-600" />
               </div>
               
@@ -2292,24 +2161,18 @@ const PaymentManagement: React.FC = () => {
                 <canvas ref={paymentStatusChartRef}></canvas>
               </div>
               
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="mt-4 grid grid-cols-2 gap-2 text-center">
                 <div>
                   <div className="text-lg font-semibold text-green-600">
-                    {universityPaymentRequests.filter((r: any) => r.status === 'paid' || r.status === 'approved').length}
+                    {financialAnalytics.applicationTrends.paidApplications}
                   </div>
                   <div className="text-xs text-slate-600">Paid</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-yellow-600">
-                    {universityPaymentRequests.filter((r: any) => r.status === 'pending').length}
+                    {financialAnalytics.applicationTrends.totalApplications - financialAnalytics.applicationTrends.paidApplications}
                   </div>
                   <div className="text-xs text-slate-600">Pending</div>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-red-600">
-                    {universityPaymentRequests.filter((r: any) => r.status === 'rejected').length}
-                  </div>
-                  <div className="text-xs text-slate-600">Rejected</div>
                 </div>
               </div>
             </div>

@@ -28,6 +28,12 @@
     "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
   },
   "footer": {
+    "sections": {
+      "platform": "La Plataforma",
+      "helpContact": "Ayuda y Contacto",
+      "explore": "Explorar",
+      "followUs": "Síguenos en redes sociales"
+    },
     "company": {
       "title": "Empresa",
       "about": "Sobre Nosotros",
@@ -58,7 +64,9 @@
       "privacy": "Política de Privacidad",
       "terms": "Términos de Servicio",
       "cookies": "Política de Cookies",
-      "manageCookies": "Gestionar Cookies"
+      "manageCookies": "Gestionar Cookies",
+      "disclaimerTitle": "Descargo de Responsabilidad Legal",
+      "disclaimerText": "MatriculaUSA no es un bufete de abogados, no ofrece asesoramiento legal, no garantiza la aprobación de visas y no representa al cliente ante consulados o USCIS. Nuestro soporte humano es únicamente operativo. Ofrecemos exclusivamente consultoría educativa y asistencia en la solicitud escolar."
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -125,7 +133,9 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. Todos los derechos reservados."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Hecho con ❤ para nuestros estudiantes",
+    "becomeAffiliate": "Conviértete en Afiliado"
   },
   "common": {
     "select": "Seleccione",
@@ -152,6 +162,8 @@
     "learnMore": "Saber más",
     "search": "Buscar",
     "support": "Soporte",
+    "payment": "Pago",
+    "general": "General",
     "welcome": "Bienvenido",
     "close": "Cerrar",
     "back": "Volver",

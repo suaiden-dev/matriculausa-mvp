@@ -28,6 +28,12 @@
     "zellePaymentPending": "Please wait for your Zelle payment verification before starting a new process."
   },
   "footer": {
+    "sections": {
+      "platform": "The Platform",
+      "helpContact": "Help & Contact",
+      "explore": "Explore",
+      "followUs": "Follow us on social media"
+    },
     "company": {
       "title": "Company",
       "about": "About Us",
@@ -58,7 +64,9 @@
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
       "cookies": "Cookie Policy",
-      "manageCookies": "Manage Cookies"
+      "manageCookies": "Manage Cookies",
+      "disclaimerTitle": "Legal Disclaimer",
+      "disclaimerText": "MatriculaUSA is not a law firm, does not offer legal advice, does not guarantee approval, and does not represent the client before consulates or USCIS. Human support is only operational. We offer educational consulting and school application assistance only."
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -125,7 +133,9 @@
         "processErrorRetry": "Error processing unsubscribe request. Please try again."
       }
     },
-    "copyright": "© 2026 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Made with ❤ for our students",
+    "becomeAffiliate": "Become an Affiliate"
   },
   "common": {
     "select": "Select",
@@ -152,6 +162,8 @@
     "learnMore": "Learn more",
     "search": "Search",
     "support": "Support",
+    "payment": "Payment",
+    "general": "General",
     "welcome": "Welcome",
     "close": "Close",
     "back": "Back",

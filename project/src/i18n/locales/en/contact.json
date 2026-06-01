@@ -11,7 +11,7 @@
     "subtitle": "Choose the best way to reach our team",
     "email": {
       "title": "Email Support",
-      "description": "Send us an email and we'll respond within 24 hours",
+      "description": "You can simply send us an email. Our Customer Experience team will get back with you ASAP.",
       "category": "Primary"
     },
     "phone": {
@@ -31,11 +31,9 @@
       "description": "Get instant help through WhatsApp messaging",
       "category": "Instant"
     },
-    "online": {
-      "title": "Online Support",
-      "value": "Smart Assistant",
-      "description": "AI-powered help available anytime",
-      "category": "AI"
+    "faq": {
+      "title": "FAQs",
+      "description": "Look through our Frequently Asked Questions to find the info you need."
     }
   }
 }
