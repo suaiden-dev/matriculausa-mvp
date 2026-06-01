@@ -3,75 +3,96 @@
 /* Container base para PhoneInput */
 .phone-input-school,
 .fax-input-school {
-  @apply flex w-full;
-}
-
-/* Seletor de país */
-.phone-input-school .PhoneInputCountrySelect,
-.fax-input-school .PhoneInputCountrySelect {
-  @apply border border-gray-300 bg-white transition-all duration-150 ease-in-out;
-  border-radius: 8px 0 0 8px !important;
-  padding: 8px 4px !important;
-  margin-right: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  background-color: white !important;
+  border: 1px solid #d1d5db !important; /* border-gray-300 */
+  border-radius: 8px !important;
   height: 42px !important;
-}
-
-.phone-input-school .PhoneInputCountrySelect:focus,
-.fax-input-school .PhoneInputCountrySelect:focus {
-  @apply outline-none border-[#05294E] ring-2 ring-[#05294E];
-  outline: 2px solid transparent !important;
-  outline-offset: 2px !important;
-}
-
-/* Input principal */
-.phone-input-school .PhoneInputInput,
-.fax-input-school .PhoneInputInput {
-  @apply w-full bg-white text-gray-900 transition-all duration-150 ease-in-out border border-gray-300 border-l-0;
-  padding: 8px 12px !important;
-  border-radius: 0 8px 8px 0 !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  height: 42px !important;
+  padding-left: 12px !important;
+  transition: all 150ms ease-in-out !important;
   box-sizing: border-box !important;
 }
 
+/* Efeitos de Hover no container */
+.phone-input-school:hover,
+.fax-input-school:hover {
+  border-color: #9ca3af !important; /* border-gray-400 */
+}
+
+/* Efeitos de Focus no container quando o input interno está ativo */
+.phone-input-school:focus-within,
+.fax-input-school:focus-within {
+  border-color: #05294E !important;
+  box-shadow: 0 0 0 2px rgba(5, 41, 78, 0.2) !important;
+}
+
+/* Container do seletor de país (Bandeira + Seta) */
+.phone-input-school .PhoneInputCountry,
+.fax-input-school .PhoneInputCountry {
+  display: flex !important;
+  align-items: center !important;
+  margin-right: 8px !important;
+  position: relative !important;
+}
+
+/* Ajuste da bandeira e da seta para não ficarem cortadas */
+.phone-input-school .PhoneInputCountryIcon,
+.fax-input-school .PhoneInputCountryIcon {
+  display: flex !important;
+  align-items: center !important;
+  height: 1.2em !important;
+}
+
+/* Esconder o select nativo feio e mantê-lo invisível como um overlay clicável */
+.phone-input-school .PhoneInputCountrySelect,
+.fax-input-school .PhoneInputCountrySelect {
+  opacity: 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+}
+
+/* Input principal limpo, sem bordas próprias para parecer um único campo contínuo */
+.phone-input-school .PhoneInputInput,
+.fax-input-school .PhoneInputInput {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  color: #111827 !important; /* text-gray-900 */
+  line-height: 1.5 !important;
+  box-sizing: border-box !important;
+  border-radius: 0 8px 8px 0 !important;
+}
+
+/* Reset de foco do input interno para não ter contorno duplo */
 .phone-input-school .PhoneInputInput:focus,
 .fax-input-school .PhoneInputInput:focus {
-  @apply outline-none border-[#05294E] ring-2 ring-[#05294E];
-  outline: 2px solid transparent !important;
-  outline-offset: 2px !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-/* Placeholder */
+/* Placeholder do input */
 .phone-input-school .PhoneInputInput::placeholder,
 .fax-input-school .PhoneInputInput::placeholder {
-  @apply text-gray-500;
+  color: #9ca3af !important; /* text-gray-400 */
 }
 
-/* Estados de erro */
-.phone-input-school.error .PhoneInputInput,
-.fax-input-school.error .PhoneInputInput {
-  @apply border-red-300;
+/* Estado de Erro no Container */
+.phone-input-school.error {
+  border-color: #fca5a5 !important; /* border-red-300 */
 }
 
-.phone-input-school.error .PhoneInputCountrySelect,
-.fax-input-school.error .PhoneInputCountrySelect {
-  @apply border-red-300;
+.phone-input-school.error:focus-within {
+  border-color: #ef4444 !important; /* border-red-500 */
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
 }
-
-/* Estados de hover */
-.phone-input-school:hover .PhoneInputInput:not(:focus),
-.fax-input-school:hover .PhoneInputInput:not(:focus) {
-  @apply border-gray-400;
-}
-
-.phone-input-school:hover .PhoneInputCountrySelect:not(:focus),
-.fax-input-school:hover .PhoneInputCountrySelect:not(:focus) {
-  @apply border-gray-400;
-}
-
-
-
-
-
-

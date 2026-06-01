@@ -11,7 +11,7 @@
     "subtitle": "Elija la mejor manera de comunicarse con nuestro equipo",
     "email": {
       "title": "Soporte por Correo",
-      "description": "Envíenos un correo electrónico y responderemos en 24 horas",
+      "description": "Simplemente puede enviarnos un correo electrónico. Nuestro equipo de Experiencia del Cliente se comunicará con usted lo antes posible.",
       "category": "Principal"
     },
     "phone": {
@@ -31,11 +31,9 @@
       "description": "Obtenga ayuda instantánea a través de mensajes de WhatsApp",
       "category": "Instante"
     },
-    "online": {
-      "title": "Soporte en Línea",
-      "value": "Asistente Inteligente",
-      "description": "Ayuda con inteligencia artificial disponible en cualquier momento",
-      "category": "IA"
+    "faq": {
+      "title": "FAQs",
+      "description": "Consulte nuestras Preguntas Frecuentes para encontrar la información que necesita."
     }
   }
 }

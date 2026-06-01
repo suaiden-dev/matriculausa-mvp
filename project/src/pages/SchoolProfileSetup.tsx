@@ -4,6 +4,7 @@ import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import NotificationService from '../services/NotificationService';
+import usCities from '../data/us-cities-by-state.json';
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -20,45 +21,151 @@ const US_STATES = [
   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
 ];
 
+// Lista de categorias/programas acadêmicos padrão
+const DEFAULT_PROGRAMS = [
+  'STEM', 'Business', 'Arts & Humanities', 'Social Sciences', 'Health Sciences',
+  'Engineering', 'Computer Science', 'Law', 'Medicine'
+];
+
+interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+interface Contact {
+  phone: string;
+  email: string;
+  admissionsEmail: string;
+  fax: string;
+}
+
+interface SchoolProfileFormData {
+  name: string;
+  description: string;
+  website: string;
+  location: string;
+  address: Address;
+  contact: Contact;
+  programs: string[];
+}
+
 const SchoolProfileSetup: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    const savedStep = localStorage.getItem('school_setup_profile_step');
+    if (savedStep) {
+      const step = parseInt(savedStep, 10);
+      if (step >= 1 && step <= 4) return step;
+    }
+    return 1;
+  });
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const { user } = useAuth();
 
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    // Basic Information
-    name: '',
-    description: '',
-    website: '',
-    
-    // Location
-    location: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'United States'
-    },
-    
-    // Contact Information
-    contact: {
-      phone: '',
-      email: '',
-      admissionsEmail: '',
-      fax: ''
-    },
-    
-    // Academic Information
-    programs: [] as string[],
+  const [formData, setFormData] = useState<SchoolProfileFormData>(() => {
+    const saved = localStorage.getItem('school_setup_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing school_setup_profile from localStorage', e);
+      }
+    }
+    return {
+      // Basic Information
+      name: '',
+      description: '',
+      website: '',
+      
+      // Location
+      location: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'United States'
+      },
+      
+      // Contact Information
+      contact: {
+        phone: '',
+        email: '',
+        admissionsEmail: '',
+        fax: ''
+      },
+      
+      // Academic Information
+      programs: [] as string[],
+    };
   });
 
+  // Salvar no localStorage sempre que o formData ou currentStep mudarem
+  useEffect(() => {
+    localStorage.setItem('school_setup_profile', JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
+    localStorage.setItem('school_setup_profile_step', String(currentStep));
+  }, [currentStep]);
+
+  // Carregar cidades sempre que o estado selecionado mudar
+  useEffect(() => {
+    fetchCitiesByState(formData.address.state);
+  }, [formData.address.state]);
+
   const [newProgram, setNewProgram] = useState('');
+  const [isCustomProgram, setIsCustomProgram] = useState(false);
+  const [customProgramName, setCustomProgramName] = useState('');
 
-  // A lógica de busca do cities.json foi removida para evitar pacotes pesados de dependência e erros de build.
+  // Interface removida - usando any[] para flexibilidade com diferentes formatos
 
+
+  // ✅ OTIMIZAÇÃO: Busca instantânea das cidades a partir do JSON de estados dos EUA otimizado
+  const fetchCitiesByState = (state: string) => {
+    if (!state) {
+      setCities([]);
+      return;
+    }
+
+    setLoadingCities(true);
+    
+    try {
+      const stateCode = getStateAbbreviation(state);
+      const stateData = (usCities.states as Record<string, { name: string; cities: string[] }>)[stateCode];
+      const stateCities = stateData ? stateData.cities : [];
+      setCities(stateCities);
+    } catch (error: any) {
+      console.error('Erro ao buscar cidades:', error.message);
+      setCities([]);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // Função para obter abreviação do estado
+  const getStateAbbreviation = (stateName: string): string => {
+    const stateAbbreviations: Record<string, string> = {
+      'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+      'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+      'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+      'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+      'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+      'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH',
+      'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC',
+      'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+      'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN',
+      'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+      'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
+    };
+    return stateAbbreviations[stateName] || '';
+  };
 
 
   useEffect(() => {
@@ -74,7 +181,7 @@ const SchoolProfileSetup: React.FC = () => {
         .from('universities')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -165,19 +272,23 @@ const SchoolProfileSetup: React.FC = () => {
   };
 
   const addProgram = () => {
-    if (newProgram.trim() && !formData.programs.includes(newProgram.trim())) {
+    const programToAdd = isCustomProgram ? customProgramName.trim() : newProgram.trim();
+    
+    if (programToAdd && !formData.programs.includes(programToAdd)) {
       setFormData(prev => ({
         ...prev,
-        programs: [...prev.programs, newProgram.trim()]
+        programs: [...prev.programs, programToAdd]
       }));
       setNewProgram('');
+      setCustomProgramName('');
+      setIsCustomProgram(false);
     }
   };
 
   const removeProgram = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      programs: prev.programs.filter((_, i) => i !== index)
+      programs: prev.programs.filter((_: string, i: number) => i !== index)
     }));
   };
 
@@ -198,9 +309,23 @@ const SchoolProfileSetup: React.FC = () => {
         if (!formData.address.zipCode.trim()) newErrors['address.zipCode'] = 'ZIP code is required';
         break;
       case 3:
-        if (!formData.contact.phone || formData.contact.phone.length < 8) newErrors['contact.phone'] = 'Please enter a valid phone number with country code';
-        if (!formData.contact.email.trim()) newErrors['contact.email'] = 'Email is required';
-        if (!formData.contact.admissionsEmail.trim()) newErrors['contact.admissionsEmail'] = 'Admissions email is required';
+        if (!formData.contact.phone || formData.contact.phone.length < 8) {
+          newErrors['contact.phone'] = 'Please enter a valid phone number with country code';
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!formData.contact.email.trim()) {
+          newErrors['contact.email'] = 'Email is required';
+        } else if (!emailRegex.test(formData.contact.email.trim())) {
+          newErrors['contact.email'] = 'Please enter a valid email address';
+        }
+        
+        if (!formData.contact.admissionsEmail.trim()) {
+          newErrors['contact.admissionsEmail'] = 'Admissions email is required';
+        } else if (!emailRegex.test(formData.contact.admissionsEmail.trim())) {
+          newErrors['contact.admissionsEmail'] = 'Please enter a valid admissions email';
+        }
         break;
       case 4:
         if (formData.programs.length === 0) newErrors.programs = 'At least one program is required';
@@ -247,6 +372,10 @@ const SchoolProfileSetup: React.FC = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Limpar o localStorage após o cadastro concluído com sucesso
+      localStorage.removeItem('school_setup_profile');
+      localStorage.removeItem('school_setup_profile_step');
 
       // Enviar notificação para o admin sobre universidade pendente para aprovação
       try {
@@ -422,15 +551,27 @@ const SchoolProfileSetup: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.address.city}
                     onChange={(e) => handleInputChange('address.city', e.target.value)}
+                    disabled={!formData.address.state || loadingCities}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
                       errors['address.city'] ? 'border-red-300' : 'border-gray-300'
                     }`}
-                    placeholder="Enter city"
-                  />
+                  >
+                    <option value="">
+                      {!formData.address.state
+                        ? 'Select a state first'
+                        : loadingCities
+                        ? 'Loading cities...'
+                        : 'Select a city'}
+                    </option>
+                    {cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
                   {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
                 </div>
 
@@ -447,7 +588,7 @@ const SchoolProfileSetup: React.FC = () => {
                     readOnly
                   />
                   {errors.location && <p className="text-red-600 text-xs mt-1">{errors.location}</p>}
-                  <p className="text-xs text-gray-500 mt-1">Este campo é preenchido automaticamente baseado na cidade e estado</p>
+                  <p className="text-xs text-gray-500 mt-1">This field is automatically filled based on the city and state</p>
                 </div>
 
                 <div>
@@ -496,6 +637,8 @@ const SchoolProfileSetup: React.FC = () => {
                     addInternationalOption={false}
                     value={formData.contact.phone}
                     onChange={(value) => handlePhoneChange('contact.phone', value)}
+                    limitMaxLength={true}
+                    maxLength={20}
                     style={{
                       '--PhoneInputCountryFlag-height': '1.2em',
                       '--PhoneInputCountrySelectArrow-opacity': '0.8',
@@ -515,6 +658,8 @@ const SchoolProfileSetup: React.FC = () => {
                     addInternationalOption={false}
                     value={formData.contact.fax}
                     onChange={(value) => handlePhoneChange('contact.fax', value)}
+                    limitMaxLength={true}
+                    maxLength={20}
                     style={{
                       '--PhoneInputCountryFlag-height': '1.2em',
                       '--PhoneInputCountrySelectArrow-opacity': '0.8',
@@ -568,24 +713,68 @@ const SchoolProfileSetup: React.FC = () => {
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Academic Programs *</label>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newProgram}
-                        onChange={(e) => setNewProgram(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                        placeholder="Enter program name"
-                        onKeyPress={(e) => e.key === 'Enter' && addProgram()}
-                      />
-                      <button
-                        type="button"
-                        onClick={addProgram}
-                        className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <div className="space-y-3">
+                      {!isCustomProgram ? (
+                        <div className="flex gap-2">
+                          <select
+                            value={newProgram}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'custom') {
+                                setIsCustomProgram(true);
+                                setNewProgram('');
+                              } else if (val) {
+                                if (!formData.programs.includes(val)) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    programs: [...prev.programs, val]
+                                  }));
+                                }
+                                setNewProgram('');
+                              }
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                          >
+                            <option value="">Select a program...</option>
+                            {DEFAULT_PROGRAMS.map((program) => (
+                              <option key={program} value={program}>
+                                {program}
+                              </option>
+                            ))}
+                            <option value="custom">-- Custom Program (Type manually) --</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={customProgramName}
+                            onChange={(e) => setCustomProgramName(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                            placeholder="Enter custom program name"
+                            onKeyPress={(e) => e.key === 'Enter' && addProgram()}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={addProgram}
+                            disabled={!customProgramName.trim()}
+                            className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomProgram(false);
+                              setCustomProgramName('');
+                            }}
+                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     
                     {formData.programs.length > 0 && (
                       <div className="flex flex-wrap gap-2">

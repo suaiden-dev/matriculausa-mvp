@@ -74,6 +74,7 @@ const StudentDetails: React.FC = () => {
       is_scholarship_fee_paid: application.is_scholarship_fee_paid || profile.is_scholarship_fee_paid,
       acceptance_letter_status: application.acceptance_letter_status || null,
       student_process_type: application.student_process_type || profile.student_process_type || null,
+      visa_transfer_active: (profile as any).visa_transfer_active,
       seller_referral_code: profile.seller_referral_code || null,
       application_id: application.id,
       scholarship_id: application.scholarship_id,

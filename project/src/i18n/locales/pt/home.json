@@ -1,10 +1,12 @@
 {
   "home": {
     "hero": {
-      "title": "Sua Porta de Entrada para Universidades Americanas",
+      "title": "Estude nos EUA com bolsa em universidades americanas.",
+      "titleMain": "Estude nos EUA com",
+      "titleHighlight": "bolsa em universidades americanas.",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo para estudar nos EUA.",
-      "cta": "Inicie Seu Processo",
+      "description": "A Matrícula USA ajuda você a encontrar universidades americanas com bolsas híbridas, poucas aulas presenciais e oportunidades com permissão de trabalho, para estudar nos EUA com mais estratégia, economia e liberdade.",
+      "cta": "Começar Agora",
       "watchVideo": "Assistir Vídeo",
       "stats": {
         "successRate": {
@@ -24,26 +26,43 @@
       "loginToView": "Fazer Login para Ver",
       "featured": "Destaque"
     },
+    "featuredScholarships": {
+      "title": "Bolsas mais procuradas",
+      "titleMain": "Bolsas",
+      "titleHighlight": "mais procuradas.",
+      "viewAll": "Ver todas",
+      "subtitle": "Essas são só algumas das bolsas que podem ser suas. Quer ver quais combinam com você? Faça seu processo seletivo e descubra nosso catálogo completo esperando por você."
+    },
+    "trustedUniversities": {
+      "badge": "Rede de Instituições Parceiras",
+      "titleMain": "As Melhores",
+      "titleHighlight": "Universidades Americanas",
+      "description": "Nossos alunos são aceitos em algumas das mais prestigiadas e reconhecidas universidades dos Estados Unidos. Inicie seu Processo Seletivo e garanta seu lugar."
+    },
     "features": {
       "whyChoose": "Por Que Escolher MatriculaUSA?",
-      "title": "Por Que Escolher MatriculaUSA?",
-      "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
-      "smartMatching": {
-        "title": "Correspondência Inteligente",
-        "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+      "title": "Encontre as melhores oportunidades para o seu perfil.",
+      "titleMain": "Encontre as melhores oportunidades",
+      "titleHighlight": "para o seu perfil.",
+      "subtitle": "Com o processo seletivo da Matrícula USA, você entende quais oportunidades combinam com seu perfil e recebe um caminho claro para iniciar sua jornada acadêmica nos Estados Unidos.",
+      "opportunities": {
+        "title": "Processo Seletivo simples",
+        "description": "Em poucos passos a gente avalia seu perfil, organiza seus documentos e te conecta às bolsas certas. Comece em 5 minutos."
       },
-      "exclusiveScholarships": {
-        "title": "Bolsas Exclusivas",
-        "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+      "universities": {
+        "title": "Bolsas exclusivas",
+        "description": "Mais de 150 bolsas em universidades parceiras nos EUA, com descontos que só os alunos da Matrícula USA têm acesso."
       },
-      "personalSupport": {
-        "title": "Suporte Pessoal",
-        "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+      "confidence": {
+        "title": "Garantia de aprovação",
+        "description": "Se sua bolsa não sair, devolvemos seu investimento. Você só avança com a gente quando o caminho está confirmado."
       },
-      "fastProcess": {
-        "title": "Processo Rápido",
-        "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
-      }
+      "moreThanStudy": {
+        "title": "Mais do que estudar fora",
+        "description": "É sobre viver uma nova cultura, ampliar sua visão de mundo e construir um futuro com mais possibilidades."
+      },
+      "universitiesNumber": "+500",
+      "universitiesCount": "universidades"
     },
     "stats": {
       "students": "Estudantes Colocados",
@@ -59,7 +78,7 @@
       "secure": "100% Seguro"
     },
     "faq": {
-      "title": "Perguntas Frecuentes",
+      "title": "Perguntas Frequentes",
       "mainTitle": "Tudo o que Você Precisa Saber",
       "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
       "badge": "Perguntas e Respostas",
@@ -69,85 +88,109 @@
       "footerContact": "Use os botões flutuantes para ajuda instantânea ou contate-nos diretamente em info@matriculausa.com",
       "instantAiResponses": "Respostas instantâneas por IA",
       "availability": "Disponibilidade 24/7",
+      "whatsappCardDesc": "Obtenha ajuda instantânea por mensagens do WhatsApp disponível 24 horas por dia, 7 dias por semana",
       "questions": {
         "q1": {
-          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
-          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+          "question": "O que é o Processo Seletivo?",
+          "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q2": {
-          "question": "O que é o Processo Seletivo?",
-          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
-        },
-        "q3": {
-          "question": "O que é a Taxa de Colocação (Placement Fee)?",
-          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Cobre o trabalho profissional incluindo análise acadêmica, identificação de opções universitárias, negociação de bolsas e suporte no processo de matrícula. Esta taxa é variável e diretamente ligada ao valor da bolsa."
-        },
-        "q4": {
-          "question": "O que é a Taxa de Matrícula?",
-          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
-        },
-        "q5": {
           "question": "Existe suporte para o processo de visto?",
           "answer": "Sim! A Taxa de Colocação inclui suporte especializado para seu processo de visto de estudante. Nossa equipe guia você em todas as etapas necessárias para garantir que você tenha os documentos corretos para sua chegada nos EUA."
         },
+        "q3": {
+          "question": "E se eu não for aprovado em nenhuma bolsa?",
+          "answer": "Se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, o valor pago do Processo Seletivo poderá ser reembolsado."
+        },
+        "q4": {
+          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+        },
+        "q5": {
+          "question": "O que é a Taxa de Matrícula?",
+          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+        },
         "q6": {
+          "question": "O que é a Taxa de Colocação (Placement Fee)?",
+          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Cobre o trabalho profissional incluindo análise acadêmica, identificação de opções universitárias, negociação de bolsas e suporte no processo de matrícula. Esta taxa é variável e diretamente ligada ao valor da bolsa."
+        },
+        "q7": {
           "question": "Existem outras taxas que devo conhecer?",
           "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas sempre serão comunicadas diretamente pela universidade ou por nós antecipadamente."
         },
-        "q7": {
-          "question": "Como posso pagar essas taxas?",
-          "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação."
-        },
         "q8": {
+          "question": "Como posso pagar essas taxas?",
+          "answer": "Você pode pagar todas as taxas diretamente pela plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, Parcelow e Zelle, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+        },
+        "q9": {
           "question": "Minhas informações de pagamento estão seguras?",
           "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
         },
-        "q9": {
-          "question": "Posso obter reembolso?",
-          "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
-        },
         "q10": {
+          "question": "Posso obter reembolso?",
+          "answer": "O reembolso se aplica apenas ao valor do Processo Seletivo, caso nenhuma das bolsas selecionadas resulte em aprovação. Porém, se você desistir ou abandonar o processo após confirmar uma bolsa aprovada, o valor não será reembolsável, pois o processamento e o suporte já estarão em andamento."
+        },
+        "q11": {
           "question": "Tenho que pagar todas as taxas de uma vez?",
           "answer": "Não. As taxas são separadas e pagas em etapas conforme você avança no processo. Você paga primeiro a Taxa do Processo Seletivo, depois a Taxa de Matrícula (se aplicável) e, finalmente, a Taxa de Colocação associada à bolsa escolhida. Todas são obrigatórias, mas pagas em momentos diferentes."
         },
-        "q11": {
+        "q12": {
           "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
           "answer": "Nossa equipe de suporte está disponível via chat ou email a qualquer momento para responder a qualquer dúvida sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudá-lo a cada passo do caminho!"
         }
       }
     },
     "threeSteps": {
-      "title": "Três Passos para Sua Educação Americana",
-      "subtitle": "Processo Simples",
+      "title": "Uma experiência que pode mudar sua vida",
+      "titleMain": "Uma experiência que pode",
+      "titleHighlight": "mudar sua vida.",
+      "subtitle": "Benefícios",
       "step1": {
-        "title": "Crie Seu Perfil",
-        "description": "Construa seu perfil abrangente de estudante com histórico acadêmico, objetivos e preferências para nos ajudar a encontrar a combinação perfeita."
+        "title": "Experiência Internacional",
+        "description": "Permissão de trabalho durante e após o curso (CPT e OPT). Ganhe experiência internacional, complemente a renda e construa carreira nos EUA."
       },
       "step2": {
-        "title": "Descubra Oportunidades",
-        "description": "Navegue pela nossa seleção curada de escolas e oportunidades exclusivas de bolsas adaptadas ao seu perfil e interesses."
+        "title": "Networking de Alto Nível",
+        "description": "Conecte-se com estudantes e profissionais do mundo todo. Construa uma rede de contatos poderosa nos EUA que abrirá portas para sua carreira global."
       },
-      "step3": {
-        "title": "Complete a Matrícula",
-        "description": "Candidate-se com nosso processo simplificado e receba suporte abrangente até estar matriculado com sucesso na instituição escolhida."
+      "step4": {
+        "title": "Ganhe confiança para ir além",
+        "description": "Quando você percebe que esse sonho é possível, começa a enxergar sua vida com outros olhos."
+      },
+      "step5": {
+        "title": "Transforme distância em possibilidade",
+        "description": "O que antes parecia longe pode se tornar o começo de uma nova jornada."
       }
     },
-    "successStories": {
-      "title": "Histórias de Sucesso",
-      "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
-      "testimonial1": {
+    "successWall": {
+      "title": {
+        "part1": "Nosso",
+        "highlight": "Mural de Sucesso"
+      },
+      "subtitle": "Conheça os alunos que realizaram o sonho de estudar nos EUA com a MatriculaUSA.",
+      "stats": {
+        "enrolled": "Alunos matriculados",
+        "approval": "Taxa de aprovação",
+        "universities": "Universidades parceiras"
+      },
+      "photoLabel": "Foto do aluno",
+      "videoLabel": "Depoimento em vídeo",
+      "tagPhoto": "Foto",
+      "tagVideo": "Vídeo",
+      "tagTestimonial": "Depoimento",
+      "card1": {
         "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
         "author": "Gustavo Santos",
         "field": "Ciência da Computação"
       },
-      "testimonial2": {
+      "card2": {
         "text": "O processo de matrícula foi perfeito. Da candidatura ao suporte para visto, o MatriculaUSA me orientou em cada passo do caminho.",
         "author": "Carlos Rodriguez",
         "field": "Escola de Negócios"
       },
-      "testimonial3": {
+      "card3": {
         "text": "Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.",
-        "actionRequired": "AÇÃO NECESSÁRIA",
+        "author": "Ana Chen",
         "field": "Engenharia"
       }
     },
@@ -157,6 +200,7 @@
       "button": "Comece Seu Processo Hoje",
       "learnMore": "Saiba Mais",
       "badge": "Junte-se a mais de 5.000 {{students}}",
+      "studyAndWork": "Estudar e trabalhar nos EUA",
       "features": {
         "freeToStart": "Gratuito para começar",
         "noHiddenFees": "Sem taxas ocultas",
@@ -174,9 +218,12 @@
     }
   },
   "howItWorks": {
-    "title": "Como Funciona",
-    "subtitle": "Seu caminho para uma universidade americana, passo a passo",
+    "title": "A forma mais inteligente de estudar nos EUA",
+    "subtitle": "Clareza para transformar vontade em movimento.",
     "journey": "Seu Processo",
+    "cta": {
+      "start": "Começar Processo Agora"
+    },
     "stats": {
       "setup": "Configuração em 5 Minutos",
       "success": "95% de Taxa de Sucesso",
@@ -184,8 +231,8 @@
     },
     "steps": {
       "profile": {
-        "title": "Crie Seu Perfil",
-        "description": "Preencha suas informações acadêmicas e pessoais. Nossa IA encontra suas melhores opções.",
+        "title": "Inicie o Processo Seletivo",
+        "description": "Faça nosso questionário e escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
         "items": [
           "Histórico acadêmico e conquistas",
           "Objetivos de carreira e preferências",
@@ -194,8 +241,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Pague Taxa do Processo Seletivo ($400)",
-        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável. (+$150 por dependente)",
+        "title": "Avance com sua bolsa aprovado",
+        "description": "Selecione a melhor bolsa para continuar seu processo de matricula",
         "items": [
           "Acesso para navegar pelas bolsas",
           "Iniciar processo de candidatura",
@@ -203,8 +250,8 @@
         ]
       },
       "documents": {
-        "title": "Escolha Bolsas e Envie Documentos",
-        "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
+        "title": "Prepare sua matrícula com especialistas ao seu lado",
+        "description": "Envie seus documentos pela plataforma e conte com suporte especializado em cada etapa do processo, da candidatura à matrícula.",
         "items": [
           "Selecione até 4 bolsas",
           "Upload seguro de documentos",
@@ -212,8 +259,8 @@
         ]
       },
       "applicationFee": {
-        "title": "Pague Taxa de Matrícula",
-        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)",
+        "title": "Viva sua conquista",
+        "description": "Receba sua carta de aceite e comece seu novo capítulo nos EUA. Estaremos prontos para te receber no primeiro dia!",
         "items": [
           "Visualize bolsas aprovadas",
           "Confirme sua escolha de universidade",
@@ -233,23 +280,61 @@
       }
     },
     "whyUs": {
+      "mainTitle": "O Atalho entre Bolsas e Universidades Americanas",
       "title": "Por Que MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Descoberta Inteligente",
-        "description": "IA encontra as melhores bolsas para você"
+        "title": "Bolsas Exclusivas (+154 opções)",
+        "description": "Acesse oportunidades diretas com anuidades reduzidas que você não encontra em agências tradicionais."
       },
       "documentManagement": {
-        "title": "Gerenciamento de Documentos",
-        "description": "Envie e acompanhe todos seus documentos facilmente"
+        "title": "Mentoria com Especialistas",
+        "description": "A oportunidade certa começa quando seu perfil encontra o programa ideal. Com uma orientação estratégica, sua jornada para estudar nos EUA fica mais clara, possível e próxima da realidade."
       },
       "personalSupport": {
-        "title": "Suporte Pessoal",
-        "description": "Nossa equipe te ajuda em cada etapa"
+        "title": "Economia Real",
+        "description": "Um investimento único na plataforma que substitui as altas taxas e custos ocultos de agências de intercâmbio."
       },
       "successTracking": {
-        "title": "Acompanhamento de Sucesso",
-        "description": "Veja seu progresso e próximos passos em tempo real"
+        "title": "Gestão Simplificada",
+        "description": "Gerencie todo o seu processo em um só lugar, do envio de documentos à aprovação final, de forma 100% digital."
+      },
+      "benefits": {
+        "clarity": {
+          "title": "Clareza para escolher melhor",
+          "description": "Entenda quais caminhos fazem sentido para seu perfil, seus objetivos e sua realidade."
+        },
+        "support": {
+          "title": "Acompanhamento humano",
+          "description": "Converse com especialistas que entendem o processo e ajudam você a avançar com mais confiança."
+        }
       }
+    },
+    "selectionFeeShowcase": {
+      "title": "O caminho mais seguro para conquistar sua bolsa nos EUA",
+      "subtitle": "Compare a diferença entre tentar sozinho, depender de processos tradicionais e avançar com uma estrutura pensada para aproximar você da sua aprovação.",
+      "traditionalWay": "Meio Tradicional (Agências)",
+      "ourWay": "Com Matrícula USA",
+      "savings": "Economia Significativa",
+      "startProcess": "Quero conquistar minha bolsa",
+      "traditionalItems": [
+        "Incerteza no valor final",
+        "Taxas ocultas por cada serviço",
+        "Processo manual e lento",
+        "Múltiplos pagamentos picados",
+        "Sem garantia de bolsa real"
+      ],
+      "ourItems": [
+        "Valor total transparente",
+        "Bolsas de estudo exclusivas",
+        "Mentoria humana dedicada",
+        "Tudo em uma só plataforma",
+        "Garantia de aprovação Suaide"
+      ]
+    },
+    "bottomCTA": {
+      "title": "Pronto para estudar nos EUA?",
+      "description": "Junte-se a centenas de estudantes e inicie seu processo agora mesmo. A sua aprovação está mais próxima do que nunca.",
+      "button": "Iniciar Minha Jornada"
     },
     "successStories": {
       "title": "Histórias de Sucesso",
@@ -275,51 +360,110 @@
       }
     },
     "faq": {
-      "title": "Perguntas Frequentes",
+      "title": "Tudo o que você precisa saber",
       "q1": {
-        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
-        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+        "question": "O que é o Processo Seletivo?",
+        "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
       },
       "q2": {
-        "question": "O que é o Processo Seletivo?",
-        "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Este valor é final e você será reembolsado caso não seja aceito em nenhuma universidade."
-      },
-      "q3": {
-        "question": "O que é a Taxa de Colocação (Placement Fee)?",
-        "answer": "A taxa de colocação cobre o trabalho profissional necessário para conectar e matricular com sucesso um aluno no programa universitário correto. Esta taxa é variável e está diretamente ligada ao valor da bolsa: quanto maior a taxa de colocação, menor será a sua anuidade (tuition)."
-      },
-      "q4": {
-        "question": "O que é a Taxa de Matrícula?",
-        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
-      },
-      "q5": {
         "question": "Como eu escolho minha bolsa?",
         "answer": "Ao se inscrever no Processo Seletivo, você pode se candidatar a até 4 bolsas. A plataforma mostra as opções compatíveis com seu perfil e você decide em quais se candidatar. Se tiver dúvidas na hora de escolher, nossa equipe de suporte está pronta para te orientar."
       },
+      "q3": {
+        "question": "E se eu não for aprovado em nenhuma bolsa?",
+        "answer": "Se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, o valor pago do Processo Seletivo poderá ser reembolsado."
+      },
+      "q4": {
+        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q5": {
+        "question": "O que é a Taxa de Matrícula?",
+        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+      },
       "q6": {
+        "question": "O que é a Taxa de Colocação (Placement Fee)?",
+        "answer": "A taxa de colocação cobre o trabalho profissional necessário para conectar e matricular com sucesso um aluno no programa universitário correto. Esta taxa é variável e está diretamente ligada ao valor da bolsa: quanto maior a taxa de colocação, menor será a sua anuidade (tuition)."
+      },
+      "q7": {
         "question": "Existem outras taxas que devo conhecer?",
         "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas serão sempre comunicadas diretamente pela universidade ou por nós com antecedência. Todas as taxas são finais e não reembolsáveis."
       },
-      "q7": {
-        "question": "Como posso pagar essas taxas?",
-        "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação por cada transação. Todas as taxas são finais e não reembolsáveis."
-      },
       "q8": {
+        "question": "Como posso pagar essas taxas?",
+        "answer": "Você pode pagar todas as taxas diretamente pela plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, Parcelow e Zelle, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q9": {
         "question": "Minhas informações de pagamento são seguras?",
         "answer": "Sim. O MatriculaUSA utiliza processadores de pagamento e padrões de segurança líderes do setor. Seus dados de pagamento nunca são armazenados em nossos servidores, e todas as transações são totalmente criptografadas para sua proteção. Você pode escolher entre os métodos de pagamento disponíveis na plataforma."
       },
-      "q9": {
-        "question": "Posso obter reembolso?",
-        "answer": "Sim — se nenhuma das bolsas para as quais você se candidatou resultar em aprovação, devolvemos 100% do valor do Processo Seletivo. Caso desista ou abandone o processo após confirmar uma bolsa aprovada, o valor não é reembolsável, pois o processamento e suporte já estarão em andamento."
-      },
       "q10": {
-        "question": "Tenho que pagar todas as taxas de uma vez?",
-        "answer": "Não. As taxas são compras independentes e são pagas em etapas conforme você avança no processo. Você paga a Taxa de Processo de Seleção $400 primeiro, depois a Taxa de Matrícula (se aplicável) e, finalmente, a Taxa de Colocação associada à bolsa escolhida."
+        "question": "Posso obter reembolso?",
+        "answer": "O reembolso se aplica apenas ao valor do Processo Seletivo, caso nenhuma das bolsas selecionadas resulte em aprovação. Porém, se você desistir ou abandonar o processo após confirmar uma bolsa aprovada, o valor não será reembolsável, pois o processamento e o suporte já estarão em andamento."
       },
       "q11": {
+        "question": "Tenho que pagar todas as taxas de uma vez?",
+        "answer": "Não. As taxas são compras independentes e são pagas em etapas conforme você avança no processo. Você paga o Processo Seletivo primeiro, depois a Taxa de Matrícula (se aplicável) e, finalmente, a Taxa de Colocação associada à bolsa escolhida."
+      },
+      "q12": {
         "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
         "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
       }
+    },
+    "mockups": {
+      "mySelection": "Minha Seleção",
+      "preSelectedCourses": "Cursos Pré-Selecionados",
+      "selectedCount": "4 / 4 Selecionados",
+      "undergraduate": "Graduação",
+      "graduate": "Mestrado",
+      "year": "ano",
+      "exclusive": "Exclusiva",
+      "originalTuition": "Anuidade Original",
+      "withScholarship": "Com Bolsa de Estudo",
+      "guaranteedDiscount": "Desconto Garantido",
+      "approved": "Aprovado",
+      "onboarding": "Onboarding",
+      "universityDocuments": "Documentos da Universidade",
+      "sentCount": "2 / 3 Enviados",
+      "officialPassport": "Passaporte Oficial",
+      "approvedCheck": "Aprovado ✓",
+      "academicTranscripts": "Histórico Escolar",
+      "underReview": "Em Análise",
+      "financialStatement": "Comprovante Financeiro",
+      "uploading": "Enviando...",
+      "officeAdmissions": "Escritório de Admissões",
+      "congratulations": "Parabéns!",
+      "admittedMessage": "Você foi oficialmente admitido para a turma de 2026.",
+      "status": "Status",
+      "scholarshipLabel": "Bolsa de Estudo",
+      "startDate": "Data de Início",
+      "admittedVisa": "Admitido — Visto F-1",
+      "fall2026": "Outono 2026"
+    },
+    "showcaseTable": {
+      "differential": "Diferencial",
+      "doItAlone": "Fazer sozinho",
+      "traditionalAgencies": "Agências tradicionais",
+      "accessScholarships": "Acesso a bolsas",
+      "difficultOpportunities": "Difícil encontrar oportunidades reais",
+      "fewOptions": "Poucas opções ou descontos limitados",
+      "exclusiveScholarships": "Bolsas exclusivas com grandes descontos",
+      "supportMentorship": "Suporte e mentoria",
+      "decideAlone": "Você decide tudo por conta própria",
+      "genericService": "Atendimento genérico e pouco personalizado",
+      "strategicOrientation": "Orientação estratégica com especialistas",
+      "costTransparency": "Transparência nos custos",
+      "hiddenExpenses": "Gastos podem aparecer no caminho",
+      "extraFees": "Taxas extras e pouca clareza",
+      "transparencyAllSteps": "Transparência em todos os passos",
+      "processOrganization": "Organização do processo",
+      "manualConfusing": "Manual, confuso e fácil de errar",
+      "slowProcess": "Processo lento e espalhado",
+      "simplePlatform": "Tudo simples em uma única plataforma",
+      "approvalSecurity": "Segurança na aprovação",
+      "noGuarantee": "Sem garantia se não avançar",
+      "guaranteeUnclear": "Garantia nem sempre clara",
+      "refundSelection": "Sem aprovação? Reembolsamos o valor do Processo Seletivo"
     }
   },
 
@@ -503,7 +647,7 @@
         },
         {
           "question": "O que é o Processo Seletivo?",
-          "answer": "O Processo Seletivo $400 é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "answer": "O Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ele desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         {
           "question": "Como funciona a escolha das bolsas?",
@@ -526,7 +670,7 @@
     "socialProof": {
       "title": "Mais de 150 alunos aprovados só em 2026",
       "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
-      "ctaButton": "Ser o Próximo Aprovado",
+      "ctaButton": "Quero ser o próximo",
       "statistics": {
         "approved": "Alunos aprovados",
         "approvalRate": "Taxa de aprovação",
@@ -626,5 +770,11 @@
       "confirm": "Ir para o Perfil",
       "cancel": "Agora não"
     }
+  },
+  "footerCTA": {
+    "badge": "Oferta por tempo limitado",
+    "title": "Garanta sua vaga no Processo Seletivo",
+    "description": "Desbloqueie acesso completo às bolsas, candidate-se a múltiplas universidades e dê o primeiro passo rumo aos EUA.",
+    "priceLabel": "A partir de"
   }
 }

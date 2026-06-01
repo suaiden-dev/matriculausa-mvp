@@ -86,9 +86,13 @@ const initI18n = async () => {
       },
     });
 
-  // Quando o idioma muda, pré-carrega todos os namespaces do novo idioma
-  i18n.on('languageChanged', async (lng) => {
+  // Quando o idioma muda, pré-carrega todos os namespaces do novo idioma e atualiza a tag HTML
+  i18n.on('languageChanged', (lng) => {
     if (!['en', 'pt', 'es'].includes(lng)) return;
+    
+    // Atualizar atributo lang do HTML para SEO e ferramentas de acessibilidade
+    document.documentElement.lang = lng;
+    
     // O resourcesToBackend carregará os namespaces sob demanda automaticamente
   });
 

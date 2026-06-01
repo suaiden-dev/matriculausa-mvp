@@ -324,11 +324,8 @@ export function useIdentityPhotoStatusQuery(userId?: string) {
       // Tentar cache primeiro
       const cached = requestCache.get('identity_photo_status', { userId });
       if (cached) {
-        console.log('[useIdentityPhotoStatusQuery] Cache HIT para userId:', userId);
         return cached;
       }
-
-      console.log('[useIdentityPhotoStatusQuery] Cache MISS - fetching para userId:', userId);
 
       try {
         const { data, error } = await supabase
@@ -417,11 +414,8 @@ export function useScholarshipsQuery() {
       // Tentar cache primeiro
       const cached = requestCache.get('scholarships_list');
       if (cached) {
-        console.log('[useScholarshipsQuery] Cache HIT');
         return cached;
       }
-
-      console.log('[useScholarshipsQuery] Cache MISS - fetching');
 
       const { data, error } = await supabase
         .from('scholarships')

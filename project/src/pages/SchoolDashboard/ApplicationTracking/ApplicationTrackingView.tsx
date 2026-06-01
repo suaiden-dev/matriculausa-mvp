@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useUniversity } from '../../../context/UniversityContext';
 import { useStudentUnreadMessages } from '../../../hooks/useStudentUnreadMessages';
 import { useGlobalStudentUnread } from '../../../hooks/useGlobalStudentUnread';
@@ -11,9 +12,14 @@ import { Scholarship } from '../../../types';
 
 const SchoolApplicationTrackingView: React.FC = () => {
   const { applications, university, refreshData } = useUniversity();
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedScholarship, setSelectedScholarship] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+  const [selectedScholarship, setSelectedScholarship] = useState<string>(
+    searchParams.get('scholarship') || ''
+  );
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(
+    (searchParams.get('view') as 'kanban' | 'table') || 'kanban'
+  );
 
   // Extract unique scholarships
   const scholarships: Scholarship[] = Array.from(

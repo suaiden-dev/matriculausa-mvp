@@ -1,7 +1,7 @@
 {
   "scholarships": {
-    "title": "Bolsas de Estudo",
-    "subtitle": "Encontre a bolsa perfeita para sua jornada acadêmica",
+    "title": "Seu futuro nos EUA não precisa parecer distante",
+    "subtitle": "Conheça bolsas que aproximam você de universidades americanas.",
     "searchPlaceholder": "Buscar bolsas...",
     "filterBy": "Filtrar por",
     "amount": "Valor",
@@ -20,7 +20,7 @@
     "featuredSection": {
       "title": "Bolsas em Destaque",
       "subtitle": "Destaques Semanais",
-      "description": "Bolsas selecionadas por nossos especialistas para você"
+      "description": "Bolsas mais procuradas no momento"
     },
     "allScholarships": {
       "title": "Todas as Bolsas",
@@ -186,7 +186,7 @@
       "applicationFeeDetail": "Taxa cobrada diretamente pela instituição para emissão do I-20 oficial",
       "placementFeeLabel": "Placement Fee",
       "placementFeeDetail": "",
-      "controlFeeDetail": "Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)",
+      "controlFeeDetail": "Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido",
       "internalFeesDescription": "Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.",
       "regularAnnualCost": "Investimento Anual (Sem Bolsa)",
       "exclusiveScholarshipPrice": "Investimento com Bolsa Exclusiva",
@@ -316,13 +316,17 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Universidades Parceiras",
-      "title": "Universidades Americanas",
-      "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
+      "title": "Seu próximo capítulo começa em um campus americano",
+      "subtitle": "Encontre oportunidades para estudar, crescer e viver uma experiência internacional."
     },
     "loginRequired": {
       "title": "Login Necessário",
       "message": "Faça login para visualizar os detalhes das universidades e acessar todos os recursos"
+    },
+    "unlockAccess": {
+      "title": "Desbloqueie o Acesso",
+      "message": "Inicie o Processo Seletivo para ver todos os detalhes das universidades.",
+      "button": "Iniciar Processo Seletivo"
     },
     "search": {
       "placeholder": "Buscar universidades...",
@@ -337,9 +341,7 @@
     },
     "loading": "Carregando universidades...",
     "featured": {
-      "title": "Universidades em Destaque",
       "subtitle": "Destaques Semanais",
-      "description": "Descubra as universidades selecionadas por nossos especialistas para você",
       "featured": "Destaque",
       "more": "mais"
     },
@@ -359,7 +361,7 @@
     "callToAction": {
       "title": "Pronto para Se Candidatar à Sua",
       "titleHighlight": "Universidade dos Sonhos?",
-      "description": "Comece sua jornada com nossa plataforma com IA e desbloqueie oportunidades exclusivas de bolsa.",
+      "description": "Através de nossas parcerias diretas com universidades americanas, oferecemos bolsas de estudo exclusivas com valores significativamente mais baixos que a concorrência.",
       "findScholarships": "Encontrar Bolsas",
       "learnMore": "Saiba Mais"
     }

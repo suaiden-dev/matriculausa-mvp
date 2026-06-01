@@ -16,7 +16,9 @@ import {
   X,
   FileText,
   Trash2,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -62,6 +64,7 @@ const AdminScholarshipEdit: React.FC = () => {
   const [isDataRestored, setIsDataRestored] = useState(false);
   const [predefinedBanners, setPredefinedBanners] = useState<string[]>([]);
   const [loadingBanners, setLoadingBanners] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -745,56 +748,71 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
               )}
 
-              {/* Predefined Banners Library */}
+              {/* Predefined Banners Library - Collapsible Accordion */}
               <div className="mt-8 pt-8 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Choose from Library
-                  </label>
-                  {!loadingBanners && predefinedBanners.length > 0 && (
-                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full font-medium">
-                      {predefinedBanners.length} options
+                <button
+                  type="button"
+                  onClick={() => setShowLibrary(!showLibrary)}
+                  className="w-full flex items-center justify-between py-2 text-left group hover:text-[#05294E] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-700 group-hover:text-[#05294E] transition-colors">
+                      Choose from Library
                     </span>
-                  )}
-                </div>
-                
-                {loadingBanners ? (
-                  <div className="flex gap-4 overflow-x-auto pb-2">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="flex-shrink-0 w-32 h-20 bg-slate-100 animate-pulse rounded-lg" />
-                    ))}
+                    {!loadingBanners && predefinedBanners.length > 0 && (
+                      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full font-medium">
+                        {predefinedBanners.length} options
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                    {predefinedBanners.map((url) => {
-                      const isSelected = formData.image_url === url && !imageFile;
-                      return (
-                        <button
-                          key={url}
-                          type="button"
-                          onClick={() => handleSelectBanner(url)}
-                          className={`relative aspect-[8/3] rounded-lg overflow-hidden border-2 transition-all duration-200 group ${
-                            isSelected 
-                              ? 'border-[#05294E] ring-2 ring-[#05294E]/20' 
-                              : 'border-transparent hover:border-slate-300'
-                          }`}
-                        >
-                          <img 
-                            src={url} 
-                            alt="Banner option" 
-                            className="w-full h-full object-cover"
-                          />
-                          {isSelected && (
-                            <div className="absolute inset-0 bg-[#05294E]/10 flex items-center justify-center">
-                              <div className="bg-[#05294E] text-white rounded-full p-1 shadow-lg">
-                                <Check className="w-3 h-3" />
-                              </div>
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                        </button>
-                      );
-                    })}
+                  {showLibrary ? (
+                    <ChevronUp className="h-5 w-5 text-slate-400 group-hover:text-[#05294E] transition-colors" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-slate-400 group-hover:text-[#05294E] transition-colors" />
+                  )}
+                </button>
+                
+                {showLibrary && (
+                  <div className="mt-4 pt-2 transition-all duration-300 animate-fadeIn">
+                    {loadingBanners ? (
+                      <div className="flex gap-4 overflow-x-auto pb-2">
+                        {[1, 2, 3, 4].map(i => (
+                          <div key={i} className="flex-shrink-0 w-32 h-20 bg-slate-100 animate-pulse rounded-lg" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {predefinedBanners.map((url) => {
+                          const isSelected = formData.image_url === url && !imageFile;
+                          return (
+                            <button
+                              key={url}
+                              type="button"
+                              onClick={() => handleSelectBanner(url)}
+                              className={`relative aspect-[8/3] rounded-lg overflow-hidden border-2 transition-all duration-200 group ${
+                                isSelected 
+                                  ? 'border-[#05294E] ring-2 ring-[#05294E]/20' 
+                                  : 'border-transparent hover:border-slate-300'
+                              }`}
+                            >
+                              <img 
+                                src={url} 
+                                  alt="Banner option" 
+                                className="w-full h-full object-cover"
+                              />
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-[#05294E]/10 flex items-center justify-center">
+                                  <div className="bg-[#05294E] text-white rounded-full p-1 shadow-lg">
+                                    <Check className="w-3 h-3" />
+                                  </div>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

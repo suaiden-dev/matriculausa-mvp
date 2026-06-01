@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Bell, Clock } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
@@ -674,18 +674,32 @@ const StudentOnboarding: React.FC = () => {
 
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">
         {true && (
-          <div className="mb-4 sm:mb-6 flex justify-between items-center">
-            {window.location.hostname === 'localhost' && (
+          <div className="mx-4 md:mx-8 mb-4 sm:mb-6 flex justify-between items-center gap-2 sm:gap-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <button
-                onClick={handleBack}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
+                onClick={() => navigate('/')}
+                className="flex min-w-0 items-center justify-center h-9 sm:h-[46px] transition-transform hover:scale-105"
+                aria-label="Matrícula USA"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium">{t('common:common.back')}</span>
+                <img
+                  src="/logo.png"
+                  alt="Matrícula USA"
+                  className="h-9 sm:h-11 w-auto max-w-[118px] sm:max-w-none object-contain"
+                />
               </button>
-            )}
 
-            <div className="flex items-center gap-3 ml-auto">
+              {window.location.hostname === 'localhost' && (
+                <button
+                  onClick={handleBack}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="font-medium">{t('common:common.back')}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-center ml-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-1 gap-0.5 sm:p-1.5 sm:gap-1.5">
               {/* Notifications Bell */}
               <div className="relative notifications-container">
                 <button
@@ -696,7 +710,7 @@ const StudentOnboarding: React.FC = () => {
                       setShowNotif(!showNotif);
                     }
                   }}
-                  className="relative p-2 rounded-xl bg-white hover:bg-gray-50 transition-colors shadow-sm border border-gray-100 flex items-center justify-center h-[42px] w-[42px]"
+                  className="relative p-2 rounded-xl transition-colors flex items-center justify-center h-9 w-9 sm:h-[42px] sm:w-[42px] bg-transparent hover:bg-gray-50 border border-transparent shadow-none"
                   title="Notifications"
                 >
                   <Bell className="h-5 w-5 text-gray-600" />
@@ -741,12 +755,12 @@ const StudentOnboarding: React.FC = () => {
                 )}
               </div>
 
-              <LanguageSelector variant="dashboard" showLabel={true} />
+              <LanguageSelector variant="dashboard" showLabel={true} grouped={true} />
               <button
                 onClick={() => navigate('/student/dashboard')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100 h-[42px]"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors px-2 sm:px-4 py-2 rounded-xl h-9 sm:h-[42px] bg-transparent hover:bg-gray-50 border border-transparent shadow-none"
               >
-                <span className="font-medium">{t('common:nav.dashboard')}</span>
+                <span className="font-medium text-xs sm:text-sm">{t('common:nav.dashboard')}</span>
               </button>
             </div>
           </div>
@@ -764,6 +778,18 @@ const StudentOnboarding: React.FC = () => {
 
         <div className="w-full flex-1 flex flex-col">
           {renderStep()}
+        </div>
+
+        <div className="mt-8 sm:mt-10 pb-2 flex justify-center">
+          <div className="inline-flex max-w-sm sm:max-w-none items-start sm:items-center justify-center gap-1.5 sm:gap-2 px-4 py-3 text-center sm:text-left text-xs sm:text-sm font-medium text-slate-600 leading-relaxed">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 sm:mt-0 sm:h-4 sm:w-4 text-emerald-600 flex-shrink-0" />
+            <span>
+              {t(
+                'registration:onboarding.secureEnvironmentDisclaimer',
+                'Você está em um ambiente seguro. Suas informações são protegidas durante todo o processo.'
+              )}
+            </span>
+          </div>
         </div>
       </div>
 
