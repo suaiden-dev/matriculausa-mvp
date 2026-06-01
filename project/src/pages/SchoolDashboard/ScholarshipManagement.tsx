@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
-  Edit,
+  Pencil,
   Trash2,
   Award,
   Search,
@@ -10,7 +10,8 @@ import {
   Zap,
   Users,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  MoreVertical
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -30,6 +31,16 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setActiveDropdownId(null);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   // Force refresh data when component mounts
   useEffect(() => {
@@ -285,28 +296,47 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
                           )}
                         </div>
 
-                        <div className="flex flex-col items-end space-y-3 ml-4">
-                          <button
-                            onClick={() => handleDeleteScholarship(scholarship.id)}
-                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete scholarship"
-                            aria-label="Delete scholarship"
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-
-                          <label className="relative inline-flex items-center cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={scholarship.is_active}
-                              onChange={() => toggleScholarshipStatus(scholarship.id, scholarship.is_active)}
-                              className="sr-only peer"
-                            />
-                            <span className="mr-2 text-xs font-semibold text-slate-700 flex items-center">
-                              {scholarship.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                            <div className="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                          </label>
+                        <div className="ml-4 flex-shrink-0">
+                          {/* Menu Três Pontinhos */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveDropdownId(activeDropdownId === scholarship.id ? null : scholarship.id);
+                              }}
+                              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
+                              title="More options"
+                            >
+                              <MoreVertical className="w-5 h-5" />
+                            </button>
+                            
+                            {activeDropdownId === scholarship.id && (
+                              <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveDropdownId(null);
+                                    navigate(`/school/dashboard/application-tracking?scholarship=${scholarship.id}&view=table`);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center space-x-2 font-medium"
+                                >
+                                  <Users className="w-4 h-4 text-slate-400" />
+                                  <span>View Applicants</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveDropdownId(null);
+                                    handleDeleteScholarship(scholarship.id);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 font-medium"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-400" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -358,23 +388,28 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
 
 
                     {/* Actions */}
-                    <div className="px-6 pb-6 mt-auto">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => navigate(`/school/dashboard/application-tracking?scholarship=${scholarship.id}&view=table`)}
-                          className="flex-1 bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm"
-                        >
-                          View Applicants
-                        </button>
-                        <Link
-                          to={`/school/dashboard/scholarship/new?edit=${scholarship.id}`}
-                          className="bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#05294E]/90 transition-colors flex items-center justify-center"
-                          title="Edit scholarship"
-                          aria-label="Edit scholarship"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </div>
+                    <div className="px-6 pb-6 mt-auto flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+                      <Link
+                        to={`/school/dashboard/scholarship/new?edit=${scholarship.id}`}
+                        className="flex-1 bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#05294E]/90 transition-colors flex items-center justify-center font-bold text-sm"
+                        title="Edit scholarship"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Link>
+
+                      <label className="relative inline-flex items-center cursor-pointer select-none shrink-0 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
+                        <input
+                          type="checkbox"
+                          checked={scholarship.is_active}
+                          onChange={() => toggleScholarshipStatus(scholarship.id, scholarship.is_active)}
+                          className="sr-only peer"
+                        />
+                        <span className="mr-2.5 text-xs font-semibold text-slate-700 flex items-center">
+                          {scholarship.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        <div className="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
                     </div>
                   </div>
                 );
