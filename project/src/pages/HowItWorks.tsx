@@ -455,7 +455,7 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Faculty and Staff Scholarship</h5>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Business Administration</h5>
                               <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
@@ -477,7 +477,7 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Academic Excellence Scholarship</h5>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Computer Science</h5>
                               <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
@@ -499,7 +499,7 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Special Scholarship</h5>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Information Technology</h5>
                               <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.undergraduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
@@ -521,7 +521,7 @@ const JourneySection: React.FC<{
                         <div className="p-3 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:scale-[1.02] hover:bg-slate-50 space-y-2">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">STEM Scholarship</h5>
+                              <h5 className="text-[10px] font-black text-slate-900 leading-tight">Master of Philosophy</h5>
                               <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">{t('howItWorks.mockups.graduate')}</p>
                             </div>
                             <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
@@ -587,7 +587,7 @@ const JourneySection: React.FC<{
                         {/* Course overlay label */}
                         <div className="absolute inset-y-0 left-0 w-[80%] bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-3">
                           <p className="text-[10px] font-black text-slate-900 leading-tight">
-                            STEM SCHOLARSHIP
+                            MASTER OF PHILOSOPHY
                           </p>
                         </div>
                       </div>
@@ -596,7 +596,7 @@ const JourneySection: React.FC<{
                       <div className="p-4 space-y-3 flex-1 flex flex-col">
                         {/* Title & Uni */}
                         <div>
-                          <h4 className="text-xs font-black text-slate-900 leading-tight">STEM Scholarship</h4>
+                          <h4 className="text-xs font-black text-slate-900 leading-tight">Master of Philosophy</h4>
                         </div>
 
                         {/* Financial Box */}
