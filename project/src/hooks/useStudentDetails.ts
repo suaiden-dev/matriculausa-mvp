@@ -66,6 +66,7 @@ export interface StudentRecord {
   identity_photo_status?: 'pending' | 'approved' | 'rejected' | null;
   identity_photo_rejection_reason?: string | null;
   source?: string | null;
+  selected_application_id?: string | null;
 }
 
 /**
@@ -152,6 +153,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             visa_transfer_active,
             university_id,
             source,
+            selected_application_id,
             scholarship_applications (
               id,
               scholarship_id,
@@ -267,6 +269,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         system_type: s.system_type || null,
         university_id: s.university_id || null,
         source: s.source || null,
+        selected_application_id: s.selected_application_id || null,
       };
 
       setStudent(formatted);

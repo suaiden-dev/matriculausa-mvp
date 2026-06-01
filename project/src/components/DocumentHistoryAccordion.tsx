@@ -5,9 +5,13 @@ interface DocumentUpload {
   id: string;
   file_url: string;
   status: 'approved' | 'rejected' | 'under_review';
-  uploaded_at: string;
+  uploaded_at: string;        // when the file was submitted
+  rejected_at?: string | null;  // when it was rejected (different from upload time)
+  approved_at?: string | null;  // when it was approved
   rejection_reason?: string | null;
   is_admin_upload?: boolean;
+  uploaded_by_name?: string;
+  uploaded_by_type?: 'student' | 'admin' | 'university';
 }
 
 interface DocumentHistoryAccordionProps {
@@ -90,7 +94,7 @@ const DocumentHistoryAccordion: React.FC<DocumentHistoryAccordionProps> = ({ upl
             return (
               <li key={upload.id} className="px-4 py-3 bg-white flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-slate-400 font-medium">#{history.length - idx}</span>
                     {documentLabel && (
                       <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
@@ -101,11 +105,30 @@ const DocumentHistoryAccordion: React.FC<DocumentHistoryAccordionProps> = ({ upl
                       <Icon className={`w-3 h-3 ${cfg.iconClass}`} />
                       {cfg.label}
                     </span>
-                    {upload.is_admin_upload && (
+                    {upload.uploaded_by_name ? (
+                      <span className="text-xs text-slate-500 italic">
+                        {upload.uploaded_by_type === 'admin' ? 'Admin' : upload.uploaded_by_type === 'university' ? 'University' : 'Student'}: {upload.uploaded_by_name}
+                      </span>
+                    ) : upload.is_admin_upload ? (
                       <span className="text-xs text-slate-400 italic">enviado pelo admin</span>
+                    ) : null}
+                  </div>
+                  {/* Dates: always show upload time; show decision time separately when available */}
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-xs text-slate-400">
+                      Enviado: {formatDate(upload.uploaded_at)}
+                    </span>
+                    {upload.rejected_at && (
+                      <span className="text-xs text-red-400">
+                        Rejeitado: {formatDate(upload.rejected_at)}
+                      </span>
+                    )}
+                    {upload.approved_at && (
+                      <span className="text-xs text-green-500">
+                        Aprovado: {formatDate(upload.approved_at)}
+                      </span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400">{formatDate(upload.uploaded_at)}</span>
                 </div>
 
                 {upload.rejection_reason && (

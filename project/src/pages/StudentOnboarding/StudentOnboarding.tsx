@@ -90,7 +90,7 @@ const StudentOnboarding: React.FC = () => {
       ...(!processTypeSet ? ['process_type' as OnboardingStep] : []),
       'documents_upload',
       'payment',
-      isNewFlowUser ? 'placement_fee' : 'scholarship_fee',
+      ...(isTransferInactive ? [] : [isNewFlowUser ? 'placement_fee' as OnboardingStep : 'scholarship_fee' as OnboardingStep]),
     ];
 
     if (isTransferInactive) {

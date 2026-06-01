@@ -12,22 +12,19 @@ import {
   GraduationCap,
   Download,
   Eye,
-  Inbox
+  Inbox,
+  Star
 } from 'lucide-react';
+import { getDeliveryModeLabel } from '../../utils/scholarshipHelpers';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
-import { convertCentsToDollars } from '../../utils/currency';
-import TruncatedText from '../../components/TruncatedText';
 import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotionalCouponQuery } from '../../hooks/useStudentDashboardQueries';
 import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import { useQueryClient } from '@tanstack/react-query';
-import { getPlacementFee, formatPlacementFee } from '../../utils/placementFeeCalculator';
 
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
@@ -40,11 +37,9 @@ type ApplicationWithScholarship = Application & {
 // Labels amigáveis para os documentos principais - será definido dentro do componente
 
 const MyApplications: React.FC = () => {
-  const { t } = useTranslation(['dashboard', 'common']);
+  const { t } = useTranslation(['dashboard', 'common', 'registration', 'scholarships']);
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
-  const { getFeeAmount } = useFeeConfig(user?.id);
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const queryClient = useQueryClient();
 
   const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
@@ -54,18 +49,8 @@ const MyApplications: React.FC = () => {
   // isFetching = buscando em background (pode ter dados em cache)
   const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
   const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement', 'ds160_package', 'i539_cos_package']);
-  const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
-  const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
-  // O valor vem em centavos do banco, precisa converter para dólares primeiro
-  const getApplicationFeeWithDependents = (baseInCents: number): number => {
-    // Converter centavos para dólares
-    const baseInDollars = convertCentsToDollars(baseInCents);
-    const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
-    return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
-  };
-
+  usePromotionalCouponQuery(user?.id, 'scholarship_fee');
+  usePromotionalCouponQuery(user?.id, 'application_fee');
   // Convert query error to string for compatibility
   const error = queryError ? 'Erro ao buscar aplicações.' : null;
 
@@ -332,14 +317,7 @@ const MyApplications: React.FC = () => {
 
 
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatAmountShort = (v: number) => v?.toLocaleString('en-US', { maximumFractionDigits: 0 }) || '0';
 
   // Função para sanitizar nome do arquivo
   const sanitizeFileName = (fileName: string): string => {
@@ -613,6 +591,213 @@ const MyApplications: React.FC = () => {
   };
 
 
+  const renderApplicationCard = (application: ApplicationWithScholarship) => {
+    const scholarship = application.scholarships;
+    if (!scholarship) return null;
+
+    const annualSavings = (Number((scholarship as any).original_annual_value) || 0) - (Number(scholarship.annual_value_with_scholarship) || 0);
+    const cardImage = (scholarship as any).image_url || (scholarship as any).universities?.image_url;
+    const StatusIcon = getStatusIcon(application.status);
+
+    const handleCardClick = () => {
+      if (application.status === 'rejected') return;
+      localStorage.setItem('selected_application_id', application.id);
+      const savedStep = (userProfile as any)?.onboarding_current_step;
+      const step = (savedStep && savedStep !== 'my_applications' && savedStep !== 'completed') ? savedStep : null;
+      navigate(step ? `/student/onboarding?step=${step}` : '/student/onboarding');
+    };
+
+    return (
+      <div
+        key={application.id}
+        onClick={handleCardClick}
+        className={`group bg-white rounded-[2rem] border shadow-[0_12px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_24px_50px_rgba(5,41,78,0.12)] hover:-translate-y-1.5 transition-all duration-500 overflow-hidden flex flex-col h-full ${
+          application.status === 'rejected'
+            ? 'border-red-200 cursor-default'
+            : 'border-slate-200 hover:border-blue-200 cursor-pointer'
+        }`}
+      >
+        {/* Card Header (Cover Image) */}
+        <div className="relative h-44 w-full bg-white z-10 overflow-hidden border-b border-slate-100 shrink-0 group">
+          <div className="absolute inset-0 z-0">
+            {cardImage ? (
+              <img src={cardImage} alt={scholarship.title} className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+            ) : (
+              <div className="flex items-center justify-center w-full h-full bg-slate-50">
+                <Building className="h-12 w-12 text-[#05294E]/20" />
+              </div>
+            )}
+          </div>
+
+          {/* Text Overlay (Left side) */}
+          <div className="absolute inset-y-0 left-0 w-[65%] sm:w-[70%] z-10 bg-gradient-to-r from-white via-white/95 to-transparent flex flex-col justify-center pl-4 pr-8">
+            <div className="absolute top-4 left-4">
+              <img src="/logo.png" alt="Matricula USA" className="h-5 w-auto object-contain mb-1.5 drop-shadow-sm" />
+            </div>
+            <p className="w-[95%] text-sm font-black font-['Montserrat',sans-serif] text-slate-900 line-clamp-3 pt-0.5 mt-8" style={{ lineHeight: 0.95 }}>
+              {(scholarship as any).field_of_study || t('scholarships:scholarshipsPage.filters.anyField', 'Qualquer Área')}
+            </p>
+          </div>
+
+          {/* Top Right: Status + Exclusive badges (hide status for rejected — shown at bottom) */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-20">
+            {application.status !== 'rejected' && (
+              <div className={`px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1 ${
+                application.status === 'approved' || application.status === 'enrolled'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-amber-500 text-white'
+              }`}>
+                <StatusIcon className="h-3 w-3" />
+                {getStatusLabel(application.status)}
+              </div>
+            )}
+            {(scholarship as any).is_exclusive && (
+              <div className="bg-amber-500 text-white px-2.5 py-1.5 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1">
+                <Star className="h-3 w-3 fill-white" />
+                {t('common:exclusive', 'Exclusiva')}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Right: Level + Scholarship % */}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+            <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-800 shadow-sm border border-white/20">
+              {getLevelLabel((scholarship as any).level || '')}
+            </span>
+            {(scholarship as any).scholarship_percentage && (
+              <span className="px-2.5 py-1 bg-green-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                {(scholarship as any).scholarship_percentage}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Card Body */}
+        <div className="p-6 flex-1 flex flex-col justify-between">
+          <div>
+            {/* University */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative w-7 h-7 rounded-md border border-slate-100 bg-white p-0.5 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {scholarship.universities?.logo_url ? (
+                  <img src={scholarship.universities.logo_url} alt={scholarship.universities.name || ''} className="w-full h-full object-contain" />
+                ) : (
+                  <Building className="w-4 h-4 text-slate-400" />
+                )}
+              </div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[85%]">
+                {scholarship.universities?.name || 'Universidade'}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-base font-black text-slate-900 line-clamp-2 leading-snug mb-2">
+              {scholarship.title}
+            </h3>
+
+            {/* Field of Study */}
+            {(scholarship as any).field_of_study && (
+              <div className="mb-2">
+                <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                  <span className="truncate">{(scholarship as any).field_of_study}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Specs: Delivery Mode + Work Permissions */}
+            {((scholarship as any).delivery_mode || ((scholarship as any).work_permissions && (scholarship as any).work_permissions.length > 0)) && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(scholarship as any).delivery_mode && (
+                  <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                    <span className="truncate">{getDeliveryModeLabel((scholarship as any).delivery_mode, t)}</span>
+                  </span>
+                )}
+                {(scholarship as any).work_permissions && (scholarship as any).work_permissions.map((perm: string, i: number) => (
+                  <span key={i} className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200/60 rounded-xl px-2.5 py-1 max-w-full">
+                    <span className="truncate">{perm}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Financial Section */}
+          <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 sm:p-5 mt-2 flex items-center justify-between gap-4">
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                {t('scholarships:scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+              </span>
+              <span className="text-sm font-bold text-slate-400 line-through leading-tight">
+                ${formatAmountShort(Number((scholarship as any).original_annual_value))}
+              </span>
+              {annualSavings > 0 && (
+                <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
+                  -{t('scholarships:scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmountShort(annualSavings)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">
+                {t('scholarships:scholarshipsPage.detail.withScholarship', 'Com Bolsa')}
+              </span>
+              <div className="flex items-baseline justify-end">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                  ${formatAmountShort(Number(scholarship.annual_value_with_scholarship))}
+                </span>
+                <span className="text-xs font-bold text-slate-500 ml-0.5">
+                  {t('scholarships:scholarshipsPage.detail.perYear', '/ano')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rejected: status + reason (after financial section, same card style) */}
+          {application.status === 'rejected' && (
+            <div className="bg-red-50/80 border border-red-100 rounded-[1.5rem] p-4 sm:p-5 mt-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                  <XCircle className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-[11px] font-extrabold text-red-500 uppercase tracking-wider">
+                  {getStatusLabel(application.status)}
+                </span>
+              </div>
+              {(application as any).notes && (
+                <p className="text-xs text-red-600/80 font-medium leading-relaxed pl-8">
+                  {(application as any).notes}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Action Button */}
+          {application.status !== 'rejected' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+              className={`mt-4 w-full py-3 px-4 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center transition-all duration-300 active:scale-95 ${
+                application.status === 'enrolled'
+                  ? 'bg-green-600 text-white shadow-lg'
+                  : 'bg-gradient-to-r from-[#05294E] to-slate-700 text-white shadow-lg hover:shadow-2xl hover:scale-[1.02]'
+              }`}
+            >
+              <span className="truncate">
+                {application.status === 'enrolled'
+                  ? t('studentDashboard.myApplications.applicationCompleted', 'Aplicação Finalizada')
+                  : t('studentDashboard.myApplications.continueApplication', 'Continuar Aplicação')}
+              </span>
+              {application.status === 'enrolled'
+                ? <CheckCircle className="ml-2 h-4 w-4 flex-shrink-0" />
+                : <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0" />
+              }
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="pt-6 sm:pt-8">
@@ -797,13 +982,25 @@ const MyApplications: React.FC = () => {
               <p className="text-slate-500 mb-6 sm:mb-8 max-w-lg mx-auto text-base sm:text-lg leading-relaxed px-4">
                 {t('studentDashboard.myApplications.noApplications.description')}
               </p>
-              <Link
-                to="/student/onboarding"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
-              >
-                Começar Processo
-                <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
-              </Link>
+              {(() => {
+                const savedStep = (userProfile as any)?.onboarding_current_step;
+                const hasStarted = !!(
+                  userProfile?.has_paid_selection_process_fee ||
+                  (savedStep && savedStep !== 'selection_fee')
+                );
+                const onboardingUrl = (hasStarted && savedStep && savedStep !== 'my_applications' && savedStep !== 'completed')
+                  ? `/student/onboarding?step=${savedStep}`
+                  : '/student/onboarding';
+                return (
+                  <Link
+                    to={onboardingUrl}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
+                  >
+                    {hasStarted ? 'Continuar Processo' : 'Começar Processo'}
+                    <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
+                  </Link>
+                );
+              })()}
             </div>
           ) : (
             <>
@@ -822,279 +1019,8 @@ const MyApplications: React.FC = () => {
                         <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-x-auto md:pb-4 gap-6" style={{
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        WebkitOverflowScrolling: 'touch'
-                      }}>
-                        {approvedList.map((application: ApplicationWithScholarship) => {
-                          const Icon = getStatusIcon(application.status);
-                          const scholarship = application.scholarships;
-                          
-                          const packageD160Paid = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
-                          const packageI539Paid = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
-                          const hasPaidPackage = packageD160Paid || packageI539Paid;
-                          
-                          const applicationFeePaid = !!application.is_application_fee_paid || hasPaidPackage;
-                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid || 
-                                                     !!application.acceptance_letter_url ||
-                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
-                                                     hasPaidPackage;
-                          if (!scholarship) return null;
-
-
-
-                          return (
-                            <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-slate-200 overflow-hidden group w-full md:flex-shrink-0 md:min-w-0 md:self-start">
-                              <div className="p-4">
-                                {/* Header Section Compacto */}
-                                <div className="mb-4">
-                                  {/* Linha 1: Título e Status Badge */}
-                                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
-                                    <h2 className="font-bold text-gray-900 text-base leading-tight flex-1 min-w-0 pr-0 sm:pr-3">
-                                      <span className="line-clamp-2">{scholarship.title}</span>
-                                    </h2>
-                                    <span className={`inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold border flex-shrink-0 self-start sm:self-auto ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
-                                      <Icon className="h-3 w-3 mr-1 flex-shrink-0" />
-                                      <span className="whitespace-nowrap">{application.status === 'approved' || application.status === 'enrolled' ? t('studentDashboard.myApplications.statusLabels.approved') : getStatusLabel(application.status)}</span>
-                                    </span>
-                                  </div>
-
-                                  {/* Linha 3: Universidade + Level */}
-                                  <div className="flex items-center gap-2 text-sm mb-3">
-                                    <div className="flex items-center text-gray-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
-                                      <span className="font-medium truncate">{scholarship.universities?.name}</span>
-                                    </div>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>
-                                      <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
-                                      <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Status Details REMOVED as per user request */}
-
-
-                                {/* Details Section */}
-                                <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
-                                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                    <div className="flex items-center">
-                                      <div className="bg-green-100 p-2 rounded-lg mr-3 flex-shrink-0">
-                                        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.annualScholarshipValue')}</p>
-                                        <p className="font-bold text-sm sm:text-base text-green-700 truncate">
-                                          {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex items-center">
-                                      <div className="bg-blue-100 p-2 rounded-lg mr-3 flex-shrink-0">
-                                        <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.applicationDate')}</p>
-                                        <p className="font-semibold text-gray-900 text-[10px] sm:text-xs">
-                                          {new Date(application.applied_at).toLocaleDateString('en-US', {
-                                            year: 'numeric', month: 'short', day: 'numeric'
-                                          })}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {scholarship.min_gpa && (
-                                      <div className="flex items-center">
-                                        <div className="bg-amber-100 p-2 rounded-lg mr-3 flex-shrink-0">
-                                          <span className="text-amber-600 font-bold text-xs">GPA</span>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('dashboard:academicInfo.minGpa')}</p>
-                                          <p className="font-bold text-sm sm:text-base text-amber-700 truncate">
-                                            {scholarship.min_gpa}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {scholarship.min_english_proficiency && (
-                                      <div className="flex items-center">
-                                        <div className="bg-indigo-100 p-2 rounded-lg mr-3 flex-shrink-0">
-                                          <span className="text-indigo-600 font-bold text-xs">ENG</span>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('dashboard:academicInfo.minEnglishProficiency')}</p>
-                                          <p className="font-bold text-sm sm:text-base text-indigo-700 truncate">
-                                            {t(`dashboard:academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Payment Status Section */}
-                                <div className="mb-6">
-                                  <h3 className="font-bold text-gray-900 mb-4 text-base">{t('studentDashboard.myApplications.paymentStatus.title')}</h3>
-                                  <div className="space-y-3">
-                                    <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
-                                      <div className="flex items-center justify-between mb-3">
-                                        <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
-                                        {realPaidAmounts.application !== undefined ? (
-                                          // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.application)}</span>
-                                        ) : applicationFeePromotionalCoupon ? (
-                                          // Se há cupom promocional, mostrar valor com desconto
-                                          <div className="text-right">
-                                            <div className="text-base font-bold text-gray-400 line-through">{formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}</div>
-                                            <div className="text-base font-bold text-green-600">{formatAmount(applicationFeePromotionalCoupon.finalAmount)}</div>
-                                          </div>
-                                        ) : (
-                                          // Sem cupom, mostrar valor normal da taxa
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}</span>
-                                        )}
-                                      </div>
-                                      {applicationFeePaid ? (
-                                        <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          {t('studentDashboard.myApplications.paymentStatus.paid')}
-                                        </div>
-                                      ) : (
-                                        <>
-                                          {isBlocked && pendingPayment ? (
-                                            <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
-                                              <div className="flex items-center justify-center">
-                                                <Clock className="h-4 w-4 text-amber-600 mr-2 animate-spin" />
-                                                <span className="text-xs font-semibold text-amber-800">
-                                                  {t('studentDashboard.myApplications.paymentStatus.processingZellePayment')}
-                                                </span>
-                                              </div>
-                                              {pendingPayment.fee_type && (
-                                                <p className="text-xs text-amber-700 mt-1 text-center">
-                                                  {t('studentDashboard.myApplications.paymentStatus.pendingPaymentType', {
-                                                    feeType: pendingPayment.fee_type === 'application_fee'
-                                                      ? t('studentDashboard.myApplications.paymentStatus.applicationFee')
-                                                      : pendingPayment.fee_type === 'scholarship_fee'
-                                                        ? t('studentDashboard.myApplications.paymentStatus.scholarshipFee')
-                                                        : pendingPayment.fee_type
-                                                  })}
-                                                </p>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <button
-                                              onClick={() => handleApplicationFeeClick(application)}
-                                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                                              disabled={(hasSelectedScholarship && !scholarshipFeePaid) || paymentBlockedLoading}
-                                            >
-                                              {paymentBlockedLoading
-                                                ? t('studentDashboard.myApplications.paymentStatus.checking')
-                                                : t('studentDashboard.myApplications.paymentStatus.payApplicationFee')}
-                                            </button>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-
-                                      <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <span className="font-semibold text-gray-900 text-sm">
-                                            {isNewFlowUser 
-                                              ? t('studentDashboard.myApplications.paymentStatus.placementFee') 
-                                              : t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}
-                                          </span>
-                                          {realPaidAmounts.scholarship !== undefined ? (
-                                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
-                                          ) : isNewFlowUser ? (
-                                            <span className="text-base font-bold text-gray-700">
-                                              {formatPlacementFee(getPlacementFee(scholarship.annual_value_with_scholarship || 0, scholarship.placement_fee_amount))}
-                                            </span>
-                                          ) : scholarshipFeePromotionalCoupon ? (
-                                            <div className="text-right">
-                                              <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
-                                              <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
-                                            </div>
-                                          ) : (
-                                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
-                                          )}
-                                        </div>
-                                      {scholarshipFeePaid ? (
-                                        <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          {t('studentDashboard.myApplications.paymentStatus.paid')}
-                                        </div>
-                                      ) : (
-                                        <>
-                                          {isBlocked && pendingPayment ? (
-                                            <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
-                                              <div className="flex items-center justify-center">
-                                                <Clock className="h-4 w-4 text-amber-600 mr-2 animate-spin" />
-                                                <span className="text-xs font-semibold text-amber-800">
-                                                  {t('studentDashboard.myApplications.paymentStatus.processingZellePayment')}
-                                                </span>
-                                              </div>
-                                              {pendingPayment.fee_type && (
-                                                <p className="text-xs text-amber-700 mt-1 text-center">
-                                                  {t('studentDashboard.myApplications.paymentStatus.pendingPaymentType', {
-                                                    feeType: pendingPayment.fee_type === 'application_fee'
-                                                      ? t('studentDashboard.myApplications.paymentStatus.applicationFee')
-                                                      : pendingPayment.fee_type === 'scholarship_fee'
-                                                        ? t('studentDashboard.myApplications.paymentStatus.scholarshipFee')
-                                                        : pendingPayment.fee_type
-                                                  })}
-                                                </p>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <button
-                                              onClick={() => handleScholarshipFeeClick(application)}
-                                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                                              disabled={!applicationFeePaid || scholarshipFeePaid || (hasSelectedScholarship && !scholarshipFeePaid) || paymentBlockedLoading}
-                                            >
-                                              {paymentBlockedLoading
-                                                ? t('studentDashboard.myApplications.paymentStatus.checking')
-                                                : isNewFlowUser 
-                                                  ? t('studentDashboard.myApplications.paymentStatus.payPlacementFee') 
-                                                  : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
-                                            </button>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {(hasSelectedScholarship && !scholarshipFeePaid) && (
-                                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                                      <div className="flex items-start">
-                                        <AlertCircle className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
-                                        <p className="text-xs text-amber-800 leading-relaxed">
-                                          {t('studentDashboard.myApplications.importantNotice.description')}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Action Section */}
-                                {(applicationFeePaid && scholarshipFeePaid) && (
-                                  <div className="border-t border-slate-200 pt-4">
-                                    <button
-                                      onClick={() => {
-                                        localStorage.setItem('selected_application_id', application.id);
-                                        navigate('/student/onboarding?step=my_applications');
-                                      }}
-                                      className="inline-flex items-center justify-center w-full px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 text-sm"
-                                    >
-                                      <GraduationCap className="h-4 w-4 mr-2" />
-                                      {t('studentDashboard.myApplications.applicationDetails.viewDetails')}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {approvedList.map((application: ApplicationWithScholarship) => renderApplicationCard(application))}
                       </div>
                     </section>
                   );
@@ -1110,424 +1036,9 @@ const MyApplications: React.FC = () => {
                         <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.pendingAndInProgress')}</h3>
                         <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} {t('studentDashboard.myApplications.sections.applications')}</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" style={{
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        WebkitOverflowScrolling: 'touch'
-                      }}>
-                        {otherList.map((application: ApplicationWithScholarship) => {
-                          const Icon = getStatusIcon(application.status);
-                          const scholarship = application.scholarships;
-                          if (!scholarship) return null;
-
-
-
-                          return (
-                            <div key={application.id} className="bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-2 border-slate-200 group w-full max-w-full">
-                              <div className="p-4 sm:p-6">
-                                {/* Compact Mobile Header */}
-                                <div className="mb-4">
-                                  {/* Line 1: Title + Status */}
-                                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                                    <h3 className="font-bold text-slate-900 text-base sm:text-lg group-hover:text-blue-600 transition-colors leading-tight flex-1 min-w-0 pr-0 sm:pr-3">
-                                      <span className="line-clamp-2">{scholarship.title}</span>
-                                    </h3>
-                                    <span className={`inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0 self-start sm:self-auto`}>
-                                      <Icon className="h-3 w-3 mr-1 flex-shrink-0" />
-                                      <span className="whitespace-nowrap">{getStatusLabel(application.status)}</span>
-                                    </span>
-                                  </div>
-
-                                  {/* Line 2: University + Level */}
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <div className="flex items-center text-slate-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
-                                      <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
-                                    </div>
-                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>
-                                      <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
-                                      <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
-                                    </span>
-                                  </div>
-
-                                  {/* Line 3: Requirements */}
-                                  {(scholarship.min_gpa || scholarship.min_english_proficiency) && (
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                      {scholarship.min_gpa && (
-                                        <div className="flex items-center bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-amber-800 text-[10px] font-bold">
-                                          GPA {scholarship.min_gpa}
-                                        </div>
-                                      )}
-                                      {scholarship.min_english_proficiency && (
-                                        <div className="flex items-center bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg text-indigo-800 text-[10px] font-bold uppercase">
-                                          {t(`dashboard:academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Status Details REMOVED as per user request to maintain consistency and avoid missing translations */}
-
-
-
-                                {/* Not selected reason for rejected applications */}
-                                {application.status === 'rejected' && (application as any).notes && (
-                                  <div className="mb-6 rounded-xl p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-                                    <div className="flex items-start">
-                                      <XCircle className="h-4 w-4 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
-                                      <div>
-                                        <strong className="block mb-1">{t('studentDashboard.myApplications.rejectedApplication.reason')}</strong>
-                                        {(application as any).notes}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Documents Status - Individual Check List */}
-                                {(() => {
-                                  const docs = parseApplicationDocuments((application as any).documents);
-                                  const reqUploads = requestUploadsByApp[application.id] || [];
-
-                                  // Create a complete document list with status
-                                  const processType = userProfile?.student_process_type;
-                                  const visaTransferActive = userProfile?.visa_transfer_active;
-
-                                  const scholarshipLevel = (application as any).scholarships?.level;
-                                  const diplomaLabel = scholarshipLevel === 'doctorate'
-                                    ? "Master's Diploma"
-                                    : scholarshipLevel === 'graduate'
-                                      ? "Bachelor's Diploma"
-                                      : t('studentDashboard.myApplications.documents.highSchoolDiploma');
-
-                                  const allDocumentsBase = [
-                                    { type: 'passport', label: t('studentDashboard.myApplications.documents.passport') },
-                                  ];
-
-
-                                  const allDocuments = allDocumentsBase.map(docTemplate => {
-                                    const docData = docs.find(d => d.type === docTemplate.type);
-                                    return {
-                                      ...docTemplate,
-                                      status: docData?.status || 'pending',
-                                      review_notes: docData?.review_notes,
-                                      rejection_reason: docData?.rejection_reason,
-                                      uploaded_at: docData?.uploaded_at
-                                    };
-                                  });
-
-                                  if (docs.length === 0 && reqUploads.length === 0) return null;
-
-                                  return (
-                                    <div className="border-t border-slate-200 pt-6">
-                                      <button
-                                        onClick={() => toggleChecklist(application.id)}
-                                        className="flex items-center justify-between cursor-pointer select-none mb-4 p-2 hover:bg-slate-50 rounded-lg transition-colors w-full text-left"
-                                      >
-                                        <h4 className="text-sm font-bold text-slate-900 flex items-center">
-                                          <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                                          {t('studentDashboard.myApplications.documents.checklist')}
-                                        </h4>
-                                        <svg
-                                          className={`w-4 h-4 text-slate-500 transition-transform ${openChecklists[application.id] ? 'rotate-180' : ''}`}
-                                          viewBox="0 0 20 20"
-                                          fill="currentColor"
-                                          aria-hidden="true"
-                                        >
-                                          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
-                                        </svg>
-                                      </button>
-
-                                      <div
-                                      className={`transition-all duration-300 ease-in-out ${openChecklists[application.id]
-                                          ? 'max-h-[5000px] opacity-100'
-                                          : 'max-h-0 opacity-0 overflow-hidden'
-                                      }`}
-                                   >
-                                     <div className="space-y-3 pt-2">
-                                       {/* Required Documents */}
-                                       {allDocuments.map((doc) => {
-                                         const status = (doc.status || '').toLowerCase();
-                                         const isApproved = status === 'approved';
-                                         const isRejected = status === 'changes_requested' || status === 'rejected';
-                                         const isUnderReview = status === 'under_review';
-                                         // const isPending = !isApproved && !isRejected && !isUnderReview;
-
-                                            return (
-                                              <div key={doc.type} className={`bg-white rounded-xl border-2 p-2 sm:p-4 hover:border-slate-300 transition-all duration-200 w-full max-w-full overflow-visible ${isRejected ? 'border-red-500' : 'border-slate-200'}`}>
-                                                <div className="flex items-start justify-between min-w-0 w-full">
-                                                  <div className="flex items-start flex-1 min-w-0 w-full">
-                                                    {/* Check Icon */}
-                                                    <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${isApproved
-                                                        ? 'bg-green-100 border-green-400 text-green-600'
-                                                        : isRejected
-                                                          ? 'bg-red-100 border-red-400 text-red-600'
-                                                          : isUnderReview
-                                                            ? 'bg-amber-100 border-amber-400 text-amber-600'
-                                                            : 'bg-slate-100 border-slate-300 text-slate-400'
-                                                      }`}>
-                                                      {isApproved ? (
-                                                        <CheckCircle className="h-4 w-4" />
-                                                      ) : isRejected ? (
-                                                        <XCircle className="h-4 w-4" />
-                                                      ) : isUnderReview ? (
-                                                        <Clock className="h-4 w-4" />
-                                                      ) : (
-                                                        <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                                                      )}
-                                                    </div>
-
-                                                    {/* Document Info */}
-                                                    <div className="flex-1 min-w-0">
-                                                      <div className="flex flex-col gap-1.5 mb-2">
-                                                        <h5 className="font-semibold text-slate-900 text-sm w-full break-words">
-                                                          <TruncatedText
-                                                            text={doc.label}
-                                                            maxLength={30}
-                                                            className="font-semibold text-slate-900 text-sm"
-                                                            showTooltip={true}
-                                                            tooltipPosition="top"
-                                                            breakWords={true}
-                                                          />
-                                                        </h5>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold border break-words inline-block max-w-full ${isApproved
-                                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                                            : isRejected
-                                                              ? 'bg-red-50 text-red-700 border-red-200'
-                                                              : isUnderReview
-                                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                                                          }`}>
-                                                          {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : isUnderReview ? t('studentDashboard.myApplications.documents.status.underReview') : t('studentDashboard.myApplications.documents.status.pending')}
-                                                        </span>
-                                                        {doc?.uploaded_at && (
-                                                          <span className="text-[10px] text-slate-500 font-medium">
-                                                            Enviado em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
-                                                          </span>
-                                                        )}
-                                                      </div>
-
-                                                      {/* Review Notes / Rejection Reason */}
-                                                      {isRejected && (doc.rejection_reason || doc.review_notes) && (
-                                                        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg w-full max-w-full overflow-hidden">
-                                                          <div className="text-xs text-red-700">
-                                                            <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                            <TruncatedText
-                                                              text={doc.rejection_reason || doc.review_notes || ''}
-                                                              maxLength={150}
-                                                              className="text-xs text-red-700 leading-relaxed"
-                                                              showTooltip={true}
-                                                              tooltipPosition="top"
-                                                              breakWords={true}
-                                                            />
-                                                          </div>
-                                                        </div>
-                                                      )}
-
-                                                      {/* Upload Action for Rejected Docs */}
-                                                      {isRejected && application.status !== 'rejected' && (
-                                                        <div className="mt-3 space-y-2">
-                                                          <div className="flex flex-col gap-2">
-                                                            <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
-                                                              <span className="block break-words">
-                                                                <TruncatedText
-                                                                  text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
-                                                                  maxLength={50}
-                                                                  className="text-xs font-semibold"
-                                                                  showTooltip={true}
-                                                                  tooltipPosition="top"
-                                                                  breakWords={true}
-                                                                />
-                                                              </span>
-                                                              <input
-                                                                type="file"
-                                                                className="sr-only"
-                                                                accept="application/pdf,image/*"
-                                                                onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
-                                                              />
-                                                            </label>
-                                                            <button
-                                                              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs break-words"
-                                                              disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
-                                                              onClick={() => handleUploadDoc(application.id, doc.type)}
-                                                            >
-                                                              {uploading[docKey(application.id, doc.type)] ? (
-                                                                <div className="flex items-center justify-center">
-                                                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                                                  <span className="whitespace-nowrap">{t('studentDashboard.myApplications.paymentStatus.uploading')}</span>
-                                                                </div>
-                                                              ) : (
-                                                                <span className="whitespace-nowrap">{t('studentDashboard.myApplications.paymentStatus.uploadDocument')}</span>
-                                                              )}
-                                                            </button>
-                                                          </div>
-                                                          {selectedFiles[docKey(application.id, doc.type)] && (
-                                                            <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2 break-words">
-                                                              <span className="font-medium">{t('studentDashboard.myApplications.paymentStatus.selected')}: </span>
-                                                              <TruncatedText
-                                                                text={selectedFiles[docKey(application.id, doc.type)]?.name || ''}
-                                                                maxLength={50}
-                                                                className="text-xs text-slate-600 inline"
-                                                                showTooltip={true}
-                                                                tooltipPosition="top"
-                                                                breakWords={true}
-                                                                isFilename={true}
-                                                                documentType={doc.type}
-                                                              />
-                                                            </div>
-                                                          )}
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-
-                                       {/* University Additional Requests */}
-                                       {reqUploads.length > 0 && (
-                                         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
-                                           <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
-                                             <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                             {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
-                                           </h5>
-                                           <div className="space-y-2">
-                                             {reqUploads.map((req, idx) => {
-                                               const status = (req.status || '').toLowerCase();
-                                               const isApproved = status === 'approved';
-                                               const isRejected = status === 'rejected' || status === 'changes_requested';
-                                               // const isUnderReview = status === 'under_review';
-                                               
-                                               return (
-                                                 <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                    <div className="flex flex-col gap-1.5">
-                                                      <div className="flex items-center">
-                                                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
-                                                         isApproved 
-                                                           ? 'bg-green-100 border-green-400' 
-                                                           : isRejected 
-                                                             ? 'bg-red-100 border-red-400'
-                                                             : 'bg-amber-100 border-amber-400'
-                                                       }`}>
-                                                         {isApproved ? (
-                                                           <CheckCircle className="h-3 w-3 text-green-600" />
-                                                         ) : isRejected ? (
-                                                           <XCircle className="h-3 w-3 text-red-600" />
-                                                         ) : (
-                                                           <Clock className="h-3 w-3 text-amber-600" />
-                                                         )}
-                                                       </div>
-                                                       <span className="font-medium text-slate-900 text-xs flex items-center gap-1.5">
-                                                         <TruncatedText
-                                                           text={req.title}
-                                                           maxLength={35}
-                                                           className="font-medium text-slate-900 text-xs"
-                                                           showTooltip={true}
-                                                           tooltipPosition="top"
-                                                         />
-                                                         {req.is_admin_upload && (
-                                                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
-                                                             Admin
-                                                           </span>
-                                                         )}
-                                                       </span>
-                                                     </div>
-                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                       isApproved 
-                                                         ? 'bg-green-100 text-green-700' 
-                                                         : isRejected 
-                                                           ? 'bg-red-100 text-red-700'
-                                                           : 'bg-amber-100 text-amber-700'
-                                                     }`}>
-                                                       {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
-                                                     </span>
-                                                   </div>
-                                                   {isRejected && (req.rejection_reason || req.review_notes) && (
-                                                     <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                                                       <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                       <TruncatedText
-                                                         text={req.rejection_reason || req.review_notes || ''}
-                                                         maxLength={120}
-                                                         className="text-xs text-red-700 leading-relaxed"
-                                                         showTooltip={true}
-                                                         tooltipPosition="top"
-                                                       />
-                                                     </div>
-                                                   )}
-                                                 </div>
-                                               );
-                                             })}
-                                           </div>
-                                         </div>
-                                       )}
-
-                                       {/* Admin Uploaded Documents (Attachments) */}
-                                       {(() => {
-                                         const adminDocs = (application as any).documents && Array.isArray((application as any).documents)
-                                           ? (application as any).documents.filter((d: any) => d.source === 'admin')
-                                           : [];
-                                         
-                                         if (adminDocs.length === 0) return null;
-
-                                         return (
-                                           <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-100 p-4 shadow-sm">
-                                             <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
-                                               <Inbox className="h-4 w-4 mr-2 text-blue-600" />
-                                               Documentos Recebidos
-                                             </h5>
-                                             <div className="grid gap-2">
-                                               {adminDocs.map((doc: any, idx: number) => (
-                                                 <div key={`admin-doc-${idx}`} className="flex items-center justify-between p-3 bg-white border border-blue-100 rounded-xl hover:shadow-md transition-all group">
-                                                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                                                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                       <FileText className="h-4 w-4" />
-                                                     </div>
-                                                     <div className="min-w-0 flex-1">
-                                                       <p className="text-xs font-bold text-slate-900 truncate">
-                                                         {doc.title || 'Documento Adicional'}
-                                                       </p>
-                                                       {doc.uploaded_at && (
-                                                         <p className="text-[10px] text-slate-500">
-                                                           Recebido em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
-                                                         </p>
-                                                       )}
-                                                     </div>
-                                                   </div>
-                                                   <div className="flex items-center space-x-1 ml-2">
-                                                     <button
-                                                       onClick={() => window.open(doc.url, '_blank')}
-                                                       className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                       title="Visualizar"
-                                                     >
-                                                       <Eye className="h-4 w-4" />
-                                                     </button>
-                                                     <a
-                                                       href={doc.url}
-                                                       download
-                                                       target="_blank"
-                                                       rel="noopener noreferrer"
-                                                       className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
-                                                       title="Baixar"
-                                                     >
-                                                       <Download className="h-4 w-4" />
-                                                     </a>
-                                                   </div>
-                                                 </div>
-                                               ))}
-                                             </div>
-                                           </div>
-                                         );
-                                       })()}
-                                     </div>
-                                   </div>
-                                 </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {otherList.map((application: ApplicationWithScholarship) => renderApplicationCard(application))}
+                      </div>
                 </section>
               );
             })()}

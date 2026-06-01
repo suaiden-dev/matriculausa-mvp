@@ -66,8 +66,8 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 next[3] = userProfile.phone;
                 hasChanged = true;
             }
-            // Q4: Dependentes
-            if (!next[4] && userProfile?.dependents !== undefined && userProfile?.dependents !== null) {
+            // Q4: Dependentes — só pré-preenche se > 0 (0 é o default do banco, não escolha explícita)
+            if (!next[4] && userProfile?.dependents !== undefined && userProfile?.dependents !== null && userProfile.dependents > 0) {
                 next[4] = String(userProfile.dependents);
                 hasChanged = true;
             }

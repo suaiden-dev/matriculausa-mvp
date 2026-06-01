@@ -241,10 +241,14 @@ Deno.serve(async (req: Request) => {
           console.log('[Edge] Buscando alunos para notificação global...');
           
           // Buscar todas as applications dessa universidade
+          // ✅ SEGURANÇA: Filtrar apenas alunos com bolsa aprovada/enrolled
+          // Alunos com status pending/rejected/under_review NÃO devem receber notificações
+          // pois ainda não têm acesso ao fluxo de documentos
           const { data: globalApps, error: globalAppsError } = await supabase
             .from('scholarship_applications')
             .select('id, student_id, student_process_type, scholarships!inner(university_id)')
-            .eq('scholarships.university_id', university_id);
+            .eq('scholarships.university_id', university_id)
+            .in('status', ['approved', 'enrolled']);
             
           if (globalAppsError) {
             console.error('[Edge] Erro ao buscar applications para global request:', globalAppsError);

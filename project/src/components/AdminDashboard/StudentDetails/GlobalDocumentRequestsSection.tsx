@@ -148,11 +148,16 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
 
                 const { closedGroups, currentGroup } = groupUploadsBySubmission(allStudentUploads);
 
+                // Last fully-reviewed submission round (may not exist for malformed data)
+                const lastClosedGroup = closedGroups.length > 0
+                  ? closedGroups[closedGroups.length - 1]
+                  : null;
+
                 // The upload used for approve/reject is the most recent of the current pending group
                 const activeUpload = currentGroup.length > 0
                   ? currentGroup[currentGroup.length - 1]
-                  : closedGroups.length > 0
-                    ? closedGroups[closedGroups.length - 1][closedGroups[closedGroups.length - 1].length - 1]
+                  : lastClosedGroup
+                    ? lastClosedGroup[lastClosedGroup.length - 1]
                     : null;
 
                 // Groups shown in history: all closedGroups when currentGroup is pending,
@@ -338,10 +343,10 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                     );
                                   })}
                                 </div>
-                              ) : (
+                              ) : lastClosedGroup ? (
                                 /* LAST CLOSED GROUP — all files, approved or rejected */
                                 <div className="space-y-3">
-                                  {closedGroups[closedGroups.length - 1].map((upload: any) => {
+                                  {lastClosedGroup.map((upload: any) => {
                                     const cfg = STATUS_CONFIG[upload.status] || STATUS_CONFIG['under_review'];
                                     const Icon = cfg.icon;
                                     return (
@@ -409,12 +414,16 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                     );
                                   })}
 
-                                  {activeUpload!.rejection_reason && (
+                                  {activeUpload?.rejection_reason && (
                                     <div className="w-full mt-2 p-4 bg-red-50 border border-red-200 rounded-lg">
                                       <p className="text-xs font-semibold text-red-800 uppercase mb-1">Rejection Reason</p>
-                                      <p className="text-sm text-red-900">{activeUpload!.rejection_reason}</p>
+                                      <p className="text-sm text-red-900">{activeUpload.rejection_reason}</p>
                                     </div>
                                   )}
+                                </div>
+                              ) : (
+                                <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center">
+                                  <p className="text-slate-500 text-sm">No response submitted yet</p>
                                 </div>
                               )}
 

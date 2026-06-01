@@ -30,7 +30,8 @@
       "Bash(rtk npm:*)",
       "Bash(date /t)",
       "Bash(grep -n \"get_admin_student_full_details\\\\|get_admin_student_secondary\" supabase/migrations/*.sql)",
-      "Bash(grep -rn \"bbb9711f\\\\|user_id.*students\\\\|students.*user_id\\\\|/students/\\\\${.*user\" src/pages/AdminDashboard/UserManagement.tsx)"
+      "Bash(grep -rn \"bbb9711f\\\\|user_id.*students\\\\|students.*user_id\\\\|/students/\\\\${.*user\" src/pages/AdminDashboard/UserManagement.tsx)",
+      "Bash(rtk npx:*)"
     ]
   }
 }
