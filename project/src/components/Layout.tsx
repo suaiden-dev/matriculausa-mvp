@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import FooterCTA from './FooterCTA';
 import { useLocation } from 'react-router-dom';
 import SmartChat from './SmartChat';
 import { ModalProvider, useModal } from '../contexts/ModalContext';
@@ -13,7 +14,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { isModalOpen } = useModal();
   
-  const hideHeader = location.pathname.startsWith('/school') ||
+  const hideHeader = location.pathname.startsWith('/school/') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
                      location.pathname.startsWith('/affiliate-admin') ||
@@ -23,9 +24,10 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/webnar' ||
                      location.pathname === '/vsl-transfer' ||
                      location.pathname === '/vsl-cos' ||
-                     location.pathname === '/selection-process';
+                     location.pathname === '/selection-process' ||
+                     ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname);
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
-  const isDashboard = hideHeader;
+
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
@@ -42,6 +44,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/vsl-transfer' ||
                        location.pathname === '/vsl-cos' ||
                        location.pathname === '/selection-process' ||
+                       ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname) ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 
   useEffect(() => {
@@ -51,12 +54,13 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
       {!hideHeader && <Header />}
-      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
+      <main className="flex-grow overflow-x-hidden">
         {children}
         {!isAdmin && !hideSmartChat && !isStudentChatPage && (
           <SmartChat />
         )}
       </main>
+      {!hideFooter && <FooterCTA />}
       {!hideFooter && <Footer />}
     </div>
   );

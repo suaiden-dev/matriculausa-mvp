@@ -182,7 +182,7 @@ const TermsAndConditions: React.FC = () => {
         .from('universities')
         .select('terms_accepted, profile_completed')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error checking terms:', error);
@@ -232,7 +232,7 @@ const TermsAndConditions: React.FC = () => {
         .from('universities')
         .select('id, terms_accepted, profile_completed')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
         throw checkError;
@@ -293,16 +293,16 @@ const TermsAndConditions: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center bg-[#05294E] rounded-full px-6 py-2 mb-6">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center bg-[#05294E] rounded-full px-6 py-2 mb-4">
             <FileText className="h-5 w-5 mr-2 text-white" />
             <span className="text-sm font-medium text-white">Partnership Agreement</span>
           </div>
           
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
             Terms and Conditions
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -330,7 +330,7 @@ const TermsAndConditions: React.FC = () => {
               </div>
             ) : (
               <div 
-                className="prose prose-gray max-w-none"
+                className="prose prose-sm prose-gray max-w-none [&_h3]:mt-4 [&_h3]:mb-1 [&_p]:mb-2"
                 dangerouslySetInnerHTML={{ __html: termsContent }}
               />
             )}

@@ -339,7 +339,7 @@ const ScholarshipDetail: React.FC = () => {
   );
 
   const renderUniversityCard = () => (
-    <div className="sm:max-w-[360px] w-full flex-shrink-0">
+    <div className="lg:max-w-[360px] w-full flex-shrink-0">
       <div className="inline-flex items-center gap-4 bg-slate-50 border border-slate-100/60 p-5 rounded-2xl w-full">
         <div className="w-16 h-16 rounded-xl bg-white shadow-sm flex items-center justify-center border border-slate-100 overflow-hidden flex-shrink-0 relative">
           {scholarship.universities?.logo_url ? (
@@ -614,7 +614,7 @@ const ScholarshipDetail: React.FC = () => {
                 Control Fee
               </span>
               <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)')}
+                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
               </span>
             </div>
           </div>
@@ -800,18 +800,18 @@ const ScholarshipDetail: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-10 pb-24 relative z-20">
         
         {/* MOBILE ONLY LAYOUT (< lg) */}
-        <div className="lg:hidden space-y-6 mb-6">
-          {/* 1. Titulo e subtitulo */}
+        <div className="lg:hidden space-y-6 mb-6 text-left">
+          {/* 1. Titulo, subtitulo e faculdade agrupados de forma padrão */}
           <div className="bg-white rounded-[2rem] border border-slate-100/80 shadow-[0_20px_50px_rgba(8,112,184,0.05)] p-6">
-            {renderTitleAndSubtitle()}
+            <div className="flex flex-col gap-6">
+              {renderTitleAndSubtitle()}
+              {renderUniversityCard()}
+            </div>
           </div>
           
-          {/* 2. Icone e nome da faculdade */}
-          {renderUniversityCard()}
-          
-          {/* 3. Elemento de preço */}
+          {/* 2. Elemento de preço */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-6 relative overflow-hidden">
-            <div className="space-y-4 text-center">
+            <div className="space-y-4 text-left">
               {renderPriceElement()}
               {renderApplyButtons()}
             </div>
@@ -902,7 +902,7 @@ const ScholarshipDetail: React.FC = () => {
       {recommendedScholarships.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 relative z-20">
           <div className="border-t border-slate-100 pt-16">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
+            <div className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:items-end justify-between mb-10">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                   {t('scholarshipsPage.detail.recommendedScholarships', 'Outras Bolsas de Estudo Recomendadas')}

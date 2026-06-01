@@ -45,31 +45,36 @@ export const useStudentChatUnreadCount = () => {
 
     const channelName = `student-chat-unread-count-${user.id}`;
 
-    const channel = channelManager.subscribe(channelName)
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'admin_student_messages',
-          filter: `recipient_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'admin_student_messages',
-          filter: `recipient_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-        }
-      );
+    channelManager.subscribe(
+      channelName,
+      {},
+      (ch) => {
+        ch.on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'admin_student_messages',
+            filter: `recipient_id=eq.${user.id}`
+          },
+          () => {
+            fetchUnreadCount();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'admin_student_messages',
+            filter: `recipient_id=eq.${user.id}`
+          },
+          () => {
+            fetchUnreadCount();
+          }
+        );
+      }
+    );
 
     return () => {
       channelManager.unsubscribe(channelName);

@@ -21,8 +21,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     try {
       // school_manager: query by university id; school: query by user_id
       const query = universityId
-        ? supabase.from('universities').select('terms_accepted, profile_completed').eq('id', universityId).single()
-        : supabase.from('universities').select('terms_accepted, profile_completed').eq('user_id', userId).single();
+        ? supabase.from('universities').select('terms_accepted, profile_completed').eq('id', universityId).maybeSingle()
+        : supabase.from('universities').select('terms_accepted, profile_completed').eq('user_id', userId).maybeSingle();
       const { data: university, error } = await query;
 
       const result = {
@@ -151,7 +151,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // REDIRECIONAMENTO APÓS LOGIN
       // REDIRECIONAMENTO APÓS LOGIN (REMOVIDO PARA MOSTRAR MENSAGEM NO COMPONENTE)
-      const isRegistrationPath = false;
+      const isRegistrationPath = currentPath === '/login' || currentPath === '/register' || currentPath === '/auth';
 
       if (isRegistrationPath) {
         const searchParams = new URLSearchParams(location.search);
@@ -225,7 +225,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA
+      // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA - Desativado para permitir exploração livre do site
+      /*
       if (currentPath === '/') {
         if (user.role === 'school' || user.role === 'school_manager') {
           setCheckingUniversity(true);
@@ -267,6 +268,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
       }
+      */
     };
 
     checkAndRedirect();

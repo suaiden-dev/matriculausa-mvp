@@ -21,9 +21,9 @@
         "actionRequired": "AÇÃO NECESSÁRIA",
         "stoppedAt": "Parou em: {{step}}",
         "startNow": "Começar Agora",
-        "documentsPortal": "Portal de Documentos",
-        "continueProcess": "Continuar Processo",
-        "startProcess": "Iniciar Processo",
+        "documentsPortal": "Continuar",
+        "continueProcess": "Continuar",
+        "startProcess": "Iniciar",
         "stepLabels": {
           "selection_fee": "Taxa do Processo Seletivo",
           "identity_verification": "Verificação de Identidade",
@@ -37,7 +37,8 @@
           "university_documents": "Minha Aplicação",
           "waiting_approval": "Carta de Aceitação e I-20",
           "completed": "Finalizado",
-          "my_applications": "Dashboard"
+          "my_applications": "Dashboard",
+          "selection_fee_pending": "Processo Seletivo"
         },
         "stepDescriptions": {
           "selection_fee": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
@@ -52,7 +53,8 @@
           "university_documents": "Revise os detalhes da sua universidade e envie a documentação obrigatória.",
           "waiting_approval": "Acompanhe a emissão da sua Carta de Aceitação e o processo do formulário I-20.",
           "my_applications": "Visualize o progresso das suas aplicações e documentos.",
-          "completed": "Parabéns! Seu processo de onboarding foi concluído com sucesso."
+          "completed": "Parabéns! Seu processo de onboarding foi concluído com sucesso.",
+          "selection_fee_pending": "Dê início ao processo seletivo, descubra bolsas de estudos nos Estados Unidos esperando por você."
         }
       },
       "onboarding": {
@@ -67,6 +69,19 @@
         "completed": "Processo de Seleção Concluído",
         "completedDesc": "Tudo pronto! Siga para a próxima etapa."
       }
+    },
+    "onboardingStep1": {
+      "stepLabel": "Processo Seletivo",
+      "title": "Sua bolsa nos EUA começa aqui",
+      "description": "Pague o Processo Seletivo e libere seu acesso completo — as melhores bolsas de estudos para os Estados Unidos.",
+      "benefit1": "Bolsas presenciais, online e híbridas",
+      "benefit2": "Autorização de trabalho OPT e CPT",
+      "benefit3": "Reembolso se não for aceito em nenhuma bolsa",
+      "imageAlt": "Estudantes em uma universidade moderna",
+      "urgencyNoticeBefore": "As bolsas disponíveis são ",
+      "urgencyNoticeBold": "limitadas",
+      "urgencyNoticeAfter": "! Garanta sua vaga!",
+      "startBtn": "Começar"
     },
     "stepByStepTour": {
       "title": "Tour Passo a Passo",
@@ -127,6 +142,30 @@
       "You have been selected for the scholarship.": "Você foi selecionado para a bolsa."
     },
     "chat": {
+      "pleaseLogin": "Por favor, faça login para acessar o chat.",
+      "supportTeam": "Equipe de Suporte",
+      "responseTime": "Tempo de resposta: 1-2 horas úteis",
+      "yesterday": "Ontem",
+      "noMessagesYet": "Nenhuma mensagem ainda",
+      "supportTab": "Suporte",
+      "universitiesTab": "Universidades",
+      "searchStudents": "Buscar alunos...",
+      "searchConversations": "Buscar conversas...",
+      "studentConversations": "Conversas com Alunos",
+      "messages": "Mensagens",
+      "refreshConversations": "Atualizar conversas",
+      "tryAgain": "Tentar novamente",
+      "noConversationsMatch": "Nenhuma conversa corresponde à sua busca",
+      "noConversationsYet": "Nenhuma conversa ainda",
+      "startConversationHelp": "Inicie uma conversa com um administrador para obter ajuda.",
+      "startNewConversation": "Iniciar nova conversa",
+      "viewStudentDetails": "Ver detalhes do estudante",
+      "openStudentDetails": "Abrir detalhes do estudante",
+      "selectStudentToChat": "Selecione um estudante para conversar",
+      "startConversation": "Iniciar uma conversa",
+      "chooseConversationSidebar": "Escolha uma conversa na barra lateral para começar a enviar mensagens",
+      "selectConversationOrNew": "Selecione uma conversa ou inicie uma nova com o suporte",
+      "noStudentConversationsYet": "Nenhuma conversa com estudantes ainda",
       "welcomeMessage": {
         "title": "Bem-vindo ao Chat de Suporte!",
         "body": "Olá! Este é o seu chat de suporte. Nossa equipe está disponível para ajudá-lo das 9h às 17h (Fuso Horário do Arizona). Você pode fazer perguntas sobre bolsas, documentos e o progresso da sua aplicação. Sinta-se à vontade para enviar mensagens e anexos a qualquer momento!",
@@ -141,7 +180,8 @@
       "completeProfile": "Complete seu perfil para desbloquear mais oportunidades",
       "completeNow": "Completar agora",
       "profileComplete": "Perfil Completo!",
-      "viewProfile": "Ver Perfil"
+      "viewProfile": "Ver Perfil",
+      "pending": "Pendente"
     },
     "successTips": {
       "title": "Dicas de Sucesso",
@@ -1289,7 +1329,7 @@
     "invitedOn": "Convidado em {{date}}",
     "nudgeCooldown": "Aguarde {{minutes}} min para notificar novamente",
     "participatingUniversities": "Universidades Participantes",
-    "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade. Clique em uma universidade para ver mais detalhes.",
+    "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade.",
     "loadingUniversities": "Carregando universidades...",
     "noParticipatingUniversities": "Nenhuma universidade participante ainda",
     "universitiesNotParticipating": "As universidades precisam optar pelo programa Matricula Rewards para aceitar moedas como desconto na mensalidade.",
@@ -1308,6 +1348,8 @@
     "errorLoadingData": "Erro ao carregar dados",
     "loading": "Carregando {{title}}...",
     "shareDescription": "Use os botões abaixo para compartilhar seu código rapidamente",
+    "balanceAbbreviation": "Saldo:",
+    "universityLogoAlt": "Logo de {{name}}",
     "customRedemption": {
       "title": "Desconto Customizado de Tuition",
       "subtitle": "Resgate qualquer quantidade de coins como desconto de tuition",

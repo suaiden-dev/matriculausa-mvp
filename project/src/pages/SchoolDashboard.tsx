@@ -11,6 +11,7 @@ const SchoolDashboard: React.FC = () => {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'scholarships' | 'profile'>('overview');
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -320,97 +321,7 @@ const SchoolDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Recent Scholarships */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Recent Scholarships</h3>
-                    {university?.profile_completed && (
-                      <Link
-                        to="/school/scholarship/new"
-                        className="text-[#05294E] hover:text-[#05294E]/80 font-medium text-sm"
-                      >
-                        Create New
-                      </Link>
-                    )}
-                  </div>
-                </div>
-                <div className="p-6">
-                  {!university?.profile_completed ? (
-                    <div className="text-center py-12">
-                      <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Complete your profile first</h3>
-                      <p className="text-gray-500 mb-4">Set up your university profile to start creating scholarships</p>
-                      <Link
-                        to="/school/setup-profile"
-                        className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        Complete Profile
-                      </Link>
-                    </div>
-                  ) : scholarships.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No scholarships yet</h3>
-                      <p className="text-gray-500 mb-4">Start by creating your first scholarship opportunity</p>
-                      <Link
-                        to="/school/scholarship/new"
-                        className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        Create Scholarship
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {scholarships.slice(0, 5).map((scholarship) => (
-                        <div key={scholarship.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{scholarship.title}</h4>
-                            <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                              <span>${(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}</span>
-                              <span>•</span>
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                scholarship.is_active 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {scholarship.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => toggleScholarshipStatus(scholarship.id, scholarship.is_active)}
-                              className={`p-2 rounded-lg transition-colors ${
-                                scholarship.is_active 
-                                  ? 'text-yellow-600 hover:bg-yellow-50' 
-                                  : 'text-green-600 hover:bg-green-50'
-                              }`}
-                              title={scholarship.is_active ? 'Deactivate' : 'Activate'}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <Link
-                              to={`/school/scholarship/edit/${scholarship.id}`}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteScholarship(scholarship.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+
             </div>
           )}
 
@@ -479,7 +390,7 @@ const SchoolDashboard: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-500">Type</span>
-                          <span className="font-medium text-gray-900">{scholarship.type}</span>
+                          <span className="font-medium text-gray-900">{scholarship.level || scholarship.scholarship_type || 'N/A'}</span>
                         </div>
                         {scholarship.deadline && (
                           <div className="flex items-center justify-between text-sm">
@@ -559,7 +470,7 @@ const SchoolDashboard: React.FC = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
-                        <p className="text-gray-900">{university.contact_email || 'Not specified'}</p>
+                        <p className="text-gray-900">{university.contact?.email || 'Not specified'}</p>
                       </div>
                     </div>
                     

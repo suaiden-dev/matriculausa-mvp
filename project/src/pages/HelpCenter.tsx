@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User, FileText, CreditCard, UploadCloud, CheckCircle, HelpCircle, MessageCircle, Search, Phone, Mail, Clock } from 'lucide-react';
+import { User, FileText, CreditCard, UploadCloud, CheckCircle, Search, Phone, Mail } from 'lucide-react';
 import SmartChat from '../components/SmartChat';
 import { useTranslation } from 'react-i18next';
 
 const HelpCenter: React.FC = () => {
-  const { t } = useTranslation(['help', 'common']);
+  const { t } = useTranslation(['help', 'common', 'home', 'contact']);
   const [searchQuery, setSearchQuery] = useState('');
 
   const topics = [
@@ -43,18 +43,16 @@ const HelpCenter: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-16 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#05294E] rounded-lg mb-6">
-              <HelpCircle className="h-8 w-8 text-white" />
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+      <div className="bg-gradient-to-r from-[#05294E] via-[#0A3D70] to-[#05294E] text-white py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-300 via-transparent to-transparent pointer-events-none"></div>
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
               {t('help:header.title')}
             </h1>
             
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto font-light leading-relaxed mb-8">
               {t('help:header.description')}
             </p>
             
@@ -65,30 +63,18 @@ const HelpCenter: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('help:header.searchPlaceholder')}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-gray-900"
               />
-            </div>
-
-            {/* Stats */}
-            <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>{t('help:header.stats.support247')}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
-                <span>{t('help:header.stats.quickResponse')}</span>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-4 gap-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div>
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div>
             <div className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">
                 {t('help:mainTopics.title')}
@@ -128,74 +114,44 @@ const HelpCenter: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Contact Options */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {t('help:sidebar.needHelp')}
-              </h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <MessageCircle className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {t('help:sidebar.smartAssistant')}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {t('help:sidebar.smartAssistantDesc')}
-                    </p>
-                  </div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                </div>
+        {/* Still have questions? Section */}
+        <div className="mt-16">
+          <h3 className="text-2xl font-semibold text-gray-900 mb-12">
+            {t('home.about.cta.questions') || 'Still have questions?'}
+          </h3>
 
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => window.open('https://wa.me/12136762544', '_blank')}
-                >
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <Phone className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">
-                      {t('help:sidebar.whatsappSupport')}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {t('help:sidebar.whatsappDesc')}
-                    </p>
-                  </div>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: Contact us (Email) */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col shadow-sm">
+              <a href="mailto:info@matriculausa.com" className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 group">
+                <div className="flex items-center space-x-3">
+                  <Mail className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
+                  <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{t('methods.email.title') || 'Contact us'}</span>
                 </div>
+                <span className="text-gray-400 text-sm font-semibold group-hover:text-blue-600 transition-colors">&gt;</span>
+              </a>
+              <div className="p-6">
+                <p className="text-gray-900 text-base leading-relaxed">
+                  {t('home.faq.footerContact') || "Got a detailed question? Shoot us an email and we'll get things smoothed out."}
+                </p>
               </div>
             </div>
 
-            {/* Contact Note */}
-            <div className="bg-[#05294E] rounded-lg p-6 text-white">
-              <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                  <Mail className="h-5 w-5 text-white" />
+            {/* Card 2: Call us (WhatsApp) */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col shadow-sm">
+              <a href="tel:+12136762544" className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 transition-colors duration-200 group">
+                <div className="flex items-center space-x-3">
+                  <Phone className="h-5 w-5 text-gray-700 group-hover:text-blue-600 transition-colors" />
+                  <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{t('methods.phone.title') || 'Call us'}</span>
                 </div>
-                <h3 className="text-lg font-semibold">
-                  {t('help:sidebar.quickSupport.title')}
-                </h3>
-              </div>
-              
-              <p className="text-blue-100 mb-4 text-sm">
-                {t('help:sidebar.quickSupport.description')}
-              </p>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
-                  <span>{t('help:sidebar.quickSupport.instantAI')}</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 text-blue-400 mr-2" />
-                  <span>{t('help:sidebar.quickSupport.availability247')}</span>
-                </div>
+                <span className="text-gray-400 text-sm font-semibold group-hover:text-blue-600 transition-colors">&gt;</span>
+              </a>
+              <div className="p-6">
+                <p className="text-gray-900 text-base leading-relaxed">
+                  {t('home.faq.whatsappCardDesc') || 'Get instant help through WhatsApp messaging available 24/7'}
+                </p>
               </div>
             </div>
           </div>

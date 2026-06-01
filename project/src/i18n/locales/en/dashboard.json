@@ -21,9 +21,9 @@
         "actionRequired": "ACTION REQUIRED",
         "stoppedAt": "Stopped at: {{step}}",
         "startNow": "Start Now",
-        "documentsPortal": "Documents Portal",
-        "continueProcess": "Continue Process",
-        "startProcess": "Start Process",
+        "documentsPortal": "Continue",
+        "continueProcess": "Continue",
+        "startProcess": "Start",
         "stepLabels": {
           "welcome": "Welcome",
           "selection_fee": "Selection Fee",
@@ -38,7 +38,8 @@
           "university_documents": "University Documents",
           "waiting_approval": "Waiting Approval",
           "completed": "Completed",
-          "my_applications": "My Applications"
+          "my_applications": "My Applications",
+          "selection_fee_pending": "Selection Process"
         },
         "stepDescriptions": {
           "selection_fee": "Pay the fee to unlock access to scholarships.",
@@ -53,7 +54,8 @@
           "university_documents": "Submit the documents required by the university.",
           "waiting_approval": "Your documents are under review. 48h timeframe.",
           "my_applications": "Track your documents and acceptance letter.",
-          "completed": "Process successfully completed!"
+          "completed": "Process successfully completed!",
+          "selection_fee_pending": "Start the selection process and discover study scholarships in the United States waiting for you."
         }
       },
       "onboarding": {
@@ -68,6 +70,19 @@
         "completed": "Selection Process Completed",
         "completedDesc": "All set! Move to the next step."
       }
+    },
+    "onboardingStep1": {
+      "stepLabel": "Selection Process",
+      "title": "Your scholarship in the US starts here",
+      "description": "Pay the Selection Process fee and unlock your full access — the best scholarships for the United States.",
+      "benefit1": "In-person, online, and hybrid scholarships",
+      "benefit2": "OPT and CPT work authorization",
+      "benefit3": "Refund if not accepted into any scholarship",
+      "imageAlt": "Students at a modern university",
+      "urgencyNoticeBefore": "Available scholarships are ",
+      "urgencyNoticeBold": "limited",
+      "urgencyNoticeAfter": "! Secure your spot!",
+      "startBtn": "Start"
     },
     "stepByStepTour": {
       "title": "Step-by-Step Tour",
@@ -131,6 +146,30 @@
       "You have been selected for the scholarship.": "You have been selected for the scholarship."
     },
     "chat": {
+      "pleaseLogin": "Please log in to access chat.",
+      "supportTeam": "Support Team",
+      "responseTime": "Response time: 1-2 business hours",
+      "yesterday": "Yesterday",
+      "noMessagesYet": "No messages yet",
+      "supportTab": "Support",
+      "universitiesTab": "Universities",
+      "searchStudents": "Search students...",
+      "searchConversations": "Search conversations...",
+      "studentConversations": "Student Conversations",
+      "messages": "Messages",
+      "refreshConversations": "Refresh conversations",
+      "tryAgain": "Try again",
+      "noConversationsMatch": "No conversations match your search",
+      "noConversationsYet": "No conversations yet",
+      "startConversationHelp": "Start a conversation with an admin to get help.",
+      "startNewConversation": "Start new conversation",
+      "viewStudentDetails": "View student details",
+      "openStudentDetails": "Open student details",
+      "selectStudentToChat": "Select a student to chat with",
+      "startConversation": "Start a conversation",
+      "chooseConversationSidebar": "Choose a conversation from the sidebar to begin messaging",
+      "selectConversationOrNew": "Select a conversation or start a new one with support",
+      "noStudentConversationsYet": "No student conversations yet",
       "welcomeMessage": {
         "title": "Welcome to Support Chat!",
         "body": "Hello! This is your support chat. Our team is available to help you from 9 AM to 5 PM (Arizona Time Zone). You can ask questions about scholarships, documents, and your application progress. Feel free to send messages and attachments at any time!",
@@ -145,7 +184,8 @@
       "completeProfile": "Complete your profile to unlock more opportunities",
       "completeNow": "Complete now",
       "profileComplete": "Profile Complete!",
-      "viewProfile": "View Profile"
+      "viewProfile": "View Profile",
+      "pending": "Pending"
     },
     "successTips": {
       "title": "Success Tips",
@@ -1231,8 +1271,9 @@
       "errors": {
         "onlyPdfAllowed": "Only PDF files are allowed."
       }
-    },
-    "profileManagement": {
+    }
+  },
+  "profileManagement": {
       "title": "Student Profile",
       "subtitle": "Manage your academic profile and preferences",
       "editProfile": "Edit Profile",
@@ -1331,7 +1372,7 @@
         "addEnglishProficiency": "Add English proficiency"
       }
     },
-    "matriculaRewards": {
+  "matriculaRewards": {
       "title": "Matricula Rewards",
       "subtitle": "Earn credits by referring friends to MatriculaUSA",
       "balance": "Balance",
@@ -1395,7 +1436,7 @@
       "invitedOn": "Invited on {{date}}",
       "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
       "participatingUniversities": "Participating Universities",
-      "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
+      "universitiesDescription": "These universities accept Matricula coins as tuition discounts.",
       "loadingUniversities": "Loading universities...",
       "noParticipatingUniversities": "No participating universities yet",
       "universitiesNotParticipating": "Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.",
@@ -1414,6 +1455,8 @@
       "errorLoadingData": "Error loading data",
       "loading": "Loading {{title}}...",
       "shareDescription": "Use the buttons below to quickly share your code",
+      "balanceAbbreviation": "Bal:",
+      "universityLogoAlt": "{{name}} logo",
       "customRedemption": {
         "title": "Custom Tuition Discount",
         "subtitle": "Redeem any amount of coins as tuition discount",
@@ -1494,7 +1537,7 @@
         "tryAgain": "Try Again"
       }
     },
-    "matriculaRewardsLanding": {
+  "matriculaRewardsLanding": {
       "aiPoweredHelp": "AI-powered help",
       "directMessaging": "Direct messaging",
       "badge": "New Rewards Program",
@@ -1701,7 +1744,7 @@
         }
       }
     },
-    "academicInfo": {
+  "academicInfo": {
       "minEnglishProficiency": "Minimum English",
       "minGpa": "Minimum GPA",
       "englishProficiencyLevels": {
@@ -1711,5 +1754,4 @@
         "native": "Native"
       }
     }
-  }
 }

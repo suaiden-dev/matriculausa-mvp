@@ -775,6 +775,9 @@
       "redirecting": "Please wait, redirecting to checkout"
     }
   },
+  "onboarding": {
+    "secureEnvironmentDisclaimer": "You are in a secure environment. Your information is protected throughout the entire process."
+  },
   "reinstatementFeeStep": {
     "title": "Reinstatement Fee",
     "subtitle": "To proceed with your transfer process, payment of the reinstatement fee is required.",

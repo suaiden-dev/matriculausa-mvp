@@ -88,8 +88,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales' | 'school_manager';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
-  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'post_sales' | 'school_manager') => void;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
+  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | 'school_manager') => void;
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -635,8 +635,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         // Garantir que o campo role do perfil esteja alinhado com o metadata e com dados de universidade
         try {
-          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined;
-          let finalRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined = profile?.role || metadataRole;
+          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | undefined;
+          let finalRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales' | undefined = profile?.role || metadataRole;
 
           if (!finalRole || (finalRole === 'student' && metadataRole === 'school')) {
             // Se tiver universidade vinculada, forçar role 'school'
@@ -1031,7 +1031,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, setUser, setUserProfile, setSupabaseUser]);
 
   // Função para registrar usuário
-  const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
+  const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
 
@@ -1365,7 +1365,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)
-  const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => {
+  const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | 'affiliate' | 'post_sales') => {
     if (!user || !userProfile) return;
 
     // Atualizar estado local temporariamente

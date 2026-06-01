@@ -28,6 +28,12 @@
     "zellePaymentPending": "Aguarde a verificação do seu pagamento Zelle antes de iniciar um novo processo."
   },
   "footer": {
+    "sections": {
+      "platform": "A Plataforma",
+      "helpContact": "Ajuda e Contato",
+      "explore": "Explore",
+      "followUs": "Siga-nos nas redes sociais"
+    },
     "company": {
       "title": "Empresa",
       "about": "Sobre Nós",
@@ -58,7 +64,9 @@
       "privacy": "Política de Privacidade",
       "terms": "Termos de Serviço",
       "cookies": "Política de Cookies",
-      "manageCookies": "Gerenciar Cookies"
+      "manageCookies": "Gerenciar Cookies",
+      "disclaimerTitle": "Aviso Legal (Disclaimer)",
+      "disclaimerText": "A Matrícula USA não é um escritório de advocacia, não oferece assessoria jurídica, não garante aprovação de visto e não representa o cliente perante consulados ou a USCIS. Nosso suporte humano é operacional. Oferecemos exclusivamente consultoria educacional e assistência na candidatura escolar."
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -83,25 +91,25 @@
       "invalidLink": {
         "title": "Link Inválido",
         "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "alreadyUnsubscribed": {
         "title": "Já Removido",
         "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "success": {
         "title": "Inscrição Cancelada com Sucesso",
         "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
         "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
         "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "error": {
         "title": "Erro",
         "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
         "tryAgain": "Tentar Novamente",
-        "backToHome": "Voltar para Home"
+        "backToHome": "Voltar para o Início"
       },
       "form": {
         "title": "Cancelar Inscrição",
@@ -125,7 +133,9 @@
         "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. Todos os direitos reservados."
+    "copyright": "© 2026 Matrícula USA — Los Angeles, CA, USA.",
+    "madeWithLove": "Feito com ❤ para nossos estudantes",
+    "becomeAffiliate": "Torne-se Afiliado"
   },
   "common": {
     "select": "Selecione",
@@ -152,6 +162,8 @@
     "learnMore": "Saiba mais",
     "search": "Buscar",
     "support": "Suporte",
+    "payment": "Pagamento",
+    "general": "Geral",
     "welcome": "Bem-vindo",
     "close": "Fechar",
     "back": "Voltar",
