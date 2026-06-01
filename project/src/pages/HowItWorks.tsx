@@ -642,7 +642,7 @@ const JourneySection: React.FC<{
               {/* Text Side (left side on desktop) */}
               <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 lg:px-16 text-center lg:text-left mt-8 lg:mt-0">
                 <div className="mb-6 flex flex-col lg:flex-row items-center gap-2 lg:gap-4 justify-center lg:justify-start lg:flex-row-reverse lg:text-right">
-                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-left">
+                  <h3 className="text-3xl font-bold text-foreground tracking-tight leading-none text-center lg:text-right">
                     {isLoadingFee ? (
                       <span className="inline-block h-8 w-40 bg-slate-200 rounded-lg animate-pulse"></span>
                     ) : (

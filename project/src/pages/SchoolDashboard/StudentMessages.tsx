@@ -1,9 +1,25 @@
 import { useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import AdminStudentChatPage from '../../components/Chat/AdminStudentChatPage';
 
 const StudentMessages: React.FC = () => {
   const [searchParams] = useSearchParams();
   const studentId = searchParams.get('studentId') || undefined;
+  const { i18n } = useTranslation();
+
+  // Garante que esta página específica (mensagens da universidade) seja sempre exibida em inglês
+  useEffect(() => {
+    const originalLanguage = i18n.language;
+    if (originalLanguage !== 'en') {
+      i18n.changeLanguage('en');
+    }
+    return () => {
+      if (originalLanguage && originalLanguage !== 'en') {
+        i18n.changeLanguage(originalLanguage);
+      }
+    };
+  }, [i18n]);
 
   return (
     <div className="space-y-6">
