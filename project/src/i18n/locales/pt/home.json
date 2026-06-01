@@ -232,7 +232,7 @@
     "steps": {
       "profile": {
         "title": "Inicie o Processo Seletivo",
-        "description": "Faça nosso questionário e escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
+        "description": "Preencha nosso questionário e escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
         "items": [
           "Histórico acadêmico e conquistas",
           "Objetivos de carreira e preferências",
@@ -241,7 +241,7 @@
         ]
       },
       "selectionFee": {
-        "title": "Avance com sua bolsa aprovado",
+        "title": "Avance com sua bolsa aprovada",
         "description": "Selecione a melhor bolsa para continuar seu processo de matricula",
         "items": [
           "Acesso para navegar pelas bolsas",
