@@ -361,7 +361,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
                     <div className="px-6 pb-6 mt-auto">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => navigate(`/school/dashboard/selection-process`)}
+                          onClick={() => navigate(`/school/dashboard/application-tracking?scholarship=${scholarship.id}&view=table`)}
                           className="flex-1 bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm"
                         >
                           View Applicants

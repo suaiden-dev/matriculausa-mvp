@@ -231,8 +231,8 @@
     },
     "steps": {
       "profile": {
-        "title": "Realiza el Proceso de Selección",
-        "description": "Completa tu información académica y personal. Nuestra IA encuentra tus mejores opciones.",
+        "title": "Inicie el Proceso de Selección",
+        "description": "Responda a nuestro cuestionario y elija hasta 4 becas exclusivas en universidades americanas alineadas con su futuro.",
         "items": [
           "Historial académico y logros",
           "Objetivos profesionales y preferencias",
@@ -241,8 +241,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Proceso de Selección",
-        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable.",
+        "title": "Avance con su beca aprobada",
+        "description": "Seleccione la mejor beca para continuar con su proceso de matrícula",
         "items": [
           "Acceso para navegar becas",
           "Iniciar proceso de solicitud",

@@ -231,8 +231,8 @@
     },
     "steps": {
       "profile": {
-        "title": "Apply for the Selection Process",
-        "description": "Fill in your academic and personal information. Our AI finds your best options.",
+        "title": "Start the Selection Process",
+        "description": "Take our questionnaire and choose up to 4 exclusive scholarships at American universities aligned with your future.",
         "items": [
           "Academic history and achievements",
           "Career goals and preferences",
@@ -241,8 +241,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Selection Process",
-        "description": "Unlock all scholarships. This fee is final and non-refundable.",
+        "title": "Move forward with your approved scholarship",
+        "description": "Select the best scholarship to continue your enrollment process",
         "items": [
           "Access to browse scholarships",
           "Start application process",
