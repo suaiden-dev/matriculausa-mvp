@@ -1598,7 +1598,7 @@
         "satisfactionRate": "Satisfaction Rate"
       },
       "howItWorks": {
-        "title": "Help a friend get to the US and earn together",
+        "title": "How it works",
         "subtitle": "Share your code and earn coins when your friends start their American journey.",
         "steps": {
           "step1": {
@@ -1623,13 +1623,13 @@
           }
         },
         "calculator": {
-          "title": "Matrícula Coins Calculator",
-          "description": "See how many coins you can earn by referring friends",
+          "title": "Imagine how much you could save",
+          "description": "Drag to discover the discount each friend you refer can bring to your tuition.",
           "label": "How many friends can you refer?",
-          "friends": "friends",
+          "friends": "friends referred",
           "coinsEarned": "Coins Earned",
-          "totalSavings": "Value Available for Redemption",
-          "cta": "Start Saving Now",
+          "totalSavings": "Your tuition discount",
+          "cta": "I want to start saving",
           "minValue": "1 friend",
           "maxValue": "50+ friends",
           "coinsPerFriend": "100 coins",

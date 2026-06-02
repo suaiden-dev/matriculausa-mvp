@@ -1355,7 +1355,7 @@
       "satisfactionRate": "Tasa de Satisfacción"
     },
     "howItWorks": {
-      "title": "Ayuda a un amigo a llegar a los EE. UU. y ganen juntos",
+      "title": "Cómo funciona",
       "subtitle": "Comparte tu código y gana coins cuando tus amigos comiencen su jornada americana.",
       "steps": {
         "step1": {
@@ -1380,13 +1380,13 @@
         }
       },
       "calculator": {
-        "title": "Calculadora de Matrícula Coins",
-        "description": "Mira cuántos coins puedes ganar refiriendo amigos",
+        "title": "Imagina cuánto puedes ahorrar",
+        "description": "Desliza y descubre el descuento que cada amigo que refieras puede traer a tu mensualidad.",
         "label": "¿Cuántos amigos puedes referir?",
-        "friends": "amigos",
+        "friends": "amigos referidos",
         "coinsEarned": "Coins Ganados",
-        "totalSavings": "Valor Disponible para Canje",
-        "cta": "Empieza a Ahorrar Ahora",
+        "totalSavings": "Tu descuento en la mensualidad",
+        "cta": "Quiero empezar a ahorrar",
         "minValue": "1 amigo",
         "maxValue": "50+ amigos",
         "coinsPerFriend": "100 coins",
