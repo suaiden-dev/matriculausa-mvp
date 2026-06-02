@@ -82,7 +82,20 @@
       "Bash(xargs -I {} grep -l \"documents\" \"{}\")",
       "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); rows=json.loads\\(data[0]['text']\\); [print\\(r['id'], r['name']\\) for r in rows]\")",
       "Bash(supabase --version)",
-      "Bash(rtk supabase:*)"
+      "Bash(rtk supabase:*)",
+      "Bash(npx vite:*)",
+      "Bash(ls -d \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\project\\\\supabase\\\\functions\"/*/)",
+      "Bash(find . -name \"*.sql\" -exec grep -l \"commission_amount\" {} \\\\;)",
+      "Bash(date /t)",
+      "Bash(time /t)",
+      "Bash(find \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\" -type f -name \"*.sql\" -exec grep -l \"affiliate_admins\" {} \\\\;)",
+      "Bash(find . -path ./node_modules -prune -o -name \"*.sql\" -type f -exec grep -l \"has_paid_ds160_package\\\\|has_paid_i539_cos_package\" {} \\\\;)",
+      "Bash(find:*)",
+      "Bash([ -d \"/c/Users/victurib/Matricula USA/matriculausa-mvp/project/supabase/functions/$dir\"* ])",
+      "Bash(xargs -I {} dirname {})",
+      "Bash(xargs -I {} basename {})",
+      "Read(//tmp/**)",
+      "Bash(ls:*)"
     ]
   }
 }
