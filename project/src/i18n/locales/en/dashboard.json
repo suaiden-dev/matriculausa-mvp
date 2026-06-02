@@ -1418,8 +1418,6 @@
       "howItWorks": "How it Works",
       "step1Title": "Share your code",
       "step1Description": "Share your unique referral code with friends and family",
-      "step2Title": "They pay the selection process fee",
-      "step2Description": "When they use your code and pay the selection process fee, you earn coins",
       "step3Title": "Redeem your rewards",
       "step3Description": "When your referred completes the full process and pays all fees, you earn 100 coins.",
       "notificationSent": "Notification sent successfully!",
@@ -1600,26 +1598,26 @@
         "satisfactionRate": "Satisfaction Rate"
       },
       "howItWorks": {
-        "title": "How Matricula Rewards Works",
-        "subtitle": "A simple and transparent system for you to save on your education while helping your friends achieve the American dream",
+        "title": "Help a friend get to the US and earn together",
+        "subtitle": "Share your code and earn coins when your friends start their American journey.",
         "steps": {
           "step1": {
             "title": "Share Your Code",
-            "description": "Get your unique code and share with friends who want to study in the USA",
+            "description": "Send your code to friends who want to study in the USA.",
             "details": "Each code automatically tracks your referrals"
           },
           "step2": {
             "title": "Friends Sign Up",
-            "description": "When your friends register using your code, you both earn Matricula Coins",
+            "description": "When your friends pay the Placement Fee, you both earn 100 Matricula Coins",
             "details": "100 coins after Placement Fee is paid"
           },
           "step3": {
-            "title": "Redeem Fee Discount",
+            "title": "Save on your tuition",
             "description": "Use your coins to redeem fee discounts from the Rewards Store",
             "details": "Select your university and redeem the discount"
           },
           "step4": {
-            "title": "Contact Your University",
+            "title": "Contact your University",
             "description": "Contact your university's admissions office to apply the redeemed discount",
             "details": "Present your discount code to get the reduction on your fees"
           }
