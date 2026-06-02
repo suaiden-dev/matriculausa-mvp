@@ -246,8 +246,8 @@ const MatriculaRewardsLanding: React.FC = () => {
 
 
             {/* Main Title */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
-              <span className="text-gray-900 drop-shadow-sm">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-8 leading-tight">
+              <span className="text-slate-900 drop-shadow-sm">
                 {t('matriculaRewardsLanding.hero.title')}
               </span>
               <span className="block text-[#05294E] drop-shadow-sm">
@@ -328,7 +328,7 @@ const MatriculaRewardsLanding: React.FC = () => {
             {/* Coluna Direita: Texto + Passos */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div>
-                <h2 className="text-3xl md:text-[36px] font-bold text-gray-900 mb-4 md:mb-6">
+                <h2 className="text-3xl md:text-[36px] font-black text-slate-900 mb-4 md:mb-6">
                   {t('matriculaRewardsLanding.howItWorks.title')}
                 </h2>
                 <p className="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
@@ -358,7 +358,7 @@ const MatriculaRewardsLanding: React.FC = () => {
           <div className="mt-20 md:mt-32 bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-8 lg:p-12 border border-gray-100 shadow-2xl">
             {/* Calculator Header */}
             <div className="text-center mb-6 md:mb-8">
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 md:mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-900 mb-3 md:mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
               <p className="text-gray-600 text-sm md:text-base">{t('matriculaRewardsLanding.howItWorks.calculator.description')}</p>
             </div>
 
@@ -420,7 +420,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                 {/* Mobile Results - Enhanced Layout */}
                 <div className="space-y-4">
                   {/* Coins Earned - Improved */}
-                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-5 border border-yellow-200">
+                  <div className="bg-white rounded-2xl p-5 border border-slate-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
@@ -439,7 +439,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                   </div>
                   
                   {/* Total Savings - Improved */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-200">
+                  <div className="bg-white rounded-2xl p-5 border border-slate-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -613,7 +613,7 @@ const MatriculaRewardsLanding: React.FC = () => {
             <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
               {/* Cabeçalho de Texto */}
               <div>
-                <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-6 leading-tight">
                   {t('matriculaRewardsLanding.finalCta.title')}
                   <span className="text-[#05294E]"> {t('matriculaRewardsLanding.finalCta.titleHighlight')}</span>
                 </h2>

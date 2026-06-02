@@ -68,5 +68,23 @@
     "phoneLabel": "Phone / WhatsApp",
     "officeLabel": "Our Office",
     "officeValue": "Los Angeles, CA, USA"
+  },
+  "stats": {
+    "students": {
+      "title": "Students Placed",
+      "desc": "Young people who have already taken the first step to turn their American dream into a real journey."
+    },
+    "scholarships": {
+      "title": "In Scholarships",
+      "desc": "Opportunities that make studying at American universities more affordable and possible."
+    },
+    "partners": {
+      "title": "Partner Universities",
+      "desc": "More options to find the right university for your profile, your major, and your future."
+    },
+    "visas": {
+      "title": "Approval Rate",
+      "desc": "A result that reflects well-guided processes, strategic choices, and stronger applications."
+    }
   }
 }

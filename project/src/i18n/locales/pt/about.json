@@ -68,5 +68,23 @@
     "phoneLabel": "Telefone / WhatsApp",
     "officeLabel": "Nosso Escritório",
     "officeValue": "Los Angeles, CA, EUA"
+  },
+  "stats": {
+    "students": {
+      "title": "Estudantes Atendidos",
+      "desc": "Jovens que já deram o primeiro passo para transformar o sonho americano em uma jornada real."
+    },
+    "scholarships": {
+      "title": "Em Bolsas de Estudos",
+      "desc": "Oportunidades que tornam estudar em universidades americanas mais acessível e possível."
+    },
+    "partners": {
+      "title": "Universidades Parceiras",
+      "desc": "Mais opções para encontrar a universidade certa para o seu perfil, sua área e seu futuro."
+    },
+    "visas": {
+      "title": "Taxa de Aprovação",
+      "desc": "Um resultado que reflete processos bem direcionados, escolhas estratégicas e candidaturas mais fortes."
+    }
   }
 }
