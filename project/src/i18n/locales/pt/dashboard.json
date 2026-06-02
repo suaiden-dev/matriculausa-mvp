@@ -1311,8 +1311,6 @@
     "howItWorks": "Como Funciona",
     "step1Title": "Compartilhe Seu Código",
     "step1Description": "Compartilhe seu código de afiliado único com amigos e familiares.",
-    "step2Title": "Amigos Se Inscrevem",
-    "step2Description": "Eles recebem $100 de desconto na taxa do processo seletivo.",
     "step3Title": "Ganhe Recompensas",
     "step3Description": "Quando seu indicado concluir todo o processo e pagar todas as taxas, você ganha 100 coins.",
     "notificationSent": "Notificação enviada com sucesso!",
@@ -1534,26 +1532,26 @@
       "satisfactionRate": "Taxa de Satisfação"
     },
     "howItWorks": {
-      "title": "Como Funciona o Matricula Rewards",
-      "subtitle": "Um sistema simples e transparente para você economizar na sua educação enquanto ajuda seus amigos a realizarem o sonho americano",
+      "title": "Ajude um amigo a chegar aos EUA e ganhe junto",
+      "subtitle": "Compartilhe seu código e ganhe coins quando seus amigos começarem a jornada americana.",
       "steps": {
         "step1": {
           "title": "Compartilhe Seu Código",
-          "description": "Receba seu código único e compartilhe com amigos que querem estudar nos EUA",
+          "description": "Envie seu código para amigos que querem estudar nos EUA.",
           "details": "Cada código rastreia automaticamente suas indicações"
         },
         "step2": {
           "title": "Amigos Se Inscrevem",
-          "description": "Quando seus amigos avançam e pagam a Placement Fee, vocês ganham Matricula Coins",
+          "description": "Quando seus amigos realizam a Placement Fee, vocês ganham 100 Matricula Coins",
           "details": "100 coins depois que a Placement Fee for paga"
         },
         "step3": {
-          "title": "Resgate Desconto de Mensalidade",
+          "title": "Economize na mensalidade",
           "description": "Use seus coins para resgatar descontos de mensalidade na Loja de Recompensas",
           "details": "Selecione sua universidade e resgate o desconto"
         },
         "step4": {
-          "title": "Entre em Contato com Sua Universidade",
+          "title": "Contate sua Universidade",
           "description": "Entre em contato com a secretaria de sua universidade para aplicar o desconto resgatado",
           "details": "Apresente seu código de desconto para obter a redução na sua mensalidade"
         }

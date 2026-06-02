@@ -18,8 +18,8 @@
     }
   },
   "story": {
-    "badge": "Our Story",
-    "title": "Transforming Dreams into Reality",
+    "badge": "About Us",
+    "title": "Transforming <0>Dreams</0> into Reality",
     "p1": "MatriculaUSA was founded by international education specialists who understand the unique challenges faced by students seeking to study in the United States. Our team has helped thousands of students from diverse backgrounds secure scholarships, admissions, and a smooth transition to American campus life.",
     "p2": "We partner with top U.S. universities and organizations to offer exclusive opportunities, transparent processes, and ongoing support—making the American dream accessible to all.",
     "stats": {
@@ -53,5 +53,38 @@
     "title": "Ready to Start Your Journey?",
     "description": "Join thousands of students who have made their American dream a reality with MatriculaUSA.",
     "button": "Get Started"
+  },
+  "partners": {
+    "badge": "Our Partners",
+    "title": "Recognized for Excellence in Accreditation",
+    "description": "We work with the best American universities to offer exclusive scholarships and real opportunities for transformation."
+  },
+  "contactSection": {
+    "title": "Let's Talk & Connect",
+    "description": "Have questions about the admissions process, visas, scholarships, or partner universities? Our specialized team is ready to guide you.",
+    "button": "CONTACT US",
+    "infoTitle": "Contact Information",
+    "emailLabel": "Support Email",
+    "phoneLabel": "Phone / WhatsApp",
+    "officeLabel": "Our Office",
+    "officeValue": "Los Angeles, CA, USA"
+  },
+  "stats": {
+    "students": {
+      "title": "Students Placed",
+      "desc": "Young people who have already taken the first step to turn their American dream into a real journey."
+    },
+    "scholarships": {
+      "title": "In Scholarships",
+      "desc": "Opportunities that make studying at American universities more affordable and possible."
+    },
+    "partners": {
+      "title": "Partner Universities",
+      "desc": "More options to find the right university for your profile, your major, and your future."
+    },
+    "visas": {
+      "title": "Approval Rate",
+      "desc": "A result that reflects well-guided processes, strategic choices, and stronger applications."
+    }
   }
 }
