@@ -6,11 +6,7 @@ import { supabase } from '../lib/supabase';
 import { 
   Coins,
   Users,
-  GraduationCap,
   Gift,
-  ArrowRight,
-  Share2,
-  Play,
   DollarSign,
   BookOpen,
   Copy
@@ -96,43 +92,31 @@ const MatriculaRewardsLanding: React.FC = () => {
   const howItWorksSteps = [
     {
       number: "01",
-      icon: Share2,
       title: t('matriculaRewardsLanding.howItWorks.steps.step1.title'),
       description: t('matriculaRewardsLanding.howItWorks.steps.step1.description'),
       details: t('matriculaRewardsLanding.howItWorks.steps.step1.details'),
-      color: "from-blue-500 to-cyan-500",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600"
+      color: "from-blue-500 to-cyan-500"
     },
     {
       number: "02", 
-      icon: Users,
       title: t('matriculaRewardsLanding.howItWorks.steps.step2.title'),
       description: t('matriculaRewardsLanding.howItWorks.steps.step2.description'),
       details: t('matriculaRewardsLanding.howItWorks.steps.step2.details'),
-      color: "from-purple-500 to-pink-500",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600"
+      color: "from-purple-500 to-pink-500"
     },
     {
       number: "03",
-      icon: Coins,
       title: t('matriculaRewardsLanding.howItWorks.steps.step3.title'),
       description: t('matriculaRewardsLanding.howItWorks.steps.step3.description'),
       details: t('matriculaRewardsLanding.howItWorks.steps.step3.details'),
-      color: "from-green-500 to-emerald-500",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600"
+      color: "from-green-500 to-emerald-500"
     },
     {
       number: "04",
-      icon: GraduationCap,
       title: t('matriculaRewardsLanding.howItWorks.steps.step4.title'),
       description: t('matriculaRewardsLanding.howItWorks.steps.step4.description'),
       details: t('matriculaRewardsLanding.howItWorks.steps.step4.details'),
-      color: "from-orange-500 to-red-500",
-      bgColor: "bg-orange-50",
-      iconColor: "text-orange-600"
+      color: "from-orange-500 to-red-500"
     }
   ];
 
@@ -202,12 +186,6 @@ const MatriculaRewardsLanding: React.FC = () => {
     }
   };
 
-  const scrollToHowItWorks = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ 
-      behavior: 'smooth' 
-    });
-  };
-
   const copyReferralCode = async () => {
     if (userAffiliateCode) {
       try {
@@ -235,7 +213,7 @@ const MatriculaRewardsLanding: React.FC = () => {
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-[450px] lg:h-[600px] flex items-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
+      <section className="relative min-h-[280px] lg:h-[380px] flex items-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
         {/* Background Image - University campus scene to reinforce educational context */}
         <div className="absolute inset-0 overflow-hidden">
           {/* University campus image */}
@@ -263,16 +241,16 @@ const MatriculaRewardsLanding: React.FC = () => {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-slate-200/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-12">
           <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
 
 
             {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-8 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
               <span className="text-gray-900 drop-shadow-sm">
                 {t('matriculaRewardsLanding.hero.title')}
               </span>
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm">
+              <span className="block text-[#05294E] drop-shadow-sm">
                 {t('matriculaRewardsLanding.hero.titleHighlight')}
               </span>
               <span className="block text-3xl sm:text-4xl lg:text-5xl text-gray-700 font-medium mt-2 drop-shadow-sm">
@@ -282,104 +260,7 @@ const MatriculaRewardsLanding: React.FC = () => {
 
             {/* Subtitle */}
 
-            {/* Value Proposition Cards */}
-            {!user || !userAffiliateCode ? (
-              // 3 cards in a row when user is not logged in
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Share2 className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.referFriends.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
-                </div>
-                
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Coins className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.description')}</p>
-                </div>
-                
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <GraduationCap className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.payLess.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.payLess.description')}</p>
-                </div>
-              </div>
-            ) : (
-              // 2+2 layout when user is logged in
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <Share2 className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.referFriends.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
-                  </div>
-                  
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <Coins className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.description')}</p>
-                  </div>
-                </div>
 
-                {/* Pay Less Card + Referral Code Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-                  {/* Pay Less Card */}
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <GraduationCap className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.payLess.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.payLess.description')}</p>
-                  </div>
-
-                  {/* Referral Code Section */}
-                  <div className="bg-blue-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-xl">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-                    <div className="relative text-center">
-                      <h4 className="font-semibold mb-3 text-blue-100">{t('matriculaRewardsLanding.hero.demo.referralCode.title')}</h4>
-                      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center mb-4">
-                        <span className="text-2xl font-bold tracking-wider">{userAffiliateCode.code}</span>
-                      </div>
-                      <button 
-                        onClick={copyReferralCode}
-                        className="w-full bg-white/20 hover:bg-white/30 rounded-lg py-2 px-3 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                      >
-                        <Copy className="h-4 w-4" />
-                        {copiedCode ? t('matriculaRewardsLanding.hero.demo.referralCode.copied') : t('matriculaRewardsLanding.hero.demo.referralCode.copy')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-              <button
-                onClick={handleGetStarted}
-                className="group bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-3xl"
-              >
-                {t('matriculaRewardsLanding.hero.cta.getStarted')}
-                <ArrowRight className="inline-block ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-              </button>
-              <button
-                onClick={scrollToHowItWorks}
-                className="group bg-white/90 backdrop-blur-sm text-gray-700 px-10 py-5 rounded-2xl font-bold text-lg border-2 border-gray-200 hover:border-blue-300 hover:text-blue-600 transition-all duration-300 shadow-xl"
-              >
-                <Play className="inline-block mr-3 h-6 w-6" />
-                {t('matriculaRewardsLanding.hero.cta.learnMore')}
-              </button>
-            </div>
 
 
           </div>
@@ -416,114 +297,65 @@ const MatriculaRewardsLanding: React.FC = () => {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-20">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">
-              {t('matriculaRewardsLanding.howItWorks.title')}
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              {t('matriculaRewardsLanding.howItWorks.subtitle')}
-            </p>
-          </div>
-
-          {/* Mobile-First Steps Layout */}
-          <div className="relative max-w-6xl mx-auto">
-            {/* Desktop Journey Path Line */}
-            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300/50 to-transparent transform -translate-y-1/2"></div>
-            
-            {/* Mobile: Vertical Stack, Desktop: Horizontal Grid */}
-            <div className="space-y-8 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 lg:gap-8">
-              {howItWorksSteps.map((step, index) => (
-                <div key={index} className="group relative">
-                  {/* Step Number Circle - Mobile Optimized */}
-                  <div className="relative mb-6 md:mb-8">
-                    <div className="w-16 h-16 md:w-20 md:h-20 mx-auto relative">
-                      {/* Simplified Ring for Mobile */}
-                      <div className="absolute inset-0 rounded-full border-2 border-gray-300/50 md:group-hover:border-blue-400/60 transition-all duration-700"></div>
-                      <div className="absolute inset-2 rounded-full border border-gray-400/60 md:group-hover:border-blue-500/70 transition-all duration-700 md:group-hover:animate-pulse"></div>
-                      
-                      {/* Number */}
-                      <div className="absolute inset-3 md:inset-4 rounded-full bg-white text-gray-700 flex items-center justify-center font-bold text-lg md:text-xl md:group-hover:bg-blue-500 md:group-hover:text-white transition-all duration-300 shadow-lg">
-                        {index + 1}
-                      </div>
-                      
-                      {/* Progress Indicator - Desktop Only */}
-                      <div className="hidden md:block absolute -inset-1 rounded-full border-2 border-transparent md:group-hover:border-blue-500/50 transition-all duration-500 md:group-hover:animate-spin"></div>
-                    </div>
-
-                    {/* Desktop Connecting Line */}
-                    {index < howItWorksSteps.length - 1 && (
-                      <div className="hidden lg:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-white/20 to-transparent transform translate-x-1/2 md:group-hover:from-blue-400/50 transition-all duration-700"></div>
-                    )}
-                  </div>
-
-                  {/* Content Card - Mobile Optimized */}
-                  <div className="bg-white/90 md:bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-6 border border-gray-200 md:group-hover:bg-white md:group-hover:border-blue-300 transition-all duration-500 md:group-hover:-translate-y-2 shadow-lg">
-                    {/* Step Title */}
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 text-center md:group-hover:text-blue-600 transition-colors duration-300">
-                      {step.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="text-sm md:text-base text-gray-600 text-center mb-4 md:mb-6 leading-relaxed">
-                      {step.description}
-                    </p>
-                    
-                    {/* Key Point */}
-                    <div className="bg-blue-50 rounded-xl p-3 md:p-4 border border-blue-100 md:group-hover:bg-blue-100 md:group-hover:border-blue-200 transition-all duration-300">
-                      <p className="text-xs md:text-sm text-gray-700 font-medium text-center">
-                        {step.details}
-                      </p>
-                    </div>
-
-                    {/* Mobile Action Button */}
-                    {/* <div className="mt-4 md:hidden">
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
-                          →
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1 font-medium">
-                          {index === 0 && t('matriculaRewardsLanding.howItWorks.actions.shareNow')}
-                          {index === 1 && t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
-                          {index === 2 && t('matriculaRewardsLanding.howItWorks.actions.seeEarnings')}
-                          {index === 3 && t('matriculaRewardsLanding.howItWorks.actions.useDiscount')}
-                        </p>
-                      </div>
-                    </div> */}
-
-                    {/* Desktop Hover Effect */}
-                    <div className="hidden md:block mt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 animate-bounce">
-                          →
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1">
-                          {index === 0 && t('matriculaRewardsLanding.howItWorks.actions.shareNow')}
-                          {index === 1 && t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
-                          {index === 2 && t('matriculaRewardsLanding.howItWorks.actions.seeEarnings')}
-                          {index === 3 && t('matriculaRewardsLanding.howItWorks.actions.useDiscount')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-
-                </div>
-              ))}
+          {/* Novo Layout Integrado: 2 Colunas */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch max-w-6xl mx-auto">
+            {/* Coluna Esquerda: Imagem absoluta na altura do conteúdo */}
+            <div className="lg:col-span-5 hidden lg:relative lg:block overflow-hidden" style={{ minHeight: '420px' }}>
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/girl_with_palm_open.webp"
+                alt="Como funciona o Matricula Rewards"
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: '40%',
+                  transform: 'translateX(-50%)',
+                  height: '100%',
+                  width: 'auto',
+                  maxWidth: 'none'
+                }}
+              />
             </div>
 
-            {/* Success Animation - Mobile Optimized */}
-            <div className="mt-12 md:mt-16 text-center">
-              <div className="inline-flex items-center gap-3 md:gap-4 bg-green-50 backdrop-blur-sm rounded-full px-6 md:px-8 py-3 md:py-4 border border-green-200">
-                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
-                  ✓
-                </div>
-                <span className="text-sm md:text-base text-green-700 font-medium">{t('matriculaRewardsLanding.howItWorks.journey.startMessage')}</span>
+            {/* Mobile: imagem normal */}
+            <div className="lg:hidden flex justify-center">
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/girl_with_palm_open.webp"
+                alt="Como funciona o Matricula Rewards"
+                className="w-full max-w-sm h-auto object-contain drop-shadow-xl rounded-3xl"
+              />
+            </div>
+
+            {/* Coluna Direita: Texto + Passos */}
+            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+              <div>
+                <h2 className="text-3xl md:text-[36px] font-bold text-gray-900 mb-4 md:mb-6">
+                  {t('matriculaRewardsLanding.howItWorks.title')}
+                </h2>
+                <p className="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                  {t('matriculaRewardsLanding.howItWorks.subtitle')}
+                </p>
+              </div>
+
+              {/* Grid 2x2 de Passos limpos (sem fundo/sombra e sem título colorido) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-10 pt-2">
+                {howItWorksSteps.map((step, index) => {
+                  return (
+                    <div key={index} className="space-y-2">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {step.title}
+                      </h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        {step.description}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
           {/* Interactive Calculator - Mobile Optimized */}
-          <div className="mt-12 md:mt-20 bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-8 lg:p-12 border border-gray-100 shadow-2xl">
+          <div className="mt-20 md:mt-32 bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-8 lg:p-12 border border-gray-100 shadow-2xl">
             {/* Calculator Header */}
             <div className="text-center mb-6 md:mb-8">
               <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 md:mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
@@ -630,8 +462,8 @@ const MatriculaRewardsLanding: React.FC = () => {
               {/* Desktop Calculator Layout */}
               <div className="hidden md:grid md:grid-cols-2 gap-8 items-center">
                 {/* Calculator Input */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg">
-                  <label className="block text-sm font-semibold text-gray-700 mb-4">
+                <div className="bg-white rounded-2xl p-6 border border-slate-100">
+                  <label className="block text-base font-semibold text-gray-700 mb-4">
                     {t('matriculaRewardsLanding.howItWorks.calculator.label')}
                   </label>
                   <div className="relative">
@@ -646,33 +478,33 @@ const MatriculaRewardsLanding: React.FC = () => {
                         background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
                       }}
                     />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
+                    <div className="flex justify-between text-base text-gray-500 mt-2">
                       <span>{t('matriculaRewardsLanding.howItWorks.calculator.minValue')}</span>
                       <span>{t('matriculaRewardsLanding.howItWorks.calculator.maxValue')}</span>
                     </div>
                   </div>
                   <div className="mt-4 text-center">
-                    <span className="text-4xl font-bold text-blue-600">{calculatorFriends}</span>
-                    <span className="text-gray-600 ml-2">{t('matriculaRewardsLanding.howItWorks.calculator.friends')}</span>
+                    <span className="text-base font-bold text-blue-600">{calculatorFriends}</span>
+                    <span className="text-base text-gray-600 ml-2">{t('matriculaRewardsLanding.howItWorks.calculator.friends')}</span>
                   </div>
                 </div>
 
                 {/* Results */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-3 mx-auto">
-                      <Coins className="h-6 w-6 text-yellow-600" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.coinsEarned')}</p>
-                    <p className="text-2xl font-bold text-yellow-600">{calculateSavings(calculatorFriends).coins.toLocaleString()}</p>
+                  <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 flex flex-col justify-center">
+                    <p className="text-base text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.coinsEarned')}</p>
+                    <p className="text-[22px] font-bold text-yellow-600">{calculateSavings(calculatorFriends).coins.toLocaleString()}</p>
+                    <p className="text-base text-gray-400 mt-2">
+                      {t('matriculaRewardsLanding.howItWorks.calculator.coinsPerFriend')} {t('matriculaRewardsLanding.howItWorks.calculator.perFriend')}
+                    </p>
                   </div>
                   
-                  <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-3 mx-auto">
-                      <DollarSign className="h-6 w-6 text-green-600" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.totalSavings')}</p>
-                    <p className="text-2xl font-bold text-green-600">${calculateSavings(calculatorFriends).dollars}</p>
+                  <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 flex flex-col justify-center">
+                    <p className="text-base text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.totalSavings')}</p>
+                    <p className="text-[22px] font-bold text-green-600">${calculateSavings(calculatorFriends).dollars}</p>
+                    <p className="text-base text-gray-400 mt-2">
+                      {t('matriculaRewardsLanding.howItWorks.calculator.coinValue')} {t('matriculaRewardsLanding.howItWorks.calculator.usdValue')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -681,7 +513,7 @@ const MatriculaRewardsLanding: React.FC = () => {
               <div className="text-center mt-8">
                 <button
                   onClick={handleGetStarted}
-                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-2xl border border-white/20"
+                  className="w-full md:w-auto bg-[#05294E] text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-[#0a3663] transition-all duration-300 transform hover:scale-105 shadow-2xl border border-white/20"
                 >
                   {t('matriculaRewardsLanding.howItWorks.calculator.cta')}
                 </button>
@@ -758,52 +590,103 @@ const MatriculaRewardsLanding: React.FC = () => {
           <div className="absolute -bottom-8 left-20 w-72 h-72 bg-slate-100 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
         </div>
 
-        <div className="relative max-w-6xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          {/* Main Content */}
-          <div className="mb-12">
-            <h2 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-8">
-              {t('matriculaRewardsLanding.finalCta.title')}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"> {t('matriculaRewardsLanding.finalCta.titleHighlight')}</span>
-            </h2>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
-              {t('matriculaRewardsLanding.finalCta.description')}
-            </p>
-          </div>
-
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Primary CTA */}
-            <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Gift className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('matriculaRewardsLanding.finalCta.cards.startNow.title')}</h3>
-              <p className="text-gray-600 mb-6">
-                {t('matriculaRewardsLanding.finalCta.cards.startNow.description')}
-              </p>
-              <button
-                onClick={handleGetStarted}
-                className="w-full bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-xl"
-              >
-                {t('matriculaRewardsLanding.finalCta.cards.startNow.cta')}
-              </button>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Coluna Esquerda: Foto do Estudante */}
+            <div className="lg:col-span-5 relative overflow-hidden rounded-3xl border border-white/20" style={{ minHeight: '500px' }}>
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/man_lookin_at_cellphone.webp" 
+                alt="Estudante olhando celular" 
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  height: '100%',
+                  width: 'auto',
+                  maxWidth: 'none'
+                }}
+              />
             </div>
 
-            {/* Secondary CTA */}
-            <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <BookOpen className="h-8 w-8 text-white" />
+            {/* Coluna Direita: Conteúdo + Cards Empilhados */}
+            <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
+              {/* Cabeçalho de Texto */}
+              <div>
+                <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                  {t('matriculaRewardsLanding.finalCta.title')}
+                  <span className="text-[#05294E]"> {t('matriculaRewardsLanding.finalCta.titleHighlight')}</span>
+                </h2>
+                <p className="text-lg text-gray-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                  {t('matriculaRewardsLanding.finalCta.description')}
+                </p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('matriculaRewardsLanding.finalCta.cards.learnMore.title')}</h3>
-              <p className="text-gray-600 mb-6">
-                {t('matriculaRewardsLanding.finalCta.cards.learnMore.description')}
-              </p>
-              <Link
-                to="/how-it-works"
-                className="w-full inline-block bg-transparent text-gray-700 border-2 border-gray-300 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 text-center"
-              >
-                {t('matriculaRewardsLanding.finalCta.cards.learnMore.cta')}
-              </Link>
+
+              {/* Cards Empilhados Verticalmente */}
+              <div className="flex flex-col gap-6">
+                {/* Se logado: Card do Código de Referência real do usuário */}
+                {user && userAffiliateCode && (
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-6 hover:shadow-xl transition-all duration-300 group flex flex-col sm:flex-row items-center sm:items-start gap-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center flex-shrink-0">
+                      <Gift className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-3 relative z-10 w-full">
+                      <h3 className="text-xl font-bold">{t('matriculaRewardsLanding.hero.demo.referralCode.title')}</h3>
+                      <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 text-center">
+                        <span className="text-2xl font-bold tracking-wider font-mono">{userAffiliateCode.code}</span>
+                      </div>
+                      <button
+                        onClick={copyReferralCode}
+                        className="w-full sm:w-auto bg-white hover:bg-gray-50 text-blue-600 px-6 py-3 rounded-2xl font-bold text-base transition-all duration-300 transform hover:scale-105 shadow-xl flex items-center justify-center gap-2"
+                      >
+                        <Copy className="h-4 w-4" />
+                        {copiedCode ? t('matriculaRewardsLanding.hero.demo.referralCode.copied') : t('matriculaRewardsLanding.hero.demo.referralCode.copy')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Primary CTA Card (Se não logado) */}
+                {(!user || !userAffiliateCode) && (
+                  <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-6 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                    <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                      <Gift className="h-7 w-7 text-white" />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-3">
+                      <h3 className="text-xl font-bold text-gray-900">{t('matriculaRewardsLanding.finalCta.cards.startNow.title')}</h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {t('matriculaRewardsLanding.finalCta.cards.startNow.description')}
+                      </p>
+                      <button
+                        onClick={handleGetStarted}
+                        className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-base hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-xl"
+                      >
+                        {t('matriculaRewardsLanding.finalCta.cards.startNow.cta')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Secondary CTA Card */}
+                <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-6 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                  <div className="w-14 h-14 bg-indigo-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                    <BookOpen className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1 text-center sm:text-left space-y-3">
+                    <h3 className="text-xl font-bold text-gray-900">{t('matriculaRewardsLanding.finalCta.cards.learnMore.title')}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {t('matriculaRewardsLanding.finalCta.cards.learnMore.description')}
+                    </p>
+                    <Link
+                      to="/how-it-works"
+                      className="w-full sm:w-auto inline-block bg-transparent text-gray-700 border-2 border-gray-300 px-6 py-3 rounded-2xl font-bold text-base hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 text-center"
+                    >
+                      {t('matriculaRewardsLanding.finalCta.cards.learnMore.cta')}
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -828,7 +711,7 @@ const MatriculaRewardsLanding: React.FC = () => {
               {/* Benefits List */}
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div className="w-2 h-2 bg-gray-900 rounded-full mt-3 flex-shrink-0"></div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.title')}</h3>
                     <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.description')}</p>
@@ -836,7 +719,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                 </div>
                 
                 <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div className="w-2 h-2 bg-gray-900 rounded-full mt-3 flex-shrink-0"></div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.title')}</h3>
                     <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.description')}</p>
@@ -844,7 +727,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                 </div>
                 
                 <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div className="w-2 h-2 bg-gray-900 rounded-full mt-3 flex-shrink-0"></div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.title')}</h3>
                     <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.description')}</p>

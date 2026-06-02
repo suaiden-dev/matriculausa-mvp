@@ -1176,8 +1176,6 @@
     "howItWorks": "How it Works",
     "step1Title": "Share your code",
     "step1Description": "Share your unique referral code with friends and family",
-    "step2Title": "They pay the selection process fee",
-    "step2Description": "When they use your code and pay the selection process fee, you earn coins",
     "step3Title": "Redeem your rewards",
     "step3Description": "Cuando tu referido complete todo el proceso y pague todas las tasas, ganas 100 coins.",
     "participatingUniversities": "Participating Universities",
@@ -1357,21 +1355,21 @@
       "satisfactionRate": "Tasa de Satisfacción"
     },
     "howItWorks": {
-      "title": "Cómo Funciona Matricula Rewards",
-      "subtitle": "Un sistema simple y transparente para que ahorres en tu educación mientras ayudas a tus amigos a alcanzar el sueño americano",
+      "title": "Ayuda a un amigo a llegar a los EE. UU. y ganen juntos",
+      "subtitle": "Comparte tu código y gana coins cuando tus amigos comiencen su jornada americana.",
       "steps": {
         "step1": {
           "title": "Comparte tu Código",
-          "description": "Obtén tu código único y compártelo con amigos que quieran estudiar en EE. UU.",
+          "description": "Envía tu código a amigos que quieran estudiar en EE. UU.",
           "details": "Cada código rastrea automáticamente tus referidos"
         },
         "step2": {
           "title": "Tus Amigos se Registran",
-          "description": "Cuando tus amigos se registran usando tu código, ambos ganan Matricula Coins",
+          "description": "Cuando tus amigos pagan la Placement Fee, ganan 100 Matricula Coins",
           "details": "100 coins después de pagar la Cuota de Colocación (Placement Fee)"
         },
         "step3": {
-          "title": "Canjea Descuento en Cuotas",
+          "title": "Ahorra en tu mensualidad",
           "description": "Usa tus coins para canjear descuentos en las cuotas desde la Tienda de Recompensas",
           "details": "Selecciona tu universidad y canjea el descuento"
         },

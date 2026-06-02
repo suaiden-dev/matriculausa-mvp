@@ -1,148 +1,231 @@
 import React from 'react';
-import { Zap, Globe, Award, Users, Heart, BookOpen, CheckCircle, Sparkles } from 'lucide-react';
+import { Heart, Mail, Phone, MapPin, Eye, Target } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
+import { useUniversityLogos } from '../hooks/useUniversityLogos';
 
 const About: React.FC = () => {
   const { t } = useTranslation('about');
+  const { universities: partnerUniversities, loading: partnersLoading } = useUniversityLogos();
 
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="bg-[#05294E] text-white py-24 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-gradient-to-r from-[#05294E] via-[#0A3D70] to-[#05294E] text-white py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-300 via-transparent to-transparent pointer-events-none"></div>
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <img src="/logo.png.png" alt="MatriculaUSA Logo" className="mx-auto h-16 mb-6 bg-white rounded-2xl shadow-lg p-2" />
-            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-              <span className="text-white">{t('hero.title')}</span>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+              {t('story.badge')}
             </h1>
-            <p className="text-xl md:text-2xl text-slate-200 max-w-3xl mx-auto leading-relaxed">
-              {t('hero.description')}
-            </p>
           </div>
         </div>
-      </section>
-
-      {/* Mission, Vision, Values */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-            <div>
-              <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Zap className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-[#05294E]">{t('pillars.mission.title')}</h3>
-              <p className="text-slate-700">{t('pillars.mission.description')}</p>
-            </div>
-            <div>
-              <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Globe className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-[#D0151C]">{t('pillars.vision.title')}</h3>
-              <p className="text-slate-700">{t('pillars.vision.description')}</p>
-            </div>
-            <div>
-              <div className="bg-green-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Heart className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-green-700">{t('pillars.values.title')}</h3>
-              <p className="text-slate-700">{t('pillars.values.description')}</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
 
       {/* Our Story & Impact */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
-                <Sparkles className="h-4 w-4 mr-2 text-[#05294E]" />
-              <span className="text-sm font-bold text-slate-700">{t('story.badge')}</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8">
-              {t('story.title')}
-              </h2>
-            <div className="space-y-6 text-slate-700 text-lg leading-relaxed">
-                <p>
+          <div className="text-center lg:text-left">
+            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8 leading-tight">
+              <Trans i18nKey="story.title" t={t} components={[<span className="text-[#D0151C]" />]} />
+            </h2>
+            <div className="space-y-6 text-slate-600 text-lg leading-relaxed font-medium">
+              <p>
                 {t('story.p1')}
-                </p>
-                <p>
+              </p>
+              <p>
                 {t('story.p2')}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-6 mt-8">
-              <div className="bg-[#05294E]/10 p-6 rounded-2xl border border-[#05294E]/20 text-center">
-                <div className="text-3xl font-black text-[#05294E] mb-2">$50M+</div>
-                <div className="text-sm font-medium text-slate-700">{t('story.stats.scholarships')}</div>
-              </div>
-              <div className="bg-[#D0151C]/10 p-6 rounded-2xl border border-[#D0151C]/20 text-center">
-                <div className="text-3xl font-black text-[#D0151C] mb-2">5,000+</div>
-                <div className="text-sm font-medium text-slate-700">{t('story.stats.students')}</div>
-              </div>
+              </p>
             </div>
           </div>
-          <div className="lg:pl-12">
+          <div className="lg:pl-12 relative flex items-center justify-center">
+            {/* Decorative solid red square in the background behind the bottom-left of the image */}
+            <div className="absolute left-6 lg:left-6 bottom-[-24px] w-[140px] h-[140px] lg:w-[180px] lg:h-[180px] bg-[#D0151C] z-0"></div>
             <img
               src="https://images.unsplash.com/photo-1557064349-d835670beb60?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="International student with USA flag"
-              className="rounded-3xl shadow-2xl w-full"
+              className="relative z-10 w-full shadow-2xl border border-slate-100 object-cover"
+              style={{ aspectRatio: '1.2' }}
             />
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              <Trans
-                i18nKey="howItWorks.title"
-                ns="about"
-                components={[<span className="text-[#D0151C]" />]}
-              />
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              {t('howItWorks.description')}
+      {/* Partner Universities Carousel Strip */}
+      <section className="py-16 bg-[#05294E] overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="max-w-xl text-center md:text-left">
+              <p className="text-[#D0151C] text-sm font-black uppercase tracking-widest mb-3">
+                {t('partners.badge')}
+              </p>
+              <h2 className="text-3xl md:text-4xl font-black text-white leading-tight">
+                {t('partners.title')}
+              </h2>
+            </div>
+            <p className="text-slate-300 text-base max-w-sm leading-relaxed text-center md:text-right mx-auto md:mx-0">
+              {t('partners.description')}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
-              <BookOpen className="h-10 w-10 mx-auto mb-4 text-[#05294E]" />
-              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.explore.title')}</h3>
-              <p className="text-slate-600">{t('howItWorks.steps.explore.description')}</p>
+        </div>
+
+        {/* Marquee */}
+        <div className="relative overflow-hidden">
+          {/* Side fade gradients matching dark bg */}
+          <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-[#05294E] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-[#05294E] to-transparent z-10 pointer-events-none" />
+
+          {partnersLoading ? (
+            <div className="flex gap-16 px-8 animate-pulse">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[140px] h-16 bg-white/10 rounded-xl" />
+              ))}
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
-              <Users className="h-10 w-10 mx-auto mb-4 text-[#D0151C]" />
-              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.apply.title')}</h3>
-              <p className="text-slate-600">{t('howItWorks.steps.apply.description')}</p>
+          ) : (
+            <div className="animate-marquee flex gap-12 items-center py-4">
+              {[...partnerUniversities, ...partnerUniversities]
+                .filter(u => u.logoUrl)
+                .map((university, index) => {
+                  const wrapperId = `about-logo-${university.name.replace(/\s+/g, '-').toLowerCase()}-${index}`;
+                  return (
+                    <div
+                      key={wrapperId}
+                      id={wrapperId}
+                      className="flex-shrink-0 w-[160px] h-16 bg-white/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-center select-none shadow-md hover:shadow-xl hover:scale-105 hover:bg-white transition-all duration-300 border border-white/10"
+                    >
+                      <img
+                        src={university.logoUrl!}
+                        alt={`${university.name} logo`}
+                        className="max-h-full max-w-full object-contain transition-all duration-300"
+                        onError={() => {
+                          const wrapper = document.getElementById(wrapperId);
+                          if (wrapper) wrapper.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  );
+                })}
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
-              <Award className="h-10 w-10 mx-auto mb-4 text-green-600" />
-              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.match.title')}</h3>
-              <p className="text-slate-600">{t('howItWorks.steps.match.description')}</p>
+          )}
+        </div>
+      </section>
+
+      {/* cannibalized Mission, Vision, Values and Hero Details */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
+            <div className="lg:col-span-6 text-center lg:text-left">
+              <h2 className="text-4xl lg:text-5xl font-black text-slate-900 leading-tight">
+                {t('hero.title')}
+              </h2>
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
-              <CheckCircle className="h-10 w-10 mx-auto mb-4 text-[#05294E]" />
-              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.succeed.title')}</h3>
-              <p className="text-slate-600">{t('howItWorks.steps.succeed.description')}</p>
+            <div className="lg:col-span-6 lg:pl-8 text-center lg:text-left">
+              <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                {t('hero.description')}
+              </p>
+            </div>
+          </div>
+
+          {/* Connected Cards Block */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 rounded-t-[2rem] rounded-b-none lg:rounded-l-[2rem] lg:rounded-r-none shadow-none overflow-hidden border border-slate-100 bg-white items-stretch">
+            {/* Card 1: Nossos Valores (Wide - 2 cols) */}
+            <div className="lg:col-span-2 p-8 lg:p-12 flex flex-col justify-between min-h-[320px] bg-white border-b lg:border-b-0 lg:border-r border-slate-100 text-center lg:text-left">
+              <div>
+                <Heart className="h-10 w-10 text-[#D0151C] mb-8 mx-auto lg:mx-0" />
+                <h3 className="text-2xl font-black text-slate-900 mb-4">{t('pillars.values.title')}</h3>
+                <p className="text-slate-600 text-lg leading-relaxed font-medium">
+                  {t('pillars.values.description')}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: Nossa Visão (1 col - Dark Blue) */}
+            <div className="lg:col-span-1 p-8 lg:p-10 flex flex-col justify-between min-h-[320px] bg-[#05294E] text-white border-b lg:border-b-0 border-slate-700/30 text-center lg:text-left">
+              <div>
+                <Eye className="h-10 w-10 text-white mb-8 mx-auto lg:mx-0" />
+                <h3 className="text-2xl font-black mb-4">{t('pillars.vision.title')}</h3>
+                <p className="text-white/80 text-base leading-relaxed font-medium">
+                  {t('pillars.vision.description')}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Nossa Missão (1 col - Red) */}
+            <div className="lg:col-span-1 p-8 lg:p-10 flex flex-col justify-between min-h-[320px] bg-[#D0151C] text-white text-center lg:text-left">
+              <div>
+                <Target className="h-10 w-10 text-white mb-8 mx-auto lg:mx-0" />
+                <h3 className="text-2xl font-black mb-4">{t('pillars.mission.title')}</h3>
+                <p className="text-white/80 text-base leading-relaxed font-medium">
+                  {t('pillars.mission.description')}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-20 bg-white text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">{t('cta.title')}</h2>
-          <p className="text-xl text-slate-700 mb-8">{t('cta.description')}</p>
-          <a href="/register" className="inline-block bg-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-[#B01218] transition-all duration-300">
-            {t('cta.button')}
-          </a>
+
+      {/* Contact Section */}
+      <section className="py-20 bg-slate-50 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative bg-white border border-slate-100 rounded-[2.5rem] shadow-none p-8 md:p-16 flex flex-col lg:flex-row items-center justify-between gap-12 overflow-hidden">
+            <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-[#05294E]/5 rounded-full blur-xl pointer-events-none"></div>
+            <div className="absolute top-10 right-1/3 w-60 h-60 bg-[#D0151C]/5 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Left Content */}
+            <div className="relative z-10 flex-1 text-slate-900 max-w-xl text-center lg:text-left flex flex-col items-center lg:items-start">
+              <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight text-slate-900">
+                {t('contactSection.title')}
+              </h2>
+              <p className="text-lg text-slate-600 mb-8 leading-relaxed font-medium">
+                {t('contactSection.description')}
+              </p>
+              <a
+                href="/contact"
+                className="inline-flex items-center gap-3 bg-[#05294E] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+              >
+                <Phone className="h-5 w-5 text-white group-hover:animate-bounce" />
+                {t('contactSection.button')}
+              </a>
+            </div>
+
+            {/* Right Card */}
+            <div className="relative z-10 w-full lg:w-[420px] bg-slate-50 rounded-3xl p-8 md:p-10 shadow-sm border border-slate-100 self-stretch flex flex-col justify-center">
+              <h3 className="text-2xl font-black text-slate-900 mb-8 border-b pb-4 border-slate-200 text-center lg:text-left">
+                {t('contactSection.infoTitle')}
+              </h3>
+              <div className="space-y-6">
+                <a href="mailto:info@matriculausa.com" className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all duration-300 group">
+                  <div className="bg-[#05294E]/10 p-3 rounded-xl group-hover:bg-[#05294E] transition-all duration-300">
+                    <Mail className="h-6 w-6 text-[#05294E] group-hover:text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('contactSection.emailLabel')}</p>
+                    <p className="text-base font-bold text-slate-800 break-all">info@matriculausa.com</p>
+                  </div>
+                </a>
+                <a href="tel:+12136762544" className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all duration-300 group">
+                  <div className="bg-[#05294E]/10 p-3 rounded-xl group-hover:bg-[#05294E] transition-all duration-300">
+                    <Phone className="h-6 w-6 text-[#05294E] group-hover:text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('contactSection.phoneLabel')}</p>
+                    <p className="text-base font-bold text-slate-800 break-all">+1 (213) 676-2544</p>
+                  </div>
+                </a>
+                <div className="flex flex-col lg:flex-row items-center lg:items-start text-center lg:text-left gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all duration-300 group">
+                  <div className="bg-green-600/10 p-3 rounded-xl group-hover:bg-green-600 transition-all duration-300">
+                    <MapPin className="h-6 w-6 text-green-600 group-hover:text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('contactSection.officeLabel')}</p>
+                    <p className="text-base font-bold text-slate-800">{t('contactSection.officeValue')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
