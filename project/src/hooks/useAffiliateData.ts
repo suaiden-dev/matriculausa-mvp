@@ -24,13 +24,16 @@ function shouldExcludeStudent(email: string | null | undefined): boolean {
 export interface CommissionRule {
   type: 'fixed' | 'percentage';
   value: number;
+  enabled?: boolean;                        // default true quando ausente (backward compat)
+  trigger?: 'on_payment' | 'on_last_fee';  // default 'on_payment' quando ausente
 }
 
 export interface CommissionRules {
   selection_process?: CommissionRule;
-  scholarship?: CommissionRule;
-  i20_control?: CommissionRule;
   application?: CommissionRule;
+  placement?: CommissionRule;
+  i20_control?: CommissionRule;
+  reinstatement?: CommissionRule;
 }
 
 export interface Affiliate {

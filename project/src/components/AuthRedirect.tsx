@@ -143,8 +143,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
 
-    // Detectar fluxo de recuperação de senha
+    // Detectar fluxo de recuperação de senha ou de aceitação de convite de seller
     const isPasswordResetFlow = currentPath.startsWith('/forgot-password') ||
+      currentPath === '/seller/accept-invite' ||
       window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
     if (isPasswordResetFlow) return;
 

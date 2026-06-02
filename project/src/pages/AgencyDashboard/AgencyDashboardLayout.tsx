@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AgencyNotifications from '../../components/AgencyNotifications';
-import { useI20DeadlineMonitor } from '../../hooks/useI20DeadlineMonitor';
 import { useSystemType } from '../../hooks/useSystemType';
 
 interface AgencyDashboardLayoutProps {
@@ -47,12 +46,6 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
     return companyName && companyName.trim() ? companyName : (user?.name || 'Agência');
   };
 
-  // Monitorar deadlines do I-20
-  useI20DeadlineMonitor({
-    affiliateAdminId: user?.id || '',
-    checkInterval: 5 * 60 * 1000 // Verificar a cada 5 minutos
-  });
-
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/users')) return 'users';
@@ -74,7 +67,6 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
       { id: 'users', label: 'Seller Management', icon: Users, path: '/agency/dashboard/users', badge: null },
       { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/agency/dashboard/payments', badge: null },
       { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/agency/dashboard/students', badge: null },
-      { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/agency/dashboard/my-students', badge: null },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/agency/dashboard/analytics', badge: null },
       { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/agency/dashboard/utm-tracking', badge: null },
       { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/agency/dashboard/profile', badge: null }
@@ -132,15 +124,24 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
           {/* Affiliate Admin Status */}
           <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center shadow-lg">
-                <Crown className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 shadow-lg">
+                {(userProfile as any)?.logo_url ? (
+                  <img
+                    src={(userProfile as any).logo_url}
+                    alt="Agency logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#05294E] flex items-center justify-center">
+                    <Crown className="h-6 w-6 text-white" />
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 truncate">Agency Panel</h3>
-                <p className="text-sm text-slate-500 truncate">Agency</p>
+                <h3 className="font-semibold text-slate-900 truncate">{getDisplayName()}</h3>
+                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
               </div>
             </div>
-            
           </div>
 
           {/* Navigation */}

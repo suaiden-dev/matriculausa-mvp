@@ -14,12 +14,11 @@ export function useAgencyDataQuery(userId?: string) {
     queryFn: async () => {
       if (!userId) return null;
 
-      console.log('[useAgencyDataQuery] Fetching admin data for userId:', userId);
       
-      // 1. Descobrir affiliate_admin_id
+      // 1. Descobrir affiliate_admin_id e simplified_pricing_for_students
       const { data: aaList, error: aaErr } = await supabase
         .from('affiliate_admins')
-        .select('id')
+        .select('id, simplified_pricing_for_students')
         .eq('user_id', userId)
         .limit(1);
       
@@ -29,6 +28,7 @@ export function useAgencyDataQuery(userId?: string) {
       
       return {
         affiliateAdminId: aaList[0].id,
+        simplifiedPricing: aaList[0].simplified_pricing_for_students === true,
         userId
       };
     },
@@ -50,7 +50,6 @@ export function useAgencySellersQuery(affiliateAdminId?: string) {
     queryFn: async () => {
       if (!affiliateAdminId) return [];
 
-      console.log('[useAgencySellersQuery] Fetching sellers for admin:', affiliateAdminId);
       
       const { data: sellers, error } = await supabase
         .from('sellers')
@@ -79,7 +78,6 @@ export function useAgencyStudentProfilesQuery(userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
-      console.log('[useAgencyStudentProfilesQuery] Fetching profiles for userId:', userId);
       
       const { data: profiles, error } = await supabase
         .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: userId });
@@ -114,7 +112,6 @@ export function useUserFeeOverridesQuery(userIds: string[]) {
     queryFn: async () => {
       if (!userIds.length) return {};
 
-      console.log('[useUserFeeOverridesQuery] Fetching overrides for users:', userIds.length);
       
       const overrideEntries = await Promise.allSettled(
         userIds.map(async (uid) => {
@@ -159,7 +156,6 @@ export function useRealPaidAmountsQuery(userIds: string[]) {
     queryFn: async () => {
       if (!userIds.length) return {};
 
-      console.log('[useRealPaidAmountsQuery] Fetching real amounts for users:', userIds.length);
       
       const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
       
@@ -198,7 +194,6 @@ export function useStudentPaymentMethodsQuery(profileIds: string[]) {
     queryFn: async () => {
       if (!profileIds.length) return {};
 
-      console.log('[useStudentPaymentMethodsQuery] Fetching payment methods for profiles:', profileIds.length);
       
       const { data: userProfilesData, error } = await supabase
         .from('user_profiles')
@@ -257,7 +252,6 @@ export function useStudentFeeOverridesQuery(userIds: string[]) {
     queryFn: async () => {
       if (!userIds.length) return {};
 
-      console.log('[useStudentFeeOverridesQuery] Fetching overrides for users:', userIds.length);
       
       const overrideEntries = await Promise.allSettled(
         userIds.map(async (userId) => {
@@ -303,7 +297,6 @@ export function useStudentDependentsQuery(profileIds: string[]) {
     queryFn: async () => {
       if (!profileIds.length) return {};
 
-      console.log('[useStudentDependentsQuery] Fetching dependents for profiles:', profileIds.length);
       
       const { data, error } = await supabase
         .from('user_profiles')
@@ -335,7 +328,6 @@ export function useBlackCouponUsersQuery() {
   return useQuery({
     queryKey: queryKeys.agency.blackCouponUsers(),
     queryFn: async () => {
-      console.log('[useBlackCouponUsersQuery] Fetching BLACK coupon users');
       
       const { data, error } = await supabase
         .from('promotional_coupon_usage')
@@ -369,7 +361,8 @@ export function useBlackCouponUsersQuery() {
  */
 export function useAdjustedStudentsCalculation(
   students: any[], 
-  filteredStudents: any[]
+  filteredStudents: any[],
+  agencySimplifiedPricing?: boolean
 ) {
   // Derivar IDs únicos de uma vez só
   const uniqueUserIds = useMemo(() => 
@@ -392,8 +385,9 @@ export function useAdjustedStudentsCalculation(
     return (student: any) => {
       const dependents = dependentsMap[student.profile_id] || 0;
       const ov = overridesMap[student.user_id] || {};
-      const systemType = student.system_type || 'legacy';
-      const isSimplified = systemType === 'simplified';
+      const isSimplified = agencySimplifiedPricing !== undefined 
+        ? agencySimplifiedPricing 
+        : (student.system_type === 'simplified');
 
       let total = 0;
       const baseSelection = isSimplified ? 350 : 400;
@@ -417,7 +411,7 @@ export function useAdjustedStudentsCalculation(
         allApplications: student.allApplications
       };
     };
-  }, [overridesMap, dependentsMap]);
+  }, [overridesMap, dependentsMap, agencySimplifiedPricing]);
 
   // Calcular estudantes ajustados (todos)
   const allAdjustedStudents = useMemo(() => {
@@ -449,7 +443,6 @@ export function useAgencyCommissionsQuery(userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
-      console.log('[useAgencyCommissionsQuery] Fetching real commissions for userId:', userId);
 
       // 1. Descobrir affiliate_admin_id
       const { data: aaList, error: aaErr } = await supabase
@@ -468,7 +461,7 @@ export function useAgencyCommissionsQuery(userId?: string) {
         .eq('agency_id', affiliateAdminId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) return []; // tabela pode não existir ainda
       return data || [];
     },
     enabled: !!userId,
@@ -500,7 +493,6 @@ export function useAgencyRevenueCalculationQuery(userId?: string) {
         };
       }
 
-      console.log('[useAgencyRevenueCalculationQuery] Calculating commission revenue from', commissions.length, 'entries');
 
       // Calcular revenue por referral usando comissões REAIS
       const revenueByReferral: Record<string, number> = {};
@@ -515,10 +507,9 @@ export function useAgencyRevenueCalculationQuery(userId?: string) {
       });
 
       commissions.forEach((c: any) => {
-        const student = studentsMap[c.student_id];
-        const ref = student?.seller_referral_code || '__unknown__';
+        const ref = c.affiliate_code || studentsMap[c.student_id]?.seller_referral_code || '__unknown__';
         const amount = Number(c.amount) || 0;
-        
+
         revenueByReferral[ref] = (revenueByReferral[ref] || 0) + amount;
         totalRevenue += amount;
         
@@ -569,7 +560,6 @@ export function useStudentDetailsQuery(studentId?: string, profileId?: string) {
     queryFn: async () => {
       if (!studentId) return null;
 
-      console.log('[useStudentDetailsQuery] Fetching details for student:', studentId);
 
       // Buscar detalhes do estudante usando a RPC existente
       const { data: sqlData, error: sqlError } = await supabase.rpc(
@@ -609,7 +599,6 @@ export function useStudentApplicationsQuery(profileId?: string) {
     queryFn: async () => {
       if (!profileId) return [];
 
-      console.log('[useStudentApplicationsQuery] Fetching applications for profile:', profileId);
 
       const { data: applications, error } = await supabase
         .from('scholarship_applications')
@@ -647,7 +636,6 @@ export function useStudentDocumentsQuery(profileId?: string) {
     queryFn: async () => {
       if (!profileId) return [];
 
-      console.log('[useStudentDocumentsQuery] Fetching documents for profile:', profileId);
 
       // Buscar documentos das aplicações
       const { data: applications, error: appError } = await supabase
@@ -690,7 +678,6 @@ export function useStudentFeeHistoryQuery(studentUserId?: string) {
     queryFn: async () => {
       if (!studentUserId) return [];
 
-      console.log('[useStudentFeeHistoryQuery] Fetching fee history for user:', studentUserId);
 
       // Buscar histórico de pagamentos individuais
       const { data: feeHistory, error } = await supabase
@@ -809,7 +796,6 @@ export function useFinancialStatsQuery(userId?: string) {
     queryFn: async () => {
       if (!userId || !profiles || !commissions) return null;
 
-      console.log('[useFinancialStatsQuery] Calculating real financial stats for userId:', userId);
 
       // Importar serviço apenas quando necessário
       const { AffiliatePaymentRequestService } = await import('../services/AffiliatePaymentRequestService');
@@ -902,7 +888,6 @@ export function useAgencyPaymentRequestsQuery(userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
-      console.log('[useAgencyPaymentRequestsQuery] Fetching payment requests for userId:', userId);
 
       // Importar serviço apenas quando necessário (atenção ao case no nome do arquivo)
       const { AffiliatePaymentRequestService } = await import('../services/AffiliatePaymentRequestService');

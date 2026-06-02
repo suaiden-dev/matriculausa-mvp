@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  User, 
-  Edit, 
-  Save, 
-  X, 
-  Phone, 
-  Mail, 
-  Globe, 
+import {
+  User,
+  Edit,
+  Save,
+  X,
+  Phone,
+  Mail,
+  Globe,
   MapPin,
   Building,
+  Building2,
   Users,
   Award,
   CheckCircle,
@@ -18,7 +19,12 @@ import {
   Target,
   Shield,
   Bell,
-  Settings
+  Settings,
+  Instagram,
+  Linkedin,
+  Smartphone,
+  Hash,
+  Briefcase,
 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -30,17 +36,21 @@ interface ProfileSettingsProps {
 }
 
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
-  const { user: authUser } = useAuth();
+  const { user: authUser, supabaseUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.avatar_url);
-  
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+
   const [formData, setFormData] = useState({
+    // user_profiles
     name: user?.name || '',
     phone: user?.phone || '',
     territory: user?.territory || '',
@@ -50,91 +60,73 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
       email: user?.notifications?.email ?? true,
       sms: user?.notifications?.sms ?? false,
       push: user?.notifications?.push ?? true
-    }
+    },
+    // affiliate_admins extra fields
+    legal_name: '',
+    cnpj: '',
+    founded_year: '',
+    country: '',
+    state: '',
+    city: '',
+    address: '',
+    whatsapp: '',
+    instagram: '',
+    linkedin: '',
+    students_per_year: '',
   });
 
-  // Trava de segurança para impedir loop infinito
   const hasLoadedProfile = useRef(false);
 
-  // Carregar dados do perfil diretamente do banco de dados
   useEffect(() => {
     const loadUserProfile = async () => {
       if (!authUser || hasLoadedProfile.current) return;
       hasLoadedProfile.current = true;
-      
+
       try {
-        console.log('🔄 [ProfileSettings] Carregando perfil do banco de dados para user_id:', authUser.id);
-        const { data: profile, error } = await supabase
-          .from('user_profiles')
-          .select('full_name, phone, territory, company_name, website, notifications, avatar_url')
-          .eq('user_id', authUser.id)
-          .single();
-        
-        if (error) {
-          console.error('❌ [ProfileSettings] Erro ao carregar perfil:', error);
-          // Fallback para dados do user prop
-          if (user) {
-            setFormData({
-              name: user.name || '',
-              phone: user.phone || '',
-              territory: user.territory || '',
-              company_name: user.company_name || '',
-              website: user.website || '',
-              notifications: {
-                email: user.notifications?.email ?? true,
-                sms: user.notifications?.sms ?? false,
-                push: user.notifications?.push ?? true
-              }
-            });
-            setAvatarUrl(user.avatar_url);
-          }
-          return;
-        }
-        
-        if (profile) {
-          console.log('✅ [ProfileSettings] Perfil carregado do banco:', {
-            full_name: profile.full_name,
-            company_name: profile.company_name,
-            website: profile.website,
-            territory: profile.territory,
-            notifications: profile.notifications
-          });
-          
-          setFormData({
-            name: profile.full_name || user?.name || '',
-            phone: profile.phone || user?.phone || '',
-            territory: profile.territory || user?.territory || '',
-            company_name: profile.company_name || user?.company_name || '',
-            website: profile.website || user?.website || '',
-            notifications: (profile.notifications as any) || {
-              email: user?.notifications?.email ?? true,
-              sms: user?.notifications?.sms ?? false,
-              push: user?.notifications?.push ?? true
-            }
-          });
-          setAvatarUrl(profile.avatar_url || user?.avatar_url);
-        }
+        const [{ data: profile }, { data: agency }] = await Promise.all([
+          supabase
+            .from('user_profiles')
+            .select('full_name, phone, territory, company_name, website, notifications, avatar_url')
+            .eq('user_id', authUser.id)
+            .single(),
+          supabase
+            .from('affiliate_admins')
+            .select('company_name, legal_name, cnpj, website, founded_year, country, state, city, address, phone, whatsapp, instagram, linkedin, students_per_year, logo_url')
+            .eq('user_id', authUser.id)
+            .maybeSingle(),
+        ]);
+
+        setAvatarUrl(profile?.avatar_url || user?.avatar_url);
+        setLogoUrl(agency?.logo_url || undefined);
+
+        setFormData({
+          name: profile?.full_name || user?.name || '',
+          phone: agency?.phone || profile?.phone || user?.phone || '',
+          territory: profile?.territory || user?.territory || '',
+          company_name: agency?.company_name || profile?.company_name || user?.company_name || '',
+          website: agency?.website || profile?.website || user?.website || '',
+          notifications: (profile?.notifications as any) || {
+            email: user?.notifications?.email ?? true,
+            sms: user?.notifications?.sms ?? false,
+            push: user?.notifications?.push ?? true
+          },
+          legal_name: agency?.legal_name || '',
+          cnpj: agency?.cnpj || '',
+          founded_year: agency?.founded_year || '',
+          country: agency?.country || '',
+          state: agency?.state || '',
+          city: agency?.city || '',
+          address: agency?.address || '',
+          whatsapp: agency?.whatsapp || '',
+          instagram: agency?.instagram || '',
+          linkedin: agency?.linkedin || '',
+          students_per_year: agency?.students_per_year || '',
+        });
       } catch (error) {
-        console.error('❌ [ProfileSettings] Erro ao carregar perfil:', error);
-        // Fallback para dados do user prop
-        if (user) {
-          setFormData({
-            name: user.name || '',
-            phone: user.phone || '',
-            territory: user.territory || '',
-            company_name: user.company_name || '',
-            website: user.website || '',
-            notifications: {
-              email: user.notifications?.email ?? true,
-              sms: user.notifications?.sms ?? false,
-              push: user.notifications?.push ?? true
-            }
-          });
-          setAvatarUrl(user.avatar_url);
-        }
+        console.error('❌ [ProfileSettings] load error:', error);
       }
     };
-    
+
     loadUserProfile();
   }, [authUser, user]);
 
@@ -144,18 +136,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...(prev[parent as keyof typeof prev] as any),
           [child]: value
         }
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      setFormData(prev => ({ ...prev, [field]: value }));
     }
-    
-    // Clear error messages when user starts typing
     if (saveError) setSaveError(null);
   };
 
@@ -165,55 +152,23 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
 
     setUploading(true);
     setUploadError(null);
-
     try {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Por favor, selecione um arquivo de imagem');
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('O arquivo deve ter menos de 5MB');
-      }
+      if (!file.type.startsWith('image/')) throw new Error('Please select an image file');
+      if (file.size > 5 * 1024 * 1024) throw new Error('File must be under 5MB');
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${authUser.id}/avatar_${Date.now()}.${fileExt}`;
-      
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('user-avatars')
-        .upload(fileName, file, { 
-          upsert: true,
-          contentType: file.type
-        });
-        
-      if (uploadError) {
-        throw new Error(`Erro no upload: ${uploadError.message}`);
-      }
 
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('user-avatars')
-        .getPublicUrl(fileName);
+      const { error: uploadErr } = await supabase.storage.from('user-avatars').upload(fileName, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw new Error(`Upload error: ${uploadErr.message}`);
 
-      const publicUrl = publicUrlData?.publicUrl;
-      if (!publicUrl) throw new Error('Não foi possível obter a URL da imagem');
+      const { data: urlData } = supabase.storage.from('user-avatars').getPublicUrl(fileName);
+      if (!urlData?.publicUrl) throw new Error('Could not get image URL');
 
-      // Update user profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', authUser.id);
-
-      if (updateError) {
-        throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
-      }
-
-      setAvatarUrl(publicUrl);
-      setSuccessMessage('Avatar atualizado com sucesso!');
+      await supabase.from('user_profiles').update({ avatar_url: urlData.publicUrl }).eq('user_id', authUser.id);
+      setAvatarUrl(urlData.publicUrl);
+      setSuccessMessage('Avatar updated!');
       setTimeout(() => setSuccessMessage(null), 3000);
-
     } catch (error: any) {
       setUploadError(error.message);
     } finally {
@@ -221,13 +176,39 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     }
   };
 
-  const handleCameraClick = () => {
-    fileInputRef.current?.click();
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !authUser) return;
+
+    setUploadingLogo(true);
+    setUploadError(null);
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('Please select an image file');
+      if (file.size > 5 * 1024 * 1024) throw new Error('File must be under 5MB');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${authUser.id}/logo_${Date.now()}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage.from('user-avatars').upload(fileName, file, { upsert: true, contentType: file.type });
+      if (uploadErr) throw new Error(`Upload error: ${uploadErr.message}`);
+
+      const { data: urlData } = supabase.storage.from('user-avatars').getPublicUrl(fileName);
+      if (!urlData?.publicUrl) throw new Error('Could not get image URL');
+
+      await supabase.from('affiliate_admins').update({ logo_url: urlData.publicUrl }).eq('user_id', authUser.id);
+      setLogoUrl(urlData.publicUrl);
+      setSuccessMessage('Logo updated!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error: any) {
+      setUploadError(error.message);
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const handleSave = async () => {
     if (!authUser) {
-      setSaveError('Usuário não autenticado');
+      setSaveError('User not authenticated');
       return;
     }
 
@@ -236,62 +217,48 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     setSuccessMessage(null);
 
     try {
-      // Update user profile
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('user_profiles')
-        .update({
-          full_name: formData.name,
-          phone: formData.phone,
-          territory: formData.territory,
-          company_name: formData.company_name,
-          website: formData.website,
-          notifications: formData.notifications,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', authUser.id)
-        .select()
-        .single();
+      const [{ data: updatedProfile, error: profileError }] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .update({
+            full_name: formData.name,
+            phone: formData.phone,
+            territory: formData.territory,
+            company_name: formData.company_name,
+            website: formData.website,
+            notifications: formData.notifications,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', authUser.id)
+          .select()
+          .single(),
 
-      if (updateError) {
-        throw new Error(`Erro ao salvar: ${updateError.message}`);
-      }
+        supabase
+          .from('affiliate_admins')
+          .update({
+            company_name: formData.company_name,
+            legal_name: formData.legal_name,
+            cnpj: formData.cnpj,
+            website: formData.website,
+            founded_year: formData.founded_year,
+            country: formData.country,
+            state: formData.state,
+            city: formData.city,
+            address: formData.address,
+            phone: formData.phone,
+            whatsapp: formData.whatsapp,
+            instagram: formData.instagram,
+            linkedin: formData.linkedin,
+            students_per_year: formData.students_per_year,
+          })
+          .eq('user_id', authUser.id),
+      ]);
 
-      // Atualizar o estado local com os dados salvos
-      if (updatedProfile) {
-        console.log('✅ [ProfileSettings] Perfil atualizado com sucesso:', {
-          full_name: updatedProfile.full_name,
-          company_name: updatedProfile.company_name,
-          website: updatedProfile.website,
-          territory: updatedProfile.territory,
-          notifications: updatedProfile.notifications
-        });
-        
-        setFormData({
-          name: updatedProfile.full_name || formData.name,
-          phone: updatedProfile.phone || '',
-          territory: updatedProfile.territory || '',
-          company_name: updatedProfile.company_name || '',
-          website: updatedProfile.website || '',
-          notifications: (updatedProfile.notifications as any) || formData.notifications
-        });
-      }
+      if (profileError) throw new Error(`Error saving: ${profileError.message}`);
 
-      setSuccessMessage('Perfil atualizado com sucesso!');
+      setSuccessMessage('Profile updated successfully!');
       setTimeout(() => setSuccessMessage(null), 3000);
       setIsEditing(false);
-
-      // Recarregar os dados do perfil após salvar
-      if (updatedProfile) {
-        setFormData({
-          name: updatedProfile.full_name || formData.name,
-          phone: updatedProfile.phone || formData.phone,
-          territory: updatedProfile.territory || formData.territory,
-          company_name: updatedProfile.company_name || formData.company_name,
-          website: updatedProfile.website || formData.website,
-          notifications: (updatedProfile.notifications as any) || formData.notifications
-        });
-      }
-
     } catch (error: any) {
       setSaveError(error.message);
     } finally {
@@ -300,22 +267,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
   };
 
   const handleCancel = () => {
-    // Reset form data to original values
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        phone: user.phone || '',
-        territory: user.territory || '',
-        company_name: user.company_name || '',
-        website: user.website || '',
-        notifications: {
-          email: user.notifications?.email ?? true,
-          sms: user.notifications?.sms ?? false,
-          push: user.notifications?.push ?? true
-        }
-      });
-    }
-    setAvatarUrl(user?.avatar_url);
+    hasLoadedProfile.current = false;
     setIsEditing(false);
     setSaveError(null);
     setSuccessMessage(null);
@@ -325,9 +277,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     const fields = [
       formData.name,
       formData.phone,
-      formData.territory,
+      formData.city,
       formData.company_name,
-      avatarUrl
+      logoUrl
     ];
     const completedFields = fields.filter(field => field && field !== '').length;
     return Math.round((completedFields / fields.length) * 100);
@@ -368,14 +320,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
               <div className="text-blue-100 text-sm">Complete</div>
             </div>
           </div>
-          
+
           <div className="w-full bg-white/20 rounded-full h-3 mb-4">
-            <div 
+            <div
               className="bg-white rounded-full h-3 transition-all duration-500"
               style={{ width: `${completeness}%` }}
             ></div>
           </div>
-          
+
           {completeness < 100 && (
             <div className="flex items-center text-blue-100">
               <AlertCircle className="h-4 w-4 mr-2" />
@@ -400,12 +352,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   {saving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Salvando...
+                      Saving...
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      Salvar Alterações
+                      Save Changes
                     </>
                   )}
                 </button>
@@ -415,55 +367,94 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   className="w-full sm:w-auto bg-slate-100 text-slate-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Cancelar
+                  Cancel
                 </button>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+
+            {/* Section: Basic Info */}
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Personal Info</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nome Completo *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Digite seu nome completo"
+                  placeholder="Your full name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Telefone *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Phone *</label>
                 <PhoneInput
                   international
                   defaultCountry="BR"
                   value={formData.phone}
                   onChange={(value) => handleInputChange('phone', value || '')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Ex: +55 11 99999-8888"
                   limitMaxLength
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Território/Região *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Territory / Region</label>
                 <input
                   type="text"
                   value={formData.territory}
                   onChange={(e) => handleInputChange('territory', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Ex: São Paulo, Sul do Brasil"
+                  placeholder="Ex: São Paulo, South Brazil"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nome da Empresa</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Email Notifications</label>
+                <select
+                  value={formData.notifications.email ? 'true' : 'false'}
+                  onChange={(e) => handleInputChange('notifications.email', e.target.value === 'true')}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                >
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Section: Company */}
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Company</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Company Name</label>
                 <input
                   type="text"
                   value={formData.company_name}
                   onChange={(e) => handleInputChange('company_name', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Nome da sua empresa ou organização"
+                  placeholder="Your company name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Legal Name (Razão Social)</label>
+                <input
+                  type="text"
+                  value={formData.legal_name}
+                  onChange={(e) => handleInputChange('legal_name', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="Razão social"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">CNPJ</label>
+                <input
+                  type="text"
+                  value={formData.cnpj}
+                  onChange={(e) => handleInputChange('cnpj', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="00.000.000/0001-00"
                 />
               </div>
 
@@ -474,21 +465,111 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   value={formData.website}
                   onChange={(e) => handleInputChange('website', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="https://exemplo.com"
+                  placeholder="https://youragency.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Notificações por Email</label>
-                <select
-                  value={formData.notifications.email ? 'true' : 'false'}
-                  onChange={(e) => handleInputChange('notifications.email', e.target.value === 'true')}
+                <label className="block text-sm font-medium text-slate-700 mb-2">Founded Year</label>
+                <input
+                  type="text"
+                  value={formData.founded_year}
+                  onChange={(e) => handleInputChange('founded_year', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  aria-label="Configurar notificações por email"
-                >
-                  <option value="true">Ativadas</option>
-                  <option value="false">Desativadas</option>
-                </select>
+                  placeholder="2015"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Students per Year</label>
+                <input
+                  type="text"
+                  value={formData.students_per_year}
+                  onChange={(e) => handleInputChange('students_per_year', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="11-50"
+                />
+              </div>
+            </div>
+
+            {/* Section: Location */}
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Location</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                <input
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => handleInputChange('country', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="Brazil"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">State</label>
+                <input
+                  type="text"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="São Paulo"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">City</label>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="São Paulo"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Address</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="Street, number"
+                />
+              </div>
+            </div>
+
+            {/* Section: Social & Contact */}
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Social & Contact</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">WhatsApp</label>
+                <PhoneInput
+                  international
+                  defaultCountry="BR"
+                  value={formData.whatsapp}
+                  onChange={(value) => handleInputChange('whatsapp', value || '')}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  limitMaxLength
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Instagram</label>
+                <input
+                  type="text"
+                  value={formData.instagram}
+                  onChange={(e) => handleInputChange('instagram', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="@youragency"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">LinkedIn</label>
+                <input
+                  type="text"
+                  value={formData.linkedin}
+                  onChange={(e) => handleInputChange('linkedin', e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  placeholder="linkedin.com/company/..."
+                />
               </div>
             </div>
           </div>
@@ -496,195 +577,131 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
           <div className="p-8">
             {/* Profile Header */}
             <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0 mb-6 sm:mb-8">
+              {/* Agency Logo */}
               <div className="relative">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
-                  {avatarUrl ? (
-                    <img 
-                      src={avatarUrl} 
-                      alt="Profile Avatar" 
-                      className="w-full h-full object-cover"
-                    />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden border-2 border-slate-200">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="Agency Logo" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+                    <Building2 className="h-10 w-10 sm:h-12 sm:w-12 text-slate-400" />
                   )}
                 </div>
-                <button 
-                  onClick={handleCameraClick}
-                  disabled={uploading}
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Alterar foto do perfil"
-                  aria-label="Alterar foto do perfil"
+                <button
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50"
+                  title="Change agency logo"
                 >
-                  {uploading ? (
+                  {uploadingLogo ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                   ) : (
                     <Camera className="h-4 w-4" />
                   )}
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                  aria-label="Selecionar foto de perfil"
-                />
+                <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
               </div>
-              
+
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                  {formData.company_name && formData.company_name.trim() 
-                    ? formData.company_name 
-                    : (formData.name || user?.name || 'Admin de Afiliados')
+                <h3 className="text-2xl font-bold text-slate-900 mb-1">
+                  {formData.company_name && formData.company_name.trim()
+                    ? formData.company_name
+                    : (formData.name || user?.name || 'Agency')
                   }
                 </h3>
                 <p className="text-slate-600 mb-3">{user?.email}</p>
                 <div className="flex items-center space-x-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     <Users className="h-3 w-3 mr-1" />
-                    Admin de Afiliados
+                    Agency
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Verificado
+                    Verified
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Upload Error Message */}
+            {/* Upload Error / Success */}
             {uploadError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                  <p className="text-red-700 text-sm">{uploadError}</p>
-                </div>
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                <p className="text-red-700 text-sm">{uploadError}</p>
               </div>
             )}
-
-            {/* Success Message */}
             {successMessage && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <p className="text-green-700 text-sm">{successMessage}</p>
-                </div>
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <p className="text-green-700 text-sm">{successMessage}</p>
               </div>
             )}
-
-            {/* Save Error Message */}
             {saveError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                  <p className="text-red-700 text-sm">{saveError}</p>
-                </div>
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                <p className="text-red-700 text-sm">{saveError}</p>
               </div>
             )}
 
             {/* Profile Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Personal */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">Informações Pessoais</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">Personal Information</h4>
                 <div className="space-y-4">
-                  <div className="flex items-center">
-                    <User className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Nome Completo</label>
-                      <p className="text-slate-900">{formData.name || user?.name || 'Não fornecido'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Mail className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Email</label>
-                      <p className="text-slate-900">{user?.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Phone className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Telefone</label>
-                      <p className="text-slate-900">{formData.phone || user?.phone || 'Não fornecido'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <MapPin className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Território/Região</label>
-                      <p className="text-slate-900">{formData.territory || user?.territory || 'Não fornecido'}</p>
-                    </div>
-                  </div>
+                  <InfoRow icon={<User />} label="Full Name" value={formData.name || user?.name} />
+                  <InfoRow icon={<Mail />} label="Email" value={user?.email} />
+                  <InfoRow icon={<Phone />} label="Phone" value={formData.phone || user?.phone} />
+                  <InfoRow icon={<MapPin />} label="Territory / Region" value={formData.territory || user?.territory} />
+                  <InfoRow icon={<Bell />} label="Email Notifications" value={formData.notifications?.email ? 'Enabled' : 'Disabled'} />
+                  <InfoRow icon={<Shield />} label="Account Status" value="Active" />
                 </div>
               </div>
 
+              {/* Company */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">Informações da Empresa</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">Company Information</h4>
                 <div className="space-y-4">
-                  <div className="flex items-center">
-                    <Building className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Nome da Empresa</label>
-                      <p className="text-slate-900">{formData.company_name || user?.company_name || 'Não fornecido'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Globe className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Website</label>
-                      <p className="text-slate-900">{formData.website || user?.website || 'Não fornecido'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Bell className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Notificações por Email</label>
-                      <p className="text-slate-900">
-                        {formData.notifications?.email !== undefined 
-                          ? (formData.notifications.email ? 'Ativadas' : 'Desativadas')
-                          : (user?.notifications?.email ? 'Ativadas' : 'Desativadas')
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Shield className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Status da Conta</label>
-                      <p className="text-slate-900">Ativo</p>
-                    </div>
-                  </div>
+                  <InfoRow icon={<Building />} label="Company Name" value={formData.company_name || user?.company_name} />
+                  <InfoRow icon={<Hash />} label="Legal Name" value={formData.legal_name} />
+                  <InfoRow icon={<Hash />} label="CNPJ" value={formData.cnpj} />
+                  <InfoRow icon={<Globe />} label="Website" value={formData.website || user?.website} isLink />
+                  <InfoRow icon={<Calendar />} label="Founded Year" value={formData.founded_year} />
+                  <InfoRow icon={<Briefcase />} label="Students per Year" value={formData.students_per_year} />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">Location</h4>
+                <div className="space-y-4">
+                  <InfoRow icon={<MapPin />} label="Country" value={formData.country} />
+                  <InfoRow icon={<MapPin />} label="State" value={formData.state} />
+                  <InfoRow icon={<MapPin />} label="City" value={formData.city} />
+                  <InfoRow icon={<MapPin />} label="Address" value={formData.address} />
+                </div>
+              </div>
+
+              {/* Social */}
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">Social & Contact</h4>
+                <div className="space-y-4">
+                  <InfoRow icon={<Smartphone />} label="WhatsApp" value={formData.whatsapp} />
+                  <InfoRow icon={<Instagram />} label="Instagram" value={formData.instagram} />
+                  <InfoRow icon={<Linkedin />} label="LinkedIn" value={formData.linkedin} isLink />
                 </div>
               </div>
             </div>
 
             {/* Account Information */}
             <div className="mt-8 pt-8 border-t border-slate-200">
-              <h4 className="text-lg font-bold text-slate-900 mb-6">Informações da Conta</h4>
+              <h4 className="text-lg font-bold text-slate-900 mb-6">Account Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-slate-400 mr-3" />
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Membro Desde</label>
-                    <p className="text-slate-900">
-                      {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'Desconhecido'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center">
-                  <Target className="h-5 w-5 text-slate-400 mr-3" />
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Perfil Completo</label>
-                    <p className="text-slate-900">{completeness}%</p>
-                  </div>
-                </div>
+                <InfoRow icon={<Calendar />} label="Member Since" value={
+                  supabaseUser?.created_at
+                    ? new Date(supabaseUser.created_at).toLocaleDateString('en-US')
+                    : undefined
+                } />
+                <InfoRow icon={<Target />} label="Profile Completeness" value={`${completeness}%`} />
               </div>
             </div>
           </div>
@@ -692,42 +709,21 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
       </div>
 
       {/* Profile Tips */}
-      {completeness < 100 && (
+      {completeness < 100 && !isEditing && (
         <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0">
             <AlertCircle className="h-5 w-5 text-yellow-600 mx-auto sm:mx-0 sm:mr-3 sm:mt-0.5" />
             <div className="text-center sm:text-left">
-              <h4 className="font-medium text-yellow-800 mb-2">Complete Seu Perfil</h4>
+              <h4 className="font-medium text-yellow-800 mb-2">Complete Your Profile</h4>
               <p className="text-sm text-yellow-700 mb-4">
-                Um perfil completo ajuda você a gerenciar melhor seus afiliados e vendedores. 
-                Considere adicionar as informações em falta para melhorar suas capacidades de gestão.
+                A complete profile helps you manage your sellers and track performance better.
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                {!user?.phone && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    Adicionar telefone
-                  </span>
-                )}
-                {!user?.territory && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    Adicionar território
-                  </span>
-                )}
-                {!user?.company_name && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Adicionar nome da empresa
-                  </span>
-                )}
-                {!user?.website && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Adicionar website
-                  </span>
-                )}
-                {!avatarUrl && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Adicionar foto de perfil
-                  </span>
-                )}
+                {!formData.name && <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">Add your name</span>}
+                {!formData.phone && <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">Add phone</span>}
+                {!formData.company_name && <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">Add company name</span>}
+                {!formData.city && <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">Add city</span>}
+                {!logoUrl && <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">Add agency logo</span>}
               </div>
             </div>
           </div>
@@ -736,5 +732,28 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     </div>
   );
 };
+
+/* ── Helper ── */
+const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value?: string; isLink?: boolean }> = ({
+  icon, label, value, isLink
+}) => (
+  <div className="flex items-center">
+    <span className="h-5 w-5 text-slate-400 mr-3 flex-shrink-0">{icon}</span>
+    <div>
+      <label className="text-sm font-medium text-slate-500">{label}</label>
+      {value ? (
+        isLink ? (
+          <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline text-sm">
+            {value}
+          </a>
+        ) : (
+          <p className="text-slate-900">{value}</p>
+        )
+      ) : (
+        <p className="text-slate-400 italic text-sm">Not provided</p>
+      )}
+    </div>
+  </div>
+);
 
 export default ProfileSettings;

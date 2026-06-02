@@ -1810,6 +1810,32 @@ const AdminStudentDetails: React.FC = () => {
       toast.error(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
     }
 
+    // Register commission billing for non-Zelle manual payments
+    try {
+      const feeTypeMapping: Record<string, string> = {
+        selection_process: 'selection_process',
+        application: 'application_fee',
+        scholarship: 'scholarship_fee',
+        placement: 'placement_fee',
+        i20_control: 'i20_control_fee',
+        ds160_package: 'ds160_package',
+        i539_cos_package: 'i539_cos_package',
+        reinstatement_package: 'reinstatement_package',
+      };
+      const billingFeeType = feeTypeMapping[feeType];
+      if (billingFeeType) {
+        await supabase.rpc('register_payment_billing', {
+          user_id_param: student.user_id,
+          fee_type_param: billingFeeType,
+          amount_param: finalPaymentAmount,
+          payment_session_id_param: null,
+          payment_method_param: paymentMethodValue,
+        });
+      }
+    } catch (billingErr: any) {
+      console.error('[PaymentStatusCard] ❌ register_payment_billing failed:', billingErr.message);
+    }
+
     // Calculate remaining placement fee balance to pass to markFeeAsPaid
     let placementFeePendingBalance: number | undefined = undefined;
     if (feeType === 'placement') {

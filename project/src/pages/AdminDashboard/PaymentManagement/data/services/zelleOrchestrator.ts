@@ -708,6 +708,17 @@ export async function approveZelleFlow(params: {
     }
   }
 
+  // Registrar comissão para application_fee
+  if (payment.fee_type === "application_fee" || payment.fee_type === "application_fee_migma") {
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "application_fee",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
   // Update user_profiles for application_fee flag
   if (payment.fee_type === "application_fee" || payment.fee_type === "application_fee_migma") {
     const { data: updatedProfiles } = await supabase

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -40,6 +41,14 @@ interface FilterState {
   dateFrom?: string;
   dateTo?: string;
 }
+
+const DEFAULT_COMMISSION_RULES = {
+  selection_process: { type: 'fixed' as const, value: 100, enabled: true,  trigger: 'on_last_fee' as const },
+  application:       { type: 'fixed' as const, value: 0,   enabled: false, trigger: 'on_payment' as const },
+  placement:         { type: 'fixed' as const, value: 0,   enabled: false, trigger: 'on_payment' as const },
+  reinstatement:     { type: 'fixed' as const, value: 0,   enabled: false, trigger: 'on_payment' as const },
+  i20_control:       { type: 'fixed' as const, value: 0,   enabled: false, trigger: 'on_payment' as const },
+};
 
 const AffiliateManagement: React.FC = () => {
 
@@ -132,6 +141,42 @@ const AffiliateManagement: React.FC = () => {
   const [commissionModalOpen, setCommissionModalOpen] = useState<string | null>(null);
   const [tempRules, setTempRules] = useState<any>({});
   const [savingRules, setSavingRules] = useState(false);
+
+  // ===== Aprovação de agência com configuração de regras =====
+  const [approvalModalRequest, setApprovalModalRequest] = useState<AgencyRequest | null>(null);
+  const [approvalRules, setApprovalRules] = useState<any>({ ...DEFAULT_COMMISSION_RULES });
+  const [approvingAgency, setApprovingAgency] = useState(false);
+  const [viewingRequest, setViewingRequest] = useState<AgencyRequest | null>(null);
+  const [viewingAffiliate, setViewingAffiliate] = useState<any | null>(null);
+  const [loadingAffiliate, setLoadingAffiliate] = useState(false);
+
+  const openRequestDetails = async (req: AgencyRequest) => {
+    setViewingRequest(req);
+    setViewingAffiliate(null);
+    setLoadingAffiliate(true);
+    try {
+      // Buscar user_profiles pelo email para obter user_id
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .eq('email', req.email.toLowerCase())
+        .maybeSingle();
+      if (profile?.user_id) {
+        const { data: affiliate } = await supabase
+          .from('affiliate_admins')
+          .select('*')
+          .eq('user_id', profile.user_id)
+          .maybeSingle();
+        setViewingAffiliate(affiliate || null);
+      }
+    } catch {
+      // silently fail — modal still shows request data
+    } finally {
+      setLoadingAffiliate(false);
+    }
+  };
+  const [domMounted, setDomMounted] = useState(false);
+  useEffect(() => { setDomMounted(true); }, []);
 
   interface CommissionBalance {
     vendas_comissionadas: number;
@@ -245,13 +290,22 @@ const AffiliateManagement: React.FC = () => {
   };
 
   const handleOpenCommissionModal = (affiliate: any) => {
-    const rules = affiliate.commission_rules || {
-      selection_process: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
-      scholarship: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
-      i20_control: { type: 'fixed', value: affiliate.commission_per_sale || 0 },
-      application: { type: 'fixed', value: affiliate.commission_per_sale || 0 }
-    };
-    setTempRules(rules);
+    const rawRules = affiliate.commission_rules || DEFAULT_COMMISSION_RULES;
+    const feeKeys = ['selection_process', 'application', 'placement', 'reinstatement', 'i20_control'] as const;
+    const normalized = Object.fromEntries(
+      feeKeys.map(key => {
+        const existing = rawRules[key];
+        const defaults = DEFAULT_COMMISSION_RULES[key];
+        if (!existing) return [key, defaults];
+        return [key, {
+          type:    existing.type    ?? defaults.type,
+          value:   existing.value   ?? defaults.value,
+          enabled: existing.enabled ?? true,
+          trigger: existing.trigger ?? 'on_payment',
+        }];
+      })
+    );
+    setTempRules(normalized);
     setCommissionModalOpen(affiliate.id);
   };
 
@@ -377,6 +431,7 @@ const AffiliateManagement: React.FC = () => {
           .select(`
           id,
           user_id,
+          email,
           has_paid_selection_process_fee, 
           has_paid_i20_control_fee, 
           selection_process_fee_payment_method,
@@ -755,26 +810,34 @@ const AffiliateManagement: React.FC = () => {
     }
   };
 
-  const handleApproveAgencyRequest = async (req: AgencyRequest) => {
-    if (!window.confirm(`Aprovar solicitação de ${req.company_name} (${req.email})?`)) return;
-    setProcessingAgencyRequest(req.id);
+  const handleApproveAgencyRequest = (req: AgencyRequest) => {
+    setApprovalRules({ ...DEFAULT_COMMISSION_RULES });
+    setApprovalModalRequest(req);
+  };
+
+  const handleConfirmApproveWithRules = async () => {
+    if (!approvalModalRequest) return;
+    setApprovingAgency(true);
+    setProcessingAgencyRequest(approvalModalRequest.id);
     try {
-      // Create user account and mark request approved via edge function
       const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-agency-user', {
         body: {
-          email: req.email,
-          full_name: req.full_name,
-          company_name: req.company_name,
-          agency_request_id: req.id,
+          email: approvalModalRequest.email,
+          full_name: approvalModalRequest.full_name,
+          company_name: approvalModalRequest.company_name,
+          agency_request_id: approvalModalRequest.id,
+          commission_rules: approvalRules,
         },
       });
       if (inviteError) throw inviteError;
       if (inviteData?.error) throw new Error(inviteData.error);
 
+      setApprovalModalRequest(null);
       await loadAgencyRequests();
     } catch (e: any) {
       alert('Erro ao aprovar: ' + (e.message || 'Tente novamente'));
     } finally {
+      setApprovingAgency(false);
       setProcessingAgencyRequest(null);
     }
   };
@@ -1457,25 +1520,35 @@ const AffiliateManagement: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {req.status === 'pending' && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleApproveAgencyRequest(req)}
-                              disabled={processingAgencyRequest === req.id}
-                              className="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
-                            >
-                              {processingAgencyRequest === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                              Aprovar
-                            </button>
-                            <button
-                              onClick={() => handleRejectAgencyRequest(req)}
-                              disabled={processingAgencyRequest === req.id}
-                              className="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                            >
-                              Rejeitar
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openRequestDetails(req)}
+                            className="px-3 py-1 text-xs rounded bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center gap-1"
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-3 h-3" />
+                            Detalhes
+                          </button>
+                          {req.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleApproveAgencyRequest(req)}
+                                disabled={processingAgencyRequest === req.id}
+                                className="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {processingAgencyRequest === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                Aprovar
+                              </button>
+                              <button
+                                onClick={() => handleRejectAgencyRequest(req)}
+                                disabled={processingAgencyRequest === req.id}
+                                className="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                              >
+                                Rejeitar
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2470,9 +2543,269 @@ const AffiliateManagement: React.FC = () => {
         )}
       </div>
 
+      {/* Modal de Detalhes da Solicitação */}
+      {viewingRequest && domMounted && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Detalhes da Solicitação</h3>
+                <p className="text-sm text-slate-500 mt-0.5">{viewingRequest.company_name} — {viewingRequest.email}</p>
+              </div>
+              <button onClick={() => { setViewingRequest(null); setViewingAffiliate(null); }} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6 space-y-6">
+              {/* Status + Data */}
+              <div className="flex items-center gap-4">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                  viewingRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  viewingRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {viewingRequest.status === 'pending' ? 'Pendente' : viewingRequest.status === 'approved' ? 'Aprovada' : 'Rejeitada'}
+                </span>
+                <span className="text-xs text-slate-400">Solicitação em {new Date(viewingRequest.created_at).toLocaleDateString('pt-BR')}</span>
+              </div>
+
+              {/* Step 1 — Dados básicos da request */}
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Step 1 — Company Info</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Agency Name" value={viewingAffiliate?.company_name || viewingRequest.company_name} />
+                  <Field label="Contact Name" value={viewingRequest.full_name} />
+                  <Field label="Email" value={viewingRequest.email} />
+                  {(viewingAffiliate?.website) && <Field label="Website" value={viewingAffiliate.website} />}
+                  {viewingAffiliate?.logo_url && (
+                    <div className="col-span-2">
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Logo</p>
+                      <img src={viewingAffiliate.logo_url} alt="Logo" className="h-16 w-auto object-contain rounded-lg border border-slate-100" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 2 — Localização */}
+              {(viewingAffiliate?.country || viewingAffiliate?.city || viewingAffiliate?.state || viewingAffiliate?.address || viewingRequest.country) && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Step 2 — Location</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(viewingAffiliate?.country || viewingRequest.country) && <Field label="Country" value={viewingAffiliate?.country || viewingRequest.country} />}
+                    {viewingAffiliate?.state && <Field label="State / Province" value={viewingAffiliate.state} />}
+                    {viewingAffiliate?.city && <Field label="City" value={viewingAffiliate.city} />}
+                    {viewingAffiliate?.address && <Field label="Address" value={viewingAffiliate.address} className="col-span-2" />}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 — Contato */}
+              {(viewingAffiliate?.phone || viewingAffiliate?.whatsapp || viewingRequest.phone) && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Step 3 — Contact</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {(viewingAffiliate?.phone || viewingRequest.phone) && <Field label="Phone" value={viewingAffiliate?.phone || viewingRequest.phone} />}
+                    {viewingAffiliate?.whatsapp && <Field label="WhatsApp" value={viewingAffiliate.whatsapp} />}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4 — Sobre o Negócio */}
+              {(viewingAffiliate?.students_per_year || viewingAffiliate?.markets?.length || viewingAffiliate?.how_found_us) && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Step 4 — About the Business</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {viewingAffiliate?.students_per_year && <Field label="Students / Year" value={viewingAffiliate.students_per_year} />}
+                    {viewingAffiliate?.how_found_us && <Field label="How they found us" value={viewingAffiliate.how_found_us} />}
+                    {viewingAffiliate?.markets?.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Markets</p>
+                        <div className="flex flex-wrap gap-2">
+                          {viewingAffiliate.markets.map((m: string) => (
+                            <span key={m} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium">{m}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Mensagem da request */}
+              {viewingRequest.message && (
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Message</p>
+                  <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-4 leading-relaxed">{viewingRequest.message}</p>
+                </div>
+              )}
+
+              {loadingAffiliate && (
+                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading onboarding data...
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+              {viewingRequest.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => { const r = viewingRequest; setViewingRequest(null); setViewingAffiliate(null); handleApproveAgencyRequest(r); }}
+                    className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Aprovar
+                  </button>
+                  <button
+                    onClick={() => { const r = viewingRequest; setViewingRequest(null); setViewingAffiliate(null); handleRejectAgencyRequest(r); }}
+                    className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium"
+                  >
+                    Rejeitar
+                  </button>
+                </>
+              )}
+              <button onClick={() => { setViewingRequest(null); setViewingAffiliate(null); }} className="px-4 py-2 text-sm rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 font-medium">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Modal de Regras de Comissão */}
-      {commissionModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {approvalModalRequest && domMounted && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  Configurar Comissões e Aprovar Agência
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  <span className="font-medium text-slate-700">{approvalModalRequest.company_name}</span> — {approvalModalRequest.email}
+                </p>
+                <p className="text-xs text-amber-600 mt-1 font-medium">Configure as regras antes de aprovar. Podem ser editadas depois.</p>
+              </div>
+              <button
+                onClick={() => setApprovalModalRequest(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {[
+                { id: 'selection_process', label: 'Selection Process Fee', icon: Activity },
+                { id: 'application',       label: 'Application Fee',       icon: CreditCard },
+                { id: 'placement',         label: 'Placement Fee',         icon: GraduationCap },
+                { id: 'reinstatement',     label: 'Reinstatement Fee',     icon: ShieldAlert },
+                { id: 'i20_control',       label: 'Control Fee',           icon: ShieldCheck },
+              ].map(fee => {
+                const rule = approvalRules[fee.id] || DEFAULT_COMMISSION_RULES[fee.id as keyof typeof DEFAULT_COMMISSION_RULES];
+                const Icon = fee.icon;
+                const isEnabled = rule.enabled ?? true;
+
+                return (
+                  <div key={fee.id} className={`p-4 rounded-xl border transition-opacity ${isEnabled ? 'bg-slate-50 border-slate-200' : 'bg-slate-100/50 border-slate-200 opacity-60'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-slate-200">
+                          <Icon className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <h4 className="font-semibold text-slate-800">{fee.label}</h4>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <span className="text-xs font-medium text-slate-500">{isEnabled ? 'Ativo' : 'Inativo'}</span>
+                        <button
+                          type="button"
+                          onClick={() => setApprovalRules({ ...approvalRules, [fee.id]: { ...rule, enabled: !isEnabled } })}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </button>
+                      </label>
+                    </div>
+
+                    <div className={`flex items-center gap-4 mb-3 ${!isEnabled ? 'pointer-events-none' : ''}`}>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Tipo de Comissão</label>
+                        <select
+                          value={rule.type}
+                          onChange={e => setApprovalRules({ ...approvalRules, [fee.id]: { ...rule, type: e.target.value } })}
+                          className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        >
+                          <option value="fixed">Fixo ($)</option>
+                          <option value="percentage">Porcentagem (%)</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-3 flex items-center text-slate-500 text-sm pointer-events-none">
+                            {rule.type === 'fixed' ? '$' : '%'}
+                          </span>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={rule.value}
+                            onChange={e => setApprovalRules({ ...approvalRules, [fee.id]: { ...rule, value: parseFloat(e.target.value) || 0 } })}
+                            className="w-full text-sm border border-slate-300 rounded-lg pl-8 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={!isEnabled ? 'pointer-events-none opacity-50' : ''}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Quando pagar comissão</label>
+                      <select
+                        value={rule.trigger ?? 'on_payment'}
+                        onChange={e => setApprovalRules({ ...approvalRules, [fee.id]: { ...rule, trigger: e.target.value } })}
+                        className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="on_payment">Ao pagar esta taxa</option>
+                        <option value="on_last_fee">Ao pagar a última taxa</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setApprovalRules({ ...DEFAULT_COMMISSION_RULES })}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Restaurar padrão
+              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setApprovalModalRequest(null)}
+                  disabled={approvingAgency}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmApproveWithRules}
+                  disabled={approvingAgency}
+                  className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {approvingAgency ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Confirmar e Aprovar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {commissionModalOpen && domMounted && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
@@ -2492,87 +2825,126 @@ const AffiliateManagement: React.FC = () => {
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {[
                 { id: 'selection_process', label: 'Selection Process Fee', icon: Activity },
-                { id: 'scholarship', label: 'Scholarship Fee', icon: GraduationCap },
-                { id: 'i20_control', label: 'I-20 Control Fee', icon: ShieldCheck },
-                { id: 'application', label: 'Application Fee', icon: CreditCard }
+                { id: 'application',       label: 'Application Fee',       icon: CreditCard },
+                { id: 'placement',         label: 'Placement Fee',         icon: GraduationCap },
+                { id: 'reinstatement',     label: 'Reinstatement Fee',     icon: ShieldAlert },
+                { id: 'i20_control',       label: 'Control Fee',      icon: ShieldCheck },
               ].map(fee => {
-                const rule = tempRules[fee.id] || { type: 'fixed', value: 0 };
+                const rule = tempRules[fee.id] || DEFAULT_COMMISSION_RULES[fee.id as keyof typeof DEFAULT_COMMISSION_RULES];
                 const Icon = fee.icon;
-                
+                const isEnabled = rule.enabled ?? true;
+
                 return (
-                  <div key={fee.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-white rounded-lg border border-slate-200">
-                        <Icon className="w-4 h-4 text-slate-600" />
+                  <div key={fee.id} className={`p-4 rounded-xl border transition-opacity ${isEnabled ? 'bg-slate-50 border-slate-200' : 'bg-slate-100/50 border-slate-200 opacity-60'}`}>
+                    {/* Header: label + toggle */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg border border-slate-200">
+                          <Icon className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <h4 className="font-semibold text-slate-800">{fee.label}</h4>
                       </div>
-                      <h4 className="font-semibold text-slate-800">{fee.label}</h4>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <span className="text-xs font-medium text-slate-500">{isEnabled ? 'Ativo' : 'Inativo'}</span>
+                        <button
+                          type="button"
+                          onClick={() => setTempRules({ ...tempRules, [fee.id]: { ...rule, enabled: !isEnabled } })}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </button>
+                      </label>
                     </div>
-                    
-                    <div className="flex items-center gap-4">
+
+                    {/* Tipo + Valor */}
+                    <div className={`flex items-center gap-4 mb-3 ${!isEnabled ? 'pointer-events-none' : ''}`}>
                       <div className="flex-1">
                         <label className="block text-xs font-medium text-slate-500 mb-1">Tipo de Comissão</label>
-                        <select 
+                        <select
                           value={rule.type}
-                          onChange={e => setTempRules({
-                            ...tempRules,
-                            [fee.id]: { ...rule, type: e.target.value }
-                          })}
+                          onChange={e => setTempRules({ ...tempRules, [fee.id]: { ...rule, type: e.target.value } })}
                           className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                         >
                           <option value="fixed">Fixo ($)</option>
                           <option value="percentage">Porcentagem (%)</option>
                         </select>
                       </div>
-                      
                       <div className="flex-1">
                         <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
                         <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-slate-500 sm:text-sm">
-                              {rule.type === 'fixed' ? '$' : '%'}
-                            </span>
-                          </div>
-                          <input 
-                            type="number"
-                            min="0"
-                            step="0.01"
+                          <span className="absolute inset-y-0 left-3 flex items-center text-slate-500 text-sm pointer-events-none">
+                            {rule.type === 'fixed' ? '$' : '%'}
+                          </span>
+                          <input
+                            type="number" min="0" step="0.01"
                             value={rule.value}
-                            onChange={e => setTempRules({
-                              ...tempRules,
-                              [fee.id]: { ...rule, value: parseFloat(e.target.value) || 0 }
-                            })}
+                            onChange={e => setTempRules({ ...tempRules, [fee.id]: { ...rule, value: parseFloat(e.target.value) || 0 } })}
                             className="w-full text-sm border border-slate-300 rounded-lg pl-8 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                           />
                         </div>
                       </div>
                     </div>
+
+                    {/* Trigger */}
+                    <div className={!isEnabled ? 'pointer-events-none opacity-50' : ''}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">Quando pagar comissão</label>
+                      <select
+                        value={rule.trigger ?? 'on_payment'}
+                        onChange={e => setTempRules({ ...tempRules, [fee.id]: { ...rule, trigger: e.target.value } })}
+                        className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="on_payment">Ao pagar esta taxa</option>
+                        <option value="on_last_fee">Ao pagar a última taxa</option>
+                      </select>
+                    </div>
                   </div>
                 );
               })}
             </div>
-            
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3">
               <button
-                onClick={() => setCommissionModalOpen(null)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                type="button"
+                onClick={() => setTempRules({ ...DEFAULT_COMMISSION_RULES })}
+                className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                Cancelar
+                Restaurar padrão
               </button>
-              <button
-                onClick={() => handleSaveCommissionRules(commissionModalOpen)}
-                disabled={savingRules}
-                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                {savingRules ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Salvar Regras
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCommissionModalOpen(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleSaveCommissionRules(commissionModalOpen)}
+                  disabled={savingRules}
+                  className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {savingRules ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Salvar Regras
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+    </div>
+  );
+};
+
+// ─── Helper ──────────────────────────────────────────────────────────────────
+const Field: React.FC<{ label: string; value: string | null | undefined; className?: string }> = ({ label, value, className }) => {
+  if (!value) return null;
+  return (
+    <div className={className}>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-sm text-slate-900 font-medium">{value}</p>
     </div>
   );
 };

@@ -66,14 +66,38 @@ const PaymentManagement: React.FC = () => {
     saldo: statsData.stats.totalEarned
   } : null;
 
+  const FEE_TYPE_LABELS: Record<string, string> = {
+    selection_process: 'Selection Process Fee',
+    application_fee: 'Application Fee',
+    application: 'Application Fee',
+    placement_fee: 'Placement Fee',
+    placement: 'Placement Fee',
+    scholarship_fee: 'Scholarship Fee',
+    scholarship: 'Scholarship Fee',
+    i20_control: 'I-20 Control Fee',
+    ds160_package: 'DS-160 Package',
+    i539_cos_package: 'I-539 COS Package',
+    reinstatement_package: 'Reinstatement Package',
+    reinstatement: 'Reinstatement Package',
+  };
+
+  const COMMISSION_RULE_LABELS: Record<string, string> = {
+    selection_process: 'Selection Process',
+    application: 'Application Fee',
+    placement: 'Placement Fee',
+    reinstatement: 'Reinstatement',
+    i20_control: 'I-20 Control',
+    scholarship: 'Scholarship Fee',
+  };
+
   const commissionHistory = commissionsData?.map(c => ({
     completed_at: c.created_at,
-    aluno_name: 'Student', // We can enrich this later if needed
-    aluno_email: '',
-    seller_name: 'Seller',
-    seller_referral_code: '',
-    payment_amount: 0,
-    commission_amount: Number(c.amount)
+    fee_type: FEE_TYPE_LABELS[c.fee_type] || c.fee_type || '—',
+    affiliate_code: (c as any).affiliate_code || '—',
+    status: (c as any).status || 'active',
+    payment_amount: Number((c as any).payment_amount) || 0,
+    commission_amount: Number(c.amount),
+    pending_commission_amount: Number((c as any).pending_commission_amount) || 0,
   })) ?? [];
 
   const loadingCommission = loadingCommissions || loadingStats;
@@ -533,10 +557,7 @@ const PaymentManagement: React.FC = () => {
                                   if (window.confirm(`Cancel this payment request of ${formatCurrency(Number(req.amount_usd) || 0)}?`)) {
                                     try {
                                       await AffiliatePaymentRequestService.cancelPaymentRequest(req.id, user.id);
-                                      // reload list and balance
-                                      hasLoadedRequestsForUser.current = null;
-                                      hasLoadedBalanceForUser.current = null;
-                                      await Promise.all([loadAffiliatePaymentRequests(), loadAffiliateBalance()]);
+                                      await Promise.all([refetchRequests(), refetchStats()]);
                                       setSuccessMessage('Payment request cancelled successfully.');
                                       setTimeout(() => setSuccessMessage(null), 5000);
                                     } catch (e: any) {
@@ -574,36 +595,28 @@ const PaymentManagement: React.FC = () => {
                   <DollarSign className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Comissões (Regras Ativas)</p>
+                  <p className="text-sm font-medium text-slate-600">Active Commission Rules</p>
                 </div>
               </div>
-              
+
               <div className="w-full">
                 {loadingCommission ? (
                   <span className="animate-pulse bg-slate-200 h-16 w-full rounded inline-block"></span>
                 ) : commissionSummary?.commission_rules ? (
                   <div className="grid grid-cols-2 gap-2 mt-1">
-                    {Object.entries(commissionSummary.commission_rules).map(([key, rule]: [string, any]) => {
-                      const labels: Record<string, string> = {
-                        selection_process: 'Application Fee',
-                        scholarship: 'Placement Fee',
-                        i20_control: 'Control Fee',
-                        application: 'App'
-                      };
-                      return (
-                        <div key={key} className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{labels[key] || key}</span>
-                          <span className="text-sm font-bold text-blue-600 mt-0.5">
-                            {rule.type === 'fixed' ? `$${rule.value}` : `${rule.value}%`}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {Object.entries(commissionSummary.commission_rules).map(([key, rule]: [string, any]) => (
+                      <div key={key} className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{COMMISSION_RULE_LABELS[key] || key}</span>
+                        <span className="text-sm font-bold text-blue-600 mt-0.5">
+                          {rule.type === 'fixed' ? `$${rule.value}` : `${rule.value}%`}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 ) : commissionSummary?.commission_per_sale != null ? (
                   <p className="text-2xl font-bold text-blue-600 ml-14">${commissionSummary.commission_per_sale}</p>
                 ) : (
-                  <span className="text-slate-400 text-sm ml-14">Não configurado</span>
+                  <span className="text-slate-400 text-sm ml-14">Not configured</span>
                 )}
               </div>
             </div>
@@ -614,7 +627,7 @@ const PaymentManagement: React.FC = () => {
                   <TrendingUp className="w-6 h-6 text-slate-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Vendas Comissionadas</p>
+                  <p className="text-sm font-medium text-slate-600">Commissions Earned</p>
                   <p className="text-2xl font-bold text-slate-900">
                     {loadingCommission ? (
                       <span className="animate-pulse bg-slate-200 h-8 w-12 rounded inline-block"></span>
@@ -632,7 +645,7 @@ const PaymentManagement: React.FC = () => {
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Acumulado</p>
+                  <p className="text-sm font-medium text-slate-600">Total Accumulated</p>
                   <p className="text-2xl font-bold text-green-600">
                     {loadingCommission ? (
                       <span className="animate-pulse bg-slate-200 h-8 w-20 rounded inline-block"></span>
@@ -640,7 +653,7 @@ const PaymentManagement: React.FC = () => {
                       formatCurrency(commissionSummary?.total_acumulado ?? 0)
                     )}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Já pago: {formatCurrency(commissionSummary?.total_pago ?? 0)}</p>
+                  <p className="text-xs text-slate-500 mt-1">Paid out: {formatCurrency(commissionSummary?.total_pago ?? 0)}</p>
                 </div>
               </div>
             </div>
@@ -651,7 +664,7 @@ const PaymentManagement: React.FC = () => {
                   <Award className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Saldo a Receber</p>
+                  <p className="text-sm font-medium text-slate-600">Available Balance</p>
                   <p className="text-2xl font-bold text-orange-600">
                     {loadingCommission ? (
                       <span className="animate-pulse bg-slate-200 h-8 w-20 rounded inline-block"></span>
@@ -659,7 +672,7 @@ const PaymentManagement: React.FC = () => {
                       formatCurrency(commissionSummary?.saldo ?? 0)
                     )}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Disponível para saque</p>
+                  <p className="text-xs text-slate-500 mt-1">Ready for withdrawal</p>
                 </div>
               </div>
             </div>
@@ -668,8 +681,8 @@ const PaymentManagement: React.FC = () => {
           {/* Commission History Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-medium text-slate-900">Histórico de Comissões</h3>
-              <p className="text-sm text-slate-500 mt-1">Todas as comissões geradas nas vendas de Selection Process</p>
+              <h3 className="text-lg font-medium text-slate-900">Commission History</h3>
+              <p className="text-sm text-slate-500 mt-1">All commissions generated from student payments</p>
             </div>
 
             {loadingCommission ? (
@@ -681,19 +694,19 @@ const PaymentManagement: React.FC = () => {
                 <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <DollarSign className="h-8 w-8 text-blue-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma comissão ainda</h3>
-                <p className="text-gray-500">Comissões aparecerão aqui após vendas de Selection Process</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No commissions yet</h3>
+                <p className="text-gray-500">Commissions will appear here after student payments</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Pago</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Comissão</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller Code</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Student Fee Paid</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
@@ -702,13 +715,11 @@ const PaymentManagement: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {row.completed_at ? new Date(row.completed_at).toLocaleDateString('en-US') : '—'}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{row.aluno_name}</div>
-                          <div className="text-xs text-gray-500">{row.aluno_email}</div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {row.fee_type}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700">{row.seller_name}</div>
-                          <div className="text-xs text-gray-400 font-mono">{row.seller_referral_code}</div>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-700 font-mono">{row.affiliate_code}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">{formatCurrency(row.payment_amount)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right text-blue-600">{formatCurrency(row.commission_amount)}</td>

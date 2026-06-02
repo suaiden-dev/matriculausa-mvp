@@ -665,6 +665,20 @@ Deno.serve(async (req)=>{
 
       // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
+      // Registrar comissão via register_payment_billing (i20_control libera pending commissions)
+      try {
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: "i20_control",
+          amount_param: paymentAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: "stripe",
+        });
+        console.log("[Commission] register_payment_billing called for i20_control, user", userId);
+      } catch (billingErr) {
+        console.error("[Commission] register_payment_billing failed:", billingErr);
+      }
+
       // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
       const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
       if (!userProfile) {

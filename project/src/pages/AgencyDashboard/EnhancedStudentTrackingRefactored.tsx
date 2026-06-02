@@ -122,7 +122,7 @@ function EnhancedStudentTracking(props) {
     overridesMap,
     dependentsMap,
     realPaidAmountsMap
-  } = useAdjustedStudentsCalculation(students, filteredStudents);
+  } = useAdjustedStudentsCalculation(students, filteredStudents, adminData?.simplifiedPricing);
 
   // Função de refresh usando React Query
   const handleRefresh = async () => {
@@ -147,9 +147,10 @@ function EnhancedStudentTracking(props) {
   };
   // Função para calcular taxas de um estudante específico
   const getStudentFees = (student: any) => {
-    // Usar system_type do estudante para determinar os valores
-    const systemType = student.system_type || 'legacy';
-    const isSimplified = systemType === 'simplified';
+    // Determinar se o sistema é simplified com base no pricing da agência (adminData) ou no system_type do estudante
+    const isSimplified = adminData?.simplifiedPricing !== undefined
+      ? adminData.simplifiedPricing
+      : (student.system_type === 'simplified');
 
     return {
       selectionProcessFee: isSimplified ? 350 : (Number(feeConfig.selection_process_fee) || 400),

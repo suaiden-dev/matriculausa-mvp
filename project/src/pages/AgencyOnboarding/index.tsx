@@ -24,11 +24,15 @@ import {
   Smartphone,
   ArrowRight,
   Sparkles,
+  Upload,
 } from 'lucide-react';
+import { useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
+type FormErrors = Partial<Record<keyof FormData | 'logo', string>>;
+
 interface FormData {
   company_name: string;
   legal_name: string;
@@ -61,42 +65,43 @@ const SERVICES_OPTIONS = [
 ];
 
 const MARKETS_OPTIONS = [
-  'Brasil',
+  'United States',
+  'Brazil',
   'Portugal',
   'Angola',
-  'Moçambique',
-  'Cabo Verde',
-  'México',
-  'Colômbia',
+  'Mozambique',
+  'Cape Verde',
+  'Mexico',
+  'Colombia',
   'Argentina',
   'Chile',
   'Peru',
-  'Outro',
+  'Other',
 ];
 
 const HOW_FOUND_OPTIONS = [
-  'Indicação de outra agência',
-  'Redes sociais',
-  'Google / Pesquisa online',
-  'Evento ou conferência',
+  'Referral from another agency',
+  'Social media',
+  'Google / Online search',
+  'Event or conference',
   'Email marketing',
-  'Parceiro comercial',
-  'Outro',
+  'Business partner',
+  'Other',
 ];
 
 const STUDENTS_PER_YEAR_OPTIONS = [
-  { value: '1-10', label: '1 a 10 alunos' },
-  { value: '11-50', label: '11 a 50 alunos' },
-  { value: '51-100', label: '51 a 100 alunos' },
-  { value: '101-300', label: '101 a 300 alunos' },
-  { value: '300+', label: 'Mais de 300 alunos' },
+  { value: '1-10', label: '1 to 10 students' },
+  { value: '11-50', label: '11 to 50 students' },
+  { value: '51-100', label: '51 to 100 students' },
+  { value: '101-300', label: '101 to 300 students' },
+  { value: '300+', label: 'More than 300 students' },
 ];
 
 const STEPS = [
-  { id: 1, title: 'Dados da Empresa', icon: Building2, subtitle: 'Informações básicas' },
-  { id: 2, title: 'Localização', icon: MapPin, subtitle: 'Onde você está' },
-  { id: 3, title: 'Contato', icon: Phone, subtitle: 'Como te encontrar' },
-  { id: 4, title: 'Sobre o Negócio', icon: Briefcase, subtitle: 'Perfil operacional' },
+  { id: 1, title: 'Company Info', icon: Building2, subtitle: 'Basic information' },
+  { id: 2, title: 'Location', icon: MapPin, subtitle: 'Where you are based' },
+  { id: 3, title: 'Contact', icon: Phone, subtitle: 'How to reach you' },
+  { id: 4, title: 'About Your Business', icon: Briefcase, subtitle: 'Operational profile' },
 ];
 
 // ─── Animations ──────────────────────────────────────────────────────────
@@ -111,8 +116,11 @@ const AffiliateAdminOnboarding: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useLocalStorage<FormData>('affiliate-onboarding-form', {
     company_name: '',
@@ -189,6 +197,29 @@ const AffiliateAdminOnboarding: React.FC = () => {
     load();
   }, [user?.id]);
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    if (!file.type.startsWith('image/')) { setErrors(prev => ({ ...prev, logo: 'Please select an image file.' })); return; }
+    if (file.size > 5 * 1024 * 1024) { setErrors(prev => ({ ...prev, logo: 'Maximum size: 5MB.' })); return; }
+
+    setUploadingLogo(true);
+    setErrors(prev => ({ ...prev, logo: undefined }));
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/logo_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('user-avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('user-avatars').getPublicUrl(path);
+      if (!urlData?.publicUrl) throw new Error('No URL');
+      setLogoUrl(urlData.publicUrl);
+    } catch (err: any) {
+      setErrors(prev => ({ ...prev, logo: err.message || 'Upload error.' }));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const set = (field: keyof FormData, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
     setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -204,20 +235,20 @@ const AffiliateAdminOnboarding: React.FC = () => {
   };
 
   const validate = (step: number): boolean => {
-    const e: Partial<Record<keyof FormData, string>> = {};
+    const e: FormErrors = {};
     if (step === 1) {
-      if (!form.company_name.trim()) e.company_name = 'Nome da agência é obrigatório';
+      if (!form.company_name.trim()) e.company_name = 'Agency name is required';
+      if (!logoUrl) e.logo = 'Agency logo is required';
     }
     if (step === 2) {
-      if (!form.country.trim()) e.country = 'País é obrigatório';
-      if (!form.city.trim()) e.city = 'Cidade é obrigatória';
+      if (!form.country.trim()) e.country = 'Country is required';
+      if (!form.city.trim()) e.city = 'City is required';
     }
     if (step === 3) {
-      if (!form.phone.trim()) e.phone = 'Telefone é obrigatório';
+      if (!form.phone.trim()) e.phone = 'Phone number is required';
     }
     if (step === 4) {
-      if (!form.students_per_year) e.students_per_year = 'Selecione o volume de alunos';
-      if (form.services.length === 0) e.services = 'Selecione pelo menos um serviço';
+      if (!form.students_per_year) e.students_per_year = 'Please select a student volume';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -255,15 +286,30 @@ const AffiliateAdminOnboarding: React.FC = () => {
           markets: form.markets,
           how_found_us: form.how_found_us || null,
           onboarding_completed: true,
+          logo_url: logoUrl || null,
         })
         .eq('id', affiliateId);
 
       if (error) throw error;
+
+      // Sync company_name and phone to user_profiles so the dashboard picks them up
+      if (user?.id) {
+        await supabase
+          .from('user_profiles')
+          .update({
+            company_name: form.company_name.trim(),
+            phone: form.phone.trim() || null,
+            website: form.website.trim() || null,
+            onboarding_completed: true,
+          })
+          .eq('user_id', user.id);
+      }
+
       localStorage.removeItem('affiliate-onboarding-form');
       await refetchUserProfile();
       navigate('/agency/pending-approval');
     } catch (e: any) {
-      setErrors({ company_name: e.message || 'Erro ao salvar. Tente novamente.' });
+      setErrors({ company_name: e.message || 'Error saving. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -281,23 +327,23 @@ const AffiliateAdminOnboarding: React.FC = () => {
           <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
             <Loader2 className="w-12 h-12 text-[#05294E] animate-spin" />
           </div>
-          <h2 className="text-3xl font-black text-[#05294E] mb-4">Perfil em Análise</h2>
+          <h2 className="text-3xl font-black text-[#05294E] mb-4">Profile Under Review</h2>
           <p className="text-slate-600 mb-10 leading-relaxed text-lg">
-            Obrigado por completar seu cadastro! Nossa equipe está revisando suas informações cuidadosamente. 
+            Thank you for completing your registration! Our team is carefully reviewing your information.
           </p>
           <div className="bg-slate-50 rounded-2xl p-6 text-sm text-slate-500 mb-10 border border-slate-100">
             <div className="flex items-center justify-center gap-2 mb-2 text-[#05294E] font-bold">
               <Sparkles className="w-4 h-4" />
-              <span>O que acontece agora?</span>
+              <span>What happens next?</span>
             </div>
-            Tempo estimado de análise: <strong className="text-slate-700">24 a 48 horas úteis</strong>. 
-            Você receberá um e-mail de confirmação.
+            Estimated review time: <strong className="text-slate-700">24 to 48 business hours</strong>.
+            You will receive a confirmation email.
           </div>
           <button
             onClick={() => navigate('/')}
             className="w-full py-4 px-8 bg-[#05294E] text-white rounded-2xl font-black hover:bg-[#041f3a] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[#05294E]/20"
           >
-            Voltar para Home
+            Back to Home
           </button>
         </motion.div>
       </div>
@@ -319,14 +365,14 @@ const AffiliateAdminOnboarding: React.FC = () => {
             <img src="/logo.png.png" alt="Matrícula USA" className="h-10 w-auto" />
             <div className="h-8 w-px bg-slate-200 mx-2 hidden sm:block" />
             <div className="hidden sm:block">
-              <div className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-0.5">Parceiros</div>
-              <h1 className="font-black text-xl text-[#05294E] leading-tight">Configuração da Agência</h1>
+              <div className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-0.5">Partners</div>
+              <h1 className="font-black text-xl text-[#05294E] leading-tight">Agency Setup</h1>
             </div>
           </div>
           <div className="flex items-center gap-6">
             <div className="hidden md:flex flex-col items-end">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Progresso</span>
-              <span className="text-sm font-black text-[#05294E]">Passo {currentStep} de {STEPS.length}</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Progress</span>
+              <span className="text-sm font-black text-[#05294E]">Step {currentStep} of {STEPS.length}</span>
             </div>
             <div className="w-16 h-16 relative">
               <svg className="w-full h-full transform -rotate-90">
@@ -353,9 +399,9 @@ const AffiliateAdminOnboarding: React.FC = () => {
           <aside className="hidden lg:block lg:col-span-4 space-y-4">
             <div className="sticky top-32">
               <div className="mb-8">
-                <h3 className="text-2xl font-black text-[#05294E] mb-2">Finalize seu Cadastro</h3>
+                <h3 className="text-2xl font-black text-[#05294E] mb-2">Complete Your Registration</h3>
                 <p className="text-slate-500 leading-relaxed">
-                  Complete as informações abaixo para que nossa equipe possa validar e ativar sua conta de parceiro.
+                  Fill in the information below so our team can validate and activate your partner account.
                 </p>
               </div>
               
@@ -385,7 +431,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                       </div>
                       <div>
                         <div className={`text-[10px] font-black uppercase tracking-wider mb-0.5 ${isActive ? 'text-[#D0151C]' : 'text-slate-400'}`}>
-                          Passo {idx + 1}
+                          Step {idx + 1}
                         </div>
                         <div className={`font-black ${isActive ? 'text-[#05294E]' : 'text-slate-500'}`}>
                           {step.title}
@@ -421,21 +467,73 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </span>
                       </div>
                       <h2 className="text-4xl font-black text-[#05294E] mb-3">
-                        {currentStep === 1 && 'Conte sobre sua agência'}
-                        {currentStep === 2 && 'Onde vocês estão?'}
-                        {currentStep === 3 && 'Canais de comunicação'}
-                        {currentStep === 4 && 'Operação do negócio'}
+                        {currentStep === 1 && 'Tell us about your agency'}
+                        {currentStep === 2 && 'Where are you located?'}
+                        {currentStep === 3 && 'Communication channels'}
+                        {currentStep === 4 && 'Business operations'}
                       </h2>
                       <p className="text-slate-500 text-lg">
-                        {STEPS[currentStep - 1].subtitle} — Precisamos disso para validar seu cadastro.
+                        {STEPS[currentStep - 1].subtitle} — We need this to validate your registration.
                       </p>
                     </header>
 
                     {/* ── STEP 1: Empresa ── */}
                     {currentStep === 1 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                        {/* Logo Upload */}
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Nome da Agência *</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">
+                            Agency Logo *
+                          </label>
+                          <div
+                            onClick={() => !uploadingLogo && logoInputRef.current?.click()}
+                            className={`relative cursor-pointer group border-2 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center transition-all duration-300 ${
+                              logoUrl
+                                ? 'border-green-300 bg-green-50/30'
+                                : errors.logo
+                                  ? 'border-[#D0151C]/40 bg-red-50/20'
+                                  : 'border-slate-200 hover:border-[#05294E]/40 hover:bg-[#05294E]/5'
+                            }`}
+                          >
+                            {uploadingLogo ? (
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="w-16 h-16 bg-[#05294E]/10 rounded-2xl flex items-center justify-center">
+                                  <Loader2 className="w-8 h-8 text-[#05294E] animate-spin" />
+                                </div>
+                                <p className="text-sm font-bold text-slate-500">Uploading logo...</p>
+                              </div>
+                            ) : logoUrl ? (
+                              <div className="flex flex-col items-center gap-3">
+                                <img src={logoUrl} alt="Logo" className="h-24 w-auto object-contain rounded-2xl shadow-md" />
+                                <p className="text-xs font-bold text-green-600 flex items-center gap-1.5">
+                                  <CheckCircle className="w-4 h-4" /> Logo uploaded — click to replace
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-3">
+                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center group-hover:bg-[#05294E]/10 transition-colors">
+                                  <Upload className="w-8 h-8 text-slate-400 group-hover:text-[#05294E] transition-colors" />
+                                </div>
+                                <div className="text-center">
+                                  <p className="font-black text-slate-700 mb-1">Click to upload your logo</p>
+                                  <p className="text-xs text-slate-400">PNG, JPG or SVG • Max 5MB</p>
+                                </div>
+                              </div>
+                            )}
+                            <input
+                              ref={logoInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleLogoUpload}
+                              className="hidden"
+                            />
+                          </div>
+                          {errors.logo && <p className="mt-2 text-xs font-bold text-[#D0151C] ml-1">{errors.logo}</p>}
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Agency Name *</label>
                           <div className="relative group">
                             <Building2 className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                             <input
@@ -447,38 +545,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Razão Social (Opcional)</label>
-                          <div className="relative group">
-                            <Hash className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="text" value={form.legal_name} onChange={e => set('legal_name', e.target.value)}
-                              className={inputCls(false)}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">CNPJ (Opcional)</label>
-                          <input
-                            type="text" value={form.cnpj} onChange={e => set('cnpj', e.target.value)}
-                            className={inputCls(false)}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Ano de Fundação</label>
-                          <div className="relative group">
-                            <Calendar className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="text" value={form.founded_year} onChange={e => set('founded_year', e.target.value)}
-                              maxLength={4}
-                              className={inputCls(false)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Website</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Website (Optional)</label>
                           <div className="relative group">
                             <Globe className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                             <input
@@ -494,7 +561,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                     {currentStep === 2 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">País *</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Country *</label>
                           <input
                             type="text" value={form.country} onChange={e => set('country', e.target.value)}
                             className={inputCls(!!errors.country)}
@@ -503,7 +570,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Estado</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">State / Province</label>
                           <input
                             type="text" value={form.state} onChange={e => set('state', e.target.value)}
                             className={inputCls(false)}
@@ -511,7 +578,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Cidade *</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">City *</label>
                           <input
                             type="text" value={form.city} onChange={e => set('city', e.target.value)}
                             className={inputCls(!!errors.city)}
@@ -520,7 +587,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Endereço Completo</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Full Address</label>
                           <div className="relative group">
                             <MapPin className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                             <input
@@ -535,7 +602,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                             <Sparkles className="w-5 h-5" />
                           </div>
                           <p className="text-sm text-slate-600 leading-relaxed">
-                            <strong>Dica Premium:</strong> Ter um endereço físico registrado aumenta a confiança da nossa rede de parceiros em seu negócio.
+                            <strong>Premium Tip:</strong> Having a registered physical address increases trust within our partner network.
                           </p>
                         </div>
                       </div>
@@ -545,7 +612,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                     {currentStep === 3 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Telefone Principal *</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Primary Phone *</label>
                           <div className="relative group">
                             <Smartphone className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                             <input
@@ -557,7 +624,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">WhatsApp de Suporte</label>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">WhatsApp</label>
                           <div className="relative group">
                             <Phone className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                             <input
@@ -567,30 +634,8 @@ const AffiliateAdminOnboarding: React.FC = () => {
                           </div>
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Instagram (@usuario)</label>
-                          <div className="relative group">
-                            <Instagram className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="text" value={form.instagram} onChange={e => set('instagram', e.target.value)}
-                              className={inputCls(false)}
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">LinkedIn URL</label>
-                          <div className="relative group">
-                            <Linkedin className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="text" value={form.linkedin} onChange={e => set('linkedin', e.target.value)}
-                              className={inputCls(false)}
-                            />
-                          </div>
-                        </div>
-
                         <div className="md:col-span-2">
-                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Email de Contato</label>
+                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Contact Email</label>
                            <div className="relative group">
                              <Mail className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
                              <input
@@ -608,7 +653,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         {/* Volume */}
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-5 ml-1">
-                            Quantos alunos sua agência atende por ano? *
+                            How many students does your agency serve per year? *
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STUDENTS_PER_YEAR_OPTIONS.map(opt => (
@@ -634,38 +679,10 @@ const AffiliateAdminOnboarding: React.FC = () => {
                           {errors.students_per_year && <p className="mt-2 text-xs font-bold text-[#D0151C] ml-1">{errors.students_per_year}</p>}
                         </div>
 
-                        {/* Services */}
+                                        {/* Markets */}
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-5 ml-1">
-                            Serviços Oferecidos *
-                          </label>
-                          <div className="flex flex-wrap gap-3">
-                            {SERVICES_OPTIONS.map(s => {
-                              const selected = form.services.includes(s);
-                              return (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => toggleArray('services', s)}
-                                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all duration-200 font-bold text-sm ${
-                                    selected
-                                      ? 'border-[#05294E] bg-[#05294E]/10 text-[#05294E]'
-                                      : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  {selected ? <CheckCircle className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-200" />}
-                                  {s}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {errors.services && <p className="mt-2 text-xs font-bold text-[#D0151C] ml-1">{errors.services}</p>}
-                        </div>
-
-                        {/* Markets */}
-                        <div>
-                          <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-5 ml-1">
-                            Mercados de Atuação
+                            Markets You Serve
                           </label>
                           <div className="flex flex-wrap gap-3">
                             {MARKETS_OPTIONS.map(m => {
@@ -691,7 +708,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         {/* How found */}
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-5 ml-1">
-                            Como conheceu a Matricula USA?
+                            How did you hear about Matricula USA?
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {HOW_FOUND_OPTIONS.map(opt => (
@@ -726,7 +743,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                   className="flex items-center gap-3 px-8 py-4 rounded-2xl text-sm font-black text-slate-400 hover:text-slate-900 transition-all disabled:opacity-0 disabled:pointer-events-none"
                 >
                   <ChevronLeft className="w-5 h-5" />
-                  Anterior
+                  Back
                 </button>
 
                 <div className="flex items-center gap-4">
@@ -736,7 +753,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                       onClick={nextStep}
                       className="group flex items-center gap-3 px-10 py-4 bg-[#05294E] text-white rounded-2xl text-sm font-black hover:bg-[#041f3a] transition-all shadow-xl shadow-[#05294E]/20 transform hover:scale-[1.05] active:scale-[0.98]"
                     >
-                      Próximo
+                      Next
                       <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                     </button>
                   ) : (
@@ -747,7 +764,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                       className="flex items-center gap-3 px-12 py-4 bg-gradient-to-r from-[#D0151C] to-red-600 text-white rounded-2xl text-sm font-black hover:from-red-600 hover:to-red-700 transition-all shadow-xl shadow-[#D0151C]/20 transform hover:scale-[1.05] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                      {saving ? 'Finalizando...' : 'Concluir Cadastro'}
+                      {saving ? 'Finishing...' : 'Complete Registration'}
                     </button>
                   )}
                 </div>
@@ -762,7 +779,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <img src="/logo.png.png" alt="Matrícula USA" className="h-8 w-auto grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" />
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-            Plataforma Oficial de Parcerias — Matricula USA Group
+            Official Partner Platform — Matricula USA Group
           </p>
         </div>
       </footer>

@@ -1733,7 +1733,21 @@ Deno.serve(async (req: Request) => {
           );
       }
 
-      // 4.4. Processar notificações de recompensa (MatriculaCoins) apenas para I20
+      // 4.4. Registrar comissão via register_payment_billing
+      try {
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: feeType,
+          amount_param: paymentAmount,
+          payment_session_id_param: String(parcelowOrder.id),
+          payment_method_param: "parcelow",
+        });
+        console.log("[Commission] register_payment_billing called for", feeType, "user", userId);
+      } catch (billingErr) {
+        console.error("[Commission] register_payment_billing failed:", billingErr);
+      }
+
+      // 4.5. Processar notificações de recompensa (MatriculaCoins) apenas para I20
       // Nota: A lógica de crédito de moedas e atualização de status do referral
       // agora é gerenciada pelo trigger 'handle_i20_payment_rewards' no banco de dados.
       // Aqui apenas enviamos a notificação para o padrinho.

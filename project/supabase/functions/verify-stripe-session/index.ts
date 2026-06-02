@@ -194,6 +194,15 @@ Deno.serve(async (req) => {
           console.error('[NOTIFICAÇÃO] Erro ao notificar universidade:', notifErr);
         }
         // --- Fim da notificação ---
+        try {
+          await supabase.rpc('register_payment_billing', {
+            user_id_param: userId,
+            fee_type_param: 'application_fee',
+            amount_param: (session.amount_total || 0) / 100,
+            payment_session_id_param: session.id,
+            payment_method_param: 'stripe',
+          });
+        } catch (billingErr) { console.error('[Commission] register_payment_billing failed:', billingErr); }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'scholarship_fee') {
         if (!applicationId) {
@@ -240,7 +249,15 @@ Deno.serve(async (req) => {
         } catch (inAppError) {
            console.error('Error creating in-app notification:', inAppError);
         }
-        return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+        try {
+          await supabase.rpc('register_payment_billing', {
+            user_id_param: userId,
+            fee_type_param: 'scholarship_fee',
+            amount_param: (session.amount_total || 0) / 100,
+            payment_session_id_param: session.id,
+            payment_method_param: 'stripe',
+          });
+        } catch (billingErr) { console.error('[Commission] register_payment_billing failed:', billingErr); }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'placement_fee') {
         console.log('Processing: Placement Fee');
@@ -253,7 +270,15 @@ Deno.serve(async (req) => {
           })
           .eq('user_id', userId);
         if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
-        
+        try {
+          await supabase.rpc('register_payment_billing', {
+            user_id_param: userId,
+            fee_type_param: 'placement_fee',
+            amount_param: (session.amount_total || 0) / 100,
+            payment_session_id_param: session.id,
+            payment_method_param: 'stripe',
+          });
+        } catch (billingErr) { console.error('[Commission] register_payment_billing failed:', billingErr); }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'selection_process') {
         console.log('Processing: Selection Process Fee');
@@ -291,7 +316,15 @@ Deno.serve(async (req) => {
         } catch (inAppError) {
            console.error('Error creating in-app notification:', inAppError);
         }
-
+        try {
+          await supabase.rpc('register_payment_billing', {
+            user_id_param: userId,
+            fee_type_param: 'selection_process',
+            amount_param: (session.amount_total || 0) / 100,
+            payment_session_id_param: session.id,
+            payment_method_param: 'stripe',
+          });
+        } catch (billingErr) { console.error('[Commission] register_payment_billing failed:', billingErr); }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else {
         console.warn(`Unhandled fee_type: ${feeType}`);

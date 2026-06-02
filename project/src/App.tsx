@@ -74,6 +74,7 @@ const VslCosLanding = React.lazy(() => import('./pages/VslCosLanding'));
 const AgencyLogin = React.lazy(() => import('./pages/AgencyLogin'));
 const AgencyOnboarding = React.lazy(() => import('./pages/AgencyOnboarding'));
 const AgencyPendingApproval = React.lazy(() => import('./pages/AgencyPendingApproval'));
+const SellerAcceptInvite = React.lazy(() => import('./pages/SellerAcceptInvite'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -178,6 +179,8 @@ const AppContent = () => {
           <Route path="/affiliate-admin/pending-approval" element={<Navigate to="/agency/pending-approval" replace />} />
           <Route path="/affiliate-admin/dashboard/*" element={<Navigate to="/agency/dashboard" replace />} />
           <Route path="/admin/dashboard/affiliate-management" element={<Navigate to="/admin/dashboard/agencies" replace />} />
+          {/* Seller Accept Invite */}
+          <Route path="/seller/accept-invite" element={<SellerAcceptInvite />} />
           {/* Seller Dashboard */}
           <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
           {/* Seller Student Details */}

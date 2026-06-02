@@ -10,6 +10,7 @@ interface InviteAgencyPayload {
   full_name: string;
   company_name: string;
   agency_request_id: string;
+  commission_rules?: Record<string, unknown>;
 }
 
 Deno.serve(async (req: Request) => {
@@ -108,10 +109,10 @@ Deno.serve(async (req: Request) => {
         .update({ role: 'affiliate_admin' })
         .eq('user_id', userId);
     } else {
-      // Create new auth user
+      // Create new auth user (email_confirm: false so they receive invite email)
       const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
         email: email,
-        email_confirm: true,
+        email_confirm: false,
         user_metadata: { full_name: body.full_name, role: 'affiliate_admin' },
       });
 
@@ -141,17 +142,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Upsert affiliate_admins record
+    // Upsert affiliate_admins record (com commission_rules se fornecidas)
     await adminClient.from('affiliate_admins').upsert({
       user_id: userId,
       company_name: body.company_name,
       is_active: true,
+      ...(body.commission_rules ? { commission_rules: body.commission_rules } : {}),
     }, { onConflict: 'user_id' });
 
-    // Send password reset email
+    // Send invite email with redirect to agency onboarding
     await adminClient.auth.admin.generateLink({
-      type: 'recovery',
+      type: 'invite',
       email: email,
+      options: {
+        redirectTo: `${Deno.env.get('SITE_URL') || 'https://app.matriculausa.com'}/agency/onboarding`,
+      },
     });
 
     // Mark agency_request as approved

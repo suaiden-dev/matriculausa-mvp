@@ -3,8 +3,9 @@ import { useLocation } from 'react-router-dom';
 import { Search, Users, UserPlus, UserCheck, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import SellerRegistrationLinkGenerator from '../../components/SellerRegistrationLinkGenerator';
 import SellerRegistrationsManagerSimple from '../../components/SellerRegistrationsManagerSimple';
+import { toast } from 'react-hot-toast';
+import DirectSalesLink from './DirectSalesLink';
 
 interface Seller {
   id: string;
@@ -25,7 +26,8 @@ const SellerManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [demotingUser, setDemotingUser] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'management' | 'registration' | 'pending'>('management');
+  const [showLinkGenerator, setShowLinkGenerator] = useState(false);
+  const [showPending, setShowPending] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sellerToDeactivate, setSellerToDeactivate] = useState<{ id: string; name: string } | null>(null);
   const [sellerToRemove, setSellerToRemove] = useState<{ id: string; name: string } | null>(null);
@@ -36,6 +38,9 @@ const SellerManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [localModifications, setLocalModifications] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
   const [deactivatedSellers, setDeactivatedSellers] = useState<Set<string>>(new Set());
   const [showDeactivatedSellers, setShowDeactivatedSellers] = useState(false);
   const [deactivatedSellersList, setDeactivatedSellersList] = useState<Seller[]>([]);
@@ -48,9 +53,8 @@ const SellerManagement: React.FC = () => {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const tab = searchParams.get('tab');
-    if (tab === 'registration' || tab === 'pending') {
-      setActiveTab(tab);
-    }
+    if (tab === 'registration') setShowLinkGenerator(true);
+    if (tab === 'pending') setShowPending(true);
   }, [location.search]);
 
 
@@ -59,6 +63,9 @@ const SellerManagement: React.FC = () => {
   const USERS_PER_PAGE = 20;
 
   const loadSellers = async (forceRefresh = false) => {
+    if (!currentUser?.id) {
+      return;
+    }
     try {
       // If not forcing refresh and we have local modifications, skip
       if (!forceRefresh && localModifications.size > 0) {
@@ -91,7 +98,7 @@ const SellerManagement: React.FC = () => {
         email: seller.seller_email || null,
         full_name: seller.seller_name || null,
         role: 'seller' as const,
-        created_at: seller.last_referral_date || null,
+        created_at: seller.created_at || null,
         phone: null, // Not available in RPC response
         country: null, // Not available in RPC response
         isSeller: true,
@@ -123,22 +130,16 @@ const SellerManagement: React.FC = () => {
         setDeactivatedSellers(new Set());
       }, []);
 
-  // Load sellers when component mounts or when activeTab changes to management
-  useEffect(() => {
-    if (activeTab === 'management') {
-      loadSellers(true); // Force refresh when switching to management tab
-    }
-  }, [activeTab]);
 
-  // Load sellers only once when component mounts
+  // Load sellers when user is loaded
   useEffect(() => {
     // Only load if we haven't loaded data yet and haven't initialized
-    if (!dataLoadedRef.current && !isInitialized.current) {
+    if (currentUser?.id && !dataLoadedRef.current && !isInitialized.current) {
       isInitialized.current = true;
       loadSellers(false);
       dataLoadedRef.current = true;
     }
-  }, []); // Empty dependency array to run only once
+  }, [currentUser?.id]); // Run when user is loaded
 
   // Add a cleanup function to prevent memory leaks
   useEffect(() => {
@@ -179,7 +180,7 @@ const SellerManagement: React.FC = () => {
         email: seller.seller_email || null,
         full_name: seller.seller_name || null,
         role: 'student' as const,
-        created_at: seller.last_referral_date || null,
+        created_at: seller.created_at || null,
         phone: null, // Not available in RPC response
         country: null, // Not available in RPC response
         isSeller: false,
@@ -552,382 +553,360 @@ const SellerManagement: React.FC = () => {
 
   return (
     <React.Fragment>
-    <div className="min-h-screen">
-      {/* Header + Tabs Section */}
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-          <div className="max-w-full mx-auto bg-slate-50">
-            {/* Header: title + note + counter */}
-            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex-1">
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                  Seller Management
-                </h1>
-                <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  Manage and monitor your affiliate sellers and their performance.
-                </p>
-                <p className="mt-3 text-sm text-slate-500">
-                  Track seller registrations, manage their status, and generate referral links.
-                </p>
-              </div>
-            </div>
+    <div className="space-y-6">
 
-            {/* Tabs Section */}
-            <div className="border-t border-slate-200 bg-white">
-              <div className="px-4 sm:px-6 lg:px-8">
-                <nav className="flex space-x-8 overflow-x-auto" role="tablist">
-                  <button
-                    onClick={() => setActiveTab('management')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'management' 
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    type="button"
-                    aria-selected={activeTab === 'management'}
-                    role="tab"
-                  >
-                    <Users className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'management' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    Manage Sellers
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('registration')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'registration' 
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    type="button"
-                    aria-selected={activeTab === 'registration'}
-                    role="tab"
-                  >
-                    <UserPlus className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'registration' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    Generate Links
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('pending')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'pending' 
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    type="button"
-                    aria-selected={activeTab === 'pending'}
-                    role="tab"
-                  >
-                    <UserCheck className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'pending' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    Pending
-                  </button>
-                </nav>
-              </div>
-            </div>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Seller Management</h1>
+          <p className="mt-1 text-sm text-slate-500">Manage your sales team and track their performance.</p>
+        </div>
+        <button
+          onClick={() => setShowLinkGenerator(!showLinkGenerator)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#05294E] text-white rounded-xl text-sm font-semibold hover:bg-[#041f3a] transition-colors shadow-sm"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Seller
+        </button>
+      </div>
 
-            {/* Action Buttons Section */}
-            <div className="border-t border-slate-200 bg-white">
-              <div className="px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      {activeTab === 'management' ? 'Seller Management' : 
-                       activeTab === 'registration' ? 'Link Generation' : 
-                       'Pending Registrations'}
-                    </h2>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {activeTab === 'management' 
-                        ? 'Manage active sellers, view their performance, and control their status'
-                        : activeTab === 'registration'
-                        ? 'Generate referral links for new seller registrations'
-                        : 'Review and approve pending seller registration requests'
-                      }
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => {
-                        setLocalModifications(new Set());
-                        setDeactivatedSellers(new Set());
-                        localStorage.removeItem('deactivatedSellers');
-                        loadSellers(true);
-                      }}
-                      disabled={isRefreshing}
-                      className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      {isRefreshing ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600 mr-2"></div>
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Refresh
-                    </button>
-                  </div>
+      {/* Direct Sales Link */}
+      <DirectSalesLink />
+
+      {/* Invite Seller Panel (expandable) */}
+      {showLinkGenerator && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-900">Invite New Seller</h2>
+            <button
+              onClick={() => { setShowLinkGenerator(false); setInviteEmail(''); setInviteError(''); }}
+              className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+          <div className="p-6">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!inviteEmail.trim()) return;
+                setInviteLoading(true);
+                setInviteError('');
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const { data, error } = await supabase.functions.invoke('invite-seller', {
+                    body: { 
+                      email: inviteEmail.trim(),
+                      redirectTo: `${window.location.origin}/seller/accept-invite`
+                    },
+                    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+                  });
+                   if (error) throw error;
+                   if (data?.error) throw new Error(data.error);
+                   setInviteEmail('');
+                   toast.success('Convite enviado com sucesso! O vendedor receberá um e-mail para concluir o cadastro.');
+                   loadSellers(true);
+                } catch (err: any) {
+                  setInviteError(err.message || 'Failed to send invite. Please try again.');
+                } finally {
+                  setInviteLoading(false);
+                }
+              }}
+              className="space-y-4 max-w-md"
+            >
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-1.5">
+                  Email address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="seller@example.com"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
+                />
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-3">
+                <h4 className="text-xs font-bold text-slate-700 flex items-center gap-2 uppercase tracking-wider">
+                  <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                  How the invitation works
+                </h4>
+                <ul className="text-xs text-slate-600 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">1.</span>
+                    <span>An invitation link is automatically sent to the email address above.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">2.</span>
+                    <span>The seller clicks the link to complete registration (sets their full name, password, and phone number).</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 font-bold mt-0.5">3.</span>
+                    <span>The account is activated instantly, associating them automatically with your agency.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {inviteError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {inviteError}
                 </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setShowLinkGenerator(false); setInviteEmail(''); setInviteError(''); }}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={inviteLoading || !inviteEmail.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-xl text-sm font-semibold hover:bg-[#041f3a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {inviteLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Invite'
+                  )}
+                </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Tab Content */}
-      <div className="px-4 sm:px-6 lg:px-8">
-          {activeTab === 'management' && (
-            <>
-                <div className="mb-6">
-                  <button
-                    onClick={() => {
-                      setShowDeactivatedSellers(!showDeactivatedSellers);
-                      if (!showDeactivatedSellers) {
-                        loadDeactivatedSellers();
-                      }
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-orange-300 rounded-lg shadow-sm text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors"
-                  >
-                    <UserCheck className="w-4 h-4 mr-2" />
-                    {showDeactivatedSellers ? 'Hide Deactivated' : 'Show Deactivated'}
-                    {deactivatedSellers.size > 0 && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-orange-200 text-orange-800 rounded-full">
-                        {deactivatedSellers.size}
-                      </span>
-                    )}
-                  </button>
-                </div>
+      {/* Main Table Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
 
-               <div className="mb-6">
-                 <div className="relative max-w-md">
-                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                   <input
-                     type="text"
-                     placeholder="Search sellers..."
-                     value={searchTerm}
-                     onChange={(e) => setSearchTerm(e.target.value)}
-                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                   />
-                 </div>
-               </div>
+        {/* Toolbar */}
+        <div className="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search sellers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
 
-                             {/* Sellers Table */}
-               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                 <div className="px-6 py-4 border-b border-slate-200">
-                   <div className="flex justify-between items-center">
-                     <div>
-                       <h2 className="text-lg font-semibold text-gray-900">Sellers</h2>
-                     </div>
-                     <div className="flex items-center space-x-3">
-                       <button
-                         onClick={() => {
-                           setLocalModifications(new Set());
-                           setDeactivatedSellers(new Set());
-                           localStorage.removeItem('deactivatedSellers');
-                           loadSellers(true);
-                         }}
-                         disabled={isRefreshing}
-                         className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
-                       >
-                         {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                       </button>
-                       <div className="text-sm text-gray-500">
-                         {getPaginationInfo()}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-                 <div className="overflow-x-auto">
-                   <table className="min-w-full divide-y divide-slate-200">
-                     <thead className="bg-gray-50">
-                       <tr>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Seller
-                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Status
-                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Date
-                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                           Actions
-                         </th>
-                       </tr>
-                     </thead>
-                     <tbody className="bg-white divide-y divide-gray-200">
-                       {paginatedSellers.map((seller) => (
-                         <tr key={seller.id} className="hover:bg-gray-50">
-                           <td className="px-6 py-4 whitespace-nowrap">
-                             <div className="flex items-center">
-                               <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                 <span className="text-sm font-medium text-gray-700">
-                                   {seller.full_name?.charAt(0) || seller.email?.charAt(0) || '?'}
-                                 </span>
-                               </div>
-                               <div className="ml-3">
-                                 <div className="text-sm font-medium text-gray-900">
-                                   {seller.full_name || 'Name not provided'}
-                                 </div>
-                                 <div className="text-sm text-gray-500">{seller.email}</div>
-                               </div>
-                             </div>
-                           </td>
-                           <td className="px-6 py-4 whitespace-nowrap">
-                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                               Active
-                             </span>
-                           </td>
-                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                             {formatDate(seller.created_at)}
-                           </td>
-                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                             <div className="flex space-x-2">
-                               <button
-                                 onClick={() => openDeactivateModal(seller.id, seller.full_name || seller.email || 'Seller')}
-                                 disabled={demotingUser === seller.id}
-                                 className="text-red-600 hover:text-red-900 disabled:opacity-50 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50"
-                               >
-                                 {demotingUser === seller.id ? 'Deactivating...' : 'Deactivate'}
-                               </button>
-                               <button
-                                 onClick={() => openRemoveModal(seller.id, seller.full_name || seller.email || 'Seller')}
-                                 disabled={demotingUser === seller.id}
-                                 className="text-gray-600 hover:text-gray-900 disabled:opacity-50 text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50"
-                               >
-                                 {demotingUser === seller.id ? 'Removing...' : 'Remove'}
-                               </button>
-                             </div>
-                           </td>
-                         </tr>
-                       ))}
-                     </tbody>
-                  </table>
-                </div>
+            <button
+              onClick={() => {
+                setShowDeactivatedSellers(!showDeactivatedSellers);
+                if (!showDeactivatedSellers) loadDeactivatedSellers();
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                showDeactivatedSellers ? 'bg-orange-50 border-orange-300 text-orange-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {showDeactivatedSellers ? 'Hide Deactivated' : 'Deactivated'}
+              {deactivatedSellers.size > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-orange-200 text-orange-800 rounded-full">
+                  {deactivatedSellers.size}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setLocalModifications(new Set());
+                setDeactivatedSellers(new Set());
+                localStorage.removeItem('deactivatedSellers');
+                loadSellers(true);
+              }}
+              disabled={isRefreshing}
+              className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              title="Refresh"
+            >
+              {isRefreshing
+                ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-600" />
+                : <RefreshCw className="w-4 h-4" />
+              }
+            </button>
+          </div>
+        </div>
 
-                {/* Deactivated Sellers Table */}
-                {showDeactivatedSellers && (
-                  <div className="mt-8">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                      <div className="px-6 py-4 border-b border-slate-200">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Deactivated Sellers</h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Sellers that have been deactivated from the system
-                            </p>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {deactivatedSellersList.length} deactivated
-                          </div>
-                        </div>
+        {/* Active Sellers Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Seller</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {paginatedSellers.map((seller) => (
+                <tr key={seller.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#05294E] to-blue-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-white">
+                          {(seller.full_name?.charAt(0) || seller.email?.charAt(0) || '?').toUpperCase()}
+                        </span>
                       </div>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Seller
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Date
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {deactivatedSellersList.map((seller) => (
-                              <tr key={seller.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                      <span className="text-sm font-medium text-gray-600">
-                                        {(seller.full_name || seller.email || 'S').charAt(0).toUpperCase()}
-                                      </span>
-                                    </div>
-                                    <div className="ml-3">
-                                      <div className="text-sm font-medium text-gray-900">
-                                        {seller.full_name || 'Unknown'}
-                                      </div>
-                                      <div className="text-sm text-gray-500">{seller.email}</div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                                    Deactivated
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {formatDate(seller.created_at)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  <button
-                                    onClick={() => reactivateSeller(seller.id, seller.full_name || seller.email || 'Seller')}
-                                    disabled={demotingUser === seller.id}
-                                    className="text-green-600 hover:text-green-900 disabled:opacity-50 text-xs px-2 py-1 border border-green-200 rounded hover:bg-green-50"
-                                  >
-                                    {demotingUser === seller.id ? 'Reactivating...' : 'Reactivate'}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{seller.full_name || 'Name not provided'}</p>
+                        <p className="text-xs text-slate-400">{seller.email}</p>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                 {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
-                   <div className="text-center py-8">
-                     <UserPlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                     <p className="text-gray-500">No sellers found</p>
-                   </div>
-                 )}
-
-                 {totalPages > 1 && (
-                   <div className="px-6 py-3 border-t border-gray-200">
-                     <div className="flex items-center justify-center space-x-2">
-                       <button
-                         onClick={() => goToPage(currentPage - 1)}
-                         disabled={currentPage === 1}
-                         className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                       >
-                         Previous
-                       </button>
-                       
-                       <span className="text-sm text-gray-500 px-3">
-                         {currentPage} of {totalPages}
-                       </span>
-                       
-                       <button
-                         onClick={() => goToPage(currentPage + 1)}
-                         disabled={currentPage === totalPages}
-                         className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                       >
-                         Next
-                       </button>
-                     </div>
-                   </div>
-                 )}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'registration' && (
-            <SellerRegistrationLinkGenerator />
-          )}
-
-          {activeTab === 'pending' && (
-            <SellerRegistrationsManagerSimple onRefresh={() => loadSellers(true)} />
-          )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                      Active
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-500">{formatDate(seller.created_at)}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openDeactivateModal(seller.id, seller.full_name || seller.email || 'Seller')}
+                        disabled={demotingUser === seller.id}
+                        className="text-xs px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      >
+                        {demotingUser === seller.id ? 'Deactivating...' : 'Deactivate'}
+                      </button>
+                      <button
+                        onClick={() => openRemoveModal(seller.id, seller.full_name || seller.email || 'Seller')}
+                        disabled={demotingUser === seller.id}
+                        className="text-xs px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {/* Empty State */}
+        {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-slate-400" />
+            </div>
+            <p className="text-slate-600 font-medium mb-1">No sellers yet</p>
+            <p className="text-sm text-slate-400 mb-4">Add your first seller to start tracking performance.</p>
+            <button
+              onClick={() => setShowLinkGenerator(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-xl text-sm font-semibold hover:bg-[#041f3a] transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add First Seller
+            </button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-sm text-slate-500">{getPaginationInfo()}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-slate-500 px-2">{currentPage} / {totalPages}</span>
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Deactivated Sellers (expandable) */}
+      {showDeactivatedSellers && (
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-orange-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Deactivated Sellers</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{deactivatedSellersList.length} seller(s) deactivated</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead className="bg-orange-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Seller</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {deactivatedSellersList.map((seller) => (
+                  <tr key={seller.id} className="hover:bg-orange-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-slate-500">
+                            {(seller.full_name?.charAt(0) || seller.email?.charAt(0) || 'S').toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-700">{seller.full_name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-400">{seller.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                        Deactivated
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{formatDate(seller.created_at)}</td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => reactivateSeller(seller.id, seller.full_name || seller.email || 'Seller')}
+                        disabled={demotingUser === seller.id}
+                        className="text-xs px-3 py-1.5 border border-emerald-200 text-emerald-700 rounded-lg hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                      >
+                        {demotingUser === seller.id ? 'Reactivating...' : 'Reactivate'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Registrations (expandable) */}
+      {showPending && (
+        <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-900">Pending Registrations</h2>
+            <button onClick={() => setShowPending(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">×</button>
+          </div>
+          <div className="p-6">
+            <SellerRegistrationsManagerSimple onRefresh={() => loadSellers(true)} />
+          </div>
+        </div>
+      )}
+
+    </div>{/* end space-y-6 */}
 
        {showConfirmModal && sellerToDeactivate && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

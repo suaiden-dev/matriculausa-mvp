@@ -331,9 +331,10 @@ Deno.serve(async (req) => {
     const { data: existingLog } = await supabase
       .from("student_action_logs")
       .select("id")
-      .eq("action_type", "fee_payment")
+      .in("action_type", ["checkout_session_processed", "fee_payment"])
       .eq("metadata->>session_id", sessionId)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (existingLog) {
       console.log(
@@ -850,6 +851,20 @@ Deno.serve(async (req) => {
         );
         // Não quebra o fluxo - continua normalmente
       }
+      // Registrar comissão via register_payment_billing
+      try {
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: "application_fee",
+          amount_param: paymentAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: "stripe",
+        });
+        console.log("[Commission] register_payment_billing called for application_fee, user", userId);
+      } catch (billingErr) {
+        console.error("[Commission] register_payment_billing failed:", billingErr);
+      }
+
       // Limpa carrinho
       const { error: cartError } = await supabase.from("user_cart").delete().eq(
         "user_id",
@@ -1041,7 +1056,7 @@ Deno.serve(async (req) => {
             "[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:",
             alunoNotificationPayload,
           );
-          const alunoNotifPromise = fetch(
+          const alunoNotificationResponse = await fetch(
             "https://nwh.suaiden.com/webhook/notfmatriculausa",
             {
               method: "POST",
@@ -1124,7 +1139,7 @@ Deno.serve(async (req) => {
             "[NOTIFICAÇÃO UNIVERSIDADE] Enviando notificação para universidade:",
             universidadeNotificationPayload,
           );
-          const univNotifPromise = fetch(
+          const universidadeNotificationResponse = await fetch(
             "https://nwh.suaiden.com/webhook/notfmatriculausa",
             {
               method: "POST",

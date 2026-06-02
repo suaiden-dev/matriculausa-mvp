@@ -48,6 +48,9 @@ interface Student {
   is_scholarship_fee_paid?: boolean;
   is_application_fee_paid?: boolean;
   system_type?: string;
+  has_paid_reinstatement_package?: boolean;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
 }
 
 interface Seller {
@@ -78,6 +81,7 @@ const AgencyDashboard: React.FC = () => {
     totalRevenue: statsData.stats.totalCredits,
     totalSellers: sellersData?.length || 0,
     activeSellers: sellersData?.filter(s => s.is_active).length || 0,
+    availableBalance: statsData.stats.totalEarned,
     pendingSellers: 0,
     approvedSellers: 0,
     rejectedSellers: 0
@@ -86,6 +90,7 @@ const AgencyDashboard: React.FC = () => {
     totalRevenue: 0,
     totalSellers: 0,
     activeSellers: 0,
+    availableBalance: 0,
     pendingSellers: 0,
     approvedSellers: 0,
     rejectedSellers: 0

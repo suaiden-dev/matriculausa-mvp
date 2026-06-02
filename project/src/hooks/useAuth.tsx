@@ -356,7 +356,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             try {
               const { data: affiliateData, error: affiliateError } = await supabase
                 .from('affiliate_admins')
-                .select('is_active, onboarding_completed')
+                .select('is_active, onboarding_completed, company_name, phone, website, logo_url')
                 .eq('user_id', session.user.id)
                 .maybeSingle();
 
@@ -364,9 +364,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 profile = {
                   ...profile,
                   is_active: affiliateData.is_active,
-                  onboarding_completed: affiliateData.onboarding_completed
+                  onboarding_completed: affiliateData.onboarding_completed,
+                  company_name: affiliateData.company_name || profile.company_name,
+                  phone: affiliateData.phone || profile.phone,
+                  website: affiliateData.website || profile.website,
+                  logo_url: affiliateData.logo_url || (profile as any).logo_url,
                 };
-                console.log('✅ [USEAUTH] Status de affiliate_admin recuperado:', affiliateData);
               }
             } catch (err) {
               console.error('❌ [USEAUTH] Erro ao buscar status de affiliate_admin:', err);
@@ -377,6 +380,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profile = null;
         }
         if (!profile) {
+          if (session.user.user_metadata?.role === 'seller') {
+            console.log('🔍 [USEAUTH] Invited seller detected without profile. Skipping auto-creation to allow manual registration.');
+            setSupabaseUser(session.user);
+            setUser(null);
+            setUserProfile(null);
+            setLoading(false);
+            return;
+          }
           try {
             console.log('🔍 [USEAUTH] Perfil não encontrado, criando novo perfil');
             console.log('🔍 [USEAUTH] session.user.id:', session.user.id);

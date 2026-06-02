@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é aluno ou affiliate_admin
-    if (role !== 'student' && role !== 'affiliate_admin') {
-      console.log(`[auto-confirm-student-email] Role is not 'student' or 'affiliate_admin', skipping auto-confirmation:`, role);
+    // Verificar se é aluno, affiliate_admin ou seller
+    if (role !== 'student' && role !== 'affiliate_admin' && role !== 'seller') {
+      console.log(`[auto-confirm-student-email] Role is not 'student', 'affiliate_admin' or 'seller', skipping auto-confirmation:`, role);
       return new Response(
-        JSON.stringify({ error: 'Auto-confirmation only for students and affiliate_admins', skipped: true }),
+        JSON.stringify({ error: 'Auto-confirmation only for students, affiliate_admins and sellers', skipped: true }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

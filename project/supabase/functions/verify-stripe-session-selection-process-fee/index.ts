@@ -1013,7 +1013,7 @@ Deno.serve(async (req: Request) => {
     const { data: allExistingLogs } = await supabase
       .from("student_action_logs")
       .select("id, metadata, created_at")
-      .eq("action_type", "fee_payment")
+      .in("action_type", ["checkout_session_processed", "fee_payment"])
       .eq("metadata->>session_id", sessionId)
       .order("created_at", { ascending: false });
 
@@ -1310,6 +1310,20 @@ Deno.serve(async (req: Request) => {
       }
 
       // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
+
+      // Registrar comissão via register_payment_billing (cobre B2C e B2B seller)
+      try {
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: "selection_process",
+          amount_param: paymentAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: "stripe",
+        });
+        console.log("[Commission] register_payment_billing called successfully for user", userId);
+      } catch (billingErr) {
+        console.error("[Commission] register_payment_billing failed:", billingErr);
+      }
 
       // Log the payment action
       try {

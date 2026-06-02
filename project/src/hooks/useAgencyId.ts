@@ -6,6 +6,7 @@ export interface AffiliateAdminInfo {
   id: string;
   system_type: 'legacy' | 'simplified';
   is_active: boolean;
+  company_name?: string;
 }
 
 export const useAgencyId = (): {
@@ -35,7 +36,7 @@ export const useAgencyId = (): {
     try {
       const { data, error: fetchError } = await supabase
         .from('affiliate_admins')
-        .select('id, system_type, is_active')
+        .select('id, system_type, is_active, company_name')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -54,7 +55,8 @@ export const useAgencyId = (): {
       setAffiliateAdminInfo({
         id: data.id,
         system_type: data.system_type || 'legacy',
-        is_active: data.is_active
+        is_active: data.is_active,
+        company_name: data.company_name
       });
       setError(null);
 
