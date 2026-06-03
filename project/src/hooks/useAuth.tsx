@@ -850,8 +850,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
+      async (event, session) => {
         if (!isMounted) return;
+        if (event === 'PASSWORD_RECOVERY') {
+          // Don't process as a normal login — the user needs to set a new password first.
+          // ForgotPassword.tsx reads the tokens from the URL hash and handles the reset form.
+          return;
+        }
         handleAuthEvent(session);
       }
     );
