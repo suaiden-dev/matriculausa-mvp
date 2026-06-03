@@ -72,8 +72,9 @@ interface Student {
   seller_id: string;
   has_paid_selection_process_fee: boolean;
   is_application_fee_paid: boolean;
-  is_scholarship_fee_paid: boolean;
+  is_placement_fee_paid: boolean;
   has_paid_i20_control_fee: boolean;
+  has_paid_reinstatement_package: boolean;
   system_type: string;
   dependents: number;
   created_at: string;
@@ -388,23 +389,40 @@ const AgencyDetail: React.FC = () => {
         const sellerCodes = sellersData.map(s => s.referral_code).filter(Boolean);
         const { data: studentProfiles } = await supabase
           .from('user_profiles')
-          .select('id, user_id, full_name, email, country, seller_referral_code, has_paid_selection_process_fee, is_application_fee_paid, has_paid_i20_control_fee, is_scholarship_fee_paid, system_type, dependents, created_at')
+          .select('id, user_id, full_name, email, country, seller_referral_code, has_paid_selection_process_fee, is_application_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, system_type, dependents, created_at')
           .in('seller_referral_code', sellerCodes);
 
         const sellersByCode: Record<string, Seller> = {};
         sellersData.forEach(s => { sellersByCode[s.referral_code] = s; });
+
+        // Fetch real payment amounts from individual_fee_payments
+        const studentUserIds = (studentProfiles || []).map((p: any) => p.user_id).filter(Boolean);
+        let realPaymentsMap: Record<string, number> = {};
+        if (studentUserIds.length > 0) {
+          const { data: feePayments } = await supabase
+            .from('individual_fee_payments')
+            .select('user_id, amount')
+            .in('user_id', studentUserIds);
+          (feePayments || []).forEach((p: any) => {
+            if (p.user_id && p.amount != null) {
+              realPaymentsMap[p.user_id] = (realPaymentsMap[p.user_id] || 0) + Number(p.amount);
+            }
+          });
+        }
 
         const studentsProcessed: Student[] = (studentProfiles || []).map(p => {
           const seller = sellersByCode[p.seller_referral_code || ''];
           const sysType = p.system_type || 'legacy';
           const deps = Number(p.dependents || 0);
 
-          // Simple revenue calculation (base fees, no overrides)
+          // Use real payment data when available; fall back to hardcoded estimates for legacy records
           let total = 0;
-          if (p.has_paid_selection_process_fee) total += sysType === 'simplified' ? 350 : 400 + (deps * 150);
-          if (p.is_scholarship_fee_paid) total += 900;
-          if (p.is_scholarship_fee_paid && p.has_paid_i20_control_fee) total += 900;
-          if (p.is_application_fee_paid) total += 100;
+          if (realPaymentsMap[p.user_id] != null) {
+            total = realPaymentsMap[p.user_id];
+          } else {
+            if (p.has_paid_selection_process_fee) total += sysType === 'simplified' ? 350 : 400 + (deps * 150);
+            if (p.is_application_fee_paid) total += 100;
+          }
 
           return {
             id: p.id,
@@ -418,8 +436,9 @@ const AgencyDetail: React.FC = () => {
             seller_id: seller?.id || '',
             has_paid_selection_process_fee: !!p.has_paid_selection_process_fee,
             is_application_fee_paid: !!p.is_application_fee_paid,
-            is_scholarship_fee_paid: !!p.is_scholarship_fee_paid,
+            is_placement_fee_paid: !!p.is_placement_fee_paid,
             has_paid_i20_control_fee: !!p.has_paid_i20_control_fee,
+            has_paid_reinstatement_package: !!p.has_paid_reinstatement_package,
             system_type: sysType,
             dependents: deps,
             created_at: p.created_at,
@@ -890,8 +909,9 @@ const AgencyDetail: React.FC = () => {
                   <th className="px-5 py-3 font-semibold">Seller</th>
                   <th className="px-4 py-3 font-semibold text-center">Sel.</th>
                   <th className="px-4 py-3 font-semibold text-center">App.</th>
-                  <th className="px-4 py-3 font-semibold text-center">Schol.</th>
-                  <th className="px-4 py-3 font-semibold text-center">I-20</th>
+                  <th className="px-4 py-3 font-semibold text-center">Place.</th>
+                  <th className="px-4 py-3 font-semibold text-center">Reinst.</th>
+                  <th className="px-4 py-3 font-semibold text-center">Control</th>
                   <th className="px-5 py-3 font-semibold text-right">Total</th>
                   <th className="px-5 py-3 font-semibold">Registered</th>
                   <th className="px-4 py-3"></th>
@@ -930,7 +950,12 @@ const AgencyDetail: React.FC = () => {
                         : <XCircle className="h-4 w-4 text-slate-200 mx-auto" />}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {student.is_scholarship_fee_paid
+                      {student.is_placement_fee_paid
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
+                        : <XCircle className="h-4 w-4 text-slate-200 mx-auto" />}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {student.has_paid_reinstatement_package
                         ? <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
                         : <XCircle className="h-4 w-4 text-slate-200 mx-auto" />}
                     </td>

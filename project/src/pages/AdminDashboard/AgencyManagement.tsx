@@ -21,17 +21,25 @@ import {
   Save,
   X,
   ChevronRight,
+  Info,
 } from 'lucide-react';
 import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useEnvironment } from '../../hooks/useEnvironment';
+
+// ─── Protected agencies — read-only, no edits allowed ──────────────────────────
+// To unprotect an agency, remove its ID from this set.
+const PROTECTED_AGENCY_IDS = new Set([
+  '525e4fba-5743-49c0-8ab8-f0dba284bc7a', // Brant Immigration
+  'fa01ff90-b78f-4362-990a-f9d9c24e2445', // The Future of English
+]);
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface FilterState {
   search: string;
   status: 'all' | 'active' | 'inactive' | 'pending';
-  sortBy: 'name' | 'created_at' | 'total_revenue' | 'total_students' | 'total_sellers';
+  sortBy: 'name' | 'created_at' | 'total_revenue' | 'total_students' | 'total_sellers' | 'total_commission';
   sortOrder: 'asc' | 'desc';
 }
 
@@ -478,6 +486,7 @@ const AffiliateManagement: React.FC = () => {
   // ── Quick commission save from list ──
   const handleSaveQuickRules = async (rules: Record<string, CommissionRule>) => {
     if (!commissionModalAffiliate) return;
+    if (PROTECTED_AGENCY_IDS.has(commissionModalAffiliate.id)) return;
     setSavingQuickRules(true);
     setQuickRulesError(null);
     try {
@@ -540,6 +549,7 @@ const AffiliateManagement: React.FC = () => {
         case 'total_revenue': av = a.total_revenue; bv = b.total_revenue; break;
         case 'total_students': av = a.total_students; bv = b.total_students; break;
         case 'total_sellers': av = a.total_sellers; bv = b.total_sellers; break;
+        case 'total_commission': av = a.total_commission ?? -1; bv = b.total_commission ?? -1; break;
         default: av = a.created_at; bv = b.created_at;
       }
       return filters.sortOrder === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
@@ -844,6 +854,8 @@ const AffiliateManagement: React.FC = () => {
             <option value="name-desc">Name Z-A</option>
             <option value="total_revenue-desc">Revenue High-Low</option>
             <option value="total_revenue-asc">Revenue Low-High</option>
+            <option value="total_commission-desc">Commission High-Low</option>
+            <option value="total_commission-asc">Commission Low-High</option>
             <option value="total_students-desc">Students High-Low</option>
             <option value="total_sellers-desc">Sellers High-Low</option>
           </select>
@@ -877,10 +889,30 @@ const AffiliateManagement: React.FC = () => {
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr className="text-left text-xs text-slate-500 uppercase tracking-wider">
                   <th className="px-5 py-3 font-semibold">Agency</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 font-semibold text-center">Sellers</th>
                   <th className="px-5 py-3 font-semibold text-center">Students</th>
-                  <th className="px-5 py-3 font-semibold text-right">Revenue</th>
+                  <th className="px-5 py-3 font-semibold text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      Platform Revenue
+                      <div className="relative group">
+                        <Info className="h-3.5 w-3.5 text-slate-400 cursor-default" />
+                        <div className="absolute right-0 top-5 z-10 w-56 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
+                          Total paid by students to the platform via this agency.
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                  <th className="px-5 py-3 font-semibold text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      Agency Earnings
+                      <div className="relative group">
+                        <Info className="h-3.5 w-3.5 text-slate-400 cursor-default" />
+                        <div className="absolute right-0 top-5 z-10 w-56 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
+                          Total commission earned by this agency based on their commission rules.
+                        </div>
+                      </div>
+                    </div>
+                  </th>
                   <th className="px-5 py-3 font-semibold">Joined</th>
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
@@ -892,6 +924,8 @@ const AffiliateManagement: React.FC = () => {
                     affiliate.status === 'active' ? 'border-l-green-400' :
                     affiliate.status === 'pending' ? 'border-l-yellow-400' :
                     'border-l-red-300';
+
+                  const isProtected = PROTECTED_AGENCY_IDS.has(affiliate.id);
 
                   return (
                     <tr
@@ -921,11 +955,6 @@ const AffiliateManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Status */}
-                      <td className="px-5 py-4">
-                        <StatusBadge status={affiliate.status} />
-                      </td>
-
                       {/* Sellers */}
                       <td className="px-5 py-4 text-center">
                         <span className="font-semibold text-slate-900">{affiliate.total_sellers}</span>
@@ -941,6 +970,13 @@ const AffiliateManagement: React.FC = () => {
                         {formatCurrency(affiliate.total_revenue)}
                       </td>
 
+                      {/* Commission */}
+                      <td className="px-5 py-4 text-right font-semibold text-blue-600">
+                        {affiliate.total_commission === null
+                          ? <span className="text-slate-400 font-normal">—</span>
+                          : formatCurrency(affiliate.total_commission)}
+                      </td>
+
                       {/* Joined */}
                       <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
                         <div className="flex items-center gap-1">
@@ -953,7 +989,7 @@ const AffiliateManagement: React.FC = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={e => { e.stopPropagation(); setCommissionModalAffiliate(affiliate); setQuickRulesError(null); }}
+                            onClick={e => { e.stopPropagation(); if (isProtected) return; setCommissionModalAffiliate(affiliate); setQuickRulesError(null); }}
                             className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                             title="Commission Rules"
                           >
