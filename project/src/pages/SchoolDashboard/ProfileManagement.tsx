@@ -5,7 +5,6 @@ import {
   Edit, 
   Settings, 
   Users,
-  Award,
   CheckCircle,
   AlertCircle,
   Save,
@@ -24,7 +23,7 @@ import { profileFieldsConfig } from '../../config/profileFields';
 import FormSection from '../../components/ProfileForm/FormSection';
 
 const ProfileManagement: React.FC = () => {
-  const { university, scholarships = [], applications = [], refreshData } = useUniversity();
+  const { university, refreshData } = useUniversity();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -345,7 +344,7 @@ const ProfileManagement: React.FC = () => {
             </div>
           </div>
           
-          {/* Banner Preview - Movido para o contexto */}
+          {/* Banner Preview - Simulating real public view */}
           {bannerUrl && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-3">
@@ -369,7 +368,7 @@ const ProfileManagement: React.FC = () => {
                       };
                       input.click();
                     }}
-                    className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
+                    className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl text-sm"
                     title="Change university banner"
                   >
                     <Edit className="h-4 w-4" />
@@ -378,25 +377,26 @@ const ProfileManagement: React.FC = () => {
                 )}
               </div>
               
-              <div className="relative group">
-                <div className="w-full h-48 sm:h-56 bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl overflow-hidden border border-white/30 shadow-lg">
+              {/* Informative size guidelines banner */}
+              <div className="mb-3 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-xs text-blue-100">
+                <p className="font-semibold mb-1">
+                  Recommended Image Guidelines:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-blue-200/90 ml-1">
+                  <li><strong>Desktop (Ideal):</strong> 3:1 aspect ratio (e.g., <code className="bg-white/15 px-1 rounded">1920 × 640 px</code>)</li>
+                  <li><strong>Format:</strong> JPG, PNG, WebP (Max: 5MB) with content horizontally centered.</li>
+                </ul>
+              </div>
+
+              <div className="relative">
+                {/* Real aspect ratio container for banner preview */}
+                <div className="w-full aspect-[21/9] md:aspect-[3/1] bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl overflow-hidden border border-white/30 shadow-lg">
                   <img 
                     src={bannerUrl} 
                     alt="University Banner Preview" 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
+                    className="w-full h-full object-cover" 
                   />
                 </div>
-                
-                {/* Overlay com instruções quando hover */}
-                {isEditing && (
-                  <div className="absolute inset-0 bg-black/60 opacity-0 rounded-xl group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <Edit className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm font-medium">Click "Change Banner" above to update</p>
-                      <p className="text-xs text-white/80 mt-1">Recommended: 800×267px</p>
-                    </div>
-                  </div>
-                )}    
               </div>
             </div>
           )}
@@ -417,26 +417,18 @@ const ProfileManagement: React.FC = () => {
               </div>
               
               {/* Indicador de Dimensões Recomendadas */}
-              <div className="mb-3 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
-                <div className="flex items-center justify-between text-xs text-blue-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                    <span className="font-medium">Recommended Dimensions:</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <span className="text-blue-100">Hero:</span>
-                      <span className="font-mono bg-white/20 px-2 py-1 rounded">1920×640px</span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-blue-200 mt-2">
-                  Upload a banner image to make your university profile more attractive
+              <div className="mb-4 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-xs text-blue-100">
+                <p className="font-semibold mb-1.5">
+                  Recommended Image Guidelines:
                 </p>
+                <ul className="list-disc list-inside space-y-1 text-blue-200/90 ml-1">
+                  <li><strong>Desktop (Ideal):</strong> 3:1 aspect ratio (e.g., <code className="bg-white/15 px-1 rounded">1920 × 640 px</code>)</li>
+                  <li><strong>Format:</strong> JPG, PNG, WebP (Max: 5MB) with content horizontally centered.</li>
+                </ul>
               </div>
               
-              {/* Upload Area - Mais Prominente */}
-              <div className="w-full h-48 sm:h-56 bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl border-2 border-dashed border-slate-400/50 flex items-center justify-center hover:border-slate-500/70 transition-colors cursor-pointer group"
+              {/* Upload Area - Mais Prominente com proporção real */}
+              <div className="w-full aspect-[21/9] md:aspect-[3/1] bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl border-2 border-dashed border-slate-400/50 flex items-center justify-center hover:border-slate-500/70 transition-colors cursor-pointer group"
                    onClick={() => {
                      const input = document.createElement('input');
                      input.type = 'file';
@@ -450,10 +442,10 @@ const ProfileManagement: React.FC = () => {
                      input.click();
                    }}
               >
-                <div className="text-center text-slate-700 group-hover:text-slate-900 transition-colors">
-                  <Globe className="h-16 w-16 mx-auto mb-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                  <p className="text-lg font-medium mb-1">Click here to upload banner</p>
-                  <p className="text-sm text-slate-500 group-hover:text-slate-700">JPG, PNG, WebP (max 5MB)</p>
+                <div className="text-center text-slate-700 group-hover:text-slate-900 transition-colors p-4">
+                  <Globe className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-2 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                  <p className="text-sm md:text-base font-semibold mb-1">Click to upload banner</p>
+                  <p className="text-xs text-slate-500">JPG, PNG or WebP (max 5MB)</p>
                 </div>
               </div>
               
@@ -644,38 +636,6 @@ const ProfileManagement: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Quick Stats */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Quick Stats</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div className="flex items-center">
-                  <Award className="h-5 w-5 text-[#05294E] mr-3" />
-                  <span className="font-medium text-slate-700">Scholarships Created</span>
-                </div>
-                <span className="text-2xl font-bold text-slate-900">{scholarships.length}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-blue-600 mr-3" />
-                  <span className="font-medium text-slate-700">Applicants</span>
-                </div>
-                <span className="text-2xl font-bold text-slate-900">{applications.length}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="font-medium text-slate-700">Approved Students</span>
-                </div>
-                <span className="text-2xl font-bold text-slate-900">
-                  {applications.filter(a => a.status === 'approved' || a.status === 'enrolled').length}
-                </span>
-              </div>
-            </div>
-          </div>
 
           {/* Account Status */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
