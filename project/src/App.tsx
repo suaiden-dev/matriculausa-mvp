@@ -130,7 +130,7 @@ const AppContent = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin/register" element={<AdminRegistration />} />
           <Route path="/seller/register" element={<SellerRegistration />} />
-          <Route path="/affiliate/register" element={<AffiliateRegistration />} />
+          <Route path="/affiliate" element={<AffiliateRegistration />} />
           <Route path="/agency" element={<Agency />} />
           <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
           <Route path="/affiliate/dashboard/rewards/store" element={<AffiliateRewardsStore />} />

@@ -210,7 +210,8 @@
       "annualCost": "Inversión Anual",
       "withScholarship": "Con Beca",
       "perYear": "/año",
-      "annualSavings": "Ahorro Anual"
+      "annualSavings": "Ahorro Anual",
+      "situationalFees": "Tasas Situacionales"
     },
     "frequencies": {
       "oneTime": "Pago único",
