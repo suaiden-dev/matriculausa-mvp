@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, AlertTriangle, Building, Star, MapPin, 
   Award, Calendar, GraduationCap, Monitor, Clock, 
-  Globe, CheckCircle, ExternalLink, Lock
+  Globe, CheckCircle, ExternalLink, Lock, ChevronDown
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -20,6 +20,7 @@ const ScholarshipDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation(['scholarships', 'common', 'school', 'dashboard']);
   const { user, userProfile, isAuthenticated } = useAuth();
+  const [showSituationalFees, setShowSituationalFees] = React.useState(false);
 
   const getLevelLabel = (lvl: string) => {
     switch (lvl?.toLowerCase()) {
@@ -605,39 +606,59 @@ const ScholarshipDetail: React.FC = () => {
           );
         })()}
 
-        {/* Control Fee */}
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100/60">
-          <div className="flex items-start gap-2.5 max-w-[75%]">
-            <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-800">
-                Control Fee
-              </span>
-              <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
-              </span>
+        {/* Situational Fees Group */}
+        <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm bg-white">
+          <button
+            onClick={() => setShowSituationalFees(!showSituationalFees)}
+            className="w-full flex items-center justify-between p-4 bg-slate-50/70 hover:bg-slate-50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <ChevronDown className={`h-5 w-5 text-slate-500 transition-transform duration-300 ${showSituationalFees ? 'rotate-180' : ''}`} />
+              <span className="text-sm font-bold text-slate-800">{t('scholarshipsPage.detail.situationalFees', 'Situational Fees')}</span>
             </div>
-          </div>
-          <span className="text-lg font-bold text-slate-900">$1,800</span>
-        </div>
+            <span className="text-xs text-slate-400 font-medium">
+              {showSituationalFees ? t('common.hideDetails', 'Hide details') : t('common.showDetails', 'Show details')}
+            </span>
+          </button>
 
-        {/* Reinstatement Fee */}
-        {(!processType || (processType === 'transfer' && visaTransferActive === false)) && (
-          <div className="p-4 bg-red-50/10 rounded-2xl border border-red-100/30 flex items-center justify-between">
-            <div className="flex items-start gap-2.5 max-w-[75%]">
-              <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-800">
-                  Reinstatement Fee
-                </span>
-                <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                  {t('scholarshipsPage.modal.reinstatementPackageDescription', 'Taxa para processamento de reativação de visto F-1 irregular')}
-                </span>
+          {showSituationalFees && (
+            <div className="divide-y divide-slate-100/80 border-t border-slate-100 bg-white">
+              {/* Control Fee */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-start gap-2.5 max-w-[75%]">
+                  <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-800">
+                      Control Fee
+                    </span>
+                    <span className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-slate-900">$1,800</span>
               </div>
+
+              {/* Reinstatement Fee */}
+              {(!processType || (processType === 'transfer' && visaTransferActive === false)) && (
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-start gap-2.5 max-w-[75%]">
+                    <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-800">
+                        Reinstatement Fee
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                        {t('scholarshipsPage.modal.reinstatementPackageDescription', 'Taxa para processamento de reativação de visto F-1 irregular')}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">$500</span>
+                </div>
+              )}
             </div>
-            <span className="text-lg font-bold text-slate-800">$500</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

@@ -215,7 +215,8 @@
       "annualCost": "Investimento Anual",
       "withScholarship": "Com Bolsa",
       "perYear": "/ano",
-      "annualSavings": "Economia Anual"
+      "annualSavings": "Economia Anual",
+      "situationalFees": "Taxas Situacionais"
     },
     "frequencies": {
       "oneTime": "Única",
