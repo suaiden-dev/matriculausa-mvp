@@ -1598,7 +1598,7 @@
         "satisfactionRate": "Satisfaction Rate"
       },
       "howItWorks": {
-        "title": "Help a friend get to the US and earn together",
+        "title": "How it works",
         "subtitle": "Share your code and earn coins when your friends start their American journey.",
         "steps": {
           "step1": {
@@ -1623,13 +1623,13 @@
           }
         },
         "calculator": {
-          "title": "Matrícula Coins Calculator",
-          "description": "See how many coins you can earn by referring friends",
+          "title": "Imagine how much you could save",
+          "description": "Drag to discover the discount each friend you refer can bring to your tuition.",
           "label": "How many friends can you refer?",
-          "friends": "friends",
+          "friends": "friends referred",
           "coinsEarned": "Coins Earned",
-          "totalSavings": "Value Available for Redemption",
-          "cta": "Start Saving Now",
+          "totalSavings": "Your tuition discount",
+          "cta": "I want to start saving",
           "minValue": "1 friend",
           "maxValue": "50+ friends",
           "coinsPerFriend": "100 coins",
@@ -1666,7 +1666,64 @@
               "description": "100 coins for each friend who pays the Placement Fee using your code"
             }
           }
+        },
+        "cards": {
+          "step1Title": "Receive your unique code",
+          "step1Desc": "By joining Matrícula Rewards, you get a unique referral code just for you.",
+          "codeCopied": "Code copied",
+          "step2Title": "Refer friends wanting to study in the USA",
+          "step2Desc": "Share your code with anyone dreaming of starting an international academic journey.",
+          "referralLink": "Your referral link",
+          "copy": "Copy",
+          "more": "More",
+          "invitesSent": "Invites sent",
+          "linkClicks": "Link clicks",
+          "step3Title": "Earn MatriculaCoins for each enrollment",
+          "step3Desc": "Drag the slider to see how much you earn: whenever a friend enrolls, the coins are automatically credited to your account.",
+          "coinsEarned": "Coins earned",
+          "discount": "Discount",
+          "friendsReferred": "friends referred",
+          "step4Title": "Redeem for discounts on your tuition",
+          "step4Desc": "Accumulate coins and apply them directly to your tuition fee at Matrícula USA.",
+          "availableBalance": "Available balance",
+          "coins": "coins",
+          "coinValueText": "1 coin = $1 USD",
+          "applyTuition": "Apply to tuition",
+          "useDiscount": "Use discount"
         }
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "items": [
+          {
+            "question": "Who is Matrícula Rewards for?",
+            "answer": "Matrícula Rewards is for students who want to turn their referrals into real benefits. For every friend who enrolls using your code, you accumulate MatriculaCoins and decide how to use them: apply as a discount on your tuition or cash out. The more you refer, the more you save or receive."
+          },
+          {
+            "question": "How much does it cost to participate in Matrícula Rewards?",
+            "answer": "Nothing. Matrícula Rewards is 100% free. You receive your referral code and can immediately start referring friends who want to study in the USA."
+          },
+          {
+            "question": "How do I earn MatriculaCoins?",
+            "answer": "You accumulate coins for every friend who enrolls using your referral code. There is no limit: the more people you refer, the more coins you earn."
+          },
+          {
+            "question": "How many coins do I earn per referral?",
+            "answer": "You get 100 MatriculaCoins for every friend who completes their enrollment from your referral."
+          },
+          {
+            "question": "When is a referral considered confirmed?",
+            "answer": "The referral is validated when the person who used your code completes the enrollment stage on the platform. After validation, the coins are automatically credited to your account."
+          },
+          {
+            "question": "How much is each MatriculaCoin worth?",
+            "answer": "Each coin is equivalent to $1 USD in discounts. You can track your available balance directly on your dashboard."
+          },
+          {
+            "question": "How do I redeem my rewards?",
+            "answer": "Directly on your dashboard, you choose what to do with your accumulated coins: apply them as a discount on your tuition or redeem the balance in cash. The choice is always yours."
+          }
+        ]
       },
       "testimonials": {
         "title": "Success Stories",
@@ -1742,6 +1799,114 @@
         }
       }
     },
+  "affiliateRegistration": {
+    "passwordStrength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "emailConfirmation": {
+      "title": "Confirm your email",
+      "sentTo": "We sent a confirmation link to",
+      "instruction": "Click the link to activate your account and start referring.",
+      "steps": {
+        "step1": "Open the email we sent you",
+        "step2": "Click the \"Confirm email\" button",
+        "step3": "You will be directed to your dashboard"
+      },
+      "resentSuccess": "Email resent successfully!",
+      "resending": "Resending...",
+      "resendButton": "Resend confirmation email",
+      "goToLogin": "Go to login",
+      "notReceived": "Didn't receive it? Check your spam folder."
+    },
+    "hero": {
+      "title": "Turn your referrals",
+      "titleHighlight": "into real discounts",
+      "description": "Share your code, refer anyone who wants to study in the USA, and accumulate <strong>MatriculaCoins</strong> for each confirmed referral.",
+      "cta": "Become an affiliate"
+    },
+    "showcase": {
+      "cards": {
+        "share": "Share",
+        "earn": "Receive Matrícula Coins",
+        "redeem": "Redeem your rewards"
+      },
+      "stats": {
+        "coinsPerReferral": "coins per confirmed referral",
+        "activeAffiliates": "active affiliates on the platform"
+      }
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "steps": {
+        "step1": {
+          "title": "Receive your unique code",
+          "desc": "After becoming an affiliate, you will have access to your unique referral code.",
+          "copied": "Code copied"
+        },
+        "step2": {
+          "title": "Share with anyone who wants to study in the USA",
+          "desc": "Send your code to people interested in starting an international academic journey.",
+          "referralLink": "Your referral link",
+          "copy": "Copy",
+          "whatsapp": "WhatsApp",
+          "email": "Email",
+          "more": "More",
+          "invitesSent": "Invites sent",
+          "linkClicks": "Link clicks"
+        },
+        "step3": {
+          "title": "Earn coins for confirmed referrals",
+          "desc": "When the referral is validated, coins automatically enter your account.",
+          "recentActivity": "Recent activity",
+          "confirmed": "Confirmed"
+        },
+        "step4": {
+          "title": "Redeem your rewards",
+          "desc": "Accumulate coins and redeem them for benefits within the Matrícula USA platform.",
+          "availableBalance": "Available balance",
+          "coinValue": "1 coin = US$ 1",
+          "coins": "coins",
+          "withdrawToAccount": "Withdraw to account",
+          "withdraw": "Withdraw balance"
+        }
+      }
+    },
+    "finalCta": {
+      "button": "Become an affiliate"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "How much does it cost to become an affiliate?",
+          "answer": "Nothing. The Matrícula USA affiliate program is 100% free. You create your account, receive your code, and can start referring."
+        },
+        {
+          "question": "How do I receive my referral code?",
+          "answer": "As soon as you create your affiliate account, a unique code is automatically generated and made available on your dashboard."
+        },
+        {
+          "question": "How many coins do I earn per referral?",
+          "answer": "You accumulate coins for each confirmed referral, with no limit on referrals. The more people you refer, the more coins you earn."
+        },
+        {
+          "question": "When is a referral considered confirmed?",
+          "answer": "The referral is validated when the person who used your code completes the required step on the platform. After validation, the coins automatically enter your account."
+        },
+        {
+          "question": "How much is each coin worth?",
+          "answer": "Each coin is equivalent to US$ 1. You can track your available balance directly on your affiliate dashboard."
+        },
+        {
+          "question": "How do I redeem my rewards?",
+          "answer": "On your dashboard, you can exchange accumulated coins for benefits within the Matrícula USA platform or withdraw the available balance."
+        }
+      ]
+    }
+  },
   "academicInfo": {
       "minEnglishProficiency": "Minimum English",
       "minGpa": "Minimum GPA",

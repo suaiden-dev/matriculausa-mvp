@@ -6,7 +6,7 @@ import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
   const { t } = useTranslationWithFees(['home', 'common', 'dashboard', 'contact']);
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
@@ -14,69 +14,63 @@ const FAQ: React.FC = () => {
 
   const faqItems = [
     {
-      q: t('home.faq.questions.q1.question'),
-      a: hasSellerPackage 
-        ? `The Selection Process Fee is ${selectionProcessFee} and includes access to our AI-powered scholarship discovery, personalized recommendations, and application support. This fee is final and non-refundable.`
-        : t('home.faq.questions.q1.answer'),
+      q: t('howItWorks.faq.q1.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q1.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q2.question'),
-      a: hasSellerPackage 
-        ? `The I-20 Control Fee is ${i20ControlFee} and is essential for your F-1 student visa process. This fee must be paid within 10 days after approval and is final and non-refundable.`
-        : t('home.faq.questions.q2.answer'),
-      category: 'Payment'
-    },
-    {
-      q: t('home.faq.questions.q3.question'),
-      a: t('home.faq.questions.q3.answer'),
-      category: 'Payment'
-    },
-    {
-      q: t('home.faq.questions.q4.question'),
-      a: t('home.faq.questions.q4.answer'),
+      q: t('howItWorks.faq.q2.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q2.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'General'
     },
     {
-      q: t('home.faq.questions.q5.question'),
-      a: t('home.faq.questions.q5.answer'),
+      q: t('howItWorks.faq.q3.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q3.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q6.question'),
-      a: hasSellerPackage 
-        ? `The Scholarship Fee is ${scholarshipFee} and covers the formalization of your scholarship grant, direct communication with your chosen university, and final documentation support. This fee is final and non-refundable.`
-        : t('home.faq.questions.q6.answer'),
+      q: t('howItWorks.faq.q4.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q4.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q7.question'),
-      a: t('home.faq.questions.q7.answer'),
+      q: t('howItWorks.faq.q5.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q5.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q8.question'),
-      a: t('home.faq.questions.q8.answer'),
+      q: t('howItWorks.faq.q6.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q6.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q9.question'),
-      a: t('home.faq.questions.q9.answer'),
-      category: 'Support'
-    },
-    {
-      q: t('home.faq.questions.q10.question'),
-      a: t('home.faq.questions.q10.answer'),
+      q: t('howItWorks.faq.q7.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q7.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q11.question'),
-      a: t('home.faq.questions.q11.answer'),
+      q: t('howItWorks.faq.q8.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q8.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Payment'
     },
     {
-      q: t('home.faq.questions.q12.question'),
-      a: t('home.faq.questions.q12.answer'),
+      q: t('howItWorks.faq.q9.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q9.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      category: 'Payment'
+    },
+    {
+      q: t('howItWorks.faq.q10.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q10.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      category: 'Payment'
+    },
+    {
+      q: t('howItWorks.faq.q11.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q11.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      category: 'Payment'
+    },
+    {
+      q: t('howItWorks.faq.q12.question', { selectionProcessFee, scholarshipFee, i20ControlFee }),
+      a: t('howItWorks.faq.q12.answer', { selectionProcessFee, scholarshipFee, i20ControlFee }),
       category: 'Support'
     }
   ];

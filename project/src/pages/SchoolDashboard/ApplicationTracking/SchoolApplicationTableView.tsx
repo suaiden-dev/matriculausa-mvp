@@ -27,6 +27,29 @@ const SchoolApplicationTableView: React.FC<SchoolApplicationTableViewProps> = ({
   const currentStudents = students.slice(startIndex, startIndex + itemsPerPage);
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
+    const selectedAppId = (student as any).selected_application_id;
+    const isChoseAnother = !!selectedAppId && selectedAppId !== student.application_id;
+
+    if (isChoseAnother) {
+      return (
+        <div className="flex items-center">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100">
+            Lost (Chose another university)
+          </span>
+        </div>
+      );
+    }
+
+    if (student.application_status === 'rejected') {
+      return (
+        <div className="flex items-center">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100">
+            Rejected by University
+          </span>
+        </div>
+      );
+    }
+
     // Only use the stages allowed for the university
     const allowedStageKeys = [
       'review',

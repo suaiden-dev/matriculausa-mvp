@@ -14,7 +14,10 @@ import { FileText, UserCircle, CheckCircle2, ArrowLeft, Files, ClipboardList } f
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
 interface ApplicationDetails extends Application {
-  user_profiles: UserProfile & { selection_survey_passed?: boolean };
+  user_profiles: UserProfile & { 
+    selection_survey_passed?: boolean;
+    selected_application_id?: string | null;
+  };
   scholarships: Scholarship;
 }
 
@@ -43,6 +46,17 @@ const StudentDetails: React.FC = () => {
   const { user } = useAuth();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents' | 'survey'>('details');
+
+  const selectedAppId = application?.user_profiles?.selected_application_id;
+  const isChoseAnother = !!selectedAppId && selectedAppId !== application?.id;
+
+  const activeTabs = isChoseAnother ? TABS.filter(tab => tab.id !== 'documents') : TABS;
+
+  useEffect(() => {
+    if (isChoseAnother && activeTab === 'documents') {
+      setActiveTab('details');
+    }
+  }, [isChoseAnother, activeTab]);
 
   // Financial Monitoring Logic
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType: configSystemType } = useFeeConfig(application?.user_profiles?.user_id);
@@ -91,6 +105,8 @@ const StudentDetails: React.FC = () => {
       system_type: profile.system_type || configSystemType,
       has_paid_ds160_package: (profile as any).has_paid_ds160_package || false,
       has_paid_i539_cos_package: (profile as any).has_paid_i539_cos_package || false,
+      has_paid_reinstatement_package: (profile as any).has_paid_reinstatement_package || false,
+      reinstatement_package_payment_method: (profile as any).reinstatement_package_payment_method || null,
       placement_fee_flow: (profile as any).placement_fee_flow || false,
       is_placement_fee_paid: (profile as any).is_placement_fee_paid || false,
       placement_fee_pending_balance: (profile as any).placement_fee_pending_balance || 0,
@@ -99,7 +115,7 @@ const StudentDetails: React.FC = () => {
 
   // Load real paid amounts
   useEffect(() => {
-    if (!application?.user_profiles?.user_id) return;
+    if (!application?.user_profiles?.user_id || isChoseAnother) return;
 
     const loadRealPaidAmounts = async () => {
       setLoadingPaidAmounts({
@@ -110,7 +126,7 @@ const StudentDetails: React.FC = () => {
         placement: true,
       });
       try {
-        const feeTypes: any[] = ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package'];
+        const feeTypes: any[] = ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package'];
         const amounts = await getRealPaidAmounts(application.user_profiles.user_id, feeTypes as any);
         setRealPaidAmounts(amounts);
       } catch (error) {
@@ -127,7 +143,7 @@ const StudentDetails: React.FC = () => {
     };
 
     loadRealPaidAmounts();
-  }, [application?.user_profiles?.user_id]);
+  }, [application?.user_profiles?.user_id, isChoseAnother]);
 
   // Documentos básicos do aluno (passport, diploma, funds_proof) para a aba Documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
@@ -179,6 +195,7 @@ const StudentDetails: React.FC = () => {
     { key: 'review', label: 'Admissions Review' },
     { key: 'application_fee', label: 'Application Fee' },
     { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'reinstatement_fee', label: 'Reinstatement Fee' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
     { key: 'i20_fee', label: 'I-20 Control Fee' },
     { key: 'acceptance_letter', label: 'Acceptance Letter' },
@@ -412,7 +429,7 @@ const StudentDetails: React.FC = () => {
 
   // Carregar dados dos documentos quando a aplicação for carregada
   useEffect(() => {
-    if (applicationId && application?.user_profiles?.user_id) {
+    if (applicationId && application?.user_profiles?.user_id && !isChoseAnother) {
       fetchDocumentRequests();
       fetchStudentDocuments();
       
@@ -422,7 +439,7 @@ const StudentDetails: React.FC = () => {
         fetchTransferFormUploads();
       }
     }
-  }, [applicationId, application]); // Incluída a dependência 'application' para garantir que os documentos sejam recarregados quando a aplicação for atualizada
+  }, [applicationId, application, isChoseAnother]); // Incluída a dependência 'application' para garantir que os documentos sejam recarregados quando a aplicação for atualizada
 
   const fetchDocumentRequests = async () => {
     if (!application) return;
@@ -2112,6 +2129,20 @@ const StudentDetails: React.FC = () => {
 
   return (
     <div className="min-h-screen overflow-y-auto">   
+      {isChoseAnother && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="max-w-full mx-auto flex items-center gap-3">
+            <div className="flex p-2 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="font-medium text-amber-800 text-sm md:text-base leading-snug">
+              This application is inactive because the student has chosen to proceed with another university's scholarship. Access to their documents, progress tracking, and payment details is restricted.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -2142,6 +2173,11 @@ const StudentDetails: React.FC = () => {
                   <CheckCircle2 className="w-5 h-5 mr-2" />
                   Application Approved
                 </div>
+              ) : application.status === 'rejected' ? (
+                <div className="flex items-center px-6 py-2.5 rounded-full text-base font-bold bg-red-600 text-white shadow-lg shadow-red-100 ring-4 ring-red-50">
+                  <div className="w-2.5 h-2.5 bg-white rounded-full mr-2"></div>
+                  Application Rejected
+                </div>
               ) : (
                 <div className="flex items-center px-6 py-2.5 rounded-full text-base font-bold bg-slate-100 text-slate-700 border border-slate-300">
                   <div className="w-3 h-3 bg-slate-400 rounded-full mr-2 animate-pulse"></div>
@@ -2157,7 +2193,7 @@ const StudentDetails: React.FC = () => {
       <div className="bg-white border-b border-slate-300 rounded-b-3xl">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 overflow-x-auto" role="tablist">
-            {TABS.map(tab => (
+            {activeTabs.map(tab => (
               <button
                 key={tab.id}
                 className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
@@ -2185,7 +2221,7 @@ const StudentDetails: React.FC = () => {
         {/* Conteúdo das abas */}
         {activeTab === 'details' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-            <div className="xl:col-span-8 space-y-6">
+            <div className={`${isChoseAnother ? 'xl:col-span-12' : 'xl:col-span-8'} space-y-6`}>
               {/* Student Information Card */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-8 py-5">
@@ -2278,7 +2314,14 @@ const StudentDetails: React.FC = () => {
                         <dd className="mt-1">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              {(() => {
+                              {isChoseAnother ? (
+                                <>
+                                  <div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
+                                  <span className="text-sm font-semibold text-slate-500">
+                                    Unavailable
+                                  </span>
+                                </>
+                              ) : (() => {
                                 const paid = (application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid;
                                 return (
                                   <>
@@ -2290,7 +2333,7 @@ const StudentDetails: React.FC = () => {
                                 );
                               })()}
                             </div>
-                            {!((application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid) && (
+                            {!isChoseAnother && !((application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid) && (
                               <div className="text-right">
                                 <span className="text-[11px] font-medium text-slate-400 uppercase">Varies by scholarship</span>
                               </div>
@@ -2302,7 +2345,14 @@ const StudentDetails: React.FC = () => {
                         <dt className="text-sm font-medium text-slate-500">Documents Review</dt>
                         <dd className="mt-1">
                           <div className="flex items-center space-x-2">
-                            {(() => {
+                            {isChoseAnother ? (
+                              <>
+                                <div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
+                                <span className="text-sm font-semibold text-slate-500">
+                                  Unavailable
+                                </span>
+                              </>
+                            ) : (() => {
                               const statusDisplay = getDocumentStatusDisplay(application?.user_profiles?.documents_status || '');
                               return (
                                 <>
@@ -2319,7 +2369,12 @@ const StudentDetails: React.FC = () => {
                       <div className="border-b border-slate-100 pb-4">
                         <dt className="text-sm font-medium text-slate-500">Enrollment Milestone</dt>
                         <dd className="mt-1">
-                          {application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
+                          {isChoseAnother ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2.5 h-2.5 bg-slate-400 rounded-full"></div>
+                              <span className="text-sm font-semibold text-slate-500">Unavailable</span>
+                            </div>
+                          ) : application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
                             <div className="flex items-center space-x-2">
                               <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
                               <span className="text-sm font-semibold text-green-700">Fully Enrolled</span>
@@ -2539,50 +2594,50 @@ const StudentDetails: React.FC = () => {
             </div>
 
             {/* Sidebar */}
-            <div className="xl:col-span-4 space-y-4">
-              <ApplicationProgressCard
-                currentStep={getCurrentStep()}
-                allSteps={steps}
-                isExpanded={isProgressExpanded}
-                onToggleExpand={() => setIsProgressExpanded(!isProgressExpanded)}
-                getStepStatus={getStepStatus}
-              />
-              
-              {studentRecord && (
-                <PaymentStatusCard
-                  student={studentRecord}
-                  realPaidAmounts={realPaidAmounts}
-                  loadingPaidAmounts={loadingPaidAmounts}
-                  editingFees={null}
-                  editingPaymentMethod={null}
-                  newPaymentMethod=""
-                  savingPaymentMethod={false}
-                  savingFees={false}
-                  isPlatformAdmin={false}
-                  dependents={studentRecord.dependents || 0}
-                  hasOverride={hasOverride}
-                  userSystemType={studentRecord.system_type}
-                  hasMatriculaRewardsDiscount={false}
-                  onStartEditFees={() => {}}
-                  onSaveEditFees={async () => {}}
-                  onCancelEditFees={() => {}}
-                  onResetFees={async () => {}}
-                  onEditFeesChange={() => {}}
-                  onMarkAsPaid={() => {}}
-                  onEditPaymentMethod={() => {}}
-                  onUpdatePaymentMethod={async () => {}}
-                  onCancelPaymentMethod={() => {}}
-                  onPaymentMethodChange={() => {}}
-                  formatFeeAmount={formatFeeAmount}
-                  getFeeAmount={getFeeAmount}
-                  hideSelectionFee={true}
+            {!isChoseAnother && (
+              <div className="xl:col-span-4 space-y-4">
+                <ApplicationProgressCard
+                  currentStep={getCurrentStep()}
+                  allSteps={steps}
+                  isExpanded={isProgressExpanded}
+                  onToggleExpand={() => setIsProgressExpanded(!isProgressExpanded)}
+                  getStepStatus={getStepStatus}
                 />
-              )}
-              
-              {/* Sidebar Content is now focused on Progress and Payments */}
-
-
-            </div>
+                
+                {studentRecord && (
+                  <PaymentStatusCard
+                    student={studentRecord}
+                    realPaidAmounts={realPaidAmounts}
+                    loadingPaidAmounts={loadingPaidAmounts}
+                    editingFees={null}
+                    editingPaymentMethod={null}
+                    newPaymentMethod=""
+                    savingPaymentMethod={false}
+                    savingFees={false}
+                    isPlatformAdmin={false}
+                    dependents={studentRecord.dependents || 0}
+                    hasOverride={hasOverride}
+                    userSystemType={studentRecord.system_type}
+                    hasMatriculaRewardsDiscount={false}
+                    onStartEditFees={() => {}}
+                    onSaveEditFees={async () => {}}
+                    onCancelEditFees={() => {}}
+                    onResetFees={async () => {}}
+                    onEditFeesChange={() => {}}
+                    onMarkAsPaid={() => {}}
+                    onEditPaymentMethod={() => {}}
+                    onUpdatePaymentMethod={async () => {}}
+                    onCancelPaymentMethod={() => {}}
+                    onPaymentMethodChange={() => {}}
+                    formatFeeAmount={formatFeeAmount}
+                    getFeeAmount={getFeeAmount}
+                    hideSelectionFee={true}
+                  />
+                )}
+                
+                {/* Sidebar Content is now focused on Progress and Payments */}
+              </div>
+            )}
           </div>
       )}
       {/* {activeTab === 'chat' && (
@@ -2617,7 +2672,7 @@ const StudentDetails: React.FC = () => {
         />
       )}
 
-        {activeTab === 'documents' && (
+        {activeTab === 'documents' && !isChoseAnother && (
           <div className="space-y-8">
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
               <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">

@@ -88,14 +88,14 @@ Deno.serve(async (req) => {
     let mensagem, redirectUrl, tipoNotf;
     
     if (isApprovedByUniversity) {
-      // Aluno já aprovado - redirecionar para Students
-      mensagem = `O aluno ${alunoData.full_name} completou o pagamento de ambas as taxas (Application Fee e Scholarship Fee) para a bolsa "${scholarship.title}" da universidade ${university.name}. O aluno está pronto para matrícula. Acesse a página Students para acompanhar o processo.`;
-      redirectUrl = '/school/dashboard/students';
+      // Aluno já aprovado - redirecionar para a página de detalhes do aluno
+      mensagem = `O aluno ${alunoData.full_name} completou o pagamento de ambas as taxas (Application Fee e Scholarship Fee) para a bolsa "${scholarship.title}" da universidade ${university.name}. O aluno está pronto para matrícula. Acesse a página de detalhes do aluno para acompanhar o processo.`;
+      redirectUrl = `/school/dashboard/student/${application_id}`;
       tipoNotf = 'Aluno aprovado - Pagamento completo realizado';
     } else {
-      // Aluno ainda não aprovado - redirecionar para Selection Process
-      mensagem = `O aluno ${alunoData.full_name} completou o pagamento de ambas as taxas (Application Fee e Scholarship Fee) para a bolsa "${scholarship.title}" da universidade ${university.name}. O aluno aguarda aprovação da universidade. Acesse a página Selection Process para revisar a candidatura.`;
-      redirectUrl = '/school/dashboard/selection-process';
+      // Aluno ainda não aprovado - redirecionar para a página de detalhes do aluno
+      mensagem = `O aluno ${alunoData.full_name} completou o pagamento de ambas as taxas (Application Fee e Scholarship Fee) para a bolsa "${scholarship.title}" da universidade ${university.name}. O aluno aguarda aprovação da universidade. Acesse a página de detalhes do aluno para revisar a candidatura.`;
+      redirectUrl = `/school/dashboard/student/${application_id}`;
       tipoNotf = 'Aluno aguardando aprovação - Pagamento completo realizado';
     }
 
