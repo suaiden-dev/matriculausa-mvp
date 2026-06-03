@@ -158,7 +158,16 @@ const CommissionPlanCard = ({ commissionRules }) => {
 
 // ─── Overview ─────────────────────────────────────────────────────────────────
 
-const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commissionRules = null }) => {
+interface OverviewProps {
+  stats: any;
+  sellers?: any[];
+  students?: any[];
+  onRefresh?: () => void;
+  userId: string | undefined;
+  commissionRules?: any;
+}
+
+const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [], onRefresh, userId, commissionRules = null }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -442,7 +451,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
               </p>
             </div>
             <button
-              onClick={() => navigate('/agency/dashboard/students')}
+              onClick={() => navigate('/agency/dashboard/sales')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors self-start sm:self-auto"
             >
               View All
@@ -637,7 +646,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
             {filteredStudentList.length > 15 && (
               <div className="px-5 py-4 border-t border-slate-100 text-center">
                 <button
-                  onClick={() => navigate('/agency/dashboard/students')}
+                  onClick={() => navigate('/agency/dashboard/sales')}
                   className="text-sm text-[#05294E] font-semibold hover:underline"
                 >
                   View all {filteredStudentList.length} records →
