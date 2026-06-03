@@ -177,7 +177,7 @@ const UniversityDetail: React.FC = () => {
         )}
 
         {/* ── HERO — Magazine Cover ── */}
-        <section className={`relative min-h-[65vh] flex flex-col overflow-hidden ${university.banner_url ? 'bg-stone-100' : 'bg-stone-950'}`}>
+        <section className={`relative min-h-[35vh] md:min-h-[50vh] lg:min-h-[60vh] flex flex-col overflow-hidden ${university.banner_url ? 'bg-stone-100' : 'bg-stone-950'}`}>
           {/* Background image if banner_url exists */}
           {university.banner_url ? (
             <div className="absolute inset-0 z-0">
