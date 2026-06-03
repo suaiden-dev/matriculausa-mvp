@@ -507,7 +507,8 @@ export function useAgencyRevenueCalculationQuery(userId?: string) {
       });
 
       commissions.forEach((c: any) => {
-        const ref = c.affiliate_code || studentsMap[c.student_id]?.seller_referral_code || '__unknown__';
+        const rawRef = c.affiliate_code || studentsMap[c.student_id]?.seller_referral_code || '__unknown__';
+        const ref = rawRef.toUpperCase();
         const amount = Number(c.amount) || 0;
 
         revenueByReferral[ref] = (revenueByReferral[ref] || 0) + amount;

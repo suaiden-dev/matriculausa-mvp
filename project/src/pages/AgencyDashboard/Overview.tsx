@@ -210,7 +210,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
   const paidStudentsByReferral = useMemo(() => {
     const map = {};
     (paidStudents || []).forEach((s) => {
-      const referralCode = s.seller_referral_code;
+      const referralCode = (s.seller_referral_code || '').toUpperCase();
       if (referralCode) {
         if (!map[referralCode]) {
           map[referralCode] = [];
@@ -227,12 +227,12 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
 
     return (sellers || [])
       .filter((s) => {
-        const referralCode = s.referral_code;
+        const referralCode = (s.referral_code || '').toUpperCase();
         const hasAdjustedRevenue = adjustedRevenueByReferral[referralCode] && adjustedRevenueByReferral[referralCode] > 0;
         return hasAdjustedRevenue;
       })
       .map((s) => {
-        const paidCount = paidStudentsByReferral[s?.referral_code]?.length || 0;
+        const paidCount = paidStudentsByReferral[(s?.referral_code || '').toUpperCase()]?.length || 0;
         return {
           ...s,
           students_count: paidCount
@@ -247,15 +247,16 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
 
     return (sellers || [])
       .filter((s) => {
-        const referralCode = s.referral_code;
+        const referralCode = (s.referral_code || '').toUpperCase();
         const hasRevenue = (adjustedRevenueByReferral[referralCode] ?? 0) > 0;
         const hasPaidStudents = (paidStudentsByReferral[referralCode]?.length ?? 0) > 0;
         return hasRevenue || hasPaidStudents;
       })
       .map((s) => {
-        const adjustedRevenue = adjustedRevenueByReferral[s?.referral_code];
+        const referralCode = (s?.referral_code || '').toUpperCase();
+        const adjustedRevenue = adjustedRevenueByReferral[referralCode];
         const finalRevenue = adjustedRevenue != null && adjustedRevenue !== undefined ? adjustedRevenue : 0;
-        const paidCount = paidStudentsByReferral[s?.referral_code]?.length || 0;
+        const paidCount = paidStudentsByReferral[referralCode]?.length || 0;
 
         return {
           ...s,
