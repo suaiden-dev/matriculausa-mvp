@@ -1734,11 +1734,17 @@ Deno.serve(async (req: Request) => {
       }
 
       // 4.4. Registrar comissão via register_payment_billing
+      // Use original_amount from order metadata (pre-surcharge base price) for commission calculation.
+      // Parcelow checkout functions store original_amount in metadata.
+      // Fallback to paymentAmount (net) if metadata is missing.
+      const parcelowBaseAmount = parcelowOrder.metadata?.original_amount
+        ? parseFloat(String(parcelowOrder.metadata.original_amount))
+        : paymentAmount;
       try {
         await supabase.rpc("register_payment_billing", {
           user_id_param: userId,
           fee_type_param: feeType,
-          amount_param: paymentAmount,
+          amount_param: parcelowBaseAmount,
           payment_session_id_param: String(parcelowOrder.id),
           payment_method_param: "parcelow",
         });

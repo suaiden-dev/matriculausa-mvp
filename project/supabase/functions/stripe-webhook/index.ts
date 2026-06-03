@@ -995,10 +995,14 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       }
 
       try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
         await supabase.rpc("register_payment_billing", {
           user_id_param: finalUserId,
           fee_type_param: "application_fee",
-          amount_param: session.amount_total ? session.amount_total / 100 : 0,
+          amount_param: commissionBaseAmount,
           payment_session_id_param: sessionId,
           payment_method_param: metadata?.payment_method || "stripe",
         });
@@ -1134,11 +1138,15 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         }
 
         // 5. Registrar comissão da agência
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : paymentAmount;
         try {
           await supabase.rpc("register_payment_billing", {
             user_id_param: userId,
             fee_type_param: "scholarship_fee",
-            amount_param: paymentAmount,
+            amount_param: commissionBaseAmount,
             payment_session_id_param: sessionId,
             payment_method_param: "stripe",
           });
@@ -1388,10 +1396,14 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         }
 
         try {
+          // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+          const commissionBaseAmount = metadata?.base_amount
+            ? parseFloat(metadata.base_amount)
+            : (session.amount_total ? session.amount_total / 100 : 0);
           await supabase.rpc("register_payment_billing", {
             user_id_param: userId,
             fee_type_param: "i20_control",
-            amount_param: session.amount_total ? session.amount_total / 100 : 0,
+            amount_param: commissionBaseAmount,
             payment_session_id_param: sessionId,
             payment_method_param: metadata?.payment_method || "stripe",
           });
@@ -1482,10 +1494,14 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       }
 
       try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
         await supabase.rpc("register_payment_billing", {
           user_id_param: userId,
           fee_type_param: "placement_fee",
-          amount_param: session.amount_total ? session.amount_total / 100 : 0,
+          amount_param: commissionBaseAmount,
           payment_session_id_param: sessionId,
           payment_method_param: metadata?.payment_method || "stripe",
         });
@@ -1564,11 +1580,15 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         }
 
         // Registrar comissão da agência
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : paymentAmount;
         try {
           await supabase.rpc("register_payment_billing", {
             user_id_param: userId,
             fee_type_param: "selection_process",
-            amount_param: paymentAmount,
+            amount_param: commissionBaseAmount,
             payment_session_id_param: sessionId,
             payment_method_param: "stripe",
           });
@@ -1727,10 +1747,14 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       }
 
       try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
         await supabase.rpc("register_payment_billing", {
           user_id_param: finalUserId,
           fee_type_param: paymentType,
-          amount_param: session.amount_total ? session.amount_total / 100 : 0,
+          amount_param: commissionBaseAmount,
           payment_session_id_param: sessionId,
           payment_method_param: paymentMethod || "stripe",
         });

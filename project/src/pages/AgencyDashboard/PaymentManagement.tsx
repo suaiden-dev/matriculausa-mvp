@@ -318,7 +318,7 @@ const PaymentManagement: React.FC = () => {
                   >
                     <DollarSign className={`w-5 h-5 mr-2 transition-colors ${activeTab === 'commission-balance' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
                       }`} />
-                    Commission Balance
+                    Histórico de Comissões
                   </button>
                 </nav>
               </div>
@@ -332,7 +332,7 @@ const PaymentManagement: React.FC = () => {
                     <h2 className="text-lg font-semibold text-slate-900">
                       {activeTab === 'financial-overview' ? 'Financial Overview' :
                         activeTab === 'payment-requests' ? 'Payment Requests' :
-                          'Commission Balance'}
+                          'Histórico de Comissões'}
                     </h2>
                     <p className="text-sm text-slate-600 mt-1">
                       {activeTab === 'financial-overview'
@@ -584,7 +584,7 @@ const PaymentManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Commission Balance Tab */}
+      {/* Histórico de Comissões Tab */}
       {activeTab === 'commission-balance' && (
         <div className="space-y-6 px-4 sm:px-6 lg:px-8">
           {/* Summary Cards */}

@@ -20,10 +20,7 @@ import {
   Shield,
   Bell,
   Settings,
-  Instagram,
-  Linkedin,
   Smartphone,
-  Hash,
   Briefcase,
 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input';
@@ -53,7 +50,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     // user_profiles
     name: user?.name || '',
     phone: user?.phone || '',
-    territory: user?.territory || '',
     company_name: user?.company_name || '',
     website: user?.website || '',
     notifications: {
@@ -62,16 +58,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
       push: user?.notifications?.push ?? true
     },
     // affiliate_admins extra fields
-    legal_name: '',
-    cnpj: '',
-    founded_year: '',
     country: '',
     state: '',
     city: '',
     address: '',
     whatsapp: '',
-    instagram: '',
-    linkedin: '',
     students_per_year: '',
   });
 
@@ -86,12 +77,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
         const [{ data: profile }, { data: agency }] = await Promise.all([
           supabase
             .from('user_profiles')
-            .select('full_name, phone, territory, company_name, website, notifications, avatar_url')
+            .select('full_name, phone, company_name, website, notifications, avatar_url')
             .eq('user_id', authUser.id)
             .single(),
           supabase
             .from('affiliate_admins')
-            .select('company_name, legal_name, cnpj, website, founded_year, country, state, city, address, phone, whatsapp, instagram, linkedin, students_per_year, logo_url')
+            .select('company_name, website, country, state, city, address, phone, whatsapp, students_per_year, logo_url')
             .eq('user_id', authUser.id)
             .maybeSingle(),
         ]);
@@ -102,7 +93,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
         setFormData({
           name: profile?.full_name || user?.name || '',
           phone: agency?.phone || profile?.phone || user?.phone || '',
-          territory: profile?.territory || user?.territory || '',
           company_name: agency?.company_name || profile?.company_name || user?.company_name || '',
           website: agency?.website || profile?.website || user?.website || '',
           notifications: (profile?.notifications as any) || {
@@ -110,16 +100,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
             sms: user?.notifications?.sms ?? false,
             push: user?.notifications?.push ?? true
           },
-          legal_name: agency?.legal_name || '',
-          cnpj: agency?.cnpj || '',
-          founded_year: agency?.founded_year || '',
           country: agency?.country || '',
           state: agency?.state || '',
           city: agency?.city || '',
           address: agency?.address || '',
           whatsapp: agency?.whatsapp || '',
-          instagram: agency?.instagram || '',
-          linkedin: agency?.linkedin || '',
           students_per_year: agency?.students_per_year || '',
         });
       } catch (error) {
@@ -223,7 +208,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
           .update({
             full_name: formData.name,
             phone: formData.phone,
-            territory: formData.territory,
             company_name: formData.company_name,
             website: formData.website,
             notifications: formData.notifications,
@@ -237,18 +221,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
           .from('affiliate_admins')
           .update({
             company_name: formData.company_name,
-            legal_name: formData.legal_name,
-            cnpj: formData.cnpj,
             website: formData.website,
-            founded_year: formData.founded_year,
             country: formData.country,
             state: formData.state,
             city: formData.city,
             address: formData.address,
             phone: formData.phone,
             whatsapp: formData.whatsapp,
-            instagram: formData.instagram,
-            linkedin: formData.linkedin,
             students_per_year: formData.students_per_year,
           })
           .eq('user_id', authUser.id),
@@ -399,17 +378,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Territory / Region</label>
-                <input
-                  type="text"
-                  value={formData.territory}
-                  onChange={(e) => handleInputChange('territory', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Ex: São Paulo, South Brazil"
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Email Notifications</label>
                 <select
                   value={formData.notifications.email ? 'true' : 'false'}
@@ -437,28 +405,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Legal Name (Razão Social)</label>
-                <input
-                  type="text"
-                  value={formData.legal_name}
-                  onChange={(e) => handleInputChange('legal_name', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Razão social"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">CNPJ</label>
-                <input
-                  type="text"
-                  value={formData.cnpj}
-                  onChange={(e) => handleInputChange('cnpj', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="00.000.000/0001-00"
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Website</label>
                 <input
                   type="url"
@@ -466,17 +412,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   onChange={(e) => handleInputChange('website', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder="https://youragency.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Founded Year</label>
-                <input
-                  type="text"
-                  value={formData.founded_year}
-                  onChange={(e) => handleInputChange('founded_year', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="2015"
                 />
               </div>
 
@@ -537,8 +472,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
               </div>
             </div>
 
-            {/* Section: Social & Contact */}
-            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Social & Contact</h4>
+            {/* Section: Contact */}
+            <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Contact</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">WhatsApp</label>
@@ -549,26 +484,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   onChange={(value) => handleInputChange('whatsapp', value || '')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   limitMaxLength
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Instagram</label>
-                <input
-                  type="text"
-                  value={formData.instagram}
-                  onChange={(e) => handleInputChange('instagram', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="@youragency"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">LinkedIn</label>
-                <input
-                  type="text"
-                  value={formData.linkedin}
-                  onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="linkedin.com/company/..."
                 />
               </div>
             </div>
@@ -651,7 +566,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                   <InfoRow icon={<User />} label="Full Name" value={formData.name || user?.name} />
                   <InfoRow icon={<Mail />} label="Email" value={user?.email} />
                   <InfoRow icon={<Phone />} label="Phone" value={formData.phone || user?.phone} />
-                  <InfoRow icon={<MapPin />} label="Territory / Region" value={formData.territory || user?.territory} />
                   <InfoRow icon={<Bell />} label="Email Notifications" value={formData.notifications?.email ? 'Enabled' : 'Disabled'} />
                   <InfoRow icon={<Shield />} label="Account Status" value="Active" />
                 </div>
@@ -662,10 +576,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                 <h4 className="text-lg font-bold text-slate-900 mb-6">Company Information</h4>
                 <div className="space-y-4">
                   <InfoRow icon={<Building />} label="Company Name" value={formData.company_name || user?.company_name} />
-                  <InfoRow icon={<Hash />} label="Legal Name" value={formData.legal_name} />
-                  <InfoRow icon={<Hash />} label="CNPJ" value={formData.cnpj} />
                   <InfoRow icon={<Globe />} label="Website" value={formData.website || user?.website} isLink />
-                  <InfoRow icon={<Calendar />} label="Founded Year" value={formData.founded_year} />
                   <InfoRow icon={<Briefcase />} label="Students per Year" value={formData.students_per_year} />
                 </div>
               </div>
@@ -683,11 +594,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
 
               {/* Social */}
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">Social & Contact</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">Contact</h4>
                 <div className="space-y-4">
                   <InfoRow icon={<Smartphone />} label="WhatsApp" value={formData.whatsapp} />
-                  <InfoRow icon={<Instagram />} label="Instagram" value={formData.instagram} />
-                  <InfoRow icon={<Linkedin />} label="LinkedIn" value={formData.linkedin} isLink />
                 </div>
               </div>
             </div>

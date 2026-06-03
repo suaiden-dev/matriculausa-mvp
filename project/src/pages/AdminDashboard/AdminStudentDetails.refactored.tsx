@@ -543,6 +543,7 @@ const AdminStudentDetails: React.FC = () => {
     affiliateId: string;
     name: string | null;
     email: string | null;
+    isAgency?: boolean;
   } | null>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
@@ -926,6 +927,7 @@ const AdminStudentDetails: React.FC = () => {
         affiliateId: codeData?.id || referral.referrer_id,
         name: profile?.full_name || null,
         email: profile?.email || null,
+        isAgency: profile?.role === 'affiliate_admin',
       });
     };
     fetchAffiliateProgramReferral();
@@ -4127,6 +4129,7 @@ const AdminStudentDetails: React.FC = () => {
                         name: affiliateProgramReferral.name || 'Unknown',
                         email: affiliateProgramReferral.email || 'No email',
                         affiliateId: affiliateProgramReferral.affiliateId,
+                        isAgency: affiliateProgramReferral.isAgency ?? false,
                       }
                       : referralInfo
                   }

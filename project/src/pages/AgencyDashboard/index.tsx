@@ -136,12 +136,13 @@ const AgencyDashboard: React.FC = () => {
         <Route 
           index 
           element={
-            <Overview 
+            <Overview
               stats={stats}
               sellers={sellers}
               students={students}
               onRefresh={handleRefresh}
               userId={userId}
+              commissionRules={adminData?.commission_rules ?? null}
             />
           } 
         />

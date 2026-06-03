@@ -29,6 +29,7 @@ const TermsManagement = lazy(() => import('./TermsManagement'));
 const CouponManagement = lazy(() => import('./CouponManagement'));
 const NewsletterManagement = lazy(() => import('./NewsletterManagement'));
 const AgencyManagement = lazy(() => import('./AgencyManagement'));
+const AgencyDetail = lazy(() => import('./AgencyDetail'));
 const ReferralAffiliatesManagement = lazy(() => import('./ReferralAffiliatesManagement'));
 const AffiliateDetails = lazy(() => import('./AffiliateDetails'));
 const AdminStudentDetailsRefactored = lazy(() => import('./AdminStudentDetails.refactored'));
@@ -636,6 +637,7 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/payout-requests" element={<AdminPayoutRequests />} />
                 <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
                 <Route path="agencies" element={<AgencyManagement />} />
+                <Route path="agencies/:agencyId" element={<AgencyDetail />} />
                 <Route path="affiliate-management" element={<Navigate to="/admin/dashboard/agencies" replace />} />
                 <Route path="referral-affiliates" element={<ReferralAffiliatesManagement />} />
                 <Route path="referral-affiliates/:affiliateId" element={<AffiliateDetails />} />

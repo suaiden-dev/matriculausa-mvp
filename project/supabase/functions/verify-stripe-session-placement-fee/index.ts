@@ -170,11 +170,16 @@ Deno.serve(async (req) => {
     });
 
     // Registrar comissão via register_payment_billing
+    // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+    // Fallback to amountPaid (net) if metadata is missing (e.g. old sessions).
+    const commissionBaseAmount = session.metadata?.base_amount
+      ? parseFloat(session.metadata.base_amount)
+      : amountPaid;
     try {
       await supabase.rpc("register_payment_billing", {
         user_id_param: userId,
         fee_type_param: "placement_fee",
-        amount_param: amountPaid,
+        amount_param: commissionBaseAmount,
         payment_session_id_param: sessionId,
         payment_method_param: "stripe",
       });

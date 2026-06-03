@@ -1312,11 +1312,16 @@ Deno.serve(async (req: Request) => {
       // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       // Registrar comissão via register_payment_billing (cobre B2C e B2B seller)
+      // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+      // Fallback to paymentAmount (net) if metadata is missing (e.g. old sessions).
+      const commissionBaseAmount = session.metadata?.base_amount
+        ? parseFloat(session.metadata.base_amount)
+        : paymentAmount;
       try {
         await supabase.rpc("register_payment_billing", {
           user_id_param: userId,
           fee_type_param: "selection_process",
-          amount_param: paymentAmount,
+          amount_param: commissionBaseAmount,
           payment_session_id_param: sessionId,
           payment_method_param: "stripe",
         });

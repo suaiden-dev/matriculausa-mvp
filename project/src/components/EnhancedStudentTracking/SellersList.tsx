@@ -239,9 +239,6 @@ const SellersList: React.FC<SellersListProps> = ({
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Progress
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Actions
-            </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
@@ -278,12 +275,7 @@ const SellersList: React.FC<SellersListProps> = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <User className="h-4 w-4 text-slate-400 mr-2" />
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{sellerName}</div>
-                      {student.seller_referral_code && (
-                        <div className="text-xs text-slate-400 font-mono">{student.seller_referral_code}</div>
-                      )}
-                    </div>
+                    <div className="text-sm font-medium text-slate-900">{sellerName}</div>
                   </div>
                 </td>
 
@@ -299,15 +291,6 @@ const SellersList: React.FC<SellersListProps> = ({
                   {renderProgressStepper(student, disponivel, pendente)}
                 </td>
 
-                {/* Actions */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => onViewStudentDetails(student.student_id || student.user_id, student.profile_id || student.id)}
-                    className="px-3 py-1.5 border border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition-all duration-200"
-                  >
-                    Details
-                  </button>
-                </td>
               </tr>
             );
           })}
