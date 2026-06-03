@@ -228,7 +228,7 @@ export const useAgencyNotifications = ({
           affiliate_admin_id: affiliateAdminId,
           title: 'I-20 Control Fee Deadline Expired',
           message: `Student ${studentName} referred by ${sellerName} has exceeded the I-20 Control Fee deadline. Immediate action required.`,
-          link: `/agency/dashboard/students?student=${studentId}`,
+          link: `/agency/dashboard/sales?student=${studentId}`,
           notification_type: 'i20_deadline_expired',
           metadata: {
             student_id: studentId,

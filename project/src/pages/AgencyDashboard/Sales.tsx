@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { GraduationCap, Search, Filter, Eye, DollarSign, Calendar, MapPin, User } from 'lucide-react';
+import { GraduationCap, Search, DollarSign, MapPin, User } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -22,13 +22,13 @@ interface Seller {
   referral_code: string;
 }
 
-interface StudentTrackingProps {
+interface SalesProps {
   students: Student[];
   sellers: Seller[];
   onRefresh: () => void;
 }
 
-const StudentTracking: React.FC<StudentTrackingProps> = ({
+const Sales: React.FC<SalesProps> = ({
   students,
   sellers,
   onRefresh
@@ -366,4 +366,4 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
   );
 };
 
-export default StudentTracking;
+export default Sales;

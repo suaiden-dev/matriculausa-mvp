@@ -2,64 +2,76 @@
 import React, { useState } from 'react';
 import { useState as useStateReact, useEffect, useMemo } from 'react';
 
-const HowItWorks = () => {
+const HowItWorksAccordion = () => {
+  const [open, setOpen] = useState(false);
+
   const steps = [
     {
       number: '01',
-      title: 'Add sellers',
-      description: 'Invite sellers by email. Each one receives a unique referral link.',
+      title: 'Cadastre vendedores',
+      description: 'Convide vendedores pelo e-mail. Cada um recebe um link de indicação único.',
     },
     {
       number: '02',
-      title: 'Sellers generate enrollments',
-      description: 'Sellers share the link. Students sign up and start the enrollment process.',
+      title: 'Vendedores geram matrículas',
+      description: 'Os vendedores compartilham o link. Alunos se cadastram através dele.',
     },
     {
       number: '03',
-      title: 'Student completes the flow',
-      description: 'The student goes through all steps: selection process, application, placement, and I-20 control.',
+      title: 'Aluno conclui o fluxo',
+      description: 'O aluno passa por todas as etapas e paga a última taxa do processo.',
     },
     {
       number: '04',
-      title: 'Commission is credited',
-      description: 'Commission is credited per fee paid — depending on your plan, some are immediate and others are released at the final step.',
+      title: 'Comissão é liberada',
+      description: 'Somente após o pagamento da última taxa a comissão é registrada e fica disponível para saque.',
     },
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-6">
-      <h3 className="font-semibold text-slate-900 mb-6">How the affiliate system works</h3>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+      >
+        <span className="font-semibold text-slate-900">Como funciona o sistema de afiliados</span>
+        <span className="text-slate-400 text-sm font-medium">{open ? 'Fechar' : 'Ver mais'}</span>
+      </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {steps.map((step) => (
-          <div key={step.number} className="flex flex-col gap-2">
-            <span className="text-2xl font-bold text-slate-200">{step.number}</span>
-            <h4 className="font-semibold text-slate-900 text-sm">{step.title}</h4>
-            <p className="text-slate-500 text-sm leading-relaxed">{step.description}</p>
+      {open && (
+        <div className="px-6 pb-6 border-t border-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+            {steps.map((step) => (
+              <div key={step.number} className="flex flex-col gap-2">
+                <span className="text-2xl font-bold text-slate-200">{step.number}</span>
+                <h4 className="font-semibold text-slate-900 text-sm">{step.title}</h4>
+                <p className="text-slate-500 text-sm leading-relaxed">{step.description}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
-        <div>
-          <h4 className="font-semibold text-slate-900 text-sm mb-2">Commission</h4>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Each agency has a custom commission plan configured at approval. Some fees pay immediately when the student completes them; others are held and released only when the student pays the final I-20 Control Fee. Check your plan above for the exact rules.
-          </p>
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
+            <div>
+              <h4 className="font-semibold text-slate-900 text-sm mb-2">Comissionamento</h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                A comissão da sua agência é liberada somente após o aluno concluir todo o fluxo e pagar a última taxa. Pagamentos parciais não geram comissão. O valor é definido individualmente no contrato com a Matrícula USA.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 text-sm mb-2">Acompanhamento de vendas</h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Use a seção <strong>Sales</strong> para ver todos os alunos indicados, qual vendedor os trouxe e se já realizaram o pagamento.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900 text-sm mb-2">Saque de comissões</h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                O saldo disponível aparece no card acima. Acesse <strong>Payment Management</strong> para solicitar o saque quando quiser.
+              </p>
+            </div>
+          </div>
         </div>
-        <div>
-          <h4 className="font-semibold text-slate-900 text-sm mb-2">Sales tracking</h4>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Use the <strong>Sales & Registration Panel</strong> below to see all referred students, which seller brought them, and which fees have already been paid.
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-slate-900 text-sm mb-2">Withdrawals</h4>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            Your available balance is shown in the card at the top. Go to <strong>Payment Management</strong> to request a withdrawal at any time.
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -81,88 +93,20 @@ import {
 } from 'lucide-react';
 import { useAgencyRevenueCalculationQuery } from '../../hooks/useAgencyQueries';
 import { invalidateAffiliateAdminAll } from '../../lib/queryKeys';
-import DirectSalesLink from './DirectSalesLink';
 
-// ─── CommissionPlanCard ────────────────────────────────────────────────────────
+interface OverviewProps {
+  stats: any;
+  sellers?: any[];
+  students?: any[];
+  onRefresh?: () => void;
+  userId: string | undefined;
+}
 
-const FEE_CONFIG = [
-  { key: 'selection_process', label: 'Selection Process Fee' },
-  { key: 'application',       label: 'Application Fee'       },
-  { key: 'placement',         label: 'Placement Fee'         },
-  { key: 'reinstatement',     label: 'Reinstatement Fee'     },
-  { key: 'i20_control',       label: 'I-20 Control Fee'      },
-];
-
-const CommissionPlanCard = ({ commissionRules }) => {
-  const enabledFees = FEE_CONFIG.filter(f => {
-    const rule = commissionRules?.[f.key];
-    return rule?.enabled !== false && rule?.value > 0;
-  });
-
-  const formatValue = (rule) =>
-    rule.type === 'percentage' ? `${rule.value}%` : `$${rule.value}`;
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-        <div className="w-9 h-9 bg-[#05294E] rounded-xl flex items-center justify-center shrink-0">
-          <DollarSign className="h-4 w-4 text-white" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-slate-900 text-base">Your Commission Plan</h3>
-          <p className="text-slate-500 text-sm">How your agency earns commission for each enrolled student</p>
-        </div>
-      </div>
-
-      {/* Active fee rows */}
-      <div className="divide-y divide-slate-100">
-        {enabledFees.map(f => {
-          const rule = commissionRules[f.key];
-          const isOnLastFee = rule.trigger === 'on_last_fee';
-          return (
-            <div key={f.key} className="px-6 py-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                <div>
-                  <p className="font-medium text-slate-900 text-sm">{f.label}</p>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
-                    <span>{isOnLastFee
-                      ? 'Released when the student pays the final fee (I-20 Control)'
-                      : 'Credited as soon as this fee is paid by the student'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="text-xl font-bold text-[#05294E]">{formatValue(rule)}</span>
-                <p className="text-xs text-slate-400">{rule.type === 'percentage' ? 'of fee value' : 'fixed'}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Footer: inactive fees mentioned as plain text + note if any on_last_fee */}
-      <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 space-y-2">
-        {enabledFees.some(f => commissionRules[f.key]?.trigger === 'on_last_fee') && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            <strong>Note:</strong> Commissions pending release are held until the student completes the enrollment and pays the I-20 Control Fee. After that, they become available for withdrawal.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ─── Overview ─────────────────────────────────────────────────────────────────
-
-const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commissionRules = null }) => {
+const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [], onRefresh, userId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // ✅ React Query Hook for revenue calculations
+  // ✅ React Query Hook para cálculos de receita
   const {
     data: revenueData,
     isPending: isLoadingRevenue,
@@ -190,14 +134,14 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
     }).format(amount);
   };
 
-  // ✅ Use React Query data with fallback to old values
+  // ✅ Usar dados do React Query com fallback para valores antigos
   const totalRevenue = revenueData?.totalRevenue ?? safeStats.totalRevenue;
   const adjustedRevenueByReferral = revenueData?.adjustedRevenueByReferral ?? {};
   const paidStudents = revenueData?.paidStudents ?? [];
   const paidStudentsCount = revenueData?.paidStudentsCount ?? 0;
   const revenueBreakdown = revenueData?.revenueBreakdown ?? [];
 
-  // Map commission by student ID for individual display
+  // Mapear comissão por ID do estudante para exibição individual
   const studentCommissions = useMemo(() => {
     const map = {};
     (revenueBreakdown || []).forEach(b => {
@@ -206,12 +150,12 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
     return map;
   }, [revenueBreakdown]);
 
-  // State for Sales & Registration Panel
+  // Estados para o Painel de Vendas e Registros
   const [searchTerm, setSearchTerm] = useStateReact('');
   const [statusFilter, setStatusFilter] = useStateReact('all'); // all, active, registered
   const [copiedSellerId, setCopiedSellerId] = useStateReact(null);
 
-  // Map sellers by referral code for fast lookup
+  // Mapeamento de vendedores por código de indicação para lookup rápido
   const sellersByReferralCode = useMemo(() => {
     const map = {};
     (sellers || []).forEach(s => {
@@ -222,7 +166,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
     return map;
   }, [sellers]);
 
-  // Filtered student list for Sales & Registration Panel
+  // Lista de estudantes filtrados para o Painel de Vendas e Registros
   const filteredStudentList = useMemo(() => {
     return (students || []).filter(student => {
       const referralCode = (student.seller_referral_code || '').toUpperCase();
@@ -258,7 +202,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
   };
 
 
-  // ✅ Refresh function using React Query
+  // ✅ Função de refresh usando React Query
   const handleRefresh = () => {
     invalidateAffiliateAdminAll(queryClient);
     onRefresh?.(); // Manter compatibilidade com props externos
@@ -345,18 +289,18 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
           onClick={handleRefresh}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
         >
-          Refresh
+          Refresh Data
         </button>
       </div>
 
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Commission Card: Total Commissions */}
+        {/* Card de Comissão: Comissões Acumuladas */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-slate-500 mb-1">Total Commissions</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">Comissões Acumuladas</p>
               {isLoadingRevenue ? (
                 <div className="animate-pulse space-y-2">
                   <div className="h-9 w-32 bg-slate-200 rounded"></div>
@@ -366,7 +310,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                   <p className="text-3xl font-bold text-slate-900">{formatCurrency(totalRevenue || 0)}</p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-blue-500 mr-1" />
-                    <span className="text-sm font-medium text-blue-600">Total accumulated</span>
+                    <span className="text-sm font-medium text-blue-600">Total acumulado</span>
                   </div>
                 </>
               )}
@@ -377,15 +321,15 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
           </div>
         </div>
 
-        {/* Student Count Card */}
+        {/* Card de Número de Estudantes */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Total Students</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">Número de Estudantes</p>
               <p className="text-3xl font-bold text-slate-900">{stats?.totalStudents || 0}</p>
               <div className="flex items-center mt-2">
                 <Users className="h-4 w-4 text-[#05294E] mr-1" />
-                <span className="text-sm font-medium text-[#05294E]">Enrolled students</span>
+                <span className="text-sm font-medium text-[#05294E]">Alunos vinculados</span>
               </div>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -394,11 +338,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
           </div>
         </div>
 
-        {/* Available Balance Card */}
+        {/* Card de Saldo Disponível para Saque */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-slate-500 mb-1">Available Balance</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">Saldo Disponível para Saque</p>
               {isLoadingRevenue ? (
                 <div className="animate-pulse space-y-2">
                   <div className="h-9 w-32 bg-slate-200 rounded"></div>
@@ -408,7 +352,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                   <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats?.availableBalance || 0)}</p>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
-                    <span className="text-sm font-medium text-emerald-600">Available for withdrawal</span>
+                    <span className="text-sm font-medium text-emerald-600">Disponível para retirada</span>
                   </div>
                 </>
               )}
@@ -420,15 +364,259 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
         </div>
       </div>
 
-      {/* Commission Plan CTA */}
-      {commissionRules && <CommissionPlanCard commissionRules={commissionRules} />}
-
       {/* How the affiliate system works */}
-      <HowItWorks />
+      <HowItWorksAccordion />
 
+      {/* Seller Management Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div className="p-4 sm:p-6 border-b border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold text-slate-900">Seller Management</h3>
+              <p className="text-slate-500 text-sm">Manage your sales team</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/agency/dashboard/users?tab=registration')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#05294E] text-white rounded-lg text-sm font-medium hover:bg-[#041f3a] transition-colors"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Add Seller
+              </button>
+              <button
+                onClick={() => navigate('/agency/dashboard/users')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                View All
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 sm:p-6">
+          {(sellers || []).length === 0 ? (
+            <div className="text-center py-10">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Users className="h-8 w-8 text-[#05294E]" />
+              </div>
+              <p className="text-slate-500 font-medium">No sellers yet</p>
+              <button
+                onClick={() => navigate('/agency/dashboard/users?tab=registration')}
+                className="mt-3 text-sm text-[#05294E] font-semibold hover:underline"
+              >
+                Add your first seller →
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 border-b border-slate-100">
+                    <th className="pb-3 font-medium">Seller</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium text-right">Students</th>
+                    <th className="pb-3 font-medium text-right">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {(sellers || []).slice(0, 8).map((seller) => {
+                    const adjustedRevenue = adjustedRevenueByReferral[seller.referral_code] || 0;
+                    const studentCount = paidStudentsByReferral[seller.referral_code]?.length || seller.students_count || 0;
+                    return (
+                      <tr key={seller.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-white">{seller.name?.charAt(0)?.toUpperCase()}</span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 truncate">{seller.name}</p>
+                              <p className="text-xs text-slate-400 truncate">{seller.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${seller.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {seller.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right font-medium text-slate-900">{studentCount}</td>
+                        <td className="py-3 text-right font-medium text-slate-900">{formatCurrency(adjustedRevenue)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {(sellers || []).length > 8 && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => navigate('/agency/dashboard/users')}
+                    className="text-sm text-[#05294E] font-semibold hover:underline"
+                  >
+                    View all {sellers.length} sellers →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* Direct Sales Link */}
-      <DirectSalesLink />
+      {/* Top Sellers Section */}
+      {sellers && sellers.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+          <div className="p-4 sm:p-6 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold text-slate-900">Top Sellers</h3>
+                <p className="text-slate-500 text-sm break-words">
+                  Ranking of top performing sellers based on performance
+                </p>
+              </div>
+              <div
+                onClick={() => navigate('/agency/dashboard/analytics')}
+                className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto"
+              >
+                View All
+                <ArrowUpRight className="h-4 w-4 ml-1" />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            {isLoadingRevenue ? (
+              <div className="space-y-4 animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 bg-slate-200 rounded-lg"></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="h-5 w-32 bg-slate-200 rounded mb-2"></div>
+                          <div className="h-4 w-48 bg-slate-200 rounded mb-2"></div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-20 bg-slate-200 rounded-full"></div>
+                            <div className="h-5 w-16 bg-slate-200 rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <div className="space-y-1">
+                          <div className="h-6 w-24 bg-slate-200 rounded"></div>
+                          <div className="h-5 w-20 bg-slate-200 rounded"></div>
+                          <div className="h-4 w-28 bg-slate-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {displaySellers
+                  .sort((a, b) => {
+                    if (b.students_count !== a.students_count) {
+                      return b.students_count - a.students_count;
+                    }
+                    return (b.total_revenue || 0) - (a.total_revenue || 0);
+                  })
+                  .slice(0, 3)
+                  .map((seller, index) => (
+                  <div
+                    key={seller.id}
+                    className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-700">
+                          {index + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 break-words">{seller.name}</p>
+                          <p className="text-sm text-slate-600 break-words">{seller.email}</p>
+                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
+                              {seller.referral_code}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+                              seller.is_active
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {seller.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-left sm:text-right">
+                        <div className="space-y-1">
+                          <div className="flex items-center sm:justify-end space-x-2">
+                            <span className="text-lg font-bold text-slate-900 whitespace-nowrap">
+                              {seller.students_count || 0}
+                            </span>
+                            <span className="text-sm text-slate-500">students</span>
+                          </div>
+                          <div className="text-sm font-medium text-slate-700">
+                            {formatCurrency(seller.total_revenue || 0)}
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            {formatDate(seller.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+              {displaySellers.length > 3 && (
+                <div className="pt-4 border-t border-slate-200">
+                  <h4 className="text-sm font-medium text-slate-600 mb-3">Other Sellers</h4>
+                  <div className="space-y-3">
+                    {displaySellers
+                      .sort((a, b) => {
+                        if (b.students_count !== a.students_count) {
+                          return b.students_count - a.students_count;
+                        }
+                        return (b.total_revenue || 0) - (a.total_revenue || 0);
+                      })
+                      .slice(3, 6)
+                      .map((seller, index) => (
+                        <div
+                          key={seller.id}
+                          className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className="w-6 h-6 bg-slate-300 rounded flex items-center justify-center text-white text-xs font-medium">
+                                {index + 4}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-900 break-words">{seller.name}</p>
+                                <p className="text-xs text-slate-500 break-words">{seller.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <div className="flex items-center sm:justify-end space-x-4">
+                                <span className="text-sm text-slate-700 whitespace-nowrap">
+                                  {seller.students_count || 0} students
+                                </span>
+                                <span className="text-sm text-slate-700 whitespace-nowrap">
+                                  {formatCurrency(seller.total_revenue || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Painel de Vendas e Registros */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -436,16 +624,16 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
         <div className="p-4 sm:p-6 border-b border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="min-w-0">
-              <h3 className="text-xl font-bold text-slate-900">Sales & Registration Panel</h3>
+              <h3 className="text-xl font-bold text-slate-900">Painel de Vendas e Registros</h3>
               <p className="text-slate-500 text-sm mt-0.5">
-                {filteredStudentList.length} of {students.length} record{students.length !== 1 ? 's' : ''} • {students.filter(s => s.has_paid_selection_process_fee).length} active student{students.filter(s => s.has_paid_selection_process_fee).length !== 1 ? 's' : ''}
+                {filteredStudentList.length} de {students.length} registro{students.length !== 1 ? 's' : ''} • {students.filter(s => s.has_paid_selection_process_fee).length} aluno{students.filter(s => s.has_paid_selection_process_fee).length !== 1 ? 's' : ''} ativos
               </p>
             </div>
             <button
-              onClick={() => navigate('/agency/dashboard/students')}
+              onClick={() => navigate('/agency/dashboard/sales')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors self-start sm:self-auto"
             >
-              View All
+              Ver Completo
               <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -459,16 +647,16 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by student, email or seller..."
+                placeholder="Buscar por aluno, email ou vendedor..."
                 className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/30 focus:border-[#05294E] bg-slate-50"
               />
             </div>
             {/* Status Filter */}
             <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 flex-shrink-0">
               {[
-                { value: 'all', label: 'All' },
-                { value: 'active', label: 'Active' },
-                { value: 'registered', label: 'Registered' },
+                { value: 'all', label: 'Todos' },
+                { value: 'active', label: 'Ativos' },
+                { value: 'registered', label: 'Registrados' },
               ].map(opt => (
                 <button
                   key={opt.value}
@@ -492,22 +680,22 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
             <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
               <Users className="h-10 w-10 text-[#05294E]" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">No records yet</h3>
-            <p className="text-slate-500 text-sm mb-4">Add sellers to start capturing registrations</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Nenhum registro ainda</h3>
+            <p className="text-slate-500 text-sm mb-4">Adicione vendedores para começar a capturar registros</p>
             <button
               onClick={() => navigate('/agency/dashboard/users?tab=registration')}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-lg text-sm font-medium hover:bg-[#041f3a] transition-colors"
             >
               <UserPlus className="h-4 w-4" />
-              Add Seller
+              Adicionar Vendedor
             </button>
           </div>
         ) : filteredStudentList.length === 0 ? (
           <div className="text-center py-12">
             <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No results for "{searchTerm}"</p>
+            <p className="text-slate-500 font-medium">Nenhum resultado para "{searchTerm}"</p>
             <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }} className="mt-2 text-sm text-[#05294E] font-semibold hover:underline">
-              Clear filters
+              Limpar filtros
             </button>
           </div>
         ) : (
@@ -515,11 +703,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                  <th className="px-5 py-3 font-semibold">Student</th>
-                  <th className="px-5 py-3 font-semibold">Seller</th>
-                  <th className="px-5 py-3 font-semibold">Registration</th>
-                  <th className="px-5 py-3 font-semibold">Paid steps</th>
-                  <th className="px-5 py-3 font-semibold">Commission</th>
+                  <th className="px-5 py-3 font-semibold">Estudante</th>
+                  <th className="px-5 py-3 font-semibold">Vendedor</th>
+                  <th className="px-5 py-3 font-semibold">Registro</th>
+                  <th className="px-5 py-3 font-semibold">Etapas pagas</th>
+                  <th className="px-5 py-3 font-semibold">Comissão</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -531,11 +719,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                     ? studentCommissions[studentId]
                     : 0;
 
-                  // ── Dynamic steps based on process type (same as admin) ──
+                  // ── Etapas dinâmicas baseadas no tipo de processo (igual ao admin) ──
                   const isTransfer = student.student_process_type === 'transfer';
                   const isReinstatement = isTransfer && student.visa_transfer_active === false;
                   const isPlacementFlow = !!student.placement_fee_flow;
-                  // I-20 only for Initial, COS and Reinstatement — active Transfer has no I-20
+                  // I-20 apenas para Initial, COS e Reinstatement — Transfer ativo não tem I-20
                   const hasI20Step = !isTransfer || isReinstatement;
 
                   const fees = [
@@ -559,7 +747,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
 
                   return (
                     <tr key={student.profile_id || student.user_id} className="hover:bg-slate-50/70 transition-colors group">
-                      {/* Student */}
+                      {/* Estudante */}
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-emerald-100' : 'bg-orange-100'}`}>
@@ -568,27 +756,41 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                             </span>
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-slate-900 truncate max-w-[160px]">{student.full_name || 'No name'}</p>
+                            <p className="font-medium text-slate-900 truncate max-w-[160px]">{student.full_name || 'Sem nome'}</p>
                             <p className="text-xs text-slate-400 truncate max-w-[160px]">{student.email}</p>
                           </div>
                           {isActive ? (
-                            <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 flex-shrink-0">Active</span>
+                            <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 flex-shrink-0">Ativo</span>
                           ) : (
-                            <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-600 flex-shrink-0">Registered</span>
+                            <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-600 flex-shrink-0">Registrado</span>
                           )}
                         </div>
                       </td>
 
-                      {/* Seller */}
+                      {/* Vendedor */}
                       <td className="px-5 py-3">
                         {seller ? (
                           <div className="flex items-center gap-2">
                             <div className="min-w-0">
                               <p className="font-medium text-slate-800 truncate max-w-[120px]">{seller.name}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{referralCode}</span>
+                                <button
+                                  onClick={() => handleCopyLink(referralCode, seller.id)}
+                                  className="text-slate-400 hover:text-[#05294E] transition-colors"
+                                  title="Copiar link de indicação"
+                                >
+                                  {copiedSellerId === seller.id ? (
+                                    <Check className="h-3 w-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-xs italic">Unassigned</span>
+                          <span className="text-slate-400 text-xs italic">Não atribuído</span>
                         )}
                       </td>
 
@@ -600,11 +802,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                         </div>
                       </td>
 
-                      {/* Paid Steps */}
+                      {/* Etapas Pagas */}
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-1">
                           {fees.map(fee => (
-                            <div key={fee.key} className="flex flex-col items-center gap-0.5" title={`${fee.label}: ${fee.paid ? 'Paid' : 'Pending'}`}>
+                            <div key={fee.key} className="flex flex-col items-center gap-0.5" title={`${fee.label}: ${fee.paid ? 'Pago' : 'Pendente'}`}>
                               {fee.paid ? (
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                               ) : (
@@ -616,7 +818,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                         </div>
                       </td>
 
-                      {/* Commission */}
+                      {/* Comissão */}
                       <td className="px-5 py-3">
                         {isActive ? (
                           <div className="flex items-center gap-1.5">
@@ -624,7 +826,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                             <span className="font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(commission)}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Waiting</span>
+                          <span className="text-xs text-slate-400 italic">Aguardando</span>
                         )}
                       </td>
                     </tr>
@@ -640,7 +842,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId, commi
                   onClick={() => navigate('/agency/dashboard/students')}
                   className="text-sm text-[#05294E] font-semibold hover:underline"
                 >
-                  View all {filteredStudentList.length} records →
+                  Ver todos os {filteredStudentList.length} registros →
                 </button>
               </div>
             )}

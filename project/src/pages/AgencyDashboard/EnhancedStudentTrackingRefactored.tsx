@@ -20,7 +20,8 @@ import {
   useAgencyDataQuery,
   useAgencySellersQuery,
   useAgencyStudentProfilesQuery,
-  useCachedStudentDetails
+  useCachedStudentDetails,
+  useAgencyCommissionsQuery
 } from '../../hooks/useAgencyQueries';
 import RefreshButton from '../../components/RefreshButton';
 import { useQueryClient } from '@tanstack/react-query';
@@ -46,9 +47,10 @@ function EnhancedStudentTracking(props) {
   const { data: adminData } = useAgencyDataQuery(effectiveUserId);
   const { data: sellers = [], isLoading: loadingSellers } = useAgencySellersQuery(adminData?.affiliateAdminId);
   const { data: students = [], isLoading: loadingStudents } = useAgencyStudentProfilesQuery(effectiveUserId);
+  const { data: commissions = [], isLoading: loadingCommissions } = useAgencyCommissionsQuery(effectiveUserId);
 
   // Loading combinado
-  const loading = loadingSellers || loadingStudents;
+  const loading = loadingSellers || loadingStudents || loadingCommissions;
 
   // Mock de universidades (não usado no componente atualmente)
   const universities: any[] = [];
@@ -672,39 +674,18 @@ function EnhancedStudentTracking(props) {
             <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                  Student Tracking Dashboard
+                  Sales & Registrations Dashboard
                 </h1>
                 <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  Monitor and manage students referred by your affiliate sellers.
+                  Track clients referred by your affiliate sellers and the status of commissions.
                 </p>
                 <p className="mt-3 text-sm text-slate-500">
-                  Track student applications, documents, and progress through the scholarship process.
+                  Monitor student progress from registration to commission release.
                 </p>
               </div>
             </div>
 
-            {/* Action Buttons Section */}
-            <div className="border-t border-slate-200 bg-white">
-              <div className="px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Student Management
-                    </h2>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Comprehensive tracking and management of student applications and progress
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RefreshButton
-                      onClick={handleRefresh}
-                      isRefreshing={isRefreshing}
-                      title="Refresh student and seller data"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
@@ -716,33 +697,41 @@ function EnhancedStudentTracking(props) {
           <StatsCards
             filteredStudents={adjustedStudents}
             allStudents={allAdjustedStudents}
+            commissions={commissions}
           />
 
-          {/* Filtros Avançados */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
-            <AdvancedFilters
-              filters={filters}
-              onFiltersChange={updateFilters}
-              sellers={sellers}
-              universities={universities}
-              showAdvancedFilters={showAdvancedFilters}
-              onToggleAdvancedFilters={toggleAdvancedFilters}
-              onResetFilters={resetFilters}
-              filteredStudentsCount={adjustedStudents.length}
+          {/* Container Unificado de Filtros e Tabela */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Filtros */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 bg-slate-50/50">
+              <AdvancedFilters
+                filters={filters}
+                onFiltersChange={updateFilters}
+                sellers={sellers}
+                universities={universities}
+                showAdvancedFilters={showAdvancedFilters}
+                onToggleAdvancedFilters={toggleAdvancedFilters}
+                onResetFilters={resetFilters}
+                filteredStudentsCount={adjustedStudents.length}
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+              />
+            </div>
+
+            {/* Tabela de Estudantes */}
+            <SellersList
+              filteredSellers={filteredSellers}
+              filteredStudents={adjustedStudents}
+              expandedSellers={expandedSellers}
+              expandedStudents={expandedStudents}
+              onToggleSellerExpansion={toggleSellerExpansion}
+              onToggleStudentExpansion={toggleStudentExpansion}
+              onViewStudentDetails={loadStudentDetails}
+              blackCouponUsers={blackCouponUsers}
+              commissions={commissions}
+              commissionRules={adminData?.commissionRules}
             />
           </div>
-
-          {/* Lista de vendedores */}
-          <SellersList
-            filteredSellers={filteredSellers}
-            filteredStudents={adjustedStudents}
-            expandedSellers={expandedSellers}
-            expandedStudents={expandedStudents}
-            onToggleSellerExpansion={toggleSellerExpansion}
-            onToggleStudentExpansion={toggleStudentExpansion}
-            onViewStudentDetails={loadStudentDetails}
-            blackCouponUsers={blackCouponUsers}
-          />
         </div>
       </div>
     </div>
