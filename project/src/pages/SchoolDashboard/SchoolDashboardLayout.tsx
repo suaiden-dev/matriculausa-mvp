@@ -146,7 +146,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/messages')) return 'messages';
-    if (path.includes('/student')) return 'students';
+    if (path.includes('/student/')) return 'application-tracking';
     return 'overview';
   };
 
@@ -571,8 +571,12 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full overflow-y-hidden">
-          <div className={['/application-tracking', '/students', '/student/', '/scholarships', '/messages', '/analytics', '/matricula-rewards', '/profile'].some(path => location.pathname.includes(path)) ? 'w-full px-2 sm:px-4' : 'max-w-7xl mx-auto'}>
+        <main className={`pb-6 max-w-full overflow-y-hidden ${
+          ['/application-tracking', '/students', '/student/', '/scholarships', '/messages', '/analytics', '/matricula-rewards', '/profile'].some(path => location.pathname.includes(path))
+            ? 'pt-0 px-2 sm:px-4' 
+            : 'pt-10 px-4 sm:px-6 lg:px-8'
+        }`}>
+          <div className={['/application-tracking', '/students', '/student/', '/scholarships', '/messages', '/analytics', '/matricula-rewards', '/profile'].some(path => location.pathname.includes(path)) ? 'w-full px-1 sm:px-2' : 'max-w-7xl mx-auto'}>
             {/* Welcome Message for Incomplete Profiles */}
             {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
               <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">

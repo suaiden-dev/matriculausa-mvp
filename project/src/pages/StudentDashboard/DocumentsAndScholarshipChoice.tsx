@@ -792,7 +792,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         try {
           const notificationLink = university.applicationId 
             ? `/school/dashboard/student/${university.applicationId}` 
-            : '/school/dashboard/selection-process';
+            : '/school/dashboard/application-tracking';
             
           console.log(`[NOTIF_DEBUG] Criando notificação para universidade ${university.name}. AppID: ${university.applicationId || 'N/A'}. Link: ${notificationLink}`);
 

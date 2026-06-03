@@ -17,9 +17,21 @@ const SchoolApplicationTrackingView: React.FC = () => {
   const [selectedScholarship, setSelectedScholarship] = useState<string>(
     searchParams.get('scholarship') || ''
   );
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(
-    (searchParams.get('view') as 'kanban' | 'table') || 'kanban'
-  );
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
+    const urlView = searchParams.get('view') as 'kanban' | 'table' | null;
+    if (urlView === 'kanban' || urlView === 'table') {
+      localStorage.setItem('school_application_tracking_view_mode', urlView);
+      return urlView;
+    }
+    const saved = localStorage.getItem('school_application_tracking_view_mode') as 'kanban' | 'table' | null;
+    if (saved === 'kanban' || saved === 'table') return saved;
+    return 'kanban';
+  });
+
+  const handleViewModeChange = (mode: 'kanban' | 'table') => {
+    setViewMode(mode);
+    localStorage.setItem('school_application_tracking_view_mode', mode);
+  };
 
   // Extract unique scholarships
   const scholarships: Scholarship[] = Array.from(
@@ -44,9 +56,17 @@ const SchoolApplicationTrackingView: React.FC = () => {
       const universityDocs = Array.isArray(app.documents) ? app.documents : [];
       const docsUploaded = universityDocs.length;
 
+      const getMostRecentActivity = () => {
+        const dates = [];
+        if (student.updated_at) dates.push(new Date(student.updated_at));
+        if (app.updated_at) dates.push(new Date(app.updated_at));
+        if (app.created_at) dates.push(new Date(app.created_at));
+        return dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date(app.created_at || Date.now());
+      };
+      const mostRecentActivity = getMostRecentActivity();
 
       return {
-        student_id: student.user_id, // Student profile user_id
+        student_id: student.id, // Student profile primary key id
         user_id: student.user_id,
         student_name: student.full_name || student.name || 'Unknown',
         student_email: student.email || '',
@@ -82,7 +102,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
         total_applications: 1, 
         all_applications: [app],
         is_archived: false,
-        is_dropped: status === 'rejected' || status === 'dropped',
+        is_dropped: status === 'rejected' || status === 'dropped' || student.is_dropped === true,
         assigned_to_admin_id: null,
         assigned_to_admin_name: null,
         placement_fee_pending_balance: student.placement_fee_pending_balance || 0,
@@ -110,15 +130,15 @@ const SchoolApplicationTrackingView: React.FC = () => {
         has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
         has_paid_ds160_package: student.has_paid_ds160_package || false,
         has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
+        most_recent_activity: mostRecentActivity,
       } as StudentRecord;
     });
 
-    console.log('[KANBAN_DEBUG] Student Records:', mappedRecords.map((r: any) => ({
-      name: r.student_name,
-      total: r.docs_total_required,
-      approved: r.docs_total_approved,
-      status: r.application_status
-    })));
+    mappedRecords.sort((a: any, b: any) => {
+      const dateA = a.most_recent_activity || new Date(a.student_created_at);
+      const dateB = b.most_recent_activity || new Date(b.student_created_at);
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
 
     return mappedRecords;
   }, [applications, university]);
@@ -155,7 +175,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex flex-col h-full">
         {/* Header & Filters */}
         <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
-          <div className="w-full px-4 sm:px-6 py-4 sm:py-6">
+          <div className="w-full px-2 sm:px-4 py-4 sm:py-6">
             <div className="flex flex-col gap-4 sm:gap-6">
               
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -168,7 +188,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center bg-slate-100 rounded-lg p-1">
                     <button
-                      onClick={() => setViewMode('kanban')}
+                      onClick={() => handleViewModeChange('kanban')}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                         viewMode === 'kanban'
                           ? 'bg-white text-slate-900 shadow-sm'
@@ -179,7 +199,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
                       Kanban
                     </button>
                     <button
-                      onClick={() => setViewMode('table')}
+                      onClick={() => handleViewModeChange('table')}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                         viewMode === 'table'
                           ? 'bg-white text-slate-900 shadow-sm'
@@ -223,7 +243,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
         </div>
 
         {/* Board/Table Area */}
-        <div className="flex-1 overflow-hidden p-4 sm:p-6 w-full">
+        <div className="flex-1 overflow-hidden py-4 px-0 w-full">
           {viewMode === 'kanban' ? (
             <SchoolApplicationKanbanView 
               students={filteredStudents}
