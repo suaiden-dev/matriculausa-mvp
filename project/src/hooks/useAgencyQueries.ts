@@ -21,15 +21,15 @@ export function useAgencyDataQuery(userId?: string) {
         .select('id, simplified_pricing_for_students, commission_rules')
         .eq('user_id', userId)
         .limit(1);
-      
+
       if (aaErr || !aaList || aaList.length === 0) {
         throw new Error('No affiliate admin found for user');
       }
-      
+
       return {
         affiliateAdminId: aaList[0].id,
         simplifiedPricing: aaList[0].simplified_pricing_for_students === true,
-        commissionRules: aaList[0].commission_rules,
+        commission_rules: aaList[0].commission_rules ?? null,
         userId
       };
     },
@@ -96,10 +96,10 @@ export function useAgencyStudentProfilesQuery(userId?: string) {
       return transformedProfiles;
     },
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000, // 2 minutos
-    gcTime: 8 * 60 * 1000, // 8 minutos
+    staleTime: 30 * 1000, // 30 seconds — student data changes when payments come in
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
   });
 }
 
@@ -717,15 +717,18 @@ export function useCachedStudentDetails(studentId?: string, profileId?: string) 
   const feeHistoryQuery = useStudentFeeHistoryQuery(studentId);
 
   // Estados locais para compatibilidade com o hook original
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [i20ControlFeeDeadline, setI20ControlFeeDeadline] = useState<Date | null>(null);
 
   // Função para carregar detalhes (compatibilidade)
-  const loadStudentDetails = useCallback(async (_newStudentId: string, _newProfileId?: string) => {
+  const loadStudentDetails = useCallback(async (newStudentId: string, newProfileId?: string) => {
+    setSelectedStudent(newStudentId);
     // As queries serão automaticamente ativadas quando studentId/profileId mudarem
   }, []);
 
   // Função para voltar à lista
   const backToList = useCallback(() => {
+    setSelectedStudent(null);
     setI20ControlFeeDeadline(null);
   }, []);
 
