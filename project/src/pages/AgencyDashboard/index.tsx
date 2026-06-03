@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -17,16 +17,6 @@ import {
   useAgencyStudentProfilesQuery,
   useAgencyDataQuery
 } from '../../hooks/useAgencyQueries';
-
-interface AgencyStats {
-  totalStudents: number;
-  totalRevenue: number;
-  totalSellers: number;
-  activeSellers: number;
-  pendingSellers: number;
-  approvedSellers: number;
-  rejectedSellers: number;
-}
 
 
 
@@ -96,8 +86,8 @@ const AgencyDashboard: React.FC = () => {
     rejectedSellers: 0
   };
 
-  const sellers = sellersData || [];
-  const students = studentsData || [];
+  const sellers: Seller[] = (sellersData as Seller[]) || [];
+  const students: Student[] = (studentsData as Student[]) || [];
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
@@ -158,7 +148,7 @@ const AgencyDashboard: React.FC = () => {
         <Route path="users" element={<SellerManagement />} />
         <Route path="payments" element={<PaymentManagement />} />
         <Route 
-          path="students" 
+          path="sales" 
           element={
             <EnhancedStudentTracking userId={userId} />
           } 

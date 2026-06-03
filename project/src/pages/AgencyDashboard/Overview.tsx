@@ -60,7 +60,7 @@ const HowItWorksAccordion = () => {
             <div>
               <h4 className="font-semibold text-slate-900 text-sm mb-2">Acompanhamento de vendas</h4>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Use a seção <strong>Seller Tracking</strong> para ver todos os alunos indicados, qual vendedor os trouxe e se já realizaram o pagamento.
+                Use a seção <strong>Sales</strong> para ver todos os alunos indicados, qual vendedor os trouxe e se já realizaram o pagamento.
               </p>
             </div>
             <div>
@@ -94,7 +94,15 @@ import {
 import { useAgencyRevenueCalculationQuery } from '../../hooks/useAgencyQueries';
 import { invalidateAffiliateAdminAll } from '../../lib/queryKeys';
 
-const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => {
+interface OverviewProps {
+  stats: any;
+  sellers?: any[];
+  students?: any[];
+  onRefresh?: () => void;
+  userId: string | undefined;
+}
+
+const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [], onRefresh, userId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -622,7 +630,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh, userId }) => 
               </p>
             </div>
             <button
-              onClick={() => navigate('/agency/dashboard/students')}
+              onClick={() => navigate('/agency/dashboard/sales')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors self-start sm:self-auto"
             >
               Ver Completo

@@ -2,16 +2,13 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
-  UserPlus,
   GraduationCap,
   BarChart3,
   Settings,
   Menu,
   X,
   LogOut,
-  Shield,
   Crown,
-  CheckCircle,
   User,
   ChevronDown,
   Activity,
@@ -31,7 +28,7 @@ interface AgencyDashboardLayoutProps {
 const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
   user,
   children,
-  onRefresh
+  onRefresh: _onRefresh
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,7 +48,7 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
     if (path.includes('/users')) return 'users';
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/my-students')) return 'my-students';
-    if (path.includes('/students')) return 'students';
+    if (path.includes('/sales')) return 'sales';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/utm-tracking')) return 'utm-tracking';
     if (path.includes('/profile')) return 'profile';
@@ -66,7 +63,7 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
       { id: 'overview', label: 'Overview', icon: BarChart3, path: '/agency/dashboard', badge: null },
       { id: 'users', label: 'Seller Management', icon: Users, path: '/agency/dashboard/users', badge: null },
       { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/agency/dashboard/payments', badge: null },
-      { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/agency/dashboard/students', badge: null },
+      { id: 'sales', label: 'Sales', icon: GraduationCap, path: '/agency/dashboard/sales', badge: null },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/agency/dashboard/analytics', badge: null },
       { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/agency/dashboard/utm-tracking', badge: null },
       { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/agency/dashboard/profile', badge: null }
@@ -88,7 +85,7 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
     try {
       setSidebarOpen(false);
       await logout();
-      // O logout já faz o redirecionamento, não precisamos fazer nada aqui
+      navigate('/');
     } catch (error) {
       console.error('Error during logout:', error);
       // Mesmo com erro, fechar sidebar
@@ -293,10 +290,7 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
                     <div className="border-t border-slate-200 my-2"></div>
                     
                     <button
-                      onClick={async () => {
-                        await logout();
-                        navigate('/');
-                      }}
+                      onClick={handleLogout}
                       className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="h-4 w-4 mr-3" />

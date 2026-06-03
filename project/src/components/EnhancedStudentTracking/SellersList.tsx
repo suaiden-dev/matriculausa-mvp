@@ -1,6 +1,5 @@
 import React from 'react';
-import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight, Building, Sparkles } from 'lucide-react';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { User } from 'lucide-react';
 
 interface SellersListProps {
   filteredSellers: any[];
@@ -11,19 +10,17 @@ interface SellersListProps {
   onToggleStudentExpansion: (studentId: string) => void;
   onViewStudentDetails: (studentId: string, profileId: string) => void;
   blackCouponUsers?: Set<string>;
+  commissions?: any[];
+  commissionRules?: any;
 }
 
 const SellersList: React.FC<SellersListProps> = ({
   filteredSellers,
   filteredStudents,
-  expandedSellers,
-  expandedStudents,
-  onToggleSellerExpansion,
-  onToggleStudentExpansion,
   onViewStudentDetails,
-  blackCouponUsers = new Set()
+  commissions = [],
+  commissionRules = {}
 }) => {
-  const { getFeeAmount } = useFeeConfig();
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -31,424 +28,277 @@ const SellersList: React.FC<SellersListProps> = ({
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US');
-  };
+  const renderProgressStepper = (student: any, disponivel: number, pendente: number) => {
+    // Conditions per applicationFlowStages.ts
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isI20Applicable =
+      student.student_process_type === 'initial' ||
+      student.student_process_type === 'change_of_status' ||
+      isTransferInactiveVisa;
+    const isPlacementApplicable = !!student.placement_fee_flow;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      default: return 'bg-blue-100 text-blue-800';
-    }
-  };
+    // Placement or Scholarship — mutually exclusive
+    // placement_fee_flow=true → Placement Fee path; false → Scholarship Fee path
+    const placementOrScholarshipPaid = isPlacementApplicable
+      ? !!student.is_placement_fee_paid
+      : !!student.is_scholarship_fee_paid;
 
-  // Função para determinar quais taxas estão faltando para um aluno
-  const getMissingFees = (student: any) => {
-    const missingFees = [];
-    
-    // ✅ ORDEM CORRETA: Selection Process → Application → Scholarship → I-20 Control
-    
-    // 1. Verificar Selection Process Fee - usar apenas o flag booleano
+    const steps = [
+      { label: 'Reg.', tooltip: 'Registered', active: true, skip: false },
+      { label: 'Sel.', tooltip: 'Selection Process Fee', active: !!student.has_paid_selection_process_fee, skip: false },
+      { label: 'App.', tooltip: 'Application Fee', active: !!student.is_application_fee_paid, skip: false },
+      {
+        label: isPlacementApplicable ? 'Plac.' : 'Schol.',
+        tooltip: isPlacementApplicable ? 'Placement Fee' : 'Scholarship Fee',
+        active: placementOrScholarshipPaid,
+        skip: false
+      },
+      {
+        label: 'Rein.',
+        tooltip: 'Reinstatement Fee',
+        active: !!student.has_paid_reinstatement_package,
+        skip: !isReinstatementApplicable
+      },
+      {
+        label: 'Ctrl.',
+        tooltip: 'I-20 Control Fee',
+        active: !!student.has_paid_i20_control_fee || !!student.has_paid_ds160_package || !!student.has_paid_i539_cos_package,
+        skip: !isI20Applicable
+      },
+      {
+        label: 'Com.',
+        tooltip: 'Commission released',
+        active: disponivel > 0,
+        skip: false
+      }
+    ];
+
+    // Dynamic status message
+    let message = '';
+    const firstName = student.full_name?.split(' ')[0] || 'The client';
+
     if (!student.has_paid_selection_process_fee) {
-      missingFees.push({ name: 'Selection Process', amount: getFeeAmount('selection_process'), color: 'red' });
+      message = `${firstName} registered. Help them pay the Selection Process Fee.`;
+    } else if (!student.is_application_fee_paid) {
+      message = `Selection Process Fee paid. Awaiting Application Fee payment to release ${formatCurrency(pendente)}.`;
+    } else if (!placementOrScholarshipPaid) {
+      const feeLabel = isPlacementApplicable ? 'Placement Fee' : 'Scholarship Fee';
+      message = `Application Fee paid. Awaiting ${feeLabel} payment to release ${formatCurrency(pendente)}.`;
+    } else if (isReinstatementApplicable && !student.has_paid_reinstatement_package) {
+      message = `Placement Fee paid. Awaiting Reinstatement Fee payment to release ${formatCurrency(pendente)}.`;
+    } else if (isI20Applicable && !(student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package)) {
+      message = `Awaiting I-20 Control Fee payment to release ${formatCurrency(pendente)}.`;
+    } else {
+      message = `Commission of ${formatCurrency(disponivel)} released!`;
     }
-    
-    // 2. Verificar Application Fee - usar apenas o flag booleano
-    if (!student.is_application_fee_paid) {
-      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
-    }
-    
-    // 3. Verificar Scholarship Fee - usar apenas o flag booleano
-    if (!student.is_scholarship_fee_paid) {
-      missingFees.push({ name: 'Placement', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
-    }
-    
-    // 4. Verificar I20 Control Fee - usar apenas o flag booleano
-    if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
-    }
-    
-    // Debug: Log do resultado final
-    
-    return missingFees;
+
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1">
+        {steps.filter(step => !step.skip).map((step, index) => (
+            <span 
+              key={index}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-all duration-200 ${
+                step.active 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-slate-50 text-slate-400 border-slate-200'
+              }`}
+              title={`${step.tooltip}: ${step.active ? 'Completed' : 'Pending'}`}
+            >
+              {step.label}
+            </span>
+          ))}
+        </div>
+        <span className="text-xs text-slate-600 font-medium mt-1.5 block whitespace-normal">
+          {message}
+        </span>
+      </div>
+    );
   };
 
-  if (filteredSellers.length === 0) {
+  // Helper para calcular comissões do aluno (pendente e disponível)
+  const getStudentCommissions = (student: any) => {
+    const studentId = student.profile_id || student.id || student.user_id;
+    // Comissões reais gravadas no banco (Disponível)
+    const studentComms = commissions.filter(c => c.student_id === studentId);
+    const disponivel = studentComms.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+    // Calcular potencial pendente
+    let pendente = 0;
+    const dependents = student.dependents || 0;
+    const isSimplified = student.system_type === 'simplified';
+    const rules = commissionRules || {};
+
+    const calculateRuleComm = (ruleKey: string, defaultFeeAmount: number) => {
+      const rule = rules[ruleKey];
+      if (!rule || rule.enabled === false) return 0;
+      if (rule.type === 'fixed') {
+        return Number(rule.value) || 0;
+      } else if (rule.type === 'percentage') {
+        const pct = (Number(rule.value) || 0) / 100;
+        return defaultFeeAmount * pct;
+      }
+      return 0;
+    };
+
+    const baseSelection = isSimplified ? 350 : 400;
+    const selectionFeeAmount = isSimplified ? baseSelection : baseSelection + dependents * 150;
+    const scholarshipFeeAmount = isSimplified ? 550 : 900;
+    const i20FeeAmount = 900;
+    const applicationFeeAmount = 100;
+
+    // Condições idênticas ao stepper
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isI20Applicable =
+      student.student_process_type === 'initial' ||
+      student.student_process_type === 'change_of_status' ||
+      isTransferInactiveVisa;
+    const isPlacementApplicable = !!student.placement_fee_flow;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+
+    const placementOrScholarshipPaid = isPlacementApplicable
+      ? !!student.is_placement_fee_paid
+      : !!student.is_scholarship_fee_paid;
+
+    const i20Paid = !!student.has_paid_i20_control_fee || !!student.has_paid_ds160_package || !!student.has_paid_i539_cos_package;
+
+    if (!student.has_paid_selection_process_fee) {
+      pendente += calculateRuleComm('selection_process', selectionFeeAmount);
+    }
+    if (!student.is_application_fee_paid) {
+      pendente += calculateRuleComm('application', applicationFeeAmount);
+    }
+    if (!placementOrScholarshipPaid) {
+      if (isPlacementApplicable) {
+        pendente += calculateRuleComm('placement', scholarshipFeeAmount);
+      } else {
+        pendente += calculateRuleComm('scholarship', scholarshipFeeAmount);
+      }
+    }
+    if (isReinstatementApplicable && !student.has_paid_reinstatement_package) {
+      pendente += calculateRuleComm('reinstatement', 500);
+    }
+    if (isI20Applicable && !i20Paid) {
+      pendente += calculateRuleComm('i20_control', i20FeeAmount);
+    }
+
+    return { disponivel, pendente };
+  };
+
+  if (filteredStudents.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
         <User className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-slate-900 mb-2">No sellers found</h3>
-        <p className="text-slate-600">
+        <h3 className="text-lg font-medium text-slate-900 mb-2">No students found</h3>
+        <p className="text-slate-500">
           Try adjusting the search filters.
         </p>
       </div>
     );
   }
 
-
-  
   return (
-    <div className="space-y-4">
-      {filteredSellers.map((seller) => {
-        const sellerStudents = filteredStudents.filter((student: any) => 
-          student.seller_referral_code === seller.referral_code
-        );
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-slate-200">
+        <thead className="bg-slate-50">
+          <tr>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Client
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Seller
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Pending Amount
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Available Amount
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Progress
+            </th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-slate-200">
+          {filteredStudents.map((student) => {
+            const { disponivel, pendente } = getStudentCommissions(student);
+            
+            // Buscar nome do vendedor se disponível, senão fallback do referral code
+            const sellerName = student.seller_name || 
+              filteredSellers.find(s => s.referral_code === student.seller_referral_code)?.name || 
+              student.seller_referral_code || 
+              'Unassigned';
 
-        return (
-          <div key={seller.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            {/* Header do vendedor */}
-            <div 
-              className="p-6 cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => onToggleSellerExpansion(seller.id)}
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <User className="h-6 w-6 text-blue-600" />
+            return (
+              <tr 
+                key={student.id} 
+                className="hover:bg-slate-50/70 transition-colors"
+              >
+                {/* Cliente */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                      student.has_paid_selection_process_fee ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {student.full_name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-semibold text-slate-900">{student.full_name || 'No name'}</div>
+                      <div className="text-xs text-slate-500">{student.email}</div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-slate-900 truncate">{seller.name}</h3>
-                    <p className="text-sm text-slate-500 truncate">{seller.email}</p>
-                    <p className="text-xs text-slate-400 font-mono truncate">{seller.referral_code}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between lg:justify-end space-x-6">
-                  <div className="text-center">
-                    <p className="text-sm text-slate-500">Students</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {sellerStudents.filter((s: any) => s.has_paid_selection_process_fee).length}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {sellerStudents.filter((s: any) => !s.has_paid_selection_process_fee).length} registered
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-slate-500">Revenue</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {(() => {
-                        // Somar receita ajustada apenas dos estudantes que pagaram (não registrados)
-                        const studentsForSeller = filteredStudents.filter((student: any) => 
-                          student.seller_referral_code === seller.referral_code && (student.has_paid_selection_process_fee || student.total_paid > 0)
-                        );
-                        const adjusted = studentsForSeller.reduce((sum: number, st: any) => {
-                          const val = Number(st.total_paid_adjusted ?? st.total_paid ?? 0);
-                          return sum + (isNaN(val) ? 0 : val);
-                        }, 0);
-                        return formatCurrency(adjusted);
-                      })()}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-slate-500">Registered</p>
-                    <p className="text-sm font-medium text-slate-900">{formatDate(seller.created_at)}</p>
-                  </div>
-                  {expandedSellers.has(seller.id) ? (
-                    <ChevronDown className="h-5 w-5 text-slate-400" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  )}
-                </div>
-              </div>
-            </div>
+                </td>
 
-            {/* Lista de estudantes (expandível) */}
-            <div 
-              className={`border-t border-slate-200 overflow-hidden transition-all duration-500 ease-in-out ${
-                expandedSellers.has(seller.id) 
-                  ? 'max-h-[5000px] opacity-100' 
-                  : 'max-h-0 opacity-0 border-t-0'
-              }`}
-            >
-              <div className={`transform transition-all duration-300 ease-out ${
-                expandedSellers.has(seller.id) ? 'translate-y-0' : '-translate-y-2'
-              }`}>
-                {sellerStudents.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Student
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Code Used
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Revenue
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Missing Fees
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Registered on
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            I-20 Deadline
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-200">
-                        {sellerStudents.map((student) => (
-                          <React.Fragment key={student.id}>
-                            <tr 
-                              className={`hover:shadow-sm cursor-pointer transition-all duration-200 group ${
-                                (student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0)
-                                  ? 'hover:bg-green-50' 
-                                  : 'hover:bg-orange-50 opacity-75'
-                              }`}
-                              onClick={() => {
-                                
-                                if (student.hasMultipleApplications) {
-                                  // Se tem múltiplas aplicações, expandir/contrair dropdown
-                                  onToggleStudentExpansion(student.id);
-                                } else {
-                                  // Se tem apenas uma aplicação, ir direto para os detalhes
-                                  onViewStudentDetails(student.id, student.profile_id);
-                                }
-                              }}
-                            >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                  student.has_paid_selection_process_fee 
-                                    ? 'bg-green-100' 
-                                    : 'bg-orange-100'
-                                }`}>
-                                  <span className={`text-sm font-medium ${
-                                    (student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0)
-                                      ? 'text-green-600' 
-                                      : 'text-orange-600'
-                                  }`}>
-                                    {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
-                                  </span>
-                                </div>
-                                <div className="ml-4 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
-                                    {!student.has_paid_selection_process_fee && (Number(student.total_paid) || 0) === 0 && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">
-                                        Registered Only
-                                      </span>
-                                    )}
-                                    {(student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0) && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        Student
-                                      </span>
-                                    )}
-                                    {(() => {
-                                      const studentUserId = student.user_id || student.id || student.student_id;
-                                      const hasBlackCoupon = studentUserId && blackCouponUsers.has(studentUserId);
-                                      
-                                      return hasBlackCoupon ? (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
-                                          <Sparkles className="h-3 w-3 mr-1" />
-                                          BLACK
-                                        </span>
-                                      ) : null;
-                                    })()}
-                                    {student.hasMultipleApplications && (
-                                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
-                                        {student.applicationCount} Applications
-                                        <svg 
-                                          className={`ml-1 h-3 w-3 transform transition-transform duration-200 ${expandedStudents.has(student.id) ? 'rotate-180' : ''}`}
-                                          fill="none" 
-                                          stroke="currentColor" 
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-sm text-slate-500">{student.email}</div>
-                                  {student.country && (
-                                    <div className="flex items-center text-xs text-slate-400 mt-1">
-                                      <MapPin className="h-3 w-3 mr-1" />
-                                      {student.country}
-                                    </div>
-                                  )}
-                                  {student.hasMultipleApplications && (
-                                    <div className="flex items-center text-xs text-slate-400 mt-1">
-                                      <Building className="h-3 w-3 mr-1" />
-                                      Multiple Universities
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm font-mono text-slate-900 bg-slate-100 px-2 py-1 rounded">
-                                {student.referral_code_used}
-                              </span>
-                            </td>
-                             <td className="px-6 py-4 whitespace-nowrap">
-                               <div className="flex items-center">
-                                 {(student.has_paid_selection_process_fee || (Number(student.total_paid) || 0) > 0) ? (
-                                   <>
-                                     <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                                     <span className="text-sm font-medium text-slate-900">
-                                       {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
-                                     </span>
-                                   </>
-                                 ) : (
-                                   <span className="text-sm text-slate-400 italic">Not paid yet</span>
-                                 )}
-                               </div>
-                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1">
-                                {(() => {
-                                  const missingFees = getMissingFees(student);
-                                  if (missingFees.length === 0) {
-                                    return (
-                                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        All Paid
-                                      </span>
-                                    );
-                                  }
-                                  return missingFees.map((fee, index) => (
-                                    <span
-                                      key={index}
-                                      className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                                        fee.color === 'red' ? 'text-red-700 bg-red-100' :
-                                        fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
-                                        fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
-                                        'text-gray-700 bg-gray-100'
-                                      }`}
-                                    >
-                                      {fee.name}
-                                    </span>
-                                  ));
-                                })()}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(student.status)}`}>
-                                {student.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                              {formatDate(student.created_at)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  {(() => {
-                                    // Calcular data limite do I-20 (10 dias após scholarship fee pago)
-                                    if (student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee) {
-                                      // Para simplificar, vamos mostrar apenas se há deadline ativo
-                                      // A data exata será calculada no componente de detalhes
-                                      return (
-                                        <div className="flex items-center space-x-2">
-                                          <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                          <span className="text-orange-700 font-medium text-xs">Active Deadline</span>
-                                        </div>
-                                      );
-                                    } else if (student.has_paid_i20_control_fee) {
-                                      return (
-                                        <div className="flex items-center space-x-2">
-                                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                          <span className="text-green-700 font-medium text-xs">Paid</span>
-                                        </div>
-                                      );
-                                    } else {
-                                      return (
-                                        <span className="text-slate-400 text-xs">Not applicable</span>
-                                      );
-                                    }
-                                  })()}
-                                </div>
-                                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
-                              </div>
-                            </td>
-                            </tr>
-                            
-                            {/* Dropdown inline para múltiplas aplicações */}
-                            {student.hasMultipleApplications && expandedStudents.has(student.id) && (
-                              <tr>
-                                <td colSpan={7} className="px-6 py-4 bg-slate-50">
-                                  <div className="space-y-3">
-                                    <h4 className="text-sm font-medium text-slate-700">All Applications:</h4>
-                                    {student.allApplications?.map((app: any, appIndex: number) => (
-                                      <div 
-                                        key={`${app.application_id}-${appIndex}`}
-                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
-                                      >
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium text-sm text-slate-900">
-                                              {app.scholarship_title || 'No scholarship selected'}
-                                            </span>
-                                            {app.university_name && (
-                                              <span className="text-xs text-slate-600">
-                                                @ {app.university_name}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="flex gap-2 mt-1">
-                                            {app.is_application_fee_paid && (
-                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                                                Application Fee Paid
-                                              </span>
-                                            )}
-                                            {app.is_scholarship_fee_paid && (
-                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
-                                                Placement Fee Paid
-                                              </span>
-                                            )}
-                                            {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (
-                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
-                                                Pending Payment
-                                              </span>
-                                            )}
-                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                                              app.application_status === 'approved' ? 'bg-green-100 text-green-800' :
-                                              app.application_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                              'bg-gray-100 text-gray-800'
-                                            }`}>
-                                              {app.application_status || 'pending'}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            onViewStudentDetails(student.id, student.profile_id);
-                                          }}
-                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1 rounded hover:bg-blue-50 transition-colors"
-                                        >
-                                          View Details
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Vendedor */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 text-slate-400 mr-2" />
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">{sellerName}</div>
+                      {student.seller_referral_code && (
+                        <div className="text-xs text-slate-400 font-mono">{student.seller_referral_code}</div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <User className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-600">No students found for this seller.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+                </td>
+
+                {/* Valor Pendente */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-semibold text-slate-700">
+                    {formatCurrency(pendente)}
+                  </span>
+                </td>
+
+                {/* Valor Disponível */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`text-sm font-bold ${disponivel > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    {formatCurrency(disponivel)}
+                  </span>
+                </td>
+
+                {/* Progresso Stepper */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderProgressStepper(student, disponivel, pendente)}
+                </td>
+
+                {/* Actions */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => onViewStudentDetails(student.student_id || student.user_id, student.profile_id || student.id)}
+                    className="px-3 py-1.5 border border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-lg transition-all duration-200"
+                  >
+                    Details
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 };
