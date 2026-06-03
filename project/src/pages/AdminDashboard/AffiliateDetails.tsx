@@ -137,17 +137,18 @@ const AffiliateDetails: React.FC = () => {
         .from('affiliate_codes')
         .select('id, user_id, code, is_active, created_at')
         .eq('id', affiliateId)
-        .single();
+        .maybeSingle();
 
-      if (codeErr || !codeData) throw codeErr || new Error('Affiliate not found');
+      if (codeErr) throw codeErr;
+      if (!codeData) throw new Error('Affiliate not found');
 
       const userId = codeData.user_id;
 
       // 2. All remaining data in parallel
       const [profileRes, usersRes, coinsRes, referralsRes, requestsRes] = await Promise.all([
-        supabase.from('user_profiles').select('full_name, email').eq('user_id', userId).single(),
+        supabase.from('user_profiles').select('full_name, email').eq('user_id', userId).maybeSingle(),
         supabase.rpc('get_admin_users_data'),
-        supabase.from('matriculacoin_credits').select('balance, total_earned').eq('user_id', userId).single(),
+        supabase.from('matriculacoin_credits').select('balance, total_earned').eq('user_id', userId).maybeSingle(),
         supabase
           .from('affiliate_referrals')
           .select('id, referred_id, selection_process_paid_at, application_fee_paid_at, scholarship_fee_paid_at, i20_paid_at, credits_earned, created_at')

@@ -5,7 +5,6 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import SellerRegistrationsManagerSimple from '../../components/SellerRegistrationsManagerSimple';
 import { toast } from 'react-hot-toast';
-import DirectSalesLink from './DirectSalesLink';
 
 interface Seller {
   id: string;
@@ -569,9 +568,6 @@ const SellerManagement: React.FC = () => {
           Add Seller
         </button>
       </div>
-
-      {/* Direct Sales Link */}
-      <DirectSalesLink />
 
       {/* Invite Seller Panel (expandable) */}
       {showLinkGenerator && (

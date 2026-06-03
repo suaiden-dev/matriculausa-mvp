@@ -567,24 +567,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           <div className="h-64 bg-slate-100 rounded-lg"></div>
         </div>
 
-        {/* Recent Activity Skeleton */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="h-6 w-48 bg-slate-200 rounded mb-4"></div>
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-slate-200 rounded-full"></div>
-                  <div>
-                    <div className="h-4 w-32 bg-slate-200 rounded mb-2"></div>
-                    <div className="h-3 w-48 bg-slate-200 rounded"></div>
-                  </div>
-                </div>
-                <div className="h-6 w-20 bg-slate-200 rounded"></div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     );
   }
@@ -872,57 +854,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         </div>
       </div>
 
-      {/* Recent Activity Timeline */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl font-semibold text-slate-900">Recent Activity</h3>
-            <p className="text-sm text-slate-600">Latest commission and referral events</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-slate-600" />
-            <span className="text-sm text-slate-600">Live</span>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {financialAnalytics.recentActivity.length > 0 ? (
-            financialAnalytics.recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                <div className={`w-3 h-3 rounded-full ${activity.type === 'commission' ? 'bg-green-500' :
-                    activity.type === 'pending' ? 'bg-yellow-500' :
-                      activity.type === 'earned' ? 'bg-blue-500' :
-                        'bg-slate-500'
-                  }`}></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">{activity.description}</p>
-                  <p className="text-xs text-slate-600">
-                    {new Date(activity.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-bold ${activity.type === 'commission' || activity.type === 'earned' ? 'text-green-600' :
-                      activity.type === 'pending' ? 'text-yellow-600' :
-                        'text-slate-600'
-                    }`}>
-                    {activity.type === 'commission' || activity.type === 'earned' ? '+' : ''}{formatCurrency(activity.amount)}
-                  </p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-500">No recent activity to display</p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
