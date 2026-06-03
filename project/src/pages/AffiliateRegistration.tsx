@@ -1,28 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Share2, Coins, Eye, EyeOff, CheckCircle, AlertCircle, RefreshCw, ArrowRight, DollarSign, ArrowDownToLine, MessageCircle, Copy, Link2, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Mail, Share2, Coins, CheckCircle, RefreshCw, ArrowRight, DollarSign, ArrowDownToLine, MessageCircle, Copy, Link2, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
-
-const getPasswordStrength = (password: string) => {
-  let strength = 0;
-  if (password.length >= 8) strength++;
-  if (/[A-Z]/.test(password)) strength++;
-  if (/[a-z]/.test(password)) strength++;
-  if (/\d/.test(password)) strength++;
-  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
-
-  if (strength <= 2) return { level: 'weak', color: 'bg-red-500', text: 'Fraca' };
-  if (strength <= 3) return { level: 'medium', color: 'bg-yellow-500', text: 'Média' };
-  if (strength <= 4) return { level: 'good', color: 'bg-blue-500', text: 'Boa' };
-  return { level: 'strong', color: 'bg-green-500', text: 'Forte' };
-};
 
 // Tela exibida após signup quando confirmação de email é obrigatória
-const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
+export const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
@@ -53,21 +38,21 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
 
           {/* Título */}
           <h1 className="text-2xl font-black text-slate-900 mb-2">
-            Confirme seu email
+            {t('affiliateRegistration.emailConfirmation.title')}
           </h1>
           <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-            Enviamos um link de confirmação para{' '}
+            {t('affiliateRegistration.emailConfirmation.sentTo')}{' '}
             <strong className="text-slate-800 break-all">{email}</strong>.
             <br className="hidden sm:block" />
-            Clique no link para ativar sua conta e começar a indicar.
+            {t('affiliateRegistration.emailConfirmation.instruction')}
           </p>
 
           {/* Passos */}
           <div className="bg-slate-50 rounded-2xl p-5 text-left space-y-3 mb-6">
             {[
-              { step: '1', text: 'Abra o email que enviamos para você' },
-              { step: '2', text: 'Clique no botão "Confirmar email"' },
-              { step: '3', text: 'Você será direcionado para o seu dashboard' },
+              { step: '1', text: t('affiliateRegistration.emailConfirmation.steps.step1') },
+              { step: '2', text: t('affiliateRegistration.emailConfirmation.steps.step2') },
+              { step: '3', text: t('affiliateRegistration.emailConfirmation.steps.step3') },
             ].map(({ step, text }) => (
               <div key={step} className="flex items-center gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#05294E] text-white text-xs font-black flex items-center justify-center flex-shrink-0">
@@ -82,7 +67,7 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
           {resent ? (
             <div className="flex items-center justify-center gap-2 text-green-600 text-sm mb-4">
               <CheckCircle className="w-4 h-4" />
-              Email reenviado com sucesso!
+              {t('affiliateRegistration.emailConfirmation.resentSuccess')}
             </div>
           ) : (
             <button
@@ -95,7 +80,7 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {resending ? 'Reenviando...' : 'Reenviar email de confirmação'}
+              {resending ? t('affiliateRegistration.emailConfirmation.resending') : t('affiliateRegistration.emailConfirmation.resendButton')}
             </button>
           )}
 
@@ -104,12 +89,12 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
             to="/login"
             className="flex items-center justify-center gap-2 w-full py-3 bg-[#05294E] text-white font-bold rounded-xl hover:bg-[#041f38] transition-colors text-sm"
           >
-            Ir para o login
+            {t('affiliateRegistration.emailConfirmation.goToLogin')}
             <ArrowRight className="w-4 h-4" />
           </Link>
 
           <p className="text-slate-400 text-xs mt-4">
-            Não recebeu? Verifique a pasta de spam.
+            {t('affiliateRegistration.emailConfirmation.notReceived')}
           </p>
         </div>
       </div>
@@ -118,6 +103,8 @@ const EmailConfirmationScreen: React.FC<{ email: string }> = ({ email }) => {
 };
 
 const AffiliateRegistration: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
+
   return (
     <div className="relative bg-white min-h-screen font-sans overflow-hidden">
 
@@ -132,19 +119,20 @@ const AffiliateRegistration: React.FC = () => {
       <section className="relative pt-20 pb-24 lg:pt-24 lg:pb-28 overflow-hidden">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] leading-tight tracking-tight">
-            Transforme suas indicações
+            {t('affiliateRegistration.hero.title')}
             <span className="block text-[#05294E] mt-1">
-              em descontos reais
+              {t('affiliateRegistration.hero.titleHighlight')}
             </span>
           </h1>
-          <p className="text-lg lg:text-xl text-[#05294E]/70 mt-4 max-w-2xl mx-auto leading-relaxed font-medium">
-            Compartilhe seu código, indique quem quer estudar nos EUA e acumule <strong className="text-[#05294E]">MatriculaCoins</strong> a cada indicação confirmada.
-          </p>
+          <p
+            className="text-lg lg:text-xl text-[#05294E]/70 mt-4 max-w-2xl mx-auto leading-relaxed font-medium"
+            dangerouslySetInnerHTML={{ __html: t('affiliateRegistration.hero.description') }}
+          />
           <Link
-            to="/login"
+            to="/register?tab=affiliate"
             className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border border-[#05294E]/20 text-[#05294E] text-sm font-semibold hover:bg-[#05294E]/5 transition-colors"
           >
-            Seja um afiliado
+            {t('affiliateRegistration.hero.cta')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -165,9 +153,9 @@ const AffiliateRegistration: React.FC = () => {
             {/* Cards — diferenciais */}
             <div className="relative z-10 order-4 flex flex-col items-start gap-3 sm:gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:p-0 lg:absolute lg:left-8 lg:top-1/2 lg:-translate-y-1/2 lg:w-auto">
               {[
-                'Compartilhe',
-                'Receba Matrícula Coins',
-                'Resgate suas recompensas',
+                t('affiliateRegistration.showcase.cards.share'),
+                t('affiliateRegistration.showcase.cards.earn'),
+                t('affiliateRegistration.showcase.cards.redeem'),
               ].map((title, i) => (
                 <motion.div
                   key={title}
@@ -196,7 +184,7 @@ const AffiliateRegistration: React.FC = () => {
                 className="bg-white rounded-2xl px-6 py-5 sm:px-7 sm:py-6 shadow-lg"
               >
                 <p className="text-4xl sm:text-5xl font-black text-[#05294E] leading-none">100</p>
-                <p className="text-slate-500 text-sm sm:text-base mt-2 leading-snug">coins por indicação confirmada</p>
+                <p className="text-slate-500 text-sm sm:text-base mt-2 leading-snug">{t('affiliateRegistration.showcase.stats.coinsPerReferral')}</p>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
@@ -216,7 +204,7 @@ const AffiliateRegistration: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-slate-700 text-sm sm:text-base leading-snug">
-                  <strong className="text-[#05294E]">300+</strong> afiliados ativos na plataforma
+                  <strong className="text-[#05294E]">300+</strong> {t('affiliateRegistration.showcase.stats.activeAffiliates')}
                 </p>
               </motion.div>
             </div>
@@ -242,15 +230,15 @@ const AffiliateRegistration: React.FC = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] tracking-tight">
-              Como funciona
+              {t('affiliateRegistration.howItWorks.title')}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
             {[
               {
-                title: 'Receba seu código único',
-                desc: 'Após se tornar afiliado, você terá acesso ao seu código exclusivo de indicação.',
+                title: t('affiliateRegistration.howItWorks.steps.step1.title'),
+                desc: t('affiliateRegistration.howItWorks.steps.step1.desc'),
                 mockup: (
                   <div className="w-full space-y-3 text-left">
                     <div className="bg-slate-50 border-2 border-dashed border-[#05294E]/20 rounded-xl px-3 py-2.5 text-center">
@@ -258,25 +246,25 @@ const AffiliateRegistration: React.FC = () => {
                     </div>
                     <button disabled className="w-full bg-[#05294E] text-white py-2 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default">
                       <CheckCircle className="w-3 h-3" />
-                      Código copiado
+                      {t('affiliateRegistration.howItWorks.steps.step1.copied')}
                     </button>
                   </div>
                 ),
               },
               {
-                title: 'Compartilhe com quem quiser estudar nos EUA',
-                desc: 'Envie seu código para pessoas interessadas em iniciar uma jornada acadêmica internacional.',
+                title: t('affiliateRegistration.howItWorks.steps.step2.title'),
+                desc: t('affiliateRegistration.howItWorks.steps.step2.desc'),
                 mockup: (
                   <div className="w-full space-y-3 text-left">
                     {/* Campo do link com botão copiar */}
                     <div>
-                      <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Seu link de indicação</p>
+                      <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{t('affiliateRegistration.howItWorks.steps.step2.referralLink')}</p>
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl pl-2.5 pr-1.5 py-1.5">
                         <Link2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <span className="text-[9px] font-bold text-slate-700 truncate flex-1">matriculausa.com/r/MUSA-7K3D</span>
                         <button disabled className="flex items-center gap-1 bg-[#05294E] text-white px-2 py-1 rounded-lg text-[7px] font-black uppercase tracking-wider cursor-default flex-shrink-0">
                           <Copy className="w-2.5 h-2.5" />
-                          Copiar
+                          {t('affiliateRegistration.howItWorks.steps.step2.copy')}
                         </button>
                       </div>
                     </div>
@@ -285,8 +273,8 @@ const AffiliateRegistration: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { label: 'WhatsApp', icon: MessageCircle, color: 'bg-green-50 text-green-600' },
-                        { label: 'E-mail', icon: Mail, color: 'bg-blue-50 text-blue-600' },
-                        { label: 'Mais', icon: Share2, color: 'bg-slate-50 text-slate-600' },
+                        { label: t('affiliateRegistration.howItWorks.steps.step2.email'), icon: Mail, color: 'bg-blue-50 text-blue-600' },
+                        { label: t('affiliateRegistration.howItWorks.steps.step2.more'), icon: Share2, color: 'bg-slate-50 text-slate-600' },
                       ].map(({ label, icon: ChannelIcon, color }) => (
                         <div key={label} className={`rounded-xl ${color} flex flex-col items-center justify-center py-2.5 gap-1`}>
                           <ChannelIcon className="w-4 h-4" />
@@ -299,28 +287,28 @@ const AffiliateRegistration: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-slate-50 rounded-xl px-2.5 py-2 text-center">
                         <p className="text-sm font-black text-[#05294E] leading-none">12</p>
-                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">Convites enviados</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('affiliateRegistration.howItWorks.steps.step2.invitesSent')}</p>
                       </div>
                       <div className="bg-emerald-50/60 rounded-xl px-2.5 py-2 text-center">
                         <p className="text-sm font-black text-emerald-600 leading-none">8</p>
-                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">Cliques no link</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('affiliateRegistration.howItWorks.steps.step2.linkClicks')}</p>
                       </div>
                     </div>
                   </div>
                 ),
               },
               {
-                title: 'Ganhe coins por indicações confirmadas',
-                desc: 'Quando a indicação for validada, os coins entram automaticamente na sua conta.',
+                title: t('affiliateRegistration.howItWorks.steps.step3.title'),
+                desc: t('affiliateRegistration.howItWorks.steps.step3.desc'),
                 mockup: (
                   <div className="w-full space-y-2.5 text-left">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Atividade recente</h4>
-                      <span className="bg-green-50 text-green-600 border border-green-100 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider">Confirmada</span>
+                      <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{t('affiliateRegistration.howItWorks.steps.step3.recentActivity')}</h4>
+                      <span className="bg-green-50 text-green-600 border border-green-100 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider">{t('affiliateRegistration.howItWorks.steps.step3.confirmed')}</span>
                     </div>
                     {[
-                      { name: 'Ana S.', status: 'Confirmada' },
-                      { name: 'Lucas M.', status: 'Confirmada' },
+                      { name: 'Ana S.', status: t('affiliateRegistration.howItWorks.steps.step3.confirmed') },
+                      { name: 'Lucas M.', status: t('affiliateRegistration.howItWorks.steps.step3.confirmed') },
                     ].map(({ name, status }) => (
                       <div key={name} className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/40 border border-emerald-100">
                         <div className="flex items-center gap-2">
@@ -341,14 +329,14 @@ const AffiliateRegistration: React.FC = () => {
                 ),
               },
               {
-                title: 'Resgate suas recompensas',
-                desc: 'Acumule coins e troque por benefícios dentro da plataforma Matrícula USA.',
+                title: t('affiliateRegistration.howItWorks.steps.step4.title'),
+                desc: t('affiliateRegistration.howItWorks.steps.step4.desc'),
                 mockup: (
                   <div className="w-full rounded-2xl overflow-hidden text-left">
                     {/* Header — saldo disponível em dólares (verde) */}
                     <div className="bg-gradient-to-br from-emerald-500 to-green-600 px-4 py-3.5 text-white rounded-2xl shadow-md shadow-green-500/20">
                       <div className="flex items-center justify-between">
-                        <p className="text-[7px] font-bold uppercase tracking-widest text-white/80">Saldo disponível</p>
+                        <p className="text-[7px] font-bold uppercase tracking-widest text-white/80">{t('affiliateRegistration.howItWorks.steps.step4.availableBalance')}</p>
                         <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider">USD</span>
                       </div>
                       <div className="flex items-end gap-1 mt-1">
@@ -357,7 +345,7 @@ const AffiliateRegistration: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1 mt-1.5 text-white/80">
                         <Coins className="w-3 h-3 text-yellow-300" />
-                        <span className="text-[8px] font-bold">1.200 coins · 1 coin = US$ 1</span>
+                        <span className="text-[8px] font-bold">1.200 {t('affiliateRegistration.howItWorks.steps.step4.coins')} · {t('affiliateRegistration.howItWorks.steps.step4.coinValue')}</span>
                       </div>
                     </div>
 
@@ -368,13 +356,13 @@ const AffiliateRegistration: React.FC = () => {
                           <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
                             <ArrowDownToLine className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-[9px] font-black text-slate-800">Sacar para conta</span>
+                          <span className="text-[9px] font-black text-slate-800">{t('affiliateRegistration.howItWorks.steps.step4.withdrawToAccount')}</span>
                         </div>
                         <span className="text-[9px] font-black text-emerald-600">$1,200.00</span>
                       </div>
                       <button disabled className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default shadow-md shadow-green-500/20">
                         <ArrowDownToLine className="w-3 h-3" />
-                        Sacar saldo
+                        {t('affiliateRegistration.howItWorks.steps.step4.withdraw')}
                       </button>
                     </div>
                   </div>
@@ -423,10 +411,10 @@ const AffiliateRegistration: React.FC = () => {
       <section className="relative py-16 lg:py-24">
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Link
-            to="/login"
+            to="/register?tab=affiliate"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#05294E] text-white font-black tracking-wide hover:bg-[#041f38] transition-colors shadow-lg shadow-[#05294E]/20"
           >
-            Quero ser afiliado
+            {t('affiliateRegistration.finalCta.button')}
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -435,38 +423,13 @@ const AffiliateRegistration: React.FC = () => {
   );
 };
 
-const AFFILIATE_FAQS = [
-  {
-    question: 'Quanto custa para se tornar um afiliado?',
-    answer: 'Nada. O programa de afiliados da Matrícula USA é 100% gratuito. Você cria sua conta, recebe seu código e já pode começar a indicar.',
-  },
-  {
-    question: 'Como recebo meu código de indicação?',
-    answer: 'Assim que você cria sua conta de afiliado, um código exclusivo é gerado automaticamente e fica disponível no seu painel.',
-  },
-  {
-    question: 'Quantos coins ganho por indicação?',
-    answer: 'Você acumula coins a cada indicação confirmada, sem limite de indicações. Quanto mais pessoas você indicar, mais coins ganha.',
-  },
-  {
-    question: 'Quando uma indicação é considerada confirmada?',
-    answer: 'A indicação é validada quando a pessoa que usou seu código conclui a etapa exigida na plataforma. Após a validação, os coins entram automaticamente na sua conta.',
-  },
-  {
-    question: 'Quanto vale cada coin?',
-    answer: 'Cada coin equivale a US$ 1. Você acompanha o saldo disponível diretamente no seu painel de afiliado.',
-  },
-  {
-    question: 'Como resgato minhas recompensas?',
-    answer: 'No seu painel, você pode trocar os coins acumulados por benefícios dentro da plataforma Matrícula USA ou sacar o saldo disponível.',
-  },
-];
-
 const AffiliateFAQ: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const renderItem = (num: number) => {
-    const faq = AFFILIATE_FAQS[num];
+  const faqs = (t('affiliateRegistration.faq.items', { returnObjects: true }) as any[]) || [];
+
+  const renderItem = (faq: any, num: number) => {
     if (!faq) return null;
     return (
       <div
@@ -520,11 +483,11 @@ const AffiliateFAQ: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl md:text-4xl font-black mb-8 text-center text-[#05294E]">
-            Perguntas frequentes
+            {t('affiliateRegistration.faq.title')}
           </h2>
 
           <div className="max-w-3xl mx-auto space-y-1">
-            {[0, 1, 2, 3, 4, 5].map(renderItem)}
+            {faqs.map((faq, num) => renderItem(faq, num))}
           </div>
         </motion.div>
       </div>

@@ -92,7 +92,7 @@ const About: React.FC = () => {
             {/* Card 1: Vermelho */}
             <div className="border-t-4 border-t-[#D0151C] p-8 bg-white flex flex-col justify-between border-r border-b lg:border-b-0 border-slate-200">
               <div>
-                <p className="text-4xl font-extrabold text-[#D0151C] mb-2">+500</p>
+                <p className="text-4xl font-extrabold text-[#D0151C] mb-2">+5000</p>
                 <h4 className="text-lg font-bold text-slate-800 mb-3">{t('stats.students.title', 'Estudantes Atendidos')}</h4>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   {t('stats.students.desc', 'Jovens que já deram o primeiro passo para transformar o sonho americano em uma jornada real.')}
@@ -114,7 +114,7 @@ const About: React.FC = () => {
             {/* Card 3: Azul */}
             <div className="border-t-4 border-t-[#05294E] p-8 bg-slate-50/50 flex flex-col justify-between border-r border-b sm:border-b-0 border-slate-200">
               <div>
-                <p className="text-4xl font-extrabold text-[#05294E] mb-2">150+</p>
+                <p className="text-4xl font-extrabold text-[#05294E] mb-2">500+</p>
                 <h4 className="text-lg font-bold text-slate-800 mb-3">{t('stats.partners.title', 'Universidades Parceiras')}</h4>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   {t('stats.partners.desc', 'Mais opções para encontrar a universidade certa para o seu perfil, sua área e seu futuro.')}
@@ -126,7 +126,7 @@ const About: React.FC = () => {
             <div className="border-t-4 border-t-[#05294E] p-8 bg-slate-50/50 flex flex-col justify-between border-slate-200">
               <div>
                 <p className="text-4xl font-extrabold text-[#05294E] mb-2">98%</p>
-                <h4 className="text-lg font-bold text-slate-800 mb-3">{t('stats.visas.title', 'Taxa de Aprovação')}</h4>
+                <h4 className="text-lg font-bold text-slate-800 mb-3">{t('stats.visas.title', 'Taxa de Satisfação')}</h4>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   {t('stats.visas.desc', 'Um resultado que reflete processos bem direcionados, escolhas estratégicas e candidaturas mais fortes.')}
                 </p>

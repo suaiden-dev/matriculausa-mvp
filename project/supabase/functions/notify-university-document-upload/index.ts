@@ -67,6 +67,32 @@ Deno.serve(async (req) => {
     let contextTitle = '';
     let scholarshipId: string | null = null;
 
+    // Helper para buscar ID da aplicação por user_id e scholarship_id opcional
+    const fetchApplicationId = async (uId: string, sId?: string | null): Promise<string | null> => {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', uId)
+        .single();
+      if (!profile) return null;
+
+      let query = supabase
+        .from('scholarship_applications')
+        .select('id')
+        .eq('student_id', profile.id);
+      
+      if (sId) {
+        query = query.eq('scholarship_id', sId);
+      }
+      
+      const { data: app } = await query
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      return app?.id ?? null;
+    };
+
     // Helper para pegar aplicação mais recente do aluno
     const fetchLatestApplicationForUser = async (): Promise<string | null> => {
       // user_profiles.id
@@ -92,7 +118,8 @@ Deno.serve(async (req) => {
       universityId: string,
       title: string,
       message: string,
-      metadata: Record<string, unknown>
+      metadata: Record<string, unknown>,
+      link?: string
     ) => {
       try {
         const key = `${universityId}:${message.replace(/\s+/g, ' ').trim()}`.slice(0, 512);
@@ -101,7 +128,7 @@ Deno.serve(async (req) => {
           title,
           message,
           type: 'document_upload',
-          link: '/school/dashboard/selection-process',
+          link: link || '/school/dashboard/application-tracking',
           metadata,
           idempotency_key: key,
         });
@@ -117,6 +144,7 @@ Deno.serve(async (req) => {
       }
     };
 
+    let appId: string | null = null;
     if (first === 'manual_review') {
       contextTitle = 'Revisão manual de documentos';
       // Se vierem scholarship_ids no payload, processar múltiplas universidades
@@ -134,6 +162,22 @@ Deno.serve(async (req) => {
           if (s.title) titlesByUniversity[s.university_id].push(s.title);
         });
 
+        // Buscar o profile do aluno e suas candidaturas para identificar as applications
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', user_id)
+          .single();
+        
+        let apps: any[] = [];
+        if (profile) {
+          const { data: appsList } = await supabase
+            .from('scholarship_applications')
+            .select('id, scholarship_id, scholarships(university_id)')
+            .eq('student_id', profile.id);
+          apps = appsList || [];
+        }
+
         if (uniqueUniversityIds.length > 0) {
           const { data: universidades } = await supabase
             .from('universities')
@@ -143,8 +187,17 @@ Deno.serve(async (req) => {
           const payloads = (universidades || []).map((u: any) => {
             const emailUniversidade = (u.contact || {}).admissionsEmail || (u.contact || {}).email || '';
             const titles = titlesByUniversity[u.id] || [];
-            const notifMessage = `Student ${aluno.full_name} uploaded documents to enroll for${titles.length?` ${titles.join(', ')}`:' the selected scholarship'}. Go to Students to review.`;
-            const n8nMessage = `O aluno ${aluno.full_name} enviou documentos para matrícula na${titles.length>1?'s bolsas':' bolsa'} ${titles.length?titles.join(', '):'selecionada'}. Acesse a página Students para revisar.`;
+            
+            // Buscar se existe alguma candidatura vinculada a esta universidade ou às bolsas
+            const appForUniv = apps.find((a: any) => a.scholarships?.university_id === u.id || scholarship_ids.includes(a.scholarship_id));
+            const appId = appForUniv?.id;
+
+            const correctNotifLink = appId ? `/school/dashboard/student/${appId}` : '/school/dashboard/application-tracking';
+            const destText = appId ? "the student's details page" : "application tracking";
+            const destTextPt = appId ? "a página de detalhes do aluno" : "o acompanhamento de candidaturas";
+
+            const notifMessage = `Student ${aluno.full_name} uploaded documents to enroll for${titles.length?` ${titles.join(', ')}`:' the selected scholarship'}. Go to ${destText} to review.`;
+            const n8nMessage = `O aluno ${aluno.full_name} enviou documentos para matrícula na${titles.length>1?'s bolsas':' bolsa'} ${titles.length?titles.join(', '):'selecionada'}. Acesse ${destTextPt} para revisar.`;
             return {
               tipo_notf: 'Novo documento enviado pelo aluno',
               email_aluno: aluno.email,
@@ -153,6 +206,7 @@ Deno.serve(async (req) => {
               o_que_enviar: n8nMessage,
               notif_message: notifMessage,
               university_id: u.id,
+              redirect_url: correctNotifLink,
             };
           });
 
@@ -165,7 +219,8 @@ Deno.serve(async (req) => {
                   p.university_id,
                   'New documents uploaded',
                   p.notif_message,
-                  { user_id, tipos_documentos, scholarship_ids }
+                  { user_id, tipos_documentos, scholarship_ids },
+                  p.redirect_url
                 );
               }
               const n8nPayload = {
@@ -175,6 +230,7 @@ Deno.serve(async (req) => {
                 email_universidade: p.email_universidade,
                 o_que_enviar: p.o_que_enviar,
                 tipos_documentos: tipos_documentos,
+                redirect_url: p.redirect_url,
               };
               const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.36.3' }, body: JSON.stringify(n8nPayload)
@@ -184,7 +240,7 @@ Deno.serve(async (req) => {
             }
             return new Response(JSON.stringify({ multi: true, results }), { status: 200, headers: corsHeaders(origin) });
           } catch (e) {
-            return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: e?.message }), { status: 500, headers: corsHeaders(origin) });
+            return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: (e as any)?.message }), { status: 500, headers: corsHeaders(origin) });
           }
         }
       }
@@ -197,6 +253,9 @@ Deno.serve(async (req) => {
           .eq('user_id', user_id)
           .single();
         scholarshipId = sel?.selected_scholarship_id ?? null;
+      }
+      if (scholarshipId) {
+        appId = await fetchApplicationId(user_id, scholarshipId);
       }
     } else {
       // Fluxo padrão: tipos_documentos[0] é o id do document_request
@@ -225,6 +284,7 @@ Deno.serve(async (req) => {
       }
       console.log('[Edge] Dados da aplicação:', app);
       scholarshipId = app.scholarship_id;
+      appId = app.id;
     }
 
     // 4. Buscar dados da bolsa
@@ -247,13 +307,14 @@ Deno.serve(async (req) => {
           const emailAluno = aluno.email;
           const contact = universidade.contact || {};
           const emailUniversidade = contact.admissionsEmail || contact.email || '';
-          const mensagem = `O aluno ${nomeAluno} iniciou revisão manual de documentos para ${nomeUniversidade}. Acesse o painel da universidade para revisar.`;
+          const mensagem = `O aluno ${nomeAluno} iniciou revisão manual de documentos para ${nomeUniversidade}. Acesse o acompanhamento de candidaturas para revisar.`;
           const payload = {
             tipo_notf: 'Novo documento enviado pelo aluno',
             email_aluno: emailAluno,
             nome_aluno: nomeAluno,
             email_universidade: emailUniversidade,
             o_que_enviar: mensagem,
+            redirect_url: '/school/dashboard/application-tracking',
           };
           try {
             const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -262,7 +323,7 @@ Deno.serve(async (req) => {
             const n8nText = await n8nRes.text();
             return new Response(JSON.stringify({ status: n8nRes.status, n8nResponse: n8nText, payload }), { status: 200, headers: corsHeaders(origin) });
           } catch (e) {
-            return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: e?.message }), { status: 500, headers: corsHeaders(origin) });
+            return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: (e as any)?.message }), { status: 500, headers: corsHeaders(origin) });
           }
         }
       }
@@ -293,6 +354,10 @@ Deno.serve(async (req) => {
     }
     console.log('[Edge] Dados da universidade:', universidade);
 
+    const correctNotifLink = appId ? `/school/dashboard/student/${appId}` : '/school/dashboard/application-tracking';
+    const destText = appId ? "the student's details page" : "application tracking";
+    const destTextPt = appId ? "a página de detalhes do aluno" : "o acompanhamento de candidaturas";
+
     // Montar mensagem customizada
     const nomeAluno = aluno.full_name;
     const nomeUniversidade = universidade.name;
@@ -301,11 +366,11 @@ Deno.serve(async (req) => {
     const emailUniversidade = contact.admissionsEmail || contact.email || '';
     const tipos = contextTitle || 'document';
     const notifMensagem = first === 'manual_review'
-      ? `Student ${nomeAluno} uploaded documents to enroll for ${scholarship.title}. Go to Students to review.`
-      : `Student ${nomeAluno} uploaded the requested ${tipos} for ${scholarship.title}. Go to Students to review.`;
+      ? `Student ${nomeAluno} uploaded documents to enroll for ${scholarship.title}. Go to ${destText} to review.`
+      : `Student ${nomeAluno} uploaded the requested ${tipos} for ${scholarship.title}. Go to ${destText} to review.`;
     const n8nMensagem = first === 'manual_review'
-      ? `O aluno ${nomeAluno} enviou documentos para matrícula na bolsa ${scholarship.title}. Acesse o painel da universidade para revisar.`
-      : `O aluno ${nomeAluno} enviou o(s) documento(s) solicitado(s) (${tipos}) para a bolsa ${scholarship.title}. Acesse o painel da universidade para revisar.`;
+      ? `O aluno ${nomeAluno} enviou documentos para matrícula na bolsa ${scholarship.title}. Acesse ${destTextPt} para revisar.`
+      : `O aluno ${nomeAluno} enviou o(s) documento(s) solicitado(s) (${tipos}) para a bolsa ${scholarship.title}. Acesse ${destTextPt} para revisar.`;
     console.log('[Edge] Mensagem customizada:', notifMensagem);
 
     // Montar body padrão
@@ -316,6 +381,7 @@ Deno.serve(async (req) => {
       email_universidade: emailUniversidade,
       o_que_enviar: n8nMensagem,
       tipos_documentos: tipos_documentos,
+      redirect_url: correctNotifLink,
     };
     console.log('[Edge] Payload para n8n:', payload);
 
@@ -326,7 +392,8 @@ Deno.serve(async (req) => {
         universidade.id,
         'New documents uploaded',
         notifMensagem,
-        { user_id, tipos_documentos, scholarship_id: scholarship.id }
+        { user_id, tipos_documentos, scholarship_id: scholarship.id },
+        correctNotifLink
       );
       const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
         method: 'POST',
@@ -345,7 +412,7 @@ Deno.serve(async (req) => {
       }), { status: 200, headers: corsHeaders(origin) });
     } catch (n8nErr) {
       console.log('[Edge] Erro ao enviar para o n8n:', n8nErr);
-      return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: n8nErr?.message }), {
+      return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: (n8nErr as any)?.message }), {
         status: 500,
         headers: corsHeaders(origin),
       });

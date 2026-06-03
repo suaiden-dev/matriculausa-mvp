@@ -1600,7 +1600,64 @@
             "description": "100 coins por cada amigo que pagar a Placement Fee"
           }
         }
+      },
+      "cards": {
+        "step1Title": "Receba seu código único",
+        "step1Desc": "Ao entrar no Matrícula Rewards, você ganha um código exclusivo de indicação só seu.",
+        "codeCopied": "Código copiado",
+        "step2Title": "Indique amigos que querem estudar nos EUA",
+        "step2Desc": "Compartilhe seu código com quem sonha em iniciar uma jornada acadêmica internacional.",
+        "referralLink": "Seu link de indicação",
+        "copy": "Copiar",
+        "more": "Mais",
+        "invitesSent": "Convites enviados",
+        "linkClicks": "Cliques no link",
+        "step3Title": "Ganhe MatriculaCoins a cada matrícula",
+        "step3Desc": "Arraste e veja quanto você ganha: a cada amigo que se matricular, os coins entram automaticamente na sua conta.",
+        "coinsEarned": "Coins ganhos",
+        "discount": "Desconto",
+        "friendsReferred": "amigos indicados",
+        "step4Title": "Troque por desconto na sua mensalidade",
+        "step4Desc": "Acumule coins e use direto no valor da sua mensalidade na Matrícula USA.",
+        "availableBalance": "Saldo disponível",
+        "coins": "coins",
+        "coinValueText": "1 coin = US$ 1",
+        "applyTuition": "Aplicar na mensalidade",
+        "useDiscount": "Use desconto"
       }
+    },
+    "faq": {
+      "title": "Perguntas frequentes",
+      "items": [
+        {
+          "question": "Para quem é o Matrícula Rewards?",
+          "answer": "O Matrícula Rewards é para estudantes que querem transformar suas indicações em benefícios reais. A cada amigo que se matricular com o seu código, você acumula MatriculaCoins e decide como usá-los: abater no valor da sua mensalidade ou resgatar em dinheiro. Quanto mais você indica, mais você economiza ou recebe."
+        },
+        {
+          "question": "Quanto custa participar do Matrícula Rewards?",
+          "answer": "Nada. O Matrícula Rewards é 100% gratuito. Você recebe seu código de indicação e já pode começar a indicar amigos que querem estudar nos EUA."
+        },
+        {
+          "question": "Como eu ganho MatriculaCoins?",
+          "answer": "Você acumula coins a cada amigo que se matricular usando o seu código de indicação. Não há limite: quanto mais pessoas você indicar, mais coins ganha."
+        },
+        {
+          "question": "Quantos coins eu ganho por indicação?",
+          "answer": "São 100 MatriculaCoins para cada amigo que concluir a matrícula a partir da sua indicação."
+        },
+        {
+          "question": "Quando a indicação é considerada confirmada?",
+          "answer": "A indicação é validada quando a pessoa que usou o seu código conclui a etapa de matrícula na plataforma. Após a validação, os coins entram automaticamente na sua conta."
+        },
+        {
+          "question": "Quanto vale cada MatriculaCoin?",
+          "answer": "Cada coin equivale a US$ 1 em descontos. Você acompanha o seu saldo disponível diretamente no seu painel."
+        },
+        {
+          "question": "Como resgato minhas recompensas?",
+          "answer": "Direto no seu painel, você escolhe o que fazer com os coins acumulados: aplicar como desconto no valor da sua mensalidade ou resgatar o saldo em dinheiro. A decisão é sempre sua."
+        }
+      ]
     },
     "testimonials": {
       "title": "Histórias de Sucesso",
@@ -1674,6 +1731,114 @@
         "quickStart": "Para começar",
         "support": "Suporte"
       }
+    }
+  },
+  "affiliateRegistration": {
+    "passwordStrength": {
+      "weak": "Fraca",
+      "medium": "Média",
+      "good": "Boa",
+      "strong": "Forte"
+    },
+    "emailConfirmation": {
+      "title": "Confirme seu email",
+      "sentTo": "Enviamos um link de confirmação para",
+      "instruction": "Clique no link para ativar sua conta e começar a indicar.",
+      "steps": {
+        "step1": "Abra o email que enviamos para você",
+        "step2": "Clique no botão \"Confirmar email\"",
+        "step3": "Você será direcionado para o seu dashboard"
+      },
+      "resentSuccess": "Email reenviado com sucesso!",
+      "resending": "Reenviando...",
+      "resendButton": "Reenviar email de confirmação",
+      "goToLogin": "Ir para o login",
+      "notReceived": "Não recebeu? Verifique a pasta de spam."
+    },
+    "hero": {
+      "title": "Transforme suas indicações",
+      "titleHighlight": "em descontos reais",
+      "description": "Compartilhe seu código, indique quem quer estudar nos EUA e acumule <strong>MatriculaCoins</strong> a cada indicação confirmada.",
+      "cta": "Seja um afiliado"
+    },
+    "showcase": {
+      "cards": {
+        "share": "Compartilhe",
+        "earn": "Receba Matrícula Coins",
+        "redeem": "Resgate suas recompensas"
+      },
+      "stats": {
+        "coinsPerReferral": "coins por indicação confirmada",
+        "activeAffiliates": "afiliados ativos na plataforma"
+      }
+    },
+    "howItWorks": {
+      "title": "Como funciona",
+      "steps": {
+        "step1": {
+          "title": "Receba seu código único",
+          "desc": "Após se tornar afiliado, você terá acesso ao seu código exclusivo de indicação.",
+          "copied": "Código copiado"
+        },
+        "step2": {
+          "title": "Compartilhe com quem quiser estudar nos EUA",
+          "desc": "Envie seu código para pessoas interessadas em iniciar uma jornada acadêmica internacional.",
+          "referralLink": "Seu link de indicação",
+          "copy": "Copiar",
+          "whatsapp": "WhatsApp",
+          "email": "E-mail",
+          "more": "Mais",
+          "invitesSent": "Convites enviados",
+          "linkClicks": "Cliques no link"
+        },
+        "step3": {
+          "title": "Ganhe coins por indicações confirmadas",
+          "desc": "Quando a indicação for validada, os coins entram automaticamente na sua conta.",
+          "recentActivity": "Atividade recente",
+          "confirmed": "Confirmada"
+        },
+        "step4": {
+          "title": "Resgate suas recompensas",
+          "desc": "Acumule coins e troque por benefícios dentro da plataforma Matrícula USA.",
+          "availableBalance": "Saldo disponível",
+          "coinValue": "1 coin = US$ 1",
+          "coins": "coins",
+          "withdrawToAccount": "Sacar para conta",
+          "withdraw": "Sacar saldo"
+        }
+      }
+    },
+    "finalCta": {
+      "button": "Quero ser afiliado"
+    },
+    "faq": {
+      "title": "Perguntas frequentes",
+      "items": [
+        {
+          "question": "Quanto custa para se tornar um afiliado?",
+          "answer": "Nada. O programa de afiliados da Matrícula USA é 100% gratuito. Você cria sua conta, recebe seu código e já pode começar a indicar."
+        },
+        {
+          "question": "Como recebo meu código de indicação?",
+          "answer": "Assim que você cria sua conta de afiliado, um código exclusivo é gerado automaticamente e fica disponível no seu painel."
+        },
+        {
+          "question": "Quantos coins ganho por indicação?",
+          "answer": "Você acumula coins a cada indicação confirmada, sem limite de indicações. Quanto mais pessoas você indicar, mais coins ganha."
+        },
+        {
+          "question": "Quando uma indicação é considerada confirmada?",
+          "answer": "A indicação é validada quando a pessoa que usó seu código conclui a etapa exigida na plataforma. Após a validação, os coins entram automaticamente na sua conta."
+        },
+        {
+          "question": "Quanto vale cada coin?",
+          "answer": "Cada coin equivale a US$ 1. Você acompanha o saldo disponível diretamente no seu painel de afiliado."
+        },
+        {
+          "question": "Como resgato minhas recompensas?",
+          "answer": "No seu painel, você pode trocar os coins acumulados por benefícios dentro da plataforma Matrícula USA ou sacar o saldo disponível."
+        }
+      ]
     }
   },
   "academicInfo": {

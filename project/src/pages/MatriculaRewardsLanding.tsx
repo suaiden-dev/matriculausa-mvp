@@ -164,7 +164,7 @@ const MatriculaRewardsLanding: React.FC = () => {
         navigate('/student/dashboard/rewards');
       }
     } else {
-      navigate('/affiliate/register');
+      navigate('/register');
     }
   };
 
@@ -187,22 +187,23 @@ const MatriculaRewardsLanding: React.FC = () => {
       <section className="relative pt-20 pb-24 lg:pt-24 lg:pb-28 overflow-hidden">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] leading-tight tracking-tight">
-            Transforme Suas
+            {t('matriculaRewardsLanding.hero.title')}
             <span className="block text-[#05294E] mt-1">
-              Indicações em Descontos
+              {t('matriculaRewardsLanding.hero.titleHighlight')}
             </span>
             <span className="block text-[#05294E] mt-1">
-              na Sua Mensalidade
+              {t('matriculaRewardsLanding.hero.subtitle')}
             </span>
           </h1>
-          <p className="text-lg lg:text-xl text-[#05294E]/70 mt-4 max-w-2xl mx-auto leading-relaxed font-medium">
-            Compartilhe seu código, indique quem quer estudar nos EUA e acumule <strong className="text-[#05294E]">MatriculaCoins</strong> a cada indicação confirmada.
-          </p>
+          <p 
+            className="text-lg lg:text-xl text-[#05294E]/70 mt-4 max-w-2xl mx-auto leading-relaxed font-medium"
+            dangerouslySetInnerHTML={{ __html: t('matriculaRewardsLanding.hero.description') }}
+          />
           <button
             onClick={handleGetStarted}
             className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border border-[#05294E]/20 text-[#05294E] text-sm font-semibold hover:bg-[#05294E]/5 transition-colors"
           >
-            Indique um amigo
+            {t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -223,9 +224,9 @@ const MatriculaRewardsLanding: React.FC = () => {
             {/* Cards — diferenciais */}
             <div className="relative z-10 order-4 flex flex-col items-start gap-3 sm:gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:p-0 lg:absolute lg:left-8 lg:top-1/2 lg:-translate-y-1/2 lg:w-auto">
               {[
-                'Indique seus amigos',
-                'Acumule MatriculaCoins',
-                'Troque por descontos reais',
+                t('matriculaRewardsLanding.hero.valueCards.referFriends.title'),
+                t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title'),
+                t('matriculaRewardsLanding.hero.valueCards.payLess.title'),
               ].map((title, i) => (
                 <motion.div
                   key={title}
@@ -254,7 +255,9 @@ const MatriculaRewardsLanding: React.FC = () => {
                 className="bg-white rounded-2xl px-6 py-5 sm:px-7 sm:py-6 shadow-lg"
               >
                 <p className="text-4xl sm:text-5xl font-black text-[#05294E] leading-none">100</p>
-                <p className="text-slate-500 text-sm sm:text-base mt-2 leading-snug">MatriculaCoins por amigo que se matricular</p>
+                <p className="text-slate-500 text-sm sm:text-base mt-2 leading-snug">
+                  {t('matriculaRewardsLanding.howItWorks.calculator.coinsPerFriend')} {t('matriculaRewardsLanding.howItWorks.calculator.perFriend')}
+                </p>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, x: 40 }}
@@ -274,7 +277,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-slate-700 text-sm sm:text-base leading-snug">
-                  <strong className="text-[#05294E]">300+</strong> estudantes já economizando com o Rewards
+                  <strong className="text-[#05294E]">300+</strong> {t('matriculaRewardsLanding.stats.activeStudents')}
                 </p>
               </motion.div>
             </div>
@@ -333,34 +336,34 @@ const MatriculaRewardsLanding: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
             {[
               {
-                title: 'Receba seu código único',
-                desc: 'Ao entrar no Matrícula Rewards, você ganha um código exclusivo de indicação só seu.',
+                title: t('matriculaRewardsLanding.howItWorks.cards.step1Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step1Desc'),
                 mockup: (
                   <div className="w-full space-y-3 text-left">
                     <div className="bg-slate-50 border-2 border-dashed border-[#05294E]/20 rounded-xl px-3 py-2.5 text-center">
-                      <span className="text-base font-black text-[#05294E] tracking-[0.15em]">MUSA-7K3D</span>
+                      <span className="text-base font-black text-[#05294E] tracking-[0.15em]">{userAffiliateCode?.code || 'MUSA-7K3D'}</span>
                     </div>
                     <button disabled className="w-full bg-[#05294E] text-white py-2 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default">
                       <CheckCircle className="w-3 h-3" />
-                      Código copiado
+                      {t('matriculaRewardsLanding.howItWorks.cards.codeCopied')}
                     </button>
                   </div>
                 ),
               },
               {
-                title: 'Indique amigos que querem estudar nos EUA',
-                desc: 'Compartilhe seu código com quem sonha em iniciar uma jornada acadêmica internacional.',
+                title: t('matriculaRewardsLanding.howItWorks.cards.step2Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step2Desc'),
                 mockup: (
                   <div className="w-full space-y-3 text-left">
                     {/* Campo do link com botão copiar */}
                     <div>
-                      <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Seu link de indicação</p>
+                      <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{t('matriculaRewardsLanding.howItWorks.cards.referralLink')}</p>
                       <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl pl-2.5 pr-1.5 py-1.5">
                         <Link2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="text-[9px] font-bold text-slate-700 truncate flex-1">matriculausa.com/r/MUSA-7K3D</span>
+                        <span className="text-[9px] font-bold text-slate-700 truncate flex-1">matriculausa.com/r/{userAffiliateCode?.code || 'MUSA-7K3D'}</span>
                         <button disabled className="flex items-center gap-1 bg-[#05294E] text-white px-2 py-1 rounded-lg text-[7px] font-black uppercase tracking-wider cursor-default flex-shrink-0">
                           <Copy className="w-2.5 h-2.5" />
-                          Copiar
+                          {t('matriculaRewardsLanding.howItWorks.cards.copy')}
                         </button>
                       </div>
                     </div>
@@ -370,7 +373,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                       {[
                         { label: 'WhatsApp', icon: MessageCircle, color: 'bg-green-50 text-green-600' },
                         { label: 'E-mail', icon: Mail, color: 'bg-blue-50 text-blue-600' },
-                        { label: 'Mais', icon: Share2, color: 'bg-slate-50 text-slate-600' },
+                        { label: t('matriculaRewardsLanding.howItWorks.cards.more'), icon: Share2, color: 'bg-slate-50 text-slate-600' },
                       ].map(({ label, icon: ChannelIcon, color }) => (
                         <div key={label} className={`rounded-xl ${color} flex flex-col items-center justify-center py-2.5 gap-1`}>
                           <ChannelIcon className="w-4 h-4" />
@@ -383,19 +386,19 @@ const MatriculaRewardsLanding: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-slate-50 rounded-xl px-2.5 py-2 text-center">
                         <p className="text-sm font-black text-[#05294E] leading-none">12</p>
-                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">Convites enviados</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('matriculaRewardsLanding.howItWorks.cards.invitesSent')}</p>
                       </div>
                       <div className="bg-emerald-50/60 rounded-xl px-2.5 py-2 text-center">
                         <p className="text-sm font-black text-emerald-600 leading-none">8</p>
-                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">Cliques no link</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('matriculaRewardsLanding.howItWorks.cards.linkClicks')}</p>
                       </div>
                     </div>
                   </div>
                 ),
               },
               {
-                title: 'Ganhe MatriculaCoins a cada matrícula',
-                desc: 'Arraste e veja quanto você ganha: a cada amigo que se matricular, os coins entram automaticamente na sua conta.',
+                title: t('matriculaRewardsLanding.howItWorks.cards.step3Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step3Desc'),
                 mockup: (
                   <div className="w-full space-y-3 text-left">
                     {/* Resultados — atualizam em tempo real */}
@@ -403,7 +406,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                       <div className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
                         <div className="flex items-center gap-1 text-slate-400">
                           <Coins className="w-3 h-3 text-yellow-500" />
-                          <span className="text-[7px] font-bold uppercase tracking-wider">Coins ganhos</span>
+                          <span className="text-[7px] font-bold uppercase tracking-wider">{t('matriculaRewardsLanding.howItWorks.cards.coinsEarned')}</span>
                         </div>
                         <p className="text-xl font-black text-[#05294E] tabular-nums leading-tight mt-0.5">
                           <AnimatedNumber value={calculateSavings(calculatorFriends).coins} />
@@ -412,7 +415,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                       <div className="bg-emerald-50/60 rounded-xl px-3 py-2.5 border border-emerald-100">
                         <div className="flex items-center gap-1 text-slate-400">
                           <DollarSign className="w-3 h-3 text-emerald-600" />
-                          <span className="text-[7px] font-bold uppercase tracking-wider">Desconto</span>
+                          <span className="text-[7px] font-bold uppercase tracking-wider">{t('matriculaRewardsLanding.howItWorks.cards.discount')}</span>
                         </div>
                         <p className="text-xl font-black text-emerald-600 tabular-nums leading-tight mt-0.5">
                           <AnimatedNumber value={calculateSavings(calculatorFriends).dollars} prefix="$" />
@@ -434,21 +437,21 @@ const MatriculaRewardsLanding: React.FC = () => {
                         }}
                       />
                       <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-2 text-center">
-                        <span className="text-[#05294E] tabular-nums">{calculatorFriends}</span> amigos indicados
+                        <span className="text-[#05294E] tabular-nums">{calculatorFriends}</span> {t('matriculaRewardsLanding.howItWorks.cards.friendsReferred')}
                       </p>
                     </div>
                   </div>
                 ),
               },
               {
-                title: 'Troque por desconto na sua mensalidade',
-                desc: 'Acumule coins e use direto no valor da sua mensalidade na Matrícula USA.',
+                title: t('matriculaRewardsLanding.howItWorks.cards.step4Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step4Desc'),
                 mockup: (
                   <div className="w-full rounded-2xl overflow-hidden text-left">
                     {/* Header — saldo disponível em dólares (verde) */}
                     <div className="bg-gradient-to-br from-emerald-500 to-green-600 px-4 py-3.5 text-white rounded-2xl shadow-md shadow-green-500/20">
                       <div className="flex items-center justify-between">
-                        <p className="text-[7px] font-bold uppercase tracking-widest text-white/80">Saldo disponível</p>
+                        <p className="text-[7px] font-bold uppercase tracking-widest text-white/80">{t('matriculaRewardsLanding.howItWorks.cards.availableBalance')}</p>
                         <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider">USD</span>
                       </div>
                       <div className="flex items-end gap-1 mt-1">
@@ -459,7 +462,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1 mt-1.5 text-white/80">
                         <Coins className="w-3 h-3 text-yellow-300" />
-                        <span className="text-[8px] font-bold">{calculateSavings(calculatorFriends).coins.toLocaleString('pt-BR')} coins · 1 coin = US$ 1</span>
+                        <span className="text-[8px] font-bold">{calculateSavings(calculatorFriends).coins.toLocaleString('pt-BR')} {t('matriculaRewardsLanding.howItWorks.cards.coins')} · {t('matriculaRewardsLanding.howItWorks.cards.coinValueText')}</span>
                       </div>
                     </div>
 
@@ -470,13 +473,13 @@ const MatriculaRewardsLanding: React.FC = () => {
                           <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
                             <ArrowDownToLine className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-[9px] font-black text-slate-800">Aplicar na mensalidade</span>
+                          <span className="text-[9px] font-black text-slate-800">{t('matriculaRewardsLanding.howItWorks.cards.applyTuition')}</span>
                         </div>
                         <span className="text-[9px] font-black text-emerald-600">-${calculateSavings(calculatorFriends).dollars.toLocaleString('pt-BR')}.00</span>
                       </div>
                       <button disabled className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default shadow-md shadow-green-500/20">
                         <ArrowDownToLine className="w-3 h-3" />
-                        Usar desconto
+                        {t('matriculaRewardsLanding.howItWorks.cards.useDiscount')}
                       </button>
                     </div>
                   </div>
@@ -701,39 +704,11 @@ const MatriculaRewardsLanding: React.FC = () => {
   );
 };
 
-const MATRICULA_REWARDS_FAQS = [
-  {
-    question: 'Para quem é o Matrícula Rewards?',
-    answer: 'O Matrícula Rewards é para estudantes que querem transformar suas indicações em benefícios reais. A cada amigo que se matricular com o seu código, você acumula MatriculaCoins e decide como usá-los: abater no valor da sua mensalidade ou resgatar em dinheiro. Quanto mais você indica, mais você economiza ou recebe.',
-  },
-  {
-    question: 'Quanto custa participar do Matrícula Rewards?',
-    answer: 'Nada. O Matrícula Rewards é 100% gratuito. Você recebe seu código de indicação e já pode começar a indicar amigos que querem estudar nos EUA.',
-  },
-  {
-    question: 'Como eu ganho MatriculaCoins?',
-    answer: 'Você acumula coins a cada amigo que se matricular usando o seu código de indicação. Não há limite: quanto mais pessoas você indicar, mais coins ganha.',
-  },
-  {
-    question: 'Quantos coins eu ganho por indicação?',
-    answer: 'São 100 MatriculaCoins para cada amigo que concluir a matrícula a partir da sua indicação.',
-  },
-  {
-    question: 'Quando a indicação é considerada confirmada?',
-    answer: 'A indicação é validada quando a pessoa que usou o seu código conclui a etapa de matrícula na plataforma. Após a validação, os coins entram automaticamente na sua conta.',
-  },
-  {
-    question: 'Quanto vale cada MatriculaCoin?',
-    answer: 'Cada coin equivale a US$ 1 em descontos. Você acompanha o seu saldo disponível diretamente no seu painel.',
-  },
-  {
-    question: 'Como resgato minhas recompensas?',
-    answer: 'Direto no seu painel, você escolhe o que fazer com os coins acumulados: aplicar como desconto no valor da sua mensalidade ou resgatar o saldo em dinheiro. A decisão é sempre sua.',
-  },
-];
-
 const MatriculaRewardsFAQ: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqs = (t('matriculaRewardsLanding.faq.items', { returnObjects: true }) as any[]) || [];
 
   return (
     <section className="py-16 sm:py-20 bg-white">
@@ -745,11 +720,11 @@ const MatriculaRewardsFAQ: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl md:text-4xl font-black mb-10 text-center text-[#05294E]">
-            Perguntas frequentes
+            {t('matriculaRewardsLanding.faq.title')}
           </h2>
 
           <div className="max-w-3xl mx-auto space-y-1">
-            {MATRICULA_REWARDS_FAQS.map((faq, num) => (
+            {faqs.map((faq, num) => (
               <div
                 key={num}
                 className={`group transition-all duration-300 border-b border-slate-200 ${

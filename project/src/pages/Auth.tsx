@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle, Handshake } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -18,7 +18,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ mode }) => {
   const { t } = useTranslation(['auth', 'common']);
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'student' | 'university'>('student');
+  const [activeTab, setActiveTab] = useState<'student' | 'university' | 'affiliate'>('student');
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -53,6 +53,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [showReferralInput, setShowReferralInput] = useState(false);
   // Ref para evitar múltiplas execuções
   const referralCodeProcessedRef = useRef(false);
 
@@ -102,7 +103,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     if (mode === 'register') {
       const params = new URLSearchParams(location.search);
       const tabParam = params.get('tab');
-      if (tabParam === 'student' || tabParam === 'university') {
+      if (tabParam === 'student' || tabParam === 'university' || tabParam === 'affiliate') {
         setActiveTab(tabParam);
       }
     }
@@ -255,6 +256,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setFormData(prev => ({ ...prev, referralCode: code }));
     setReferralCodeType(detectedType);
     setIsReferralCodeLocked(true);
+    setShowReferralInput(true);
     referralCodeProcessedRef.current = true;
     
     // Validar código de forma assíncrona
@@ -386,9 +388,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
 
-
-
-
   // Remove redirecionamento - deixar AuthRedirect fazer isso
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -413,7 +412,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         !formData.confirmPassword?.trim()
       );
 
-      if (isStudentMissing || isUniversityMissing) {
+      const isAffiliateMissing = activeTab === 'affiliate' && (
+        !formData.full_name?.trim() || 
+        !formData.email?.trim() || 
+        !formData.password?.trim() || 
+        !formData.confirmPassword?.trim()
+      );
+
+      if (isStudentMissing || isUniversityMissing || isAffiliateMissing) {
         setError('Por favor, preencha todos os campos obrigatórios.');
         return;
       }
@@ -479,20 +485,26 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
         
-        // Validar telefone obrigatório e formato internacional
-        if (!formData.phone || formData.phone.length < 8) {
-          console.log('❌ [AUTH] Validação de telefone falhou:', {
-            phone: formData.phone,
-            length: formData.phone?.length
-          });
-          setError(t('authPage.messages.invalidPhone'));
-          setLoading(false);
-          return;
+        // Validar telefone (obrigatório para estudante/universidade, opcional para afiliado)
+        if (activeTab !== 'affiliate') {
+          if (!formData.phone || formData.phone.length < 8) {
+            console.log('❌ [AUTH] Validação de telefone falhou:', {
+              phone: formData.phone,
+              length: formData.phone?.length
+            });
+            setError(t('authPage.messages.invalidPhone'));
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Para afiliado, se preenchido, deve ser válido
+          if (formData.phone && formData.phone.length < 8) {
+            setError(t('authPage.messages.invalidPhone'));
+            setLoading(false);
+            return;
+          }
         }
         
-
-        
-         
          // Validar aceite dos termos
          if (!termsAccepted) {
            setError(t('authPage.messages.mustAcceptTerms'));
@@ -531,8 +543,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         
         const userData = {
-          full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
-          role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
+          full_name: formData.full_name,
+          role: (activeTab === 'student' ? 'student' : activeTab === 'university' ? 'school' : 'affiliate') as 'student' | 'school' | 'affiliate',
           // Newsletter consent - save for all users
           newsletter_consent: newsletterConsent,
           // Add additional registration data only for universities
@@ -542,22 +554,23 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             location: formData.location || '',
             phone: formData.phone || ''
           }),
-           // Add phone for student
-           ...(activeTab === 'student' && {
+           // Add phone for student or affiliate
+           ...((activeTab === 'student' || activeTab === 'affiliate') && {
              phone: formData.phone || '',
-             // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
-             ...(referralCodeType === 'seller' && formData.referralCode && {
-               seller_referral_code: formData.referralCode
-             }),
-             ...(referralCodeType === 'rewards' && formData.referralCode && {
-               affiliate_code: formData.referralCode
-             }),
-             // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente
-             ...(isDirectSalesCode && {
-               scholarship_package_number: 3,
-               desired_scholarship_range: 4500
-             }),
-
+             ...(activeTab === 'student' && {
+               // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
+               ...(referralCodeType === 'seller' && formData.referralCode && {
+                 seller_referral_code: formData.referralCode
+               }),
+               ...(referralCodeType === 'rewards' && formData.referralCode && {
+                 affiliate_code: formData.referralCode
+               }),
+               // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente
+               ...(isDirectSalesCode && {
+                 scholarship_package_number: 3,
+                 desired_scholarship_range: 4500
+               })
+             })
            })
         };
 
@@ -574,9 +587,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           console.log('📊 [AUTH] UTM parameters detectados:', utmParams);
         }
         
-        await register(normalizedEmail, formData.password, userData, {
+        const signUpResult = await register(normalizedEmail, formData.password, userData, {
           utm: utmParams
         });
+
+        // ✅ Se for cadastrado como afiliado e tiver sessão imediata (autenticado), criar o código de indicação via RPC
+        if (activeTab === 'affiliate' && signUpResult?.user?.id && signUpResult?.session) {
+          try {
+            await supabase.rpc('create_affiliate_code_for_user', { user_id_param: signUpResult.user.id });
+            console.log('✅ [AUTH] Código de afiliado gerado com sucesso via RPC para:', signUpResult.user.id);
+          } catch (rpcErr) {
+            console.error('❌ [AUTH] Erro ao disparar RPC create_affiliate_code_for_user:', rpcErr);
+          }
+        }
 
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
@@ -593,13 +616,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
          // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
          // O AuthRedirect vai redirecionar para o dashboard
-         // Para universidades, definir isRegistered para mostrar a mensagem de sucesso e redirecionar em 10 segundos
-         if (activeTab === 'university') {
+         // Para universidades ou afiliados, definir isRegistered para mostrar a mensagem de sucesso e redirecionar em 10 segundos (só para universidades)
+         if (activeTab === 'university' || activeTab === 'affiliate') {
            setIsRegistered(true);
            setLoading(false);
-           setTimeout(() => {
-             navigate(`/login${location.search}`);
-           }, 10000);
+           if (activeTab === 'university') {
+             setTimeout(() => {
+               navigate(`/login${location.search}`);
+             }, 10000);
+           }
          }
          return;
       } else {
@@ -654,7 +679,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }));
   };
 
-  const handleTabChange = (tab: 'student' | 'university') => {
+  const handleTabChange = (tab: 'student' | 'university' | 'affiliate') => {
     setActiveTab(tab);
   };
 
@@ -817,6 +842,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     );
   }
 
+  // Dynamic styles based on active tab for inputs
+  const ringColor = activeTab === 'affiliate' ? 'focus:ring-amber-500/20' : 'focus:ring-[#05294E]/20';
+  const borderColor = activeTab === 'affiliate' ? 'focus:border-amber-500' : 'focus:border-[#05294E]';
+  const iconColor = activeTab === 'affiliate' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-[#05294E]';
+  const phoneBorderColor = activeTab === 'affiliate' ? 'focus-within:border-amber-500' : 'focus-within:border-[#05294E]';
+  const phoneFocusColor = activeTab === 'affiliate' ? '#f59e0b' : '#05294E';
+  const passwordHoverColor = activeTab === 'affiliate' ? 'hover:text-amber-500' : 'hover:text-[#05294E]';
+  const textLinkColor = 'text-[#05294E] hover:underline';
+  const checkboxColor = 'text-[#05294E] focus:ring-[#05294E]/20 accent-[#05294E]';
+
   return (
     <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
       {/* Left Side: Branding & Copywriting (Hidden on Mobile) */}
@@ -839,6 +874,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               activeTab === 'university' ? 'opacity-100' : 'opacity-0'
             }`}
           />
+          {/* Affiliate Image */}
+          <img 
+            src="https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=1200&auto=format&fit=crop" 
+            alt="Parceiros e Afiliados" 
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              activeTab === 'affiliate' ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
           <div className="absolute inset-0 bg-[#05294E]/60 mix-blend-multiply"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#031b33]/60 via-transparent to-transparent"></div>
         </div>
@@ -857,7 +900,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         {/* Title - Bottom */}
         <div className="relative z-10 w-full max-w-xl">
           <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
-            {t('authPage.sideTitle', 'Transforme seu sonho de estudar nos EUA em realidade.')}
+            {activeTab === 'student' && t('authPage.sideTitle', 'Transforme seu sonho de estudar nos EUA em realidade.')}
+            {activeTab === 'university' && t('authPage.sideTitleUniversity', 'Conecte sua universidade a estudantes prontos para viver o sonho americano.')}
+            {activeTab === 'affiliate' && t('authPage.sideTitleAffiliate', 'Faça parte da ponte entre estudantes e universidades americanas.')}
           </h1>
         </div>
       </div>
@@ -885,35 +930,52 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             <div className="flex relative w-full">
               {/* Active Indicator Line */}
               <div 
-                className={`absolute bottom-0 left-0 w-1/2 h-0.5 transition-all duration-500 ease-in-out ${
+                className={`absolute bottom-0 left-0 w-1/3 h-0.5 transition-all duration-500 ease-in-out ${
                   activeTab === 'student' 
                     ? 'translate-x-0 bg-[#05294E]' 
-                    : 'translate-x-full bg-[#D0151C]'
+                    : activeTab === 'university'
+                    ? 'translate-x-full bg-[#D0151C]'
+                    : 'translate-x-[200%] bg-amber-500'
                 }`}
               />
               
               <button
                 onClick={() => handleTabChange('student')}
-                className={`relative z-10 flex items-center justify-center px-4 py-3 flex-1 font-bold transition-all duration-300 text-sm ${
+                type="button"
+                className={`relative z-10 flex items-center justify-center px-2 py-3 flex-1 font-bold transition-all duration-300 text-xs sm:text-sm ${
                   activeTab === 'student'
                     ? 'text-[#05294E]'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <GraduationCap className={`h-5 w-5 mr-2 transition-colors duration-300 ${activeTab === 'student' ? 'text-[#05294E]' : 'text-slate-400'}`} />
-                <span>{t('authPage.register.tabStudent')}</span>
+                <GraduationCap className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'student' ? 'text-[#05294E]' : 'text-slate-400'}`} />
+                <span>{t('authPage.register.tabStudent', 'Estudante')}</span>
               </button>
               
               <button
                 onClick={() => handleTabChange('university')}
-                className={`relative z-10 flex items-center justify-center px-4 py-3 flex-1 font-bold transition-all duration-300 text-sm ${
+                type="button"
+                className={`relative z-10 flex items-center justify-center px-2 py-3 flex-1 font-bold transition-all duration-300 text-xs sm:text-sm ${
                   activeTab === 'university'
                     ? 'text-[#D0151C]'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Building className={`h-5 w-5 mr-2 transition-colors duration-300 ${activeTab === 'university' ? 'text-[#D0151C]' : 'text-slate-400'}`} />
-                <span>{t('authPage.register.tabUniversity')}</span>
+                <Building className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'university' ? 'text-[#D0151C]' : 'text-slate-400'}`} />
+                <span>{t('authPage.register.tabUniversity', 'Universidade')}</span>
+              </button>
+
+              <button
+                onClick={() => handleTabChange('affiliate')}
+                type="button"
+                className={`relative z-10 flex items-center justify-center px-2 py-3 flex-1 font-bold transition-all duration-300 text-xs sm:text-sm ${
+                  activeTab === 'affiliate'
+                    ? 'text-amber-500'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Handshake className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'affiliate' ? 'text-amber-500' : 'text-slate-400'}`} />
+                <span>{t('authPage.register.tabAffiliate', 'Sou um Afiliado')}</span>
               </button>
             </div>
           </div>
@@ -947,7 +1009,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <div>
                 <div className="font-bold text-green-900 mb-0.5">Sucesso!</div>
                 <div className="opacity-90 leading-relaxed">
-                  Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, confirme seu e-mail antes de fazer o login. Redirecionando para a tela de login em 10 segundos...
+                  {activeTab === 'affiliate' ? (
+                    <span>
+                      Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, acesse seu e-mail e clique no link para ativar sua conta de afiliado e começar a indicar.
+                    </span>
+                  ) : (
+                    <span>
+                      Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, confirme seu e-mail antes de fazer o login. Redirecionando para a tela de login em 10 segundos...
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -955,7 +1025,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Form Fields Grid */}
-            {activeTab === 'student' && (
+            {(activeTab === 'student' || activeTab === 'affiliate') && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Full Name — full width */}
                   <div className="sm:col-span-2">
@@ -963,7 +1033,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.fullName')}
                     </label>
                     <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                      <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 ${iconColor} transition-colors`} />
                       <input
                         id="full_name"
                         name="full_name"
@@ -972,7 +1042,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-sm"
+                        className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 ${ringColor} ${borderColor} focus:bg-white transition-all duration-300 text-sm`}
                         placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
@@ -984,7 +1054,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.emailAddress')}
                     </label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                      <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 ${iconColor} transition-colors`} />
                       <input
                         id="email"
                         name="email"
@@ -993,7 +1063,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white transition-all duration-300 text-sm"
+                        className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 ${ringColor} ${borderColor} focus:bg-white transition-all duration-300 text-sm`}
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
@@ -1003,7 +1073,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   {/* Phone — col 2 */}
                   <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.phoneNumber')}
+                      {t('authPage.register.phoneNumber')} {activeTab === 'affiliate' && <span className="text-slate-400 font-normal">(opcional)</span>}
                     </label>
                     <div className="relative">
                       <PhoneInput
@@ -1018,13 +1088,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         style={{
                           '--PhoneInputCountryFlag-height': '1.2em',
                           '--PhoneInputCountrySelectArrow-opacity': '0.8',
-                          '--PhoneInput-color--focus': '#05294E'
+                          '--PhoneInput-color--focus': phoneFocusColor
                         }}
                         maxLength={20}
-                        className={`phone-input-custom register w-full pl-4 pr-4 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-sm ${
+                        className={`phone-input-custom register ${activeTab === 'affiliate' ? 'affiliate' : ''} w-full pl-4 pr-4 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
-                            : 'border-slate-200 focus-within:border-[#05294E] focus-within:bg-white'
+                            : `border-slate-200 focus-within:bg-white ${phoneBorderColor}`
                         }`}
                         placeholder={t('authPage.register.enterPhone')}
                       />
@@ -1043,7 +1113,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.password')}
                     </label>
                     <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                      <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 ${iconColor} transition-colors`} />
                       <input
                         id="password"
                         name="password"
@@ -1055,7 +1125,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500/20'
-                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
+                            : `border-slate-200 ${ringColor} ${borderColor} focus:bg-white`
                         }`}
                         maxLength={20}
                         placeholder="••••••••"
@@ -1064,7 +1134,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#05294E] focus:outline-none transition-colors"
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 ${passwordHoverColor} focus:outline-none transition-colors`}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -1077,7 +1147,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.confirmPassword')}
                     </label>
                     <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                      <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 ${iconColor} transition-colors`} />
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
@@ -1089,7 +1159,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         className={`w-full pl-12 pr-12 py-3 bg-slate-50 border placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500/20'
-                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
+                            : `border-slate-200 ${ringColor} ${borderColor} focus:bg-white`
                         }`}
                         maxLength={20}
                         placeholder="••••••••"
@@ -1098,80 +1168,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#05294E] focus:outline-none transition-colors"
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 ${passwordHoverColor} focus:outline-none transition-colors`}
                       >
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Referral Code — full width */}
-                  <div className="sm:col-span-2">
-                    <label htmlFor="referralCode" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.referralCodeAutoApplied')}
-                    </label>
-                    <div className="relative group">
-                      {isReferralCodeLocked ? (
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
-                      ) : (
-                        <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
-                      )}
-                      <input
-                        id="referralCode"
-                        name="referralCode"
-                        type="text"
-                        value={formData.referralCode || ''}
-                        onChange={handleReferralCodeChange}
-                        readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-12 py-3 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
-                          isReferralCodeLocked 
-                            ? 'bg-green-50/50 cursor-not-allowed border-green-200' 
-                            : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
-                        } ${
-                          referralCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500/20 focus:border-green-500' 
-                            : referralCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500'
-                            : ''
-                        }`}
-                        placeholder={t('authPage.register.referralCodePlaceholderSellerMatr')}
-                        onBlur={() => trackFieldFilled('referral_code')}
-                        maxLength={20}
-                      />
-                      {referralCodeLoading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#05294E]"></div>
-                        </div>
-                      )}
-                      {referralCodeValid === true && !referralCodeLoading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <CheckCircle className="h-5 w-5 text-green-500 animate-in zoom-in duration-300" />
-                        </div>
-                      )}
-                      {referralCodeValid === false && formData.referralCode && !referralCodeLoading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <X className="h-5 w-5 text-red-500 animate-in zoom-in duration-300" />
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Feedback de tipo detectado */}
-                    {formData.referralCode && (
-                      <div className="mt-1 text-xs">
-                        {referralCodeValid === true && (
-                          <p className="text-green-600 flex items-center">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.referralCode.applied')}
-                          </p>
-                        )}
-                        {referralCodeValid === false && (
-                          <p className="text-red-600 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            {t('authPage.register.referralCode.invalid')}
-                          </p>
-                        )}
-                      </div>
-                    )}
                   </div>
               </div>
             )}
@@ -1198,7 +1199,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('full_name')}
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
-                        placeholder={t('authPage.register.yourFullName')}
+                        placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
                   </div>
@@ -1219,7 +1220,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         onBlur={() => handleFieldBlur('email')}
                         className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 placeholder-slate-400 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C]/20 focus:border-[#D0151C] focus:bg-white transition-all duration-300 text-sm"
-                        placeholder={t('authPage.register.officialUniversityEmail')}
+                        placeholder={t('authPage.register.enterEmail')}
                       />
                     </div>
                   </div>
@@ -1327,6 +1328,106 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
             {/* Checkboxes Area */}
             <div className="space-y-3 pt-1">
+              {/* Referral Code — Só exibe se for estudante (afiliados não indicam a si mesmos) */}
+              {activeTab === 'student' && (
+                <div className="space-y-3">
+                  {/* Checkbox para revelar o campo */}
+                  <label className="flex items-start space-x-3 cursor-pointer group">
+                    <div className="relative flex items-center mt-1">
+                      <input
+                        type="checkbox"
+                        checked={showReferralInput}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setShowReferralInput(checked);
+                          if (!checked && !isReferralCodeLocked) {
+                            setFormData(prev => ({ ...prev, referralCode: '' }));
+                            setReferralCodeValid(null);
+                            setReferralCodeType(null);
+                          }
+                        }}
+                        disabled={isReferralCodeLocked}
+                        className={`h-4 w-4 rounded border-slate-300 transition-all duration-200 cursor-pointer ${checkboxColor} disabled:cursor-not-allowed`}
+                      />
+                    </div>
+                    <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
+                      {t('authPage.register.haveReferralCodeQuestion', 'Você tem um código de cupom?')}
+                    </span>
+                  </label>
+
+                  {/* Input do código - exibe apenas se o checkbox estiver marcado */}
+                  {showReferralInput && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-2 mt-2 pb-2">
+                      <label htmlFor="referralCode" className="block text-xs font-bold text-slate-500 ml-1">
+                        {t('authPage.register.referralCodeAutoApplied')}
+                      </label>
+                      <div className="relative group">
+                        {isReferralCodeLocked ? (
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+                        ) : (
+                          <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
+                        )}
+                        <input
+                          id="referralCode"
+                          name="referralCode"
+                          type="text"
+                          value={formData.referralCode || ''}
+                          onChange={handleReferralCodeChange}
+                          readOnly={isReferralCodeLocked}
+                          className={`w-full pl-12 pr-12 py-3 bg-slate-50 border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
+                            isReferralCodeLocked 
+                              ? 'bg-green-50/50 cursor-not-allowed border-green-200' 
+                              : 'border-slate-200 focus:ring-[#05294E]/20 focus:border-[#05294E] focus:bg-white'
+                          } ${
+                            referralCodeValid === true 
+                              ? 'border-green-300 focus:ring-green-500/20 focus:border-green-500' 
+                              : referralCodeValid === false 
+                              ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500'
+                              : ''
+                          }`}
+                          placeholder={t('authPage.register.referralCodePlaceholderSellerMatr')}
+                          onBlur={() => trackFieldFilled('referral_code')}
+                          maxLength={20}
+                        />
+                        {referralCodeLoading && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#05294E]"></div>
+                          </div>
+                        )}
+                        {referralCodeValid === true && !referralCodeLoading && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <CheckCircle className="h-5 w-5 text-green-500 animate-in zoom-in duration-300" />
+                          </div>
+                        )}
+                        {referralCodeValid === false && formData.referralCode && !referralCodeLoading && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <X className="h-5 w-5 text-red-500 animate-in zoom-in duration-300" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Feedback de tipo detectado */}
+                      {formData.referralCode && (
+                        <div className="mt-1 text-xs">
+                          {referralCodeValid === true && (
+                            <p className="text-green-600 flex items-center">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.referralCode.applied')}
+                            </p>
+                          )}
+                          {referralCodeValid === false && (
+                            <p className="text-red-600 flex items-center">
+                              <X className="h-3 w-3 mr-1" />
+                              {t('authPage.register.referralCode.invalid')}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <label className="flex items-start space-x-3 cursor-pointer group">
                 <div className="relative flex items-center mt-1">
                   <input
@@ -1334,7 +1435,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     id="newsletter-consent"
                     checked={newsletterConsent}
                     onChange={(e) => setNewsletterConsent(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]/20 transition-all duration-200 cursor-pointer accent-[#05294E]"
+                    className={`h-4 w-4 rounded border-slate-300 transition-all duration-200 cursor-pointer ${checkboxColor}`}
                   />
                 </div>
                 <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
@@ -1349,16 +1450,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     id="terms-acceptance"
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]/20 transition-all duration-200 cursor-pointer accent-[#05294E]"
+                    className={`h-4 w-4 rounded border-slate-300 transition-all duration-200 cursor-pointer ${checkboxColor}`}
                   />
                 </div>
                 <span className="text-sm text-slate-600 leading-relaxed group-hover:text-slate-900 transition-colors">
                   {t('authPage.register.termsNotice')}
-                  <a href="/terms-of-service" target="_blank" className="text-[#05294E] font-bold hover:underline mx-1">
+                  <a href="/terms-of-service" target="_blank" className={`font-bold mx-1 ${textLinkColor}`}>
                     {t('authPage.register.terms')}
                   </a>
                   {t('authPage.register.and')}
-                  <a href="/privacy-policy" target="_blank" className="text-[#05294E] font-bold hover:underline ml-1">
+                  <a href="/privacy-policy" target="_blank" className={`font-bold ml-1 ${textLinkColor}`}>
                     {t('authPage.register.privacyPolicy')}
                   </a>
                   <span className="text-red-500 ml-0.5">*</span>
@@ -1373,7 +1474,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               className={`w-full group relative flex items-center justify-center py-3.5 px-6 border border-transparent text-base font-black rounded-2xl text-white transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 cursor-pointer disabled:active:scale-100 mt-4 ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#041f3a]' 
-                  : 'bg-[#D0151C] hover:bg-[#B01218]'
+                  : activeTab === 'university'
+                  ? 'bg-[#D0151C] hover:bg-[#B01218]'
+                  : 'bg-amber-500 hover:bg-amber-600'
               }`}
             >
               {loading ? (
@@ -1384,7 +1487,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               ) : (
                 <div className="flex items-center">
                   <span>
-                    {activeTab === 'student' ? t('authPage.register.createStudentAccount') : t('authPage.register.createUniversityAccount')}
+                    {activeTab === 'student' 
+                      ? t('authPage.register.createStudentAccount') 
+                      : activeTab === 'university' 
+                      ? t('authPage.register.createUniversityAccount') 
+                      : t('authPage.register.createAffiliateAccount', 'Criar Conta de Afiliado')}
                   </span>
                 </div>
               )}

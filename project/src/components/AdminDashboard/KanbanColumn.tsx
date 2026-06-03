@@ -98,7 +98,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
           )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Icon className={`w-4 h-4 ${styles.icon}`} />
               <h3 className={`font-semibold text-sm ${styles.title}`}>
                 {stage.label}
               </h3>
