@@ -30,13 +30,13 @@ const SellersList: React.FC<SellersListProps> = ({
 
   const renderProgressStepper = (student: any, disponivel: number, pendente: number) => {
     // Conditions per applicationFlowStages.ts
-    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
     const isI20Applicable =
       student.student_process_type === 'initial' ||
       student.student_process_type === 'change_of_status' ||
       isTransferInactiveVisa;
     const isPlacementApplicable = !!student.placement_fee_flow;
-    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
 
     // Placement or Scholarship — mutually exclusive
     // placement_fee_flow=true → Placement Fee path; false → Scholarship Fee path
@@ -120,9 +120,6 @@ const SellersList: React.FC<SellersListProps> = ({
   // Helper para calcular comissões do aluno (pendente e disponível)
   const getStudentCommissions = (student: any) => {
     const studentId = student.profile_id || student.id || student.user_id;
-    // Comissões reais gravadas no banco (Disponível)
-    const studentComms = commissions.filter(c => c.student_id === studentId);
-    const disponivel = studentComms.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
     // Calcular potencial pendente
     let pendente = 0;
@@ -149,13 +146,13 @@ const SellersList: React.FC<SellersListProps> = ({
     const applicationFeeAmount = 100;
 
     // Condições idênticas ao stepper
-    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
     const isI20Applicable =
       student.student_process_type === 'initial' ||
       student.student_process_type === 'change_of_status' ||
       isTransferInactiveVisa;
     const isPlacementApplicable = !!student.placement_fee_flow;
-    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
 
     const placementOrScholarshipPaid = isPlacementApplicable
       ? !!student.is_placement_fee_paid
@@ -181,6 +178,33 @@ const SellersList: React.FC<SellersListProps> = ({
     }
     if (isI20Applicable && !i20Paid) {
       pendente += calculateRuleComm('i20_control', i20FeeAmount);
+    }
+
+    // Comissões reais gravadas no banco (Disponível)
+    const studentComms = commissions.filter(c => c.student_id === studentId);
+    let disponivel = studentComms.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+    // Se no banco vier zerado, calcula dinamicamente com base nas taxas pagas
+    if (disponivel === 0) {
+      if (student.has_paid_selection_process_fee) {
+        disponivel += calculateRuleComm('selection_process', selectionFeeAmount);
+      }
+      if (student.is_application_fee_paid) {
+        disponivel += calculateRuleComm('application', applicationFeeAmount);
+      }
+      if (placementOrScholarshipPaid) {
+        if (isPlacementApplicable) {
+          disponivel += calculateRuleComm('placement', scholarshipFeeAmount);
+        } else {
+          disponivel += calculateRuleComm('scholarship', scholarshipFeeAmount);
+        }
+      }
+      if (isReinstatementApplicable && student.has_paid_reinstatement_package) {
+        disponivel += calculateRuleComm('reinstatement', 500);
+      }
+      if (isI20Applicable && i20Paid) {
+        disponivel += calculateRuleComm('i20_control', i20FeeAmount);
+      }
     }
 
     return { disponivel, pendente };
@@ -210,10 +234,7 @@ const SellersList: React.FC<SellersListProps> = ({
               Seller
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Pending Amount
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Available Amount
+              Commission
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Progress
@@ -266,14 +287,7 @@ const SellersList: React.FC<SellersListProps> = ({
                   </div>
                 </td>
 
-                {/* Valor Pendente */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-slate-700">
-                    {formatCurrency(pendente)}
-                  </span>
-                </td>
-
-                {/* Valor Disponível */}
+                {/* Commission */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`text-sm font-bold ${disponivel > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
                     {formatCurrency(disponivel)}
