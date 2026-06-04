@@ -301,7 +301,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
           o_que_enviar: `Um novo vendedor ${formData.full_name} (${formData.email}) se registrou usando seu código ${formData.registration_code}. Acesse o dashboard para aprovar ou rejeitar a solicitação.`,
           registration_code: formData.registration_code,
           seller_id: authData.user.id,
-          dashboard_link: "/affiliate-admin/dashboard?tab=pending",
+          dashboard_link: "/agency/dashboard?tab=pending",
           notification_target: 'affiliate_admin'
         };
         

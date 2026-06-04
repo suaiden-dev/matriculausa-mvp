@@ -741,7 +741,7 @@ const PreQualificationLanding: React.FC = () => {
                       <div className="w-full space-y-3 pt-6">
                         {[
                           { text: 'Analisando seu perfil', icon: <Shield className="w-5 h-5" /> },
-                          { text: 'Analisando +154 bolsas no sistema', icon: <GraduationCap className="w-5 h-5" /> },
+                          { text: 'Analisando +150 bolsas no sistema', icon: <GraduationCap className="w-5 h-5" /> },
                           { text: 'Encontrando bolsas compatíveis com seu perfil', icon: <Star className="w-5 h-5" /> },
                           { text: 'Sua seleção personalizada está a caminho!', icon: <Rocket className="w-5 h-5" /> }
                         ].map((item, idx) => {

@@ -1733,7 +1733,27 @@ Deno.serve(async (req: Request) => {
           );
       }
 
-      // 4.4. Processar notificações de recompensa (MatriculaCoins) apenas para I20
+      // 4.4. Registrar comissão via register_payment_billing
+      // Use original_amount from order metadata (pre-surcharge base price) for commission calculation.
+      // Parcelow checkout functions store original_amount in metadata.
+      // Fallback to paymentAmount (net) if metadata is missing.
+      const parcelowBaseAmount = parcelowOrder.metadata?.original_amount
+        ? parseFloat(String(parcelowOrder.metadata.original_amount))
+        : paymentAmount;
+      try {
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: feeType,
+          amount_param: parcelowBaseAmount,
+          payment_session_id_param: String(parcelowOrder.id),
+          payment_method_param: "parcelow",
+        });
+        console.log("[Commission] register_payment_billing called for", feeType, "user", userId);
+      } catch (billingErr) {
+        console.error("[Commission] register_payment_billing failed:", billingErr);
+      }
+
+      // 4.5. Processar notificações de recompensa (MatriculaCoins) apenas para I20
       // Nota: A lógica de crédito de moedas e atualização de status do referral
       // agora é gerenciada pelo trigger 'handle_i20_payment_rewards' no banco de dados.
       // Aqui apenas enviamos a notificação para o padrinho.

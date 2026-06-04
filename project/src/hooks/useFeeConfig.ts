@@ -202,10 +202,15 @@ export const useFeeConfig = (userId?: string) => {
           updates.realPaymentAmounts = {};
         }
 
-        updates.userSystemType = data.system_type || "legacy";
-        
+        // Não setar userSystemType aqui — loadUserSystemType faz isso corretamente
+        // considerando simplified_pricing_for_students da agência do aluno.
+        // (evita flash de preço incorreto quando o consolidado retorna system_type='simplified')
+
         // ✅ ATUALIZAÇÃO ÚNICA: Consolidando todos os estados em um único render
         setState(prev => ({ ...prev, ...updates, loading: false }));
+
+        // Verificar pricing correto via RPC (checa simplified_pricing_for_students da agência)
+        await loadUserSystemType();
         return;
       } else {
         useRpc = false;
@@ -225,10 +230,21 @@ export const useFeeConfig = (userId?: string) => {
   const loadUserSystemType = async () => {
     if (!userId) return;
     try {
-      const { data, error } = await supabase.from("user_profiles").select("system_type, dependents").eq("user_id", userId).single();
+      const { data, error } = await supabase.from("user_profiles").select("system_type, dependents, seller_referral_code").eq("user_id", userId).single();
       if (error) {
         setState(prev => ({ ...prev, userSystemType: "legacy" }));
         return;
+      }
+      // Se tem seller_referral_code, consultar o RPC para checar simplified_pricing_for_students
+      // (todas as agências são 'simplified', mas apenas The Future of English dá desconto ao aluno)
+      if (data?.seller_referral_code) {
+        try {
+          const { data: rpcResult, error: rpcError } = await supabase.rpc("get_seller_admin_system_type_by_code", { seller_code: data.seller_referral_code });
+          if (!rpcError && rpcResult) {
+            setState(prev => ({ ...prev, userSystemType: rpcResult as any, userDependents: data?.dependents || 0 }));
+            return;
+          }
+        } catch (_) { /* fallback abaixo */ }
       }
       setState(prev => ({ ...prev, userSystemType: (data?.system_type || "legacy") as any, userDependents: data?.dependents || 0 }));
     } catch (err) {

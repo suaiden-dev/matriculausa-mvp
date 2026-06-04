@@ -1,0 +1,742 @@
+// @ts-nocheck
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import {
+  useFilters,
+  getFilteredAndSortedData,
+  handleViewDocument,
+  handleDownloadDocument,
+  StudentDetailsView,
+  DocumentsView,
+  AdvancedFilters,
+  StatsCards,
+  SellersList
+} from '../../components/EnhancedStudentTracking';
+import { supabase } from '../../lib/supabase';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
+import {
+  useAdjustedStudentsCalculation,
+  useBlackCouponUsersQuery,
+  useAgencyDataQuery,
+  useAgencySellersQuery,
+  useAgencyStudentProfilesQuery,
+  useCachedStudentDetails,
+  useAgencyCommissionsQuery
+} from '../../hooks/useAgencyQueries';
+import RefreshButton from '../../components/RefreshButton';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+
+function EnhancedStudentTracking(props) {
+  const { userId } = props || {};
+  const { user } = useAuth();
+  const [expandedSellers, setExpandedSellers] = useState(new Set());
+  const [expandedStudents, setExpandedStudents] = useState(new Set());
+  const [activeTab, setActiveTab] = useState('details');
+
+  // Estados para Transfer Form
+  const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
+  const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
+
+  // Hooks personalizados
+  const effectiveUserId = userId || user?.id;
+  const queryClient = useQueryClient();
+
+  // ✅ React Query hooks para dados com cache
+  const { data: adminData } = useAgencyDataQuery(effectiveUserId);
+  const { data: sellers = [], isLoading: loadingSellers } = useAgencySellersQuery(adminData?.affiliateAdminId);
+  const { data: students = [], isLoading: loadingStudents } = useAgencyStudentProfilesQuery(effectiveUserId);
+  const { data: commissions = [], isLoading: loadingCommissions } = useAgencyCommissionsQuery(effectiveUserId);
+
+  // Loading combinado
+  const loading = loadingSellers || loadingStudents || loadingCommissions;
+
+  // Mock de universidades (não usado no componente atualmente)
+  const universities: any[] = [];
+
+  // Estado para refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Estados locais para o estudante selecionado
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  // ✅ Usar o novo hook com cache para detalhes do estudante
+  const {
+    selectedStudent,
+    studentDetails,
+    scholarshipApplication,
+    studentDocuments,
+    documentRequests,
+    i20ControlFeeDeadline,
+    loadStudentDetails: loadStudentDetailsFromHook,
+    backToList,
+    isLoading: loadingStudentDetails
+  } = useCachedStudentDetails(selectedStudentId, selectedProfileId);
+
+  // Função wrapper para carregar detalhes do estudante
+  const loadStudentDetails = async (studentId: string, profileId?: string) => {
+    console.log('🔍 [DEBUG] loadStudentDetails called with:', { studentId, profileId });
+    setSelectedStudentId(studentId);
+    setSelectedProfileId(profileId || studentId);
+    await loadStudentDetailsFromHook(studentId, profileId);
+  };
+
+  // Função para voltar à lista
+  const handleBackToList = () => {
+    setSelectedStudentId(null);
+    setSelectedProfileId(null);
+    backToList();
+  };
+  const {
+    filters,
+    showAdvancedFilters,
+    updateFilters,
+    resetFilters,
+    toggleAdvancedFilters
+  } = useFilters();
+
+  // Obter dados filtrados e ordenados com memoização para evitar recálculos desnecessários
+  const { filteredSellers, filteredStudents } = useMemo(() => {
+    // Aplicar filtros básicos
+    const filtered = getFilteredAndSortedData(sellers, students, filters);
+
+    // Se não há dados ainda, retornar arrays vazios para evitar loading infinito
+    if (!sellers.length && !students.length && !loading) {
+      return { filteredSellers: [], filteredStudents: [] };
+    }
+
+    return filtered;
+  }, [sellers, students, filters, loading]);
+
+  // Carregar defaults de taxas (sem userId) para usar quando não houver override
+  const { feeConfig } = useFeeConfig();
+
+  // ✅ React Query Hooks para dados pesados
+  const { data: blackCouponUsers = new Set() } = useBlackCouponUsersQuery();
+
+  // ✅ Hook composto para cálculos de receita ajustada (substitui toda a lógica manual)
+  const {
+    allAdjustedStudents,
+    adjustedStudents,
+    isLoading: isLoadingAdjustments,
+    overridesMap,
+    dependentsMap,
+    realPaidAmountsMap
+  } = useAdjustedStudentsCalculation(students, filteredStudents, adminData?.simplifiedPricing);
+
+  // Função de refresh usando React Query
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Invalidar todas as queries relacionadas para forçar refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.adminData(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.sellers(adminData?.affiliateAdminId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.studentProfiles(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.feeOverrides }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.realPaidAmounts }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.studentDependents }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.agency.blackCouponUsers })
+      ]);
+    } finally {
+      // Delay para mostrar feedback visual
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
+  // Função para calcular taxas de um estudante específico
+  const getStudentFees = (student: any) => {
+    // Determinar se o sistema é simplified com base no pricing da agência (adminData) ou no system_type do estudante
+    const isSimplified = adminData?.simplifiedPricing !== undefined
+      ? adminData.simplifiedPricing
+      : (student.system_type === 'simplified');
+
+    return {
+      selectionProcessFee: isSimplified ? 350 : (Number(feeConfig.selection_process_fee) || 400),
+      scholarshipFee: isSimplified ? 900 : (Number(feeConfig.scholarship_fee_default) || 900),
+      i20ControlFee: 900, // Sempre 900 para ambos os sistemas
+      isSimplified: isSimplified
+    };
+  };
+
+  // Toggle expandir vendedor
+  const toggleSellerExpansion = (sellerId) => {
+    setExpandedSellers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sellerId)) {
+        newSet.delete(sellerId);
+      } else {
+        newSet.add(sellerId);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle expandir estudante
+  const toggleStudentExpansion = (studentId) => {
+    setExpandedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  // Função para buscar aplicação real com campos de transfer form
+  const fetchRealApplication = async (studentId) => {
+    if (!studentId) return;
+
+    try {
+      // Verificar se studentId é user_id ou profile_id
+      let profileData: any = null;
+      let profileError: any = null;
+
+      // Primeiro, tentar como user_id
+      const { data: userProfileData, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', studentId)
+        .single();
+
+      if (!userProfileError && userProfileData) {
+        profileData = userProfileData;
+      } else {
+        // Se não encontrou como user_id, tentar como profile_id (id)
+        const { data: profileIdData, error: profileIdError } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', studentId)
+          .single();
+
+        if (!profileIdError && profileIdData) {
+          profileData = profileIdData;
+        } else {
+          profileError = profileIdError;
+        }
+      }
+
+      if (profileError || !profileData) {
+        console.error('❌ [TRANSFER_FORM] Error loading profile for student:', studentId, profileError);
+        return;
+      }
+
+      // Buscar aplicação com campos de transfer form
+      const { data: applications, error: applicationError } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          *,
+          transfer_form_url,
+          transfer_form_status,
+          transfer_form_sent_at,
+          scholarships(
+            id,
+            title,
+            universities(
+              id,
+              name
+            )
+          )
+        `)
+        .eq('student_id', profileData.id)
+        .order('status', { ascending: false }) // enrolled vem antes de approved
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!applicationError && applications && applications.length > 0) {
+        const app = applications[0];
+        setRealScholarshipApplication(app);
+      } else {
+        setRealScholarshipApplication(null);
+      }
+    } catch (err) {
+      console.error('❌ [TRANSFER_FORM] Error fetching real application:', err);
+      setRealScholarshipApplication(null);
+    }
+  };
+
+  // Função para buscar transfer form uploads
+  const fetchTransferFormUploads = async (applicationId) => {
+    if (!applicationId) return;
+
+    setLoadingTransferFormUploads(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+
+      if (!error && data) {
+        setTransferFormUploads(data);
+      } else if (error) {
+        console.error('Erro ao buscar transfer form uploads:', error);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar transfer form uploads:', err);
+    } finally {
+      setLoadingTransferFormUploads(false);
+    }
+  };
+
+  // Função para verificar se é aplicação de transfer
+  const getTransferApplication = () => {
+    // Usar a aplicação real se disponível, senão usar a passada como prop
+    const currentApplication = realScholarshipApplication || scholarshipApplication;
+
+    return currentApplication?.student_process_type === 'transfer' ? currentApplication : null;
+  };
+
+  // Buscar aplicação real quando um estudante for selecionado
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchRealApplication(selectedStudent);
+    }
+  }, [selectedStudent]);
+
+  // Buscar transfer form uploads quando a aplicação real for carregada
+  useEffect(() => {
+    if (realScholarshipApplication?.id && realScholarshipApplication.student_process_type === 'transfer') {
+      fetchTransferFormUploads(realScholarshipApplication.id);
+    }
+  }, [realScholarshipApplication?.id, realScholarshipApplication?.student_process_type]);
+
+  // Loading state - usar skeleton ao invés de spinner
+  // ✅ OTIMIZAÇÃO: Só mostrar skeleton no carregamento inicial dos dados essenciais
+  const shouldShowSkeleton = (loading && (!sellers.length || !students.length)) || isLoadingAdjustments;
+
+  if (shouldShowSkeleton) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-pulse">
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="h-8 w-64 bg-slate-200 rounded-lg mb-2"></div>
+            <div className="h-4 w-96 bg-slate-200 rounded-lg"></div>
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 w-24 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-8 w-20 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                  </div>
+                  <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filters Skeleton */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+            <div className="flex flex-wrap gap-4">
+              <div className="h-10 w-full sm:w-64 bg-slate-200 rounded-lg"></div>
+              <div className="h-10 w-full sm:w-48 bg-slate-200 rounded-lg"></div>
+              <div className="h-10 w-full sm:w-48 bg-slate-200 rounded-lg"></div>
+            </div>
+          </div>
+
+          {/* Sellers List Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="p-4 sm:p-6 border-b border-slate-200">
+              <div className="h-6 w-48 bg-slate-200 rounded mb-2"></div>
+              <div className="h-4 w-72 bg-slate-200 rounded"></div>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-5 w-40 bg-slate-200 rounded"></div>
+                    <div className="h-8 w-8 bg-slate-200 rounded"></div>
+                  </div>
+                  <div className="space-y-2">
+                    {[1, 2].map((j) => (
+                      <div key={j} className="h-16 bg-slate-200 rounded-lg"></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se um estudante está selecionado, mostrar detalhes
+  if (selectedStudentId && studentDetails) {
+    return (
+      <div className="min-h-screen">
+        {/* Header Section */}
+        <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
+                <button
+                  onClick={handleBackToList}
+                  className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100 mb-4 sm:mb-0 w-full sm:w-auto justify-start"
+                >
+                  <span className="text-sm md:text-base">← Back to list</span>
+                </button>
+                <div className="min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
+                    Student Application
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-600 break-words">
+                    Review and manage {studentDetails.full_name}'s application details
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs - SEMPRE VISÍVEIS */}
+        <div className="bg-white border-b border-slate-300 rounded-b-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-8 overflow-x-auto -mb-px" role="tablist">
+              {[
+                { id: 'details', label: 'Details', icon: '👤' },
+                { id: 'documents', label: 'Documents', icon: '📄' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap min-w-0 ${activeTab === tab.id
+                      ? 'border-[#05294E] text-[#05294E]'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  onClick={() => setActiveTab(tab.id)}
+                  type="button"
+                  aria-selected={activeTab === tab.id}
+                  role="tab"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="hidden sm:inline">{tab.icon}</span>
+                    <span className="break-words">{tab.label}</span>
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {activeTab === 'details' && (
+            <StudentDetailsView
+              studentDetails={studentDetails}
+              studentDocuments={studentDocuments}
+              scholarshipApplication={scholarshipApplication}
+              i20ControlFeeDeadline={i20ControlFeeDeadline}
+              onBack={handleBackToList}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onViewDocument={handleViewDocument}
+              onDownloadDocument={handleDownloadDocument}
+              realPaidAmounts={realPaidAmountsMap[studentDetails?.student_id || studentDetails?.user_id || ''] || {}}
+            />
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="space-y-6">
+              {/* Document Management Section */}
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center min-w-0">
+                      <span className="text-white mr-3">📄</span>
+                      <div>
+                        <h2 className="text-xl font-semibold text-white break-words">Document Management</h2>
+                        <p className="text-slate-200 text-sm mt-1 break-words">View student submitted documents and their current status</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <DocumentsView
+                    studentDocuments={studentDocuments}
+                    documentRequests={documentRequests}
+                    scholarshipApplication={scholarshipApplication}
+                    studentId={selectedStudent}
+                    onViewDocument={handleViewDocument}
+                    onDownloadDocument={handleDownloadDocument}
+                    isAdmin={false}
+                  />
+                </div>
+              </div>
+
+              {/* Transfer Form Section - Only for Transfer Students */}
+              {(() => {
+                const transferApp = getTransferApplication();
+
+                if (!transferApp) return null;
+
+                return (
+                  <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center min-w-0">
+                          <div>
+                            <h2 className="text-xl font-semibold text-white break-words">Transfer Form</h2>
+                            <p className="text-slate-200 text-sm mt-1 break-words">Transfer application documents and student uploads</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      {/* Template enviado pelo admin/universidade */}
+                      {transferApp.transfer_form_url && (
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Transfer Form Template
+                          </h3>
+
+                          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                            <div className="flex items-start space-x-4">
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap gap-2 mb-1">
+                                  <p className="font-medium text-slate-900 break-words">
+                                    {transferApp.transfer_form_url.split('/').pop() || 'Transfer Form Template'}
+                                  </p>
+                                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                    Available
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-500 break-words">
+                                  Sent on {transferApp.transfer_form_sent_at ? new Date(transferApp.transfer_form_sent_at).toLocaleDateString('pt-BR') : 'N/A'}
+                                </p>
+
+                                <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                                  <button
+                                    onClick={() => handleViewDocument({
+                                      file_url: transferApp.transfer_form_url,
+                                      filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form Template'
+                                    })}
+                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                  >
+                                    View Template
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDownloadDocument({
+                                      file_url: transferApp.transfer_form_url,
+                                      filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form Template'
+                                    })}
+                                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                  >
+                                    Download Template
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Student Uploads */}
+                      {loadingTransferFormUploads ? (
+                        <div className="text-center py-8">
+                          <div className="w-8 h-8 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-slate-600">Loading transfer form uploads...</p>
+                        </div>
+                      ) : transferFormUploads.length > 0 ? (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                          <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                            </svg>
+                            Student Uploads
+                          </h4>
+
+                          <div className="space-y-4">
+                            {transferFormUploads.map((upload) => {
+                              const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                  'bg-yellow-100 text-yellow-800 border-yellow-200';
+
+                              return (
+                                <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                                        </svg>
+                                      </div>
+                                      <div>
+                                        <p className="font-medium text-slate-900">
+                                          {upload.file_url.split('/').pop()}
+                                        </p>
+                                        <p className="text-sm text-slate-500">
+                                          Uploaded on {new Date(upload.uploaded_at).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
+                                      {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                    </span>
+                                  </div>
+
+                                  {upload.rejection_reason && (
+                                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                      <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
+                                      <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                                    </div>
+                                  )}
+
+                                  <div className="flex gap-2">
+                                    <button
+                                      className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                      onClick={() => {
+                                        const signedUrl = upload.file_url;
+                                        if (signedUrl) {
+                                          handleViewDocument({
+                                            file_url: signedUrl,
+                                            filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                      onClick={() => {
+                                        const signedUrl = upload.file_url;
+                                        if (signedUrl) {
+                                          handleDownloadDocument({
+                                            file_url: signedUrl,
+                                            filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Download
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-600 mb-2">No Student Uploads</h3>
+                          <p className="text-sm text-slate-500">
+                            The student hasn't uploaded any transfer form documents yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Lista principal de vendedores e estudantes
+  return (
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  Sales & Registrations Dashboard
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Track clients referred by your affiliate sellers and the status of commissions.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Monitor student progress from registration to commission release.
+                </p>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          {/* Stats Cards - sempre mostra diferenciação entre pagos e registrados */}
+          <StatsCards
+            filteredStudents={adjustedStudents}
+            allStudents={allAdjustedStudents}
+            commissions={commissions}
+          />
+
+          {/* Container Unificado de Filtros e Tabela */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Filtros */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 bg-slate-50/50">
+              <AdvancedFilters
+                filters={filters}
+                onFiltersChange={updateFilters}
+                sellers={sellers}
+                universities={universities}
+                showAdvancedFilters={showAdvancedFilters}
+                onToggleAdvancedFilters={toggleAdvancedFilters}
+                onResetFilters={resetFilters}
+                filteredStudentsCount={adjustedStudents.length}
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+              />
+            </div>
+
+            {/* Tabela de Estudantes */}
+            <SellersList
+              filteredSellers={filteredSellers}
+              filteredStudents={adjustedStudents}
+              expandedSellers={expandedSellers}
+              expandedStudents={expandedStudents}
+              onToggleSellerExpansion={toggleSellerExpansion}
+              onToggleStudentExpansion={toggleStudentExpansion}
+              onViewStudentDetails={loadStudentDetails}
+              blackCouponUsers={blackCouponUsers}
+              commissions={commissions}
+              commissionRules={adminData?.commissionRules}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnhancedStudentTracking;
+

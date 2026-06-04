@@ -10,7 +10,7 @@ import { useInView } from 'react-intersection-observer';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useDynamicFees } from '../hooks/useDynamicFees';
-import { useAffiliateAdminCheck } from '../hooks/useAffiliateAdminCheck';
+import { useAgencyCheck } from '../hooks/useAgencyCheck';
 import { useAuth } from '../hooks/useAuth';
 import { useSystemType } from '../hooks/useSystemType';
 import { useFeeConfig } from '../hooks/useFeeConfig';
@@ -21,7 +21,7 @@ const HowItWorks: React.FC = () => {
   const { t } = useTranslation(['home', 'common']);
   const navigate = useNavigate();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
-  const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAffiliateAdminCheck();
+  const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAgencyCheck();
   const { userProfile } = useAuth();
   const { systemType, loading: systemTypeLoading } = useSystemType();
   const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);

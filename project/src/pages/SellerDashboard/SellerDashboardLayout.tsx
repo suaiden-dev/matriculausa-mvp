@@ -77,7 +77,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const getSidebarItems = () => {
     const baseItems = [
       { id: 'overview', label: 'Overview', icon: BarChart3, path: '/seller/dashboard', badge: null },
-      { id: 'students', label: 'My Students', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
+      { id: 'students', label: 'Sales', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
       { id: 'affiliate-tools', label: 'Affiliate Tools', icon: Target, path: '/seller/dashboard/affiliate-tools', badge: null },
       { id: 'performance', label: 'Performance', icon: Activity, path: '/seller/dashboard/performance', badge: null },
       { id: 'profile', label: 'Settings', icon: Settings, path: '/seller/dashboard/profile', badge: null }
@@ -152,7 +152,6 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-slate-900 truncate">Seller Dashboard</h3>
-                <p className="text-sm text-slate-500 truncate">Affiliate Seller</p>
               </div>
             </div>
             

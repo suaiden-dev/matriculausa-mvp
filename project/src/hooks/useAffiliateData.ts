@@ -21,6 +21,21 @@ function shouldExcludeStudent(email: string | null | undefined): boolean {
   return email.toLowerCase().includes('@uorak.com');
 }
 
+export interface CommissionRule {
+  type: 'fixed' | 'percentage';
+  value: number;
+  enabled?: boolean;                        // default true quando ausente (backward compat)
+  trigger?: 'on_payment' | 'on_last_fee';  // default 'on_payment' quando ausente
+}
+
+export interface CommissionRules {
+  selection_process?: CommissionRule;
+  application?: CommissionRule;
+  placement?: CommissionRule;
+  i20_control?: CommissionRule;
+  reinstatement?: CommissionRule;
+}
+
 export interface Affiliate {
   id: string;
   user_id: string;
@@ -35,7 +50,10 @@ export interface Affiliate {
   active_sellers: number;
   total_students: number;
   total_revenue: number;
+  total_commission: number | null;
   is_active: boolean;
+  commission_per_sale: number | null;
+  commission_rules?: CommissionRules;
   sellers: Seller[];
   students: Student[];
 }
@@ -72,6 +90,13 @@ export interface Student {
   dependents?: number;
 }
 
+// Agencies whose revenue must not be recalculated — keep hardcoded estimates.
+// To unprotect an agency, remove its ID from this set.
+const PROTECTED_AGENCY_IDS = new Set([
+  '525e4fba-5743-49c0-8ab8-f0dba284bc7a', // Brant Immigration
+  'fa01ff90-b78f-4362-990a-f9d9c24e2445', // The Future of English
+]);
+
 export const useAffiliateData = () => {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [allSellers, setAllSellers] = useState<Seller[]>([]);
@@ -87,7 +112,7 @@ export const useAffiliateData = () => {
       // 1. Buscar todos os affiliate admins
       const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
         .from('affiliate_admins')
-        .select('id, user_id, is_active, created_at')
+        .select('id, user_id, is_active, created_at, commission_per_sale, commission_rules')
         .order('created_at', { ascending: false });
 
       if (affiliateAdminsError) throw affiliateAdminsError;
@@ -123,6 +148,7 @@ export const useAffiliateData = () => {
           const sellers = sellersData || [];
           let studentsData: any[] = [];
           let totalRevenue = 0;
+          let totalCommission: number | null = null;
 
           if (sellers.length > 0) {
             const sellerCodes = sellers.map((s: any) => s.referral_code);
@@ -134,31 +160,39 @@ export const useAffiliateData = () => {
             if (stdData) {
               const filtered = isDevelopment() ? stdData : stdData.filter(p => !shouldExcludeStudent(p.email));
 
-              studentsData = filtered.map(profile => {
-                const referringSeller = sellers.find(s => s.referral_code === profile.seller_referral_code);
-                
-                // Cálculo de receita detalhado
-                let revenue = 0;
+              // Fetch real payment amounts for these students (skip protected agencies)
+              const studentUserIds = filtered.map((p: any) => p.user_id).filter(Boolean);
+              let realPaymentsMap: Record<string, number> = {};
+              if (studentUserIds.length > 0 && !PROTECTED_AGENCY_IDS.has(affiliateId)) {
+                const { data: feePayments } = await supabase
+                  .from('individual_fee_payments')
+                  .select('user_id, amount')
+                  .in('user_id', studentUserIds);
+                (feePayments || []).forEach((p: any) => {
+                  if (p.user_id && p.amount != null) {
+                    realPaymentsMap[p.user_id] = (realPaymentsMap[p.user_id] || 0) + Number(p.amount);
+                  }
+                });
+              }
+
+              studentsData = filtered.map((profile: any) => {
+                const referringSeller = sellers.find((s: any) => s.referral_code === profile.seller_referral_code);
                 const sysType = profile.system_type || 'legacy';
                 const dependents = Number(profile.dependents || 0);
 
-                // 1. Selection Process Fee
-                if (profile.has_paid_selection_process_fee) {
-                  revenue += sysType === 'simplified' ? 350 : 400 + (dependents * 150);
+                // Use real payment data when available; fall back to hardcoded estimates for legacy/pre-system records
+                let revenue = 0;
+                if (realPaymentsMap[profile.user_id] != null) {
+                  revenue = realPaymentsMap[profile.user_id];
+                } else {
+                  if (profile.has_paid_selection_process_fee) {
+                    revenue += sysType === 'simplified' ? 350 : 400 + (dependents * 150);
+                  }
+                  if (profile.is_scholarship_fee_paid) revenue += 900;
+                  if (profile.has_paid_i20_control_fee) revenue += 900;
+                  if (profile.is_application_fee_paid) revenue += 100;
                 }
-                // 2. Scholarship Fee
-                if (profile.is_scholarship_fee_paid) {
-                  revenue += 900;
-                }
-                // 3. I-20 Control Fee
-                if (profile.has_paid_i20_control_fee) {
-                  revenue += 900;
-                }
-                // 4. Application Fee
-                if (profile.is_application_fee_paid) {
-                  revenue += 100;
-                }
-                
+
                 totalRevenue += revenue;
 
                 return {
@@ -185,6 +219,18 @@ export const useAffiliateData = () => {
             }
           }
 
+          // Fetch commission totals from affiliate_referrals (skip protected agencies)
+          if (!PROTECTED_AGENCY_IDS.has(affiliateId) && sellers.length > 0) {
+            const sellerCodes = sellers.map((s: any) => s.referral_code);
+            const { data: referrals } = await supabase
+              .from('affiliate_referrals')
+              .select('commission_amount')
+              .in('affiliate_code', sellerCodes);
+            totalCommission = (referrals || []).reduce(
+              (sum: number, r: any) => sum + (Number(r.commission_amount) || 0), 0
+            );
+          }
+
           return {
             id: affiliateId,
             user_id: affiliateAdmin.user_id,
@@ -199,7 +245,10 @@ export const useAffiliateData = () => {
             active_sellers: sellers.filter(s => s.is_active).length,
             total_students: studentsData.length,
             total_revenue: totalRevenue,
+            total_commission: totalCommission,
             is_active: !!affiliateAdmin.is_active,
+            commission_per_sale: affiliateAdmin.commission_per_sale ?? null,
+            commission_rules: affiliateAdmin.commission_rules,
             sellers: sellers.map(s => ({
               ...s,
               students_count: studentsData.filter(std => std.seller_referral_code === s.referral_code).length,

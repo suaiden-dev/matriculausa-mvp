@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAffiliateAdminNotifications } from './useAffiliateAdminNotifications';
+import { useAgencyNotifications } from './useAgencyNotifications';
 
 interface I20DeadlineMonitorConfig {
   affiliateAdminId: string;
@@ -11,7 +11,7 @@ export const useI20DeadlineMonitor = ({
   affiliateAdminId, 
   checkInterval = 5 * 60 * 1000 // 5 minutos por padrão
 }: I20DeadlineMonitorConfig) => {
-  const { createI20DeadlineExpiredNotification } = useAffiliateAdminNotifications({
+  const { createI20DeadlineExpiredNotification } = useAgencyNotifications({
     affiliateAdminId
   });
   
@@ -20,7 +20,6 @@ export const useI20DeadlineMonitor = ({
 
   const checkI20Deadlines = async () => {
     try {
-      console.log('🔍 [I20_DEADLINE_MONITOR] Verificando deadlines do I-20...');
       
       // Buscar estudantes que receberam carta de aceite mas não pagaram I-20 Control Fee
       // CORREÇÃO: Usar scholarship_applications para dados da carta de aceite e user_profiles para dados do I-20
@@ -54,7 +53,6 @@ export const useI20DeadlineMonitor = ({
       }
 
       if (!studentsWithDeadline || studentsWithDeadline.length === 0) {
-        console.log('🔍 [I20_DEADLINE_MONITOR] Nenhum estudante com deadline ativo encontrado');
         return;
       }
 
@@ -101,7 +99,6 @@ export const useI20DeadlineMonitor = ({
       }
 
       if (expiredStudents.length > 0) {
-        console.log(`⚠️ [I20_DEADLINE_MONITOR] ${expiredStudents.length} estudante(s) com deadline expirado encontrado(s)`);
         
         // Buscar informações do seller para cada estudante
         for (const student of expiredStudents) {
@@ -120,7 +117,6 @@ export const useI20DeadlineMonitor = ({
             
             // Verificar se o seller pertence ao affiliate admin atual
             if (seller.affiliate_admin_id !== affiliateAdminId) {
-              console.log(`🔍 [I20_DEADLINE_MONITOR] Estudante ${student.student_id} não pertence ao affiliate admin ${affiliateAdminId}`);
               continue;
             }
 

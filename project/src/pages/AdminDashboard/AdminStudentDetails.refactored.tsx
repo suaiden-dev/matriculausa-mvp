@@ -543,6 +543,7 @@ const AdminStudentDetails: React.FC = () => {
     affiliateId: string;
     name: string | null;
     email: string | null;
+    isAgency?: boolean;
   } | null>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
@@ -926,6 +927,7 @@ const AdminStudentDetails: React.FC = () => {
         affiliateId: codeData?.id || referral.referrer_id,
         name: profile?.full_name || null,
         email: profile?.email || null,
+        isAgency: profile?.role === 'affiliate_admin',
       });
     };
     fetchAffiliateProgramReferral();
@@ -1808,6 +1810,32 @@ const AdminStudentDetails: React.FC = () => {
       });
       // Mostrar alerta ao admin sobre a exceção
       toast.error(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
+    }
+
+    // Register commission billing for non-Zelle manual payments
+    try {
+      const feeTypeMapping: Record<string, string> = {
+        selection_process: 'selection_process',
+        application: 'application_fee',
+        scholarship: 'scholarship_fee',
+        placement: 'placement_fee',
+        i20_control: 'i20_control_fee',
+        ds160_package: 'ds160_package',
+        i539_cos_package: 'i539_cos_package',
+        reinstatement_package: 'reinstatement_package',
+      };
+      const billingFeeType = feeTypeMapping[feeType];
+      if (billingFeeType) {
+        await supabase.rpc('register_payment_billing', {
+          user_id_param: student.user_id,
+          fee_type_param: billingFeeType,
+          amount_param: finalPaymentAmount,
+          payment_session_id_param: null,
+          payment_method_param: paymentMethodValue,
+        });
+      }
+    } catch (billingErr: any) {
+      console.error('[PaymentStatusCard] ❌ register_payment_billing failed:', billingErr.message);
     }
 
     // Calculate remaining placement fee balance to pass to markFeeAsPaid
@@ -4101,6 +4129,7 @@ const AdminStudentDetails: React.FC = () => {
                         name: affiliateProgramReferral.name || 'Unknown',
                         email: affiliateProgramReferral.email || 'No email',
                         affiliateId: affiliateProgramReferral.affiliateId,
+                        isAgency: affiliateProgramReferral.isAgency ?? false,
                       }
                       : referralInfo
                   }

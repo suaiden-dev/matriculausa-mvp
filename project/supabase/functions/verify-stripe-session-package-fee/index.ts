@@ -173,6 +173,20 @@ Deno.serve(async (req: Request) => {
         console.warn('[Individual Fee Payment] Warning: Failed to record payment:', recordError);
       }
 
+      // Registrar comissão via register_payment_billing
+      try {
+        await supabase.rpc('register_payment_billing', {
+          user_id_param: userId,
+          fee_type_param: fee_type,
+          amount_param: paymentAmountUSD,
+          payment_session_id_param: sessionId,
+          payment_method_param: 'stripe',
+        });
+        console.log('[Commission] register_payment_billing called for', fee_type, 'user', userId);
+      } catch (billingErr) {
+        console.error('[Commission] register_payment_billing failed:', billingErr);
+      }
+
       // 3. Log da ação + Notificações
       const { data: userProfile } = await supabase
         .from('user_profiles')
