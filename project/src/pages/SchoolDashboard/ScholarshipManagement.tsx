@@ -125,8 +125,8 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
             <div className="max-w-full mx-auto bg-slate-50">
               {/* Header: title + note + counter */}
               {!isTabbed && (
-                <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex-1">
+                <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 text-center md:text-left">
+                  <div className="flex-1 flex flex-col items-center md:items-start">
                     <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
                       Manage Scholarships
                     </h1>
