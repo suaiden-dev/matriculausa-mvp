@@ -40,10 +40,10 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile }) => {
             <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                  Affiliate Tools
+                  Seller Tools
                 </h1>
                 <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  Share your affiliate code to earn commissions from student registrations.
+                  Share your referral code and links to invite students to register.
                 </p>
               </div>
             </div>
@@ -57,7 +57,7 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile }) => {
                       Referral Management
                     </h2>
                     <p className="text-sm text-slate-600 mt-1">
-                      Tools and resources to maximize your affiliate marketing success
+                      Tools and resources to maximize your sales performance
                     </p>
                   </div>
                 </div>

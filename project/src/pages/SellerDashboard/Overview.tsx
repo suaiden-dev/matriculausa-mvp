@@ -329,7 +329,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       view: 'students'
     },
     {
-      title: 'Affiliate Tools',
+      title: 'Seller Tools',
       description: 'Access tools to increase sales',
       icon: Target,
       color: 'bg-blue-600',

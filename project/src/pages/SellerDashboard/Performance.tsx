@@ -215,11 +215,9 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           // Fallback: calcular baseado no system_type e dependents
           const baseSelDefault = systemType === 'simplified' ? 350 : 400;
           const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
-          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-          // Dependentes só afetam Application Fee ($100 por dependente)
           const selPaid = overrides.selection_process_fee != null
             ? baseSel
-            : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
+            : baseSel + (deps * 100);
           total += selPaid;
         }
       }
@@ -235,7 +233,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           total += realPaid.scholarship;
         } else {
           // Fallback: calcular baseado no system_type
-          const schBaseDefault = systemType === 'simplified' ? 900 : 900;
+          const schBaseDefault = systemType === 'simplified' ? 550 : 900;
           const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
           total += schBase;
         }
