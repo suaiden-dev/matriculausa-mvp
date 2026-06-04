@@ -116,16 +116,42 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     // Plano de parcelamento ativo (novo sistema dinâmico)
     const [activePlacementPlan, setActivePlacementPlan] = useState<InstallmentPlan | null>(null);
     useEffect(() => {
-        if (!userProfile?.user_id) return;
-        supabase
-            .from('fee_installment_plans')
-            .select('*')
-            .eq('user_id', userProfile.user_id)
-            .eq('fee_type', 'placement_fee')
-            .eq('status', 'active')
-            .maybeSingle()
-            .then(({ data }) => setActivePlacementPlan(data ?? null));
-    }, [userProfile?.user_id]);
+        const userId = user?.id || userProfile?.user_id;
+        if (!userId) return;
+
+        const fetchPlan = () => {
+            supabase
+                .from('fee_installment_plans')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('fee_type', 'placement_fee')
+                .eq('status', 'active')
+                .maybeSingle()
+                .then(({ data }) => setActivePlacementPlan(data ?? null));
+        };
+
+        fetchPlan();
+
+        const channel = supabase
+            .channel(`realtime-placement-plans-docs-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'fee_installment_plans',
+                    filter: `user_id=eq.${userId}`
+                },
+                () => {
+                    fetchPlan();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id, userProfile?.user_id]);
 
     // Valor a pagar nesta parcela (próxima parcela do plano)
     const currentInstallmentNumber = (activePlacementPlan?.installments_paid ?? 0) + 1;

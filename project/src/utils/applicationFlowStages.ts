@@ -413,7 +413,7 @@ function getRawStepStatus(
       const isExpiredVisaTransfer = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
       const i20FeePaid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
 
-      if (student.transfer_form_status === 'approved') {
+      if (student.transfer_form_status === 'approved' || student.transfer_form_status === 'skipped') {
         return (isExpiredVisaTransfer && !i20FeePaid) ? 'in_progress' : 'completed';
       }
       if (student.transfer_form_status === 'returned') return 'in_progress';

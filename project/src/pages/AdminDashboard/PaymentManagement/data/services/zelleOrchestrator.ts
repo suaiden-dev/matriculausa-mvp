@@ -299,7 +299,7 @@ export async function approveZelleFlow(params: {
 
     // Record payment (individual table)
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(
+    const paymentRecord = await recordIndividualFeePayment(
       supabase,
       {
         userId: payment.user_id,
@@ -310,6 +310,10 @@ export async function approveZelleFlow(params: {
         zellePaymentId: payment.id,
       },
     );
+
+    if (paymentRecord.success && paymentRecord.recordId) {
+      await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "placement", paymentRecord.recordId);
+    }
 
     // Log action
     console.log("📤 [approveZelleFlow] Chamando log_student_action para Placement Fee:", {
@@ -1402,6 +1406,89 @@ export async function rejectZelleFlow(params: {
   }
 }
 
+// Helper to handle fee installment plans updates and associations on Zelle approval
+async function handleInstallmentPlanAssociation(
+  supabase: SupabaseClient,
+  userId: string,
+  paymentAmount: number,
+  paymentFeeType: string,
+  individualFeePaymentId: string
+) {
+  try {
+    let planFeeType = paymentFeeType;
+    if (paymentFeeType === 'placement' || paymentFeeType === 'placement_fee') {
+      planFeeType = 'placement_fee';
+    } else if (paymentFeeType === 'selection_process' || paymentFeeType === 'selection_process_fee') {
+      planFeeType = 'selection_process_fee';
+    } else if (paymentFeeType === 'i20_control' || paymentFeeType === 'i20_control_fee' || paymentFeeType === 'control_fee') {
+      planFeeType = 'i20_control_fee';
+    }
+
+    // Buscar plano ativo para o user_id + fee_type
+    const { data: activePlan, error: planError } = await supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('fee_type', planFeeType)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (planError) {
+      console.error('❌ [zelleOrchestrator] Erro ao buscar fee_installment_plans ativo:', planError);
+      return;
+    }
+
+    if (!activePlan) {
+      console.log('ℹ️ [zelleOrchestrator] Nenhum fee_installment_plans ativo encontrado para:', { userId, planFeeType });
+      return;
+    }
+
+    console.log('📝 [zelleOrchestrator] Plano ativo encontrado:', activePlan);
+
+    const nextPaidCount = (activePlan.installments_paid || 0) + 1;
+    const nextAmountPaid = Number(activePlan.amount_paid || 0) + paymentAmount;
+    
+    const isCompleted = nextPaidCount >= (activePlan.total_installments || 2) || 
+                        nextAmountPaid >= Number(activePlan.total_amount || 0);
+
+    const updateFields: any = {
+      installments_paid: nextPaidCount,
+      amount_paid: nextAmountPaid,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isCompleted) {
+      updateFields.status = 'completed';
+      updateFields.completed_at = new Date().toISOString();
+    }
+
+    // 1. Atualizar o plano de parcelamento
+    const { error: updatePlanError } = await supabase
+      .from('fee_installment_plans')
+      .update(updateFields)
+      .eq('id', activePlan.id);
+
+    if (updatePlanError) {
+      console.error('❌ [zelleOrchestrator] Erro ao atualizar fee_installment_plans:', updatePlanError);
+      return;
+    }
+
+    // 2. Vincular o plan_id no registro de individual_fee_payments
+    const { error: updatePaymentError } = await supabase
+      .from('individual_fee_payments')
+      .update({ installment_plan_id: activePlan.id })
+      .eq('id', individualFeePaymentId);
+
+    if (updatePaymentError) {
+      console.error('❌ [zelleOrchestrator] Erro ao vincular installment_plan_id no individual_fee_payments:', updatePaymentError);
+    } else {
+      console.log('✅ [zelleOrchestrator] Plano vinculado e atualizado com sucesso para o pagamento:', individualFeePaymentId);
+    }
+  } catch (err) {
+    console.error('❌ [zelleOrchestrator] Exceção em handleInstallmentPlanAssociation:', err);
+  }
+}
+
 // ─── Placement Fee Installment Flows ────────────────────────────────────────
 
 /**
@@ -1457,7 +1544,7 @@ export async function approvePartialZelleFlow(params: {
     .eq("user_id", payment.user_id);
 
   // 3. Registrar pagamento parcial em individual_fee_payments
-  await recordIndividualFeePayment(supabase, {
+  const paymentRecord = await recordIndividualFeePayment(supabase, {
     userId: payment.user_id,
     feeType: "placement" as any,
     amount: payment.amount,
@@ -1465,6 +1552,10 @@ export async function approvePartialZelleFlow(params: {
     paymentMethod: "zelle",
     zellePaymentId: payment.id,
   });
+
+  if (paymentRecord.success && paymentRecord.recordId) {
+    await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "placement", paymentRecord.recordId);
+  }
 
   // 4. Log da ação
   await supabase.rpc("log_student_action", {
@@ -1553,7 +1644,7 @@ export async function approveSecondInstallmentFlow(params: {
     .eq("user_id", payment.user_id);
 
   // 3. Registrar 2ª parcela em individual_fee_payments
-  await recordIndividualFeePayment(supabase, {
+  const paymentRecord = await recordIndividualFeePayment(supabase, {
     userId: payment.user_id,
     feeType: "placement" as any,
     amount: payment.amount,
@@ -1561,6 +1652,10 @@ export async function approveSecondInstallmentFlow(params: {
     paymentMethod: "zelle",
     zellePaymentId: payment.id,
   });
+
+  if (paymentRecord.success && paymentRecord.recordId) {
+    await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "placement", paymentRecord.recordId);
+  }
 
   // 4. Billing
   await supabase.rpc("register_payment_billing", {

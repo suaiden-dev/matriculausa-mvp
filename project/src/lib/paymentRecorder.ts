@@ -23,7 +23,7 @@ export interface RecordPaymentParams {
 export async function recordIndividualFeePayment(
   supabase: SupabaseClient,
   params: RecordPaymentParams
-): Promise<{ success: boolean; paymentId?: string; error?: string }> {
+): Promise<{ success: boolean; paymentId?: string; recordId?: string; error?: string }> {
   try {
     console.log('[Individual Fee Payment] Recording fee payment:', {
       user_id: params.userId,
@@ -70,7 +70,7 @@ export async function recordIndividualFeePayment(
       fee_type: params.feeType,
       raw_data: data
     });
-    return { success: true, paymentId: result?.payment_id || result?.id };
+    return { success: true, paymentId: result?.payment_id || result?.id, recordId: result?.id };
   } catch (error: any) {
     console.error('[Individual Fee Payment] ❌ EXCEPTION: Failed to record individual fee payment:', {
       error: error.message,

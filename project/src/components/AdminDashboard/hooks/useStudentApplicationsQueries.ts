@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
-import { queryKeys } from '../../../lib/queryKeys';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "../../../lib/supabase";
+import { queryKeys } from "../../../lib/queryKeys";
 
 export interface StudentRecord {
   student_id: string;
@@ -53,6 +53,7 @@ export interface StudentRecord {
   has_submitted_form?: boolean;
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
+  agency_name?: string | null;
   // New stage fields
   has_sent_docs_to_university?: boolean;
   sevis_transfer_completed?: boolean;
@@ -84,87 +85,137 @@ export function useStudentsQuery() {
   return useQuery({
     queryKey: queryKeys.students.list(),
     queryFn: async (): Promise<StudentRecord[]> => {
-      // Buscar estudantes com informações de atividade recente
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          full_name,
-          email,
-          created_at,
-          updated_at,
-          has_paid_selection_process_fee,
-          has_paid_i20_control_fee,
-          has_paid_i539_cos_package,
-          has_paid_ds160_package,
-          placement_fee_flow,
-          is_placement_fee_paid,
-          role,
-          seller_referral_code,
-          has_paid_reinstatement_package,
-          visa_transfer_active,
-          is_archived,
-          is_dropped,
-          placement_fee_pending_balance,
-          placement_fee_due_date,
-          placement_fee_installment_number,
-          placement_fee_installment_enabled,
-          source,
-          identity_photo_path,
-          selection_survey_passed,
-          documents_uploaded,
-          field_of_interest,
-          selected_scholarship_id,
-          student_process_type,
-          scholarship_applications!scholarship_applications_student_id_fkey (
-              id,
-              scholarship_id,
-              status,
-              applied_at,
-              is_application_fee_paid,
-              is_scholarship_fee_paid,
-              acceptance_letter_status,
-              acceptance_letter_url,
-              payment_status,
-              reviewed_at,
-              reviewed_by,
-              student_process_type,
-              transfer_form_status,
-              has_sent_docs_to_university,
-              sevis_transfer_completed,
-              visa_approved,
-              documents,
-              updated_at,
-              scholarships (
+      // Buscar estudantes com informações de atividade recente em paralelo com dados de agência/vendedor
+      const [
+        studentsResult,
+        sellersResult,
+        affiliateAdminsResult,
+        affiliateProfilesResult,
+      ] = await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select(`
+            id,
+            user_id,
+            full_name,
+            email,
+            created_at,
+            updated_at,
+            has_paid_selection_process_fee,
+            has_paid_i20_control_fee,
+            has_paid_i539_cos_package,
+            has_paid_ds160_package,
+            placement_fee_flow,
+            is_placement_fee_paid,
+            role,
+            seller_referral_code,
+            has_paid_reinstatement_package,
+            visa_transfer_active,
+            is_archived,
+            is_dropped,
+            placement_fee_pending_balance,
+            placement_fee_due_date,
+            placement_fee_installment_number,
+            placement_fee_installment_enabled,
+            source,
+            identity_photo_path,
+            selection_survey_passed,
+            documents_uploaded,
+            field_of_interest,
+            selected_scholarship_id,
+            student_process_type,
+            scholarship_applications!scholarship_applications_student_id_fkey (
                 id,
-                title,
-                field_of_study,
-                university_id,
-                placement_fee_amount,
-                universities (
-                  name
+                scholarship_id,
+                status,
+                applied_at,
+                is_application_fee_paid,
+                is_scholarship_fee_paid,
+                acceptance_letter_status,
+                acceptance_letter_url,
+                payment_status,
+                reviewed_at,
+                reviewed_by,
+                student_process_type,
+                transfer_form_status,
+                has_sent_docs_to_university,
+                sevis_transfer_completed,
+                visa_approved,
+                documents,
+                updated_at,
+                scholarships (
+                  id,
+                  title,
+                  field_of_study,
+                  university_id,
+                  placement_fee_amount,
+                  universities (
+                    name
+                  )
                 )
               )
-            )
-          `)
-          .eq('role', 'student')
-          .order('created_at', { ascending: false });
+            `)
+          .eq("role", "student")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("sellers")
+          .select("referral_code, affiliate_admin_id")
+          .eq("is_active", true),
+        supabase
+          .from("affiliate_admins")
+          .select("id, company_name, legal_name, user_id")
+          .eq("is_active", true),
+        supabase
+          .from("user_profiles")
+          .select("user_id, full_name")
+          .eq("role", "affiliate_admin"),
+      ]);
 
-      if (error) {
-        throw error;
+      if (studentsResult.error) {
+        throw studentsResult.error;
       }
+
+      const data = studentsResult.data;
+      const sellersData = sellersResult.data || [];
+      const affiliateAdminsData = affiliateAdminsResult.data || [];
+      const affiliateProfiles = affiliateProfilesResult.data || [];
+
+      // Mapear administradores de agência para nome exibível
+      const adminNamesMap = new Map(
+        affiliateProfiles.map((p: any) => [p.user_id, p.full_name]) || [],
+      );
+      const agencyMap = new Map<string, string>();
+      affiliateAdminsData.forEach((aa: any) => {
+        const name = aa.company_name || aa.legal_name ||
+          adminNamesMap.get(aa.user_id) || "Agência";
+        agencyMap.set(aa.id, name);
+      });
+
+      // Mapear código de indicação do vendedor para o nome da agência
+      const referralCodeToAgencyMap = new Map<string, string>();
+      sellersData.forEach((s: any) => {
+        if (s.referral_code && s.affiliate_admin_id) {
+          const agencyName = agencyMap.get(s.affiliate_admin_id);
+          if (agencyName) {
+            referralCodeToAgencyMap.set(s.referral_code, agencyName);
+          }
+        }
+      });
 
       // Batch fetch fee overrides for all students
       const userIds = data?.map((s: any) => s.user_id).filter(Boolean) || [];
       let feeOverridesMap: Record<string, any> = {};
       if (userIds.length > 0) {
         const { data: overridesData } = await supabase
-          .from('user_fee_overrides')
-          .select('user_id, placement_fee, i20_control_fee, selection_process_fee')
-          .in('user_id', userIds);
+          .from("user_fee_overrides")
+          .select(
+            "user_id, placement_fee, i20_control_fee, selection_process_fee",
+          )
+          .in("user_id", userIds);
         if (overridesData) {
-          overridesData.forEach((o: any) => { feeOverridesMap[o.user_id] = o; });
+          overridesData.forEach((o: any) => {
+            feeOverridesMap[o.user_id] = o;
+          });
         }
       }
 
@@ -172,25 +223,43 @@ export function useStudentsQuery() {
         // Cada estudante aparece apenas uma vez na tabela
         let scholarshipInfo = { title: null, university: null, course: null };
         let applicationStatus = null;
-        
+
         let lockedApplication = null;
-        
-        if (student.scholarship_applications && student.scholarship_applications.length > 0) {
+
+        if (
+          student.scholarship_applications &&
+          student.scholarship_applications.length > 0
+        ) {
           // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved, etc
-          lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             student.scholarship_applications.find((app: any) => app.is_application_fee_paid && app.acceptance_letter_url) ||
-                             student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
-                             student.scholarship_applications.find((app: any) => app.status === 'approved') ||
-                             student.scholarship_applications.find((app: any) => app.status === 'under_review') ||
-                             student.scholarship_applications.find((app: any) => app.status !== 'rejected') ||
-                             student.scholarship_applications[0];
-          
+          lockedApplication =
+            student.scholarship_applications.find((app: any) =>
+              app.status === "enrolled"
+            ) ||
+            student.scholarship_applications.find((app: any) =>
+              app.is_application_fee_paid && app.acceptance_letter_url
+            ) ||
+            student.scholarship_applications.find((app: any) =>
+              app.is_application_fee_paid
+            ) ||
+            student.scholarship_applications.find((app: any) =>
+              app.status === "approved"
+            ) ||
+            student.scholarship_applications.find((app: any) =>
+              app.status === "under_review"
+            ) ||
+            student.scholarship_applications.find((app: any) =>
+              app.status !== "rejected"
+            ) ||
+            student.scholarship_applications[0];
+
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship
           if (lockedApplication) {
             scholarshipInfo = {
-              title: lockedApplication.scholarships?.title || 'N/A',
-              university: lockedApplication.scholarships?.universities?.name || 'N/A',
-              course: lockedApplication.scholarships?.field_of_study || student.field_of_interest || null
+              title: lockedApplication.scholarships?.title || "N/A",
+              university: lockedApplication.scholarships?.universities?.name ||
+                "N/A",
+              course: lockedApplication.scholarships?.field_of_study ||
+                student.field_of_interest || null,
             };
             applicationStatus = lockedApplication.status;
           }
@@ -199,12 +268,12 @@ export function useStudentsQuery() {
         // Calcular a data de atividade mais recente
         const getMostRecentActivity = () => {
           const activities = [];
-          
+
           // Data de atualização do perfil
           if (student.updated_at) {
             activities.push(new Date(student.updated_at));
           }
-          
+
           // Datas das aplicações
           if (student.scholarship_applications) {
             student.scholarship_applications.forEach((app: any) => {
@@ -213,9 +282,11 @@ export function useStudentsQuery() {
               if (app.reviewed_at) activities.push(new Date(app.reviewed_at));
             });
           }
-          
+
           // Retornar a data mais recente ou a data de criação se não houver atividades
-          return activities.length > 0 ? new Date(Math.max(...activities.map(d => d.getTime()))) : new Date(student.created_at);
+          return activities.length > 0
+            ? new Date(Math.max(...activities.map((d) => d.getTime())))
+            : new Date(student.created_at);
         };
 
         const mostRecentActivity = getMostRecentActivity();
@@ -225,14 +296,19 @@ export function useStudentsQuery() {
         // New flow: 1 doc (passport only)
         // Detection: if student has diploma or funds_proof uploaded → old flow
         const typeLabels: Record<string, string> = {
-          'passport': 'Passport',
-          'diploma': 'Diploma',
-          'funds_proof': 'Proof of Funds'
+          "passport": "Passport",
+          "diploma": "Diploma",
+          "funds_proof": "Proof of Funds",
         };
 
-        const allDocTypes = (lockedApplication?.documents || []).map((d: any) => d.type?.toLowerCase()).filter(Boolean);
-        const isOldFlow = allDocTypes.includes('diploma') || allDocTypes.includes('funds_proof');
-        const requiredBasicTypes = isOldFlow ? ['passport', 'diploma', 'funds_proof'] : ['passport'];
+        const allDocTypes = (lockedApplication?.documents || []).map((d: any) =>
+          d.type?.toLowerCase()
+        ).filter(Boolean);
+        const isOldFlow = allDocTypes.includes("diploma") ||
+          allDocTypes.includes("funds_proof");
+        const requiredBasicTypes = isOldFlow
+          ? ["passport", "diploma", "funds_proof"]
+          : ["passport"];
 
         let basicDocsRequired = requiredBasicTypes.length;
         let basicDocsUploaded = 0;
@@ -243,26 +319,32 @@ export function useStudentsQuery() {
         const basicRejectedNames: string[] = [];
         const basicUnderReviewNames: string[] = [];
 
-        if (lockedApplication?.documents && Array.isArray(lockedApplication.documents)) {
+        if (
+          lockedApplication?.documents &&
+          Array.isArray(lockedApplication.documents)
+        ) {
           const latestStatusMap = new Map<string, string>();
 
           lockedApplication.documents.forEach((doc: any) => {
             const type = doc.type?.toLowerCase();
             if (type && requiredBasicTypes.includes(type)) {
-              latestStatusMap.set(type, (doc.status || 'pending').toLowerCase());
+              latestStatusMap.set(
+                type,
+                (doc.status || "pending").toLowerCase(),
+              );
             }
           });
 
           basicDocsUploaded = latestStatusMap.size;
           latestStatusMap.forEach((status, type) => {
             const label = typeLabels[type] || type;
-            if (status === 'approved') {
+            if (status === "approved") {
               basicDocsApproved++;
               basicApprovedNames.push(label);
-            } else if (status === 'rejected') {
+            } else if (status === "rejected") {
               basicDocsRejected++;
               basicRejectedNames.push(label);
-            } else if (status === 'under_review') {
+            } else if (status === "under_review") {
               basicDocsUnderReview++;
               basicUnderReviewNames.push(label);
             }
@@ -272,55 +354,78 @@ export function useStudentsQuery() {
         return {
           student_id: student.id,
           user_id: student.user_id,
-          student_name: student.full_name || 'N/A',
-          student_email: student.email || 'N/A',
+          student_name: student.full_name || "N/A",
+          student_email: student.email || "N/A",
           student_created_at: student.created_at,
-          has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
+          has_paid_selection_process_fee:
+            student.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
           has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
           has_paid_ds160_package: student.has_paid_ds160_package || false,
           placement_fee_flow: student.placement_fee_flow || false,
           is_placement_fee_paid: student.is_placement_fee_paid || false,
           seller_referral_code: student.seller_referral_code || null,
+          agency_name: student.seller_referral_code
+            ? (referralCodeToAgencyMap.get(student.seller_referral_code) ||
+              null)
+            : null,
           // Dados da aplicação só aparecem se locked
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           status: applicationStatus,
           application_status: applicationStatus,
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
-          is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
-          acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-          acceptance_letter_url: lockedApplication?.acceptance_letter_url || null,
+          is_application_fee_paid: lockedApplication?.is_application_fee_paid ||
+            false,
+          is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid ||
+            false,
+          acceptance_letter_status:
+            lockedApplication?.acceptance_letter_status || null,
+          acceptance_letter_url: lockedApplication?.acceptance_letter_url ||
+            null,
           payment_status: lockedApplication?.payment_status || null,
-          student_process_type: lockedApplication?.student_process_type || student.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type ||
+            student.student_process_type || null,
           transfer_form_status: lockedApplication?.transfer_form_status || null,
-          has_sent_docs_to_university: lockedApplication?.has_sent_docs_to_university || false,
-          sevis_transfer_completed: lockedApplication?.sevis_transfer_completed || false,
+          has_sent_docs_to_university:
+            lockedApplication?.has_sent_docs_to_university || false,
+          sevis_transfer_completed:
+            lockedApplication?.sevis_transfer_completed || false,
           visa_approved: lockedApplication?.visa_approved || false,
           scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
-          course_name: scholarshipInfo ? scholarshipInfo.course : student.field_of_interest || null,
+          course_name: scholarshipInfo
+            ? scholarshipInfo.course
+            : student.field_of_interest || null,
           university_name: scholarshipInfo ? scholarshipInfo.university : null,
           university_id: lockedApplication?.scholarships?.university_id || null,
           reviewed_at: lockedApplication?.reviewed_at || null,
           reviewed_by: lockedApplication?.reviewed_by || null,
           is_locked: !!lockedApplication,
-          total_applications: student.scholarship_applications ? student.scholarship_applications.length : 0,
+          total_applications: student.scholarship_applications
+            ? student.scholarship_applications.length
+            : 0,
           // Guardar todas as aplicações para o modal
           all_applications: student.scholarship_applications || [],
           // Campo para ordenação por atividade recente
           most_recent_activity: mostRecentActivity,
-          has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
+          has_paid_reinstatement_package:
+            student.has_paid_reinstatement_package || false,
           visa_transfer_active: student.visa_transfer_active ?? true, // Default to true if not set
           is_archived: student.is_archived || false,
           is_dropped: student.is_dropped || false,
-          placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
-          placement_fee_amount: lockedApplication?.scholarships?.placement_fee_amount ?? null,
-          fee_override_placement_fee: feeOverridesMap[student.user_id]?.placement_fee ?? null,
-          fee_override_i20_fee: feeOverridesMap[student.user_id]?.i20_control_fee ?? null,
+          placement_fee_pending_balance:
+            student.placement_fee_pending_balance ?? 0,
+          placement_fee_amount:
+            lockedApplication?.scholarships?.placement_fee_amount ?? null,
+          fee_override_placement_fee:
+            feeOverridesMap[student.user_id]?.placement_fee ?? null,
+          fee_override_i20_fee:
+            feeOverridesMap[student.user_id]?.i20_control_fee ?? null,
           placement_fee_due_date: student.placement_fee_due_date || null,
-          placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
-          placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
+          placement_fee_installment_number:
+            student.placement_fee_installment_number ?? 0,
+          placement_fee_installment_enabled:
+            student.placement_fee_installment_enabled ?? false,
           source: student.source,
           has_uploaded_photo: !!student.identity_photo_path,
           has_submitted_form: student.selection_survey_passed === true,
@@ -361,13 +466,14 @@ export function useFilterDataQuery() {
     queryKey: queryKeys.students.filterData,
     queryFn: async () => {
       // Buscar usuários com role affiliate_admin
-      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
-        .from('user_profiles')
-        .select('user_id, full_name, email')
-        .eq('role', 'affiliate_admin')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      
+      const { data: affiliateAdminsData, error: affiliateAdminsError } =
+        await supabase
+          .from("user_profiles")
+          .select("user_id, full_name, email")
+          .eq("role", "affiliate_admin")
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
+
       let affiliates: any[] = [];
       if (!affiliateAdminsError && affiliateAdminsData) {
         // Para cada affiliate admin, buscar os sellers associados
@@ -375,60 +481,60 @@ export function useFilterDataQuery() {
           affiliateAdminsData.map(async (admin) => {
             // Primeiro buscar o affiliate_admin_id na tabela affiliate_admins
             const { data: affiliateAdminData } = await supabase
-              .from('affiliate_admins')
-              .select('id')
-              .eq('user_id', admin.user_id)
+              .from("affiliate_admins")
+              .select("id")
+              .eq("user_id", admin.user_id)
               .maybeSingle();
-            
+
             let sellers: any[] = [];
             if (affiliateAdminData) {
               // Buscar sellers que pertencem a este affiliate admin
               const { data: sellersData } = await supabase
-                .from('sellers')
-                .select('id, referral_code, name, email')
-                .eq('affiliate_admin_id', affiliateAdminData.id)
-                .eq('is_active', true);
-              
+                .from("sellers")
+                .select("id, referral_code, name, email")
+                .eq("affiliate_admin_id", affiliateAdminData.id)
+                .eq("is_active", true);
+
               sellers = sellersData || [];
             }
-            
+
             // Se não encontrar sellers diretos, buscar por email
             if (sellers.length === 0) {
               const { data: sellersByEmail } = await supabase
-                .from('sellers')
-                .select('id, referral_code, name, email')
-                .eq('email', admin.email)
-                .eq('is_active', true);
+                .from("sellers")
+                .select("id, referral_code, name, email")
+                .eq("email", admin.email)
+                .eq("is_active", true);
               sellers = sellersByEmail || [];
             }
-            
+
             return {
               id: admin.user_id,
               user_id: admin.user_id,
               name: admin.full_name || admin.email,
               email: admin.email,
               referral_code: sellers[0]?.referral_code || null,
-              sellers: sellers
+              sellers: sellers,
             };
-          })
+          }),
         );
-        
+
         affiliates = affiliatesWithSellers;
       }
 
       // Carregar scholarships
       const { data: scholarshipsData } = await supabase
-        .from('scholarships')
-        .select('id, title, universities!inner(name)')
-        .eq('is_active', true)
-        .order('title', { ascending: true });
-      
+        .from("scholarships")
+        .select("id, title, universities!inner(name)")
+        .eq("is_active", true)
+        .order("title", { ascending: true });
+
       // Carregar universities
       const { data: universitiesData } = await supabase
-        .from('universities')
-        .select('id, name')
-        .eq('is_approved', true)
-        .order('name', { ascending: true });
+        .from("universities")
+        .select("id, name")
+        .eq("is_approved", true)
+        .order("name", { ascending: true });
 
       return {
         affiliates: affiliates || [],
@@ -450,16 +556,26 @@ export function useDropStudentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ studentId, isDropped, reason, adminId, adminName }: { studentId: string; isDropped: boolean; reason?: string; adminId?: string; adminName?: string }) => {
+    mutationFn: async (
+      { studentId, isDropped, reason, adminId, adminName }: {
+        studentId: string;
+        isDropped: boolean;
+        reason?: string;
+        adminId?: string;
+        adminName?: string;
+      },
+    ) => {
       // Se estiver marcando como dropped e houver uma razão, salvar nas admin_notes
       if (isDropped && reason) {
         // Buscar notas atuais primeiro para não sobrescrever
         const { data: profileData } = await supabase
-          .from('user_profiles')
-          .select('admin_notes')
-          .eq('id', studentId);
+          .from("user_profiles")
+          .select("admin_notes")
+          .eq("id", studentId);
 
-        const profile = profileData && profileData.length > 0 ? profileData[0] : null;
+        const profile = profileData && profileData.length > 0
+          ? profileData[0]
+          : null;
 
         let currentNotes: any[] = [];
         if (profile?.admin_notes) {
@@ -470,7 +586,7 @@ export function useDropStudentMutation() {
               currentNotes = JSON.parse(profile.admin_notes);
               if (!Array.isArray(currentNotes)) currentNotes = [];
             } catch (e) {
-              console.error('Error parsing admin notes:', e);
+              console.error("Error parsing admin notes:", e);
               currentNotes = [];
             }
           }
@@ -479,39 +595,41 @@ export function useDropStudentMutation() {
         const newNote = {
           id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
           content: `[DROPPED] ${reason.trim()}`,
-          created_by: adminId || 'unknown',
-          created_by_name: adminName || 'Admin',
-          created_at: new Date().toISOString()
+          created_by: adminId || "unknown",
+          created_by_name: adminName || "Admin",
+          created_at: new Date().toISOString(),
         };
 
         const updatedNotes = [newNote, ...currentNotes];
 
         const { error } = await supabase
-          .from('user_profiles')
-          .update({ 
+          .from("user_profiles")
+          .update({
             is_dropped: isDropped,
             admin_notes: JSON.stringify(updatedNotes),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
-          .eq('id', studentId);
+          .eq("id", studentId);
 
         if (error) throw error;
       } else {
         // Toggle normal (restaurar ou toggle sem razão)
         const { error } = await supabase
-          .from('user_profiles')
-          .update({ 
+          .from("user_profiles")
+          .update({
             is_dropped: isDropped,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
-          .eq('id', studentId);
+          .eq("id", studentId);
 
         if (error) throw error;
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(variables.studentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.students.details(variables.studentId),
+      });
     },
   });
 }
@@ -524,12 +642,13 @@ export function useMarkSentDocsToUniversityMutation() {
   return useMutation({
     mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('scholarship_applications')
+        .from("scholarship_applications")
         .update({ has_sent_docs_to_university: true })
-        .eq('id', applicationId);
+        .eq("id", applicationId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
 
@@ -541,12 +660,13 @@ export function useMarkSevisCompletedMutation() {
   return useMutation({
     mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('scholarship_applications')
+        .from("scholarship_applications")
         .update({ sevis_transfer_completed: true })
-        .eq('id', applicationId);
+        .eq("id", applicationId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
 
@@ -558,12 +678,13 @@ export function useMarkVisaApprovedMutation() {
   return useMutation({
     mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('scholarship_applications')
+        .from("scholarship_applications")
         .update({ visa_approved: true })
-        .eq('id', applicationId);
+        .eq("id", applicationId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
 
@@ -575,12 +696,13 @@ export function useApproveTransferFormMutation() {
   return useMutation({
     mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('scholarship_applications')
-        .update({ transfer_form_status: 'approved' })
-        .eq('id', applicationId);
+        .from("scholarship_applications")
+        .update({ transfer_form_status: "approved" })
+        .eq("id", applicationId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
 
@@ -589,20 +711,97 @@ export function useRejectTransferFormMutation() {
   return useMutation({
     mutationFn: async (applicationId: string) => {
       const { error } = await supabase
-        .from('scholarship_applications')
-        .update({ transfer_form_status: 'sent' })
-        .eq('id', applicationId);
+        .from("scholarship_applications")
+        .update({ transfer_form_status: "sent" })
+        .eq("id", applicationId);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all }),
   });
 }
+
+export function useSkipTransferFormMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      { applicationId, studentId, reason, adminId, adminName }: {
+        applicationId: string;
+        studentId: string;
+        reason: string;
+        adminId?: string;
+        adminName?: string;
+      },
+    ) => {
+      // 1. Buscar notas atuais para não sobrescrever
+      const { data: profileData } = await supabase
+        .from("user_profiles")
+        .select("admin_notes")
+        .eq("id", studentId);
+
+      const profile = profileData && profileData.length > 0
+        ? profileData[0]
+        : null;
+
+      let currentNotes: any[] = [];
+      if (profile?.admin_notes) {
+        if (Array.isArray(profile.admin_notes)) {
+          currentNotes = profile.admin_notes;
+        } else {
+          try {
+            currentNotes = JSON.parse(profile.admin_notes);
+            if (!Array.isArray(currentNotes)) currentNotes = [];
+          } catch (e) {
+            console.error("Error parsing admin notes:", e);
+            currentNotes = [];
+          }
+        }
+      }
+
+      // 2. Criar a nota de skip
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        content: `[SKIPPED TRANSFER FORM] ${reason.trim()}`,
+        created_by: adminId || "unknown",
+        created_by_name: adminName || "Admin",
+        created_at: new Date().toISOString(),
+      };
+
+      const updatedNotes = [newNote, ...currentNotes];
+
+      // 3. Executar updates em paralelo
+      const [appUpdate, profileUpdate] = await Promise.all([
+        supabase
+          .from("scholarship_applications")
+          .update({ transfer_form_status: "skipped" })
+          .eq("id", applicationId),
+        supabase
+          .from("user_profiles")
+          .update({
+            admin_notes: JSON.stringify(updatedNotes),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", studentId)
+      ]);
+
+      if (appUpdate.error) throw appUpdate.error;
+      if (profileUpdate.error) throw profileUpdate.error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.students.details(variables.studentId),
+      });
+    },
+  });
+}
+
 
 export interface DocStats {
   docs_total_required: number;
   docs_total_uploaded: number;
   docs_total_approved: number;
-  docs_total_rejected: number;       // nº de document requests com rejeição (para lógica de stage)
+  docs_total_rejected: number; // nº de document requests com rejeição (para lógica de stage)
   docs_total_rejected_files: number; // nº real de arquivos rejeitados (para exibição no kanban)
   docs_total_under_review: number;
   docs_approved_names?: string[];
@@ -616,26 +815,36 @@ export interface DocStats {
  */
 export function useStudentDocsStats(students: StudentRecord[]) {
   return useQuery({
-    queryKey: ['student-docs-stats'],
+    queryKey: ["student-docs-stats"],
     queryFn: async (): Promise<Map<string, DocStats>> => {
-      const appIds = students.map(s => s.application_id).filter(Boolean) as string[];
+      const appIds = students.map((s) => s.application_id).filter(
+        Boolean,
+      ) as string[];
 
-      const [{ data: globalDocs, error: drError }, { data: appDocs, error: appDrError }, { data: uploads, error: upError }] = await Promise.all([
+      const [
+        { data: globalDocs, error: drError },
+        { data: appDocs, error: appDrError },
+        { data: uploads, error: upError },
+      ] = await Promise.all([
         supabase
-          .from('document_requests')
-          .select('id, title, university_id, applicable_student_types, scholarship_application_id')
-          .eq('is_global', true)
-          .eq('status', 'open'),
+          .from("document_requests")
+          .select(
+            "id, title, university_id, applicable_student_types, scholarship_application_id",
+          )
+          .eq("is_global", true)
+          .eq("status", "open"),
         appIds.length > 0
           ? supabase
-              .from('document_requests')
-              .select('id, title, university_id, applicable_student_types, scholarship_application_id')
-              .in('scholarship_application_id', appIds)
-              .eq('status', 'open')
+            .from("document_requests")
+            .select(
+              "id, title, university_id, applicable_student_types, scholarship_application_id",
+            )
+            .in("scholarship_application_id", appIds)
+            .eq("status", "open")
           : Promise.resolve({ data: [] as any[], error: null }),
         supabase
-          .from('document_request_uploads')
-          .select('document_request_id, uploaded_by, status, uploaded_at'),
+          .from("document_request_uploads")
+          .select("document_request_id, uploaded_by, status, uploaded_at"),
       ]);
 
       if (drError) throw drError;
@@ -648,24 +857,27 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         allDocsMap.set(d.id, d);
       }
 
-      // Effective status per (doc_request_id, uploaded_by) considerando TODOS os uploads do request.
-      // Prioridade: under_review > rejected > approved
-      // Assim, se 9 arquivos foram rejeitados e 1 aprovado, o request é 'rejected'.
-      // Se qualquer arquivo ainda está pendente, o request é 'under_review'.
+      // Effective status per (doc_request_id, uploaded_by) considerando todos os uploads.
+      // Se houver qualquer upload APROVADO, o status final é 'approved'.
+      // Caso contrário, se houver 'under_review', o status é 'under_review'.
+      // Se houver apenas 'rejected', o status é 'rejected'.
       const uploadsByKey = new Map<string, string[]>();
       for (const u of uploads || []) {
         const key = `${u.document_request_id}:${u.uploaded_by}`;
         if (!uploadsByKey.has(key)) uploadsByKey.set(key, []);
         uploadsByKey.get(key)!.push(u.status);
       }
+
       const latestUpload = new Map<string, string>();
       for (const [key, statuses] of uploadsByKey) {
-        if (statuses.some(s => s === 'under_review')) {
-          latestUpload.set(key, 'under_review');
-        } else if (statuses.some(s => s === 'rejected')) {
-          latestUpload.set(key, 'rejected');
+        if (statuses.some((s) => s === "approved")) {
+          latestUpload.set(key, "approved");
+        } else if (statuses.some((s) => s === "under_review")) {
+          latestUpload.set(key, "under_review");
+        } else if (statuses.some((s) => s === "rejected")) {
+          latestUpload.set(key, "rejected");
         } else {
-          latestUpload.set(key, 'approved');
+          latestUpload.set(key, "pending");
         }
       }
 
@@ -675,18 +887,53 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         if (!student.user_id) continue;
 
         const processType = student.student_process_type;
-        const requiredDocs = Array.from(allDocsMap.values()).filter(dr => {
+        const rawRequiredDocs = Array.from(allDocsMap.values()).filter((dr) => {
           // App-specific doc linked to this student's application
           if (dr.scholarship_application_id) {
             return dr.scholarship_application_id === student.application_id;
           }
           // Global doc for this student's university and process type
-          if (dr.university_id && dr.university_id !== student.university_id) return false;
+          if (dr.university_id && dr.university_id !== student.university_id) {
+            return false;
+          }
           const types: string[] = dr.applicable_student_types || [];
-          return types.includes('all') || (processType ? types.includes(processType) : false);
+          return types.includes("all") ||
+            (processType ? types.includes(processType) : false);
         });
 
-        let uploaded = 0, approved = 0, rejected = 0, rejectedFiles = 0, underReview = 0;
+        // Desduplicação inteligente por título normalizado
+        const requiredDocsByTitle = new Map<string, any>();
+        for (const dr of rawRequiredDocs) {
+          const normalizedTitle = (dr.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          const existing = requiredDocsByTitle.get(normalizedTitle);
+          if (!existing) {
+            requiredDocsByTitle.set(normalizedTitle, dr);
+          } else {
+            const drKey = `${dr.id}:${student.user_id}`;
+            const existingKey = `${existing.id}:${student.user_id}`;
+            const drHasUpload = latestUpload.has(drKey);
+            const existingHasUpload = latestUpload.has(existingKey);
+
+            if (drHasUpload && !existingHasUpload) {
+              requiredDocsByTitle.set(normalizedTitle, dr);
+            } else if (drHasUpload === existingHasUpload) {
+              if (dr.scholarship_application_id && !existing.scholarship_application_id) {
+                requiredDocsByTitle.set(normalizedTitle, dr);
+              } else if (dr.scholarship_application_id === existing.scholarship_application_id) {
+                if (dr.id > existing.id) {
+                  requiredDocsByTitle.set(normalizedTitle, dr);
+                }
+              }
+            }
+          }
+        }
+        const requiredDocs = Array.from(requiredDocsByTitle.values());
+
+        let uploaded = 0,
+          approved = 0,
+          rejected = 0,
+          rejectedFiles = 0,
+          underReview = 0;
         const approvedNames: string[] = [];
         const rejectedNames: string[] = [];
         const underReviewNames: string[] = [];
@@ -696,16 +943,18 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           const status = latestUpload.get(key);
           if (status) {
             uploaded++;
-            if (status === 'approved') {
+            if (status === "approved") {
               approved++;
               approvedNames.push(dr.title);
-            } else if (status === 'rejected') {
+            } else if (status === "rejected") {
               rejected++;
               // Conta o número real de arquivos rejeitados neste request
               const allStatuses = uploadsByKey.get(key) || [];
-              rejectedFiles += allStatuses.filter(s => s === 'rejected').length;
+              rejectedFiles += allStatuses.filter((s) =>
+                s === "rejected"
+              ).length;
               rejectedNames.push(dr.title);
-            } else if (status === 'under_review') {
+            } else if (status === "under_review") {
               underReview++;
               underReviewNames.push(dr.title);
             }
@@ -734,5 +983,3 @@ export function useStudentDocsStats(students: StudentRecord[]) {
     refetchInterval: 30 * 1000,
   });
 }
-
-

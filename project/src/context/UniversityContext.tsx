@@ -132,7 +132,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           // 1. Buscar todos os requests (específicos e globais da universidade)
           const { data: allReqs, error: reqsError } = await supabase
             .from('document_requests')
-            .select('id, scholarship_application_id, is_global, applicable_student_types')
+            .select('id, title, scholarship_application_id, is_global, applicable_student_types')
             .or(`scholarship_application_id.in.(${appIds.join(',')}),and(university_id.eq.${universityData.id},is_global.eq.true)`);
 
           if (reqsError) console.error('[UNI_CONTEXT_DEBUG] Reqs Error:', reqsError);
@@ -153,7 +153,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
             const studentProcessType = app.student_process_type || app.user_profiles?.student_process_type || 'initial';
             
             // Requests que se aplicam a esta aplicação: específicos + globais filtrados por tipo de aluno
-            const relevantReqs = (allReqs || []).filter(r => {
+            const rawRelevantReqs = (allReqs || []).filter(r => {
               if (r.scholarship_application_id === app.id) return true;
               if (r.is_global) {
                 // Se não houver tipos especificados, assume que é para todos
@@ -162,6 +162,28 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
               }
               return false;
             });
+
+            // Desduplicação inteligente por título normalizado
+            const reqsByTitle = new Map<string, any>();
+            for (const r of rawRelevantReqs) {
+              const normalizedTitle = (r.title || '').replace(/\s+/g, ' ').trim().toLowerCase();
+              const existing = reqsByTitle.get(normalizedTitle);
+              if (!existing) {
+                reqsByTitle.set(normalizedTitle, r);
+              } else {
+                const rHasUpload = (allUploads || []).some(u => u.document_request_id === r.id && u.uploaded_by === studentUserId);
+                const existingHasUpload = (allUploads || []).some(u => u.document_request_id === existing.id && u.uploaded_by === studentUserId);
+
+                if (rHasUpload && !existingHasUpload) {
+                  reqsByTitle.set(normalizedTitle, r);
+                } else if (rHasUpload === existingHasUpload) {
+                  if (r.scholarship_application_id && !existing.scholarship_application_id) {
+                    reqsByTitle.set(normalizedTitle, r);
+                  }
+                }
+              }
+            }
+            const relevantReqs = Array.from(reqsByTitle.values());
 
             // Uploads que pertencem a esses requests E a este aluno
             const relevantUploads = (allUploads || []).filter(u => 
