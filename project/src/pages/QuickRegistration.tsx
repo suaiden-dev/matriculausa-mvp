@@ -275,6 +275,9 @@ const QuickRegistration: React.FC = () => {
   // Persistir método selecionado e estado do modal Zelle
 
 
+  // Agency branding (fetched when a referral/coupon code from an agency is detected)
+  const [agencyBranding, setAgencyBranding] = useState<{ name: string; logoUrl: string | null } | null>(null);
+
   // Loading Progress State
   const [loadingStep, setLoadingStep] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -482,6 +485,56 @@ const QuickRegistration: React.FC = () => {
     setHasReferralCode(true);
     await validateDiscountCode(code);
   };
+
+  // Fetch agency branding when a code is applied
+  useEffect(() => {
+    console.log('[AgencyBranding] effect triggered — couponCode:', couponCode, 'codeApplied:', codeApplied);
+    if (!couponCode || !codeApplied) { setAgencyBranding(null); return; }
+    const code = couponCode.trim().toUpperCase();
+    (async () => {
+      console.log('[AgencyBranding] fetching for code:', code);
+
+      // Try sellers table first (seller code → agency)
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('sellers')
+        .select('affiliate_admin_id')
+        .eq('referral_code', code)
+        .maybeSingle();
+      console.log('[AgencyBranding] sellers result:', sellerData, sellerError);
+
+      let agencyUserId: string | null = null;
+      let agencyId: string | null = sellerData?.affiliate_admin_id || null;
+
+      if (!agencyId) {
+        // Try affiliate_codes table (agency code → user_id)
+        const { data: affCode, error: affError } = await supabase
+          .from('affiliate_codes')
+          .select('user_id')
+          .eq('code', code)
+          .maybeSingle();
+        console.log('[AgencyBranding] affiliate_codes result:', affCode, affError);
+        agencyUserId = affCode?.user_id || null;
+      }
+
+      console.log('[AgencyBranding] agencyId:', agencyId, 'agencyUserId:', agencyUserId);
+
+      const query = agencyId
+        ? supabase.from('affiliate_admins').select('company_name, logo_url').eq('id', agencyId).maybeSingle()
+        : agencyUserId
+          ? supabase.from('affiliate_admins').select('company_name, logo_url').eq('user_id', agencyUserId).maybeSingle()
+          : null;
+
+      if (!query) { console.log('[AgencyBranding] no query — no agency found for code'); return; }
+      const { data: agency, error: agencyError } = await query;
+      console.log('[AgencyBranding] affiliate_admins result:', agency, agencyError);
+      if (agency?.company_name) {
+        setAgencyBranding({ name: agency.company_name, logoUrl: agency.logo_url || null });
+        console.log('[AgencyBranding] branding set:', agency.company_name, agency.logo_url);
+      } else {
+        console.log('[AgencyBranding] no company_name found, branding not set');
+      }
+    })();
+  }, [couponCode, codeApplied]);
 
   const validateDiscountCode = async (providedCode?: string) => {
     const targetCode = (providedCode || couponCode).trim().toUpperCase();
@@ -1213,6 +1266,46 @@ const QuickRegistration: React.FC = () => {
         <div className="text-center mb-12">
           {(codeApplied || promotionalCouponValidation?.isValid) && (
             <UrgencyBanner timeLeft={timeLeft} />
+          )}
+          {agencyBranding && (
+            <div className="inline-flex flex-col items-center mb-8">
+              {/* Label */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px w-8 bg-gradient-to-r from-transparent to-slate-300" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Oferta Exclusiva</span>
+                <div className="h-px w-8 bg-gradient-to-l from-transparent to-slate-300" />
+              </div>
+              {/* Badge */}
+              <div className="flex items-center gap-4 bg-white rounded-2xl px-6 py-4 shadow-[0_2px_20px_rgba(5,41,78,0.10)] border border-slate-100">
+                {/* Matricula USA logo */}
+                <img src="/logo.png" alt="Matrícula USA" className="h-8 w-auto object-contain opacity-80" />
+                {/* Divider */}
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <div className="h-px w-4 bg-slate-200" />
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">×</span>
+                  <div className="h-px w-4 bg-slate-200" />
+                </div>
+                {/* Agency logo / initial */}
+                {agencyBranding.logoUrl ? (
+                  <img
+                    src={agencyBranding.logoUrl}
+                    alt={agencyBranding.name}
+                    className="h-8 w-auto max-w-[80px] object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.removeProperty('display');
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="h-8 w-8 rounded-lg bg-[#05294E] flex items-center justify-center shrink-0"
+                  style={agencyBranding.logoUrl ? { display: 'none' } : undefined}
+                >
+                  <span className="text-white text-sm font-bold">{agencyBranding.name.charAt(0)}</span>
+                </div>
+                <span className="text-sm font-bold text-[#05294E]">{agencyBranding.name}</span>
+              </div>
+            </div>
           )}
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
             {t('rapidRegistration.title')}

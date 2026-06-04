@@ -401,17 +401,9 @@ const UtmTracking: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {attr.user_profile ? (
-                        <div>
-                          <div className="font-medium">{attr.user_profile.full_name}</div>
-                          <div className="text-slate-500 text-xs">{attr.user_profile.email}</div>
-                        </div>
+                        <div className="font-medium">{attr.user_profile.full_name}</div>
                       ) : (
-                        <div>
-                          <div className="text-slate-400">Not registered</div>
-                          {attr.email && (
-                            <div className="text-slate-500 text-xs">{attr.email}</div>
-                          )}
-                        </div>
+                        <div className="text-slate-400">Not registered</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
@@ -434,15 +426,8 @@ const UtmTracking: React.FC = () => {
                       {attr.utm_campaign || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {attr.client_name || attr.client_email ? (
-                        <div>
-                          {attr.client_name && (
-                            <div className="font-medium">{attr.client_name}</div>
-                          )}
-                          {attr.client_email && (
-                            <div className="text-slate-500 text-xs">{attr.client_email}</div>
-                          )}
-                        </div>
+                      {attr.client_name ? (
+                        <div className="font-medium">{attr.client_name}</div>
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}

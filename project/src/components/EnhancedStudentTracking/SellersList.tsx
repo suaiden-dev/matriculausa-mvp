@@ -266,7 +266,6 @@ const SellersList: React.FC<SellersListProps> = ({
                     </div>
                     <div className="ml-4">
                       <div className="text-sm font-semibold text-slate-900">{student.full_name || 'No name'}</div>
-                      <div className="text-xs text-slate-500">{student.email}</div>
                     </div>
                   </div>
                 </td>

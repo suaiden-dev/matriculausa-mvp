@@ -121,7 +121,14 @@ export function AffiliateRequestDetailsModal(props: AffiliateRequestDetailsModal
                 {selectedRequest.payout_details ? (
                   <div className="space-y-2">
                     {Object.entries(selectedRequest.payout_details as Record<string, any>).map(([key, value]) => (
-                      <div key={key} className="flex justify-between"><span className="text-gray-600 capitalize">{key.replace('_', ' ')}:</span><span className="font-medium">{String(value)}</span></div>
+                      <div key={key} className="flex justify-between gap-4">
+                        <span className="text-gray-600 capitalize shrink-0">{key.replace(/_/g, ' ')}:</span>
+                        {key === 'stripe_payment_link' && typeof value === 'string' && value.startsWith('http') ? (
+                          <a href={value} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 underline truncate">{value}</a>
+                        ) : (
+                          <span className="font-medium text-right">{String(value)}</span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 ) : (

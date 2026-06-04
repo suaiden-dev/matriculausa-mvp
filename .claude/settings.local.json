@@ -95,7 +95,9 @@
       "Bash(xargs -I {} dirname {})",
       "Bash(xargs -I {} basename {})",
       "Read(//tmp/**)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(command -v rtk)",
+      "WebSearch"
     ]
   }
 }

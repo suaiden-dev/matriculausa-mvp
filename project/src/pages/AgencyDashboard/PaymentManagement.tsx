@@ -12,7 +12,8 @@ import {
   RefreshCw,
   XCircle,
   Eye,
-  Award
+  Award,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -114,6 +115,36 @@ const PaymentManagement: React.FC = () => {
 
   const loadingCommission = loadingCommissions || loadingStats;
 
+  const FEE_ORDER = ['selection_process', 'application', 'scholarship', 'placement', 'reinstatement', 'i20_control'];
+  const activeCommissionRules: [string, any][] = commissionSummary?.commission_rules
+    ? FEE_ORDER
+        .filter(key => {
+          const rule = commissionSummary.commission_rules[key];
+          return rule && rule.enabled !== false && Number(rule.value) > 0;
+        })
+        .map(key => [key, commissionSummary.commission_rules[key]])
+    : [];
+
+  const commissionRulesContent = loadingCommission
+    ? <span className="animate-pulse bg-slate-200 h-16 w-full rounded inline-block"></span>
+    : commissionSummary?.commission_rules
+      ? activeCommissionRules.length === 0
+        ? <span className="text-slate-400 text-sm">No active rules</span>
+        : (
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            {activeCommissionRules.map(([key, rule]) => (
+              <div key={key} className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{COMMISSION_RULE_LABELS[key] || key}</span>
+                <span className="text-sm font-bold text-blue-600 mt-0.5">
+                  {rule.type === 'fixed' ? `$${rule.value}` : `${rule.value}%`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+      : commissionSummary?.commission_per_sale != null
+        ? <p className="text-2xl font-bold text-blue-600 ml-14">${commissionSummary.commission_per_sale}</p>
+        : <span className="text-slate-400 text-sm ml-14">Not configured</span>;
 
   const [refreshing, setRefreshing] = useState(false);
   const [forceReloadToken, setForceReloadToken] = useState(0);
@@ -138,10 +169,19 @@ const PaymentManagement: React.FC = () => {
     }
   }, [user?.id, refreshing, refetchRevenue, refetchStats, refetchCommissions, refetchRequests]);
 
+  // Auto-fill amount with full balance minus $25 fee when modal opens
+  useEffect(() => {
+    if (showPaymentRequestModal && affiliateBalance > 0) {
+      setPaymentRequestAmount(affiliateBalance - 25);
+    }
+  }, [showPaymentRequestModal, affiliateBalance]);
+
+  const maxRequestAmount = affiliateBalance - 25;
+
   // Validate payment amount
   const validatePaymentAmount = (amount: number) => {
-    if (amount > affiliateBalance) {
-      setInputError(`Insufficient balance. You have ${formatCurrency(affiliateBalance)} available.`);
+    if (amount > maxRequestAmount) {
+      setInputError(`Maximum requestable amount is ${formatCurrency(maxRequestAmount)} (balance minus $25 fee).`);
       return false;
     } else if (amount <= 0) {
       setInputError('Amount must be greater than 0');
@@ -154,7 +194,7 @@ const PaymentManagement: React.FC = () => {
 
   // Check if payment amount is valid
   const isPaymentAmountValid = () => {
-    return paymentRequestAmount > 0 && paymentRequestAmount <= affiliateBalance;
+    return paymentRequestAmount > 0 && paymentRequestAmount <= maxRequestAmount;
   };
 
   // Check if payout details are valid based on method
@@ -163,14 +203,15 @@ const PaymentManagement: React.FC = () => {
       return payoutDetails.bank_name &&
         payoutDetails.account_name &&
         payoutDetails.routing_number &&
-        payoutDetails.account_number;
+        payoutDetails.account_number &&
+        payoutDetails.business_address;
     }
     if (payoutMethod === 'zelle') {
       return (payoutDetails.zelle_email || payoutDetails.zelle_phone) &&
         !(payoutDetails.zelle_email && payoutDetails.zelle_phone);
     }
     if (payoutMethod === 'stripe') {
-      return payoutDetails.stripe_email;
+      return payoutDetails.stripe_payment_link;
     }
     return true;
   };
@@ -196,9 +237,9 @@ const PaymentManagement: React.FC = () => {
       setSubmittingPayout(true);
       await AffiliatePaymentRequestService.createPaymentRequest({
         referrerUserId: user.id,
-        amountUsd: paymentRequestAmount,
+        amountUsd: affiliateBalance, // full balance; $25 platform fee deducted by admin on payout
         payoutMethod,
-        payoutDetails
+        payoutDetails: { ...payoutDetails, platform_fee: 25, payout_amount: maxRequestAmount }
       });
       setShowPaymentRequestModal(false);
       setPaymentRequestAmount(0);
@@ -328,7 +369,7 @@ const PaymentManagement: React.FC = () => {
                   >
                     <DollarSign className={`w-5 h-5 mr-2 transition-colors ${activeTab === 'commission-balance' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
                       }`} />
-                    Histórico de Comissões
+                    Commission History
                   </button>
                 </nav>
               </div>
@@ -342,7 +383,7 @@ const PaymentManagement: React.FC = () => {
                     <h2 className="text-lg font-semibold text-slate-900">
                       {activeTab === 'financial-overview' ? 'Financial Overview' :
                         activeTab === 'payment-requests' ? 'Payment Requests' :
-                          'Histórico de Comissões'}
+                          'Commission History'}
                     </h2>
                     <p className="text-sm text-slate-600 mt-1">
                       {activeTab === 'financial-overview'
@@ -433,7 +474,6 @@ const PaymentManagement: React.FC = () => {
                       formatCurrency(totalEarned)
                     )}
                   </p>
-                  <p className="text-xs text-slate-500">All paid fees (excl. application fee)</p>
                 </div>
               </div>
             </div>
@@ -594,7 +634,7 @@ const PaymentManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Histórico de Comissões Tab */}
+      {/* Commission History Tab */}
       {activeTab === 'commission-balance' && (
         <div className="space-y-6 px-4 sm:px-6 lg:px-8">
           {/* Summary Cards */}
@@ -610,24 +650,7 @@ const PaymentManagement: React.FC = () => {
               </div>
 
               <div className="w-full">
-                {loadingCommission ? (
-                  <span className="animate-pulse bg-slate-200 h-16 w-full rounded inline-block"></span>
-                ) : commissionSummary?.commission_rules ? (
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    {Object.entries(commissionSummary.commission_rules).map(([key, rule]: [string, any]) => (
-                      <div key={key} className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center">
-                        <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{COMMISSION_RULE_LABELS[key] || key}</span>
-                        <span className="text-sm font-bold text-blue-600 mt-0.5">
-                          {rule.type === 'fixed' ? `$${rule.value}` : `${rule.value}%`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : commissionSummary?.commission_per_sale != null ? (
-                  <p className="text-2xl font-bold text-blue-600 ml-14">${commissionSummary.commission_per_sale}</p>
-                ) : (
-                  <span className="text-slate-400 text-sm ml-14">Not configured</span>
-                )}
+                {commissionRulesContent}
               </div>
             </div>
 
@@ -906,32 +929,21 @@ const PaymentManagement: React.FC = () => {
               {inputError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{inputError}</div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (USD)</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={Number.isNaN(paymentRequestAmount) ? '' : String(paymentRequestAmount)}
-                  onChange={(e) => {
-                    const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
-                    const next = onlyDigits === '' ? 0 : parseInt(onlyDigits, 10);
-                    setPaymentRequestAmount(next);
-                    validatePaymentAmount(next);
-                  }}
-                  onBlur={() => {
-                    const max = affiliateBalance;
-                    if (paymentRequestAmount > max) {
-                      setPaymentRequestAmount(max);
-                      validatePaymentAmount(max);
-                    }
-                  }}
-                  placeholder="Enter amount in USD"
-                  className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 ${inputError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-                    }`}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Available: {formatCurrency(affiliateBalance)} • Requested: {formatCurrency(paymentRequestAmount)}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Available balance</span>
+                  <span className="text-lg font-bold text-slate-900">{formatCurrency(affiliateBalance)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-slate-500">
+                  <span>Processing fee</span>
+                  <span className="text-red-500">− $25.00</span>
+                </div>
+                <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">You will receive</span>
+                  <span className="text-xl font-bold text-emerald-600">{formatCurrency(maxRequestAmount)}</span>
+                </div>
+                <p className="text-xs text-slate-400">A $25 processing fee is deducted from your available balance.
+                  {/* TODO: add payment link here when provided */}
                 </p>
               </div>
               <div>
@@ -991,6 +1003,11 @@ const PaymentManagement: React.FC = () => {
                     onChange={(e) => setPayoutDetails({ ...payoutDetails, account_number: e.target.value })}
                   />
                   <input
+                    placeholder="Business address *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.business_address ? 'border-red-300' : 'border-gray-300'}`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, business_address: e.target.value })}
+                  />
+                  <input
                     placeholder="SWIFT / IBAN (optional)"
                     className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     onChange={(e) => setPayoutDetails({ ...payoutDetails, swift: e.target.value, iban: e.target.value })}
@@ -999,9 +1016,19 @@ const PaymentManagement: React.FC = () => {
               )}
               {payoutMethod === 'stripe' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Stripe email *" className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.stripe_email ? 'border-red-300' : 'border-gray-300'
-                    }`} onChange={(e) => setPayoutDetails({ ...payoutDetails, stripe_email: e.target.value })} />
-                  <input placeholder="Stripe account id (optional)" className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" onChange={(e) => setPayoutDetails({ ...payoutDetails, stripe_account_id: e.target.value })} />
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 space-y-1">
+                    <p className="font-semibold text-slate-900">How to generate your Stripe payment link:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-600">
+                      <li>Go to your Stripe Dashboard → Payment Links</li>
+                      <li>Create a new payment link for exactly <span className="font-semibold text-emerald-700">{formatCurrency(maxRequestAmount)}</span></li>
+                      <li>Paste the link below</li>
+                    </ol>
+                  </div>
+                  <input
+                    placeholder="Paste your Stripe payment link *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.stripe_payment_link ? 'border-red-300' : 'border-gray-300'}`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, stripe_payment_link: e.target.value })}
+                  />
                 </div>
               )}
 

@@ -501,9 +501,6 @@ const MyStudents: React.FC = () => {
                           <div className="text-sm font-medium text-slate-900">
                             {student.user_full_name}
                           </div>
-                          <div className="text-sm text-slate-500">
-                            {student.user_email}
-                          </div>
                           {student.user_country && (
                             <div className="flex items-center mt-1">
                               <MapPin className="h-3 w-3 text-slate-400 mr-1" />

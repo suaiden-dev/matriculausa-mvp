@@ -17,18 +17,18 @@ const HowItWorks = () => {
     {
       number: '03',
       title: 'Student completes the flow',
-      description: 'The student goes through all steps: selection process, application, placement, and I-20 control.',
+      description: 'The student goes through all steps of the admissions process.',
     },
     {
       number: '04',
       title: 'Commission is credited',
-      description: 'Commission is credited per fee paid — depending on your plan, some are immediate and others are released at the final step.',
+      description: 'Commissions are credited in your MUSA account.',
     },
   ];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-6">
-      <h3 className="font-semibold text-slate-900 mb-6">How the affiliate system works</h3>
+      <h3 className="font-semibold text-slate-900 mb-6">How the seller system works</h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {steps.map((step) => (
@@ -432,7 +432,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
       {/* Commission Plan CTA */}
       {commissionRules && <CommissionPlanCard commissionRules={commissionRules} />}
 
-      {/* How the affiliate system works */}
+      {/* How the seller system works */}
       <HowItWorks />
 
 
@@ -578,7 +578,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium text-slate-900 truncate max-w-[160px]">{student.full_name || 'No name'}</p>
-                            <p className="text-xs text-slate-400 truncate max-w-[160px]">{student.email}</p>
                           </div>
                           {isActive ? (
                             <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 flex-shrink-0">Active</span>
