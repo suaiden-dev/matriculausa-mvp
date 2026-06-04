@@ -603,12 +603,15 @@ const FormSection: React.FC = () => {
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-5">
                           <CheckCircle className="w-10 h-10 text-green-600" />
                         </div>
-                        <h3 className="text-2xl font-black text-slate-900 mb-3">Conta Criada!</h3>
+                        <h3 className="text-2xl font-black text-slate-900 mb-3">Verifique seu e-mail!</h3>
                         <p className="text-slate-500 mb-2 leading-relaxed">
-                          Sua conta de agência foi criada com sucesso.
+                          Sua conta foi criada com sucesso.
+                        </p>
+                        <p className="text-slate-400 text-sm mb-2">
+                          Enviamos um link de confirmação para <span className="font-semibold text-slate-600">{requestForm.email}</span>.
                         </p>
                         <p className="text-slate-400 text-sm mb-6">
-                          Você está sendo redirecionado para o onboarding para completar seu perfil.
+                          Clique no link do e-mail para ativar sua conta e acessar o onboarding.
                         </p>
                         <button
                           onClick={() => {
@@ -688,37 +691,6 @@ const FormSection: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Telefone / WhatsApp</label>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                              <input
-                                type="tel" name="phone" value={requestForm.phone} onChange={handleRequestChange}
-                                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/30 focus:border-[#05294E] transition-colors"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">País</label>
-                            <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                              <input
-                                type="text" name="country" value={requestForm.country} onChange={handleRequestChange}
-                                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/30 focus:border-[#05294E] transition-colors"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mensagem (opcional)</label>
-                          <textarea
-                            name="message" value={requestForm.message} onChange={handleRequestChange} rows={3}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E]/30 focus:border-[#05294E] transition-colors resize-none"
-                          />
                         </div>
 
                         {requestError && (

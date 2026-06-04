@@ -27,6 +27,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { useRef } from 'react';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 
@@ -114,6 +116,7 @@ const fadeIn = {
 const AffiliateAdminOnboarding: React.FC = () => {
   const { user, userProfile, refetchUserProfile } = useAuth();
   const navigate = useNavigate();
+  const loadingRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -143,7 +146,8 @@ const AffiliateAdminOnboarding: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || loadingRef.current) return;
+    loadingRef.current = true;
     const load = async () => {
       const { data } = await supabase
         .from('affiliate_admins')
@@ -154,6 +158,13 @@ const AffiliateAdminOnboarding: React.FC = () => {
       if (data) {
         setAffiliateId(data.id);
         if (data.onboarding_completed) {
+          // Sync user_profiles to match affiliate_admins before navigating
+          // Prevents AuthRedirect loop when user_profiles.onboarding_completed is stale
+          await supabase
+            .from('user_profiles')
+            .update({ onboarding_completed: true })
+            .eq('user_id', user.id);
+          await refetchUserProfile();
           if (data.is_active) {
             navigate('/agency/dashboard');
           } else {
@@ -172,8 +183,8 @@ const AffiliateAdminOnboarding: React.FC = () => {
           state: prev.state || data.state || '',
           city: prev.city || data.city || '',
           address: prev.address || data.address || '',
-          phone: prev.phone || data.phone || '',
-          whatsapp: prev.whatsapp || data.whatsapp || '',
+          phone: prev.phone || (data.phone?.startsWith('+') ? data.phone : '') || '',
+          whatsapp: prev.whatsapp || (data.whatsapp?.startsWith('+') ? data.whatsapp : '') || '',
           instagram: prev.instagram || data.instagram || '',
           linkedin: prev.linkedin || data.linkedin || '',
           students_per_year: prev.students_per_year || data.students_per_year || '',
@@ -194,7 +205,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
         }));
       }
     };
-    load();
+    load().finally(() => { loadingRef.current = false; });
   }, [user?.id]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -613,25 +624,29 @@ const AffiliateAdminOnboarding: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">Primary Phone *</label>
-                          <div className="relative group">
-                            <Smartphone className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
-                              className={inputCls(!!errors.phone)}
-                            />
-                          </div>
+                          <PhoneInput
+                            international
+                            defaultCountry="US"
+                            addInternationalOption={false}
+                            limitMaxLength={true}
+                            value={form.phone}
+                            onChange={(value) => set('phone', value || '')}
+                            className={`agency-onboarding-phone w-full px-4 py-4 bg-white border rounded-[24px] text-slate-900 font-bold transition-all outline-none focus-within:ring-4 shadow-sm ${errors.phone ? 'border-[#D0151C]/30 focus-within:ring-[#D0151C]/5 focus-within:border-[#D0151C]' : 'border-slate-100 hover:border-slate-200 focus-within:ring-[#05294E]/5 focus-within:border-[#05294E]'}`}
+                          />
                           {errors.phone && <p className="mt-2 text-xs font-bold text-[#D0151C] ml-1">{errors.phone}</p>}
                         </div>
 
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-3 ml-1">WhatsApp</label>
-                          <div className="relative group">
-                            <Phone className="absolute left-5 top-5 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-[#05294E]" />
-                            <input
-                              type="tel" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
-                              className={inputCls(false)}
-                            />
-                          </div>
+                          <PhoneInput
+                            international
+                            defaultCountry="US"
+                            addInternationalOption={false}
+                            limitMaxLength={true}
+                            value={form.whatsapp}
+                            onChange={(value) => set('whatsapp', value || '')}
+                            className="agency-onboarding-phone w-full px-4 py-4 bg-white border border-slate-100 hover:border-slate-200 rounded-[24px] text-slate-900 font-bold transition-all outline-none focus-within:ring-4 focus-within:ring-[#05294E]/5 focus-within:border-[#05294E] shadow-sm"
+                          />
                         </div>
 
                         <div className="md:col-span-2">

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { usePaymentBlockedContext } from '../contexts/PaymentBlockedContext';
 
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
@@ -154,7 +154,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) return;
 
     // Evitar re-execução se o path e o role não mudaram e o estado de pagamento é estável
-    const checkKey = `${user?.id}-${user?.role}-${currentPath}`;
+    const affiliateOnboardingDoneKey = user?.role === 'affiliate_admin'
+      ? String(user?.onboarding_completed || userProfile?.onboarding_completed)
+      : '';
+    const checkKey = `${user?.id}-${user?.role}-${currentPath}-${affiliateOnboardingDoneKey}`;
     if (lastCheckedPath.current === checkKey && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
       return;
     }
@@ -185,7 +188,12 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
 
         if (user.role === 'admin' || user.role === 'post_sales') { navigate('/admin/dashboard', { replace: true }); return; }
-        if (user.role === 'affiliate_admin') { navigate('/agency/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate_admin') {
+          const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
+          if (!affiliateOnboardingDone) { navigate('/agency/onboarding', { replace: true }); return; }
+          if (!user.is_active) { navigate('/agency/pending-approval', { replace: true }); return; }
+          navigate('/agency/dashboard', { replace: true }); return;
+        }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
 
@@ -240,16 +248,23 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           currentPath.startsWith('/agency/onboarding') ||
           currentPath.startsWith('/agency/pending-approval');
 
-        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath) {
-          if (!user.onboarding_completed && currentPath !== '/agency/onboarding') {
+        const isRootOrAgencias = currentPath === '/' || currentPath === '/agencias';
+
+        // Use userProfile.onboarding_completed as fallback to avoid stale cache issue:
+        // user.onboarding_completed comes from cached_user (may be stale on first load),
+        // while userProfile is updated by refetchUserProfile() in AgencyOnboarding.
+        const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
+
+        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath || isRootOrAgencias) {
+          if (!affiliateOnboardingDone && currentPath !== '/agency/onboarding') {
             navigate('/agency/onboarding', { replace: true });
             return;
           }
-          if (user.onboarding_completed && !user.is_active && currentPath !== '/agency/pending-approval') {
+          if (affiliateOnboardingDone && !user.is_active && currentPath !== '/agency/pending-approval') {
             navigate('/agency/pending-approval', { replace: true });
             return;
           }
-          if (user.onboarding_completed && user.is_active && (tryingToAccessOtherDashboard || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
+          if (affiliateOnboardingDone && user.is_active && (tryingToAccessOtherDashboard || isRootOrAgencias || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
             navigate('/agency/dashboard', { replace: true });
             return;
           }
@@ -311,7 +326,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     };
 
     checkAndRedirect();
-  }, [user?.id, user?.role, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
+  }, [user?.id, user?.role, user?.onboarding_completed, user?.is_active, userProfile?.onboarding_completed, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
 
   if (checkingUniversity) {
     return (

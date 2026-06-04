@@ -631,6 +631,36 @@ All colors MUST be HSL.
   cursor: pointer;
 }
 
+.agency-onboarding-phone {
+  display: flex !important;
+  align-items: center;
+}
+
+.agency-onboarding-phone .PhoneInputCountry {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.agency-onboarding-phone .PhoneInputInput {
+  flex: 1;
+  outline: none;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.agency-onboarding-phone .PhoneInputInput::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.agency-onboarding-phone .PhoneInputCountrySelect {
+  cursor: pointer;
+}
+
 /* Custom override for PhoneInput inside registration page */
 .phone-input-custom:focus-within {
   outline: none !important;

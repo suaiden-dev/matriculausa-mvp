@@ -1197,11 +1197,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     }
 
+    const emailRedirectTo = userData.role === 'affiliate_admin'
+      ? `${window.location.origin}/agencias`
+      : undefined;
+
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
         data: signUpData,
+        ...(emailRedirectTo ? { emailRedirectTo } : {}),
       }
     });
 
@@ -1219,7 +1224,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] data.user:', data?.user);
 
     // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
-    if (data?.user && (userData.role === 'student' || userData.role === 'affiliate_admin')) {
+    // Nota: affiliate_admin (agências) NÃO deve ser auto-confirmado — aguarda confirmação manual de email
+    if (data?.user && userData.role === 'student') {
       try {
         // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
         let isSellerRegistration = false;
