@@ -41,6 +41,7 @@ const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
 const AdminRegistration = React.lazy(() => import('./pages/AdminRegistration'));
 const SellerRegistration = React.lazy(() => import('./pages/SellerRegistration'));
 const AffiliateRegistration = React.lazy(() => import('./pages/AffiliateRegistration'));
+const Agency = React.lazy(() => import('./pages/Agency'));
 const AffiliateDashboard = React.lazy(() => import('./pages/AffiliateDashboard/index'));
 const AffiliateRewardsStore = React.lazy(() => import('./pages/StudentDashboard/RewardsStore'));
 const SellerStudentRegistration = React.lazy(() => import('./pages/SellerStudentRegistration'));
@@ -130,6 +131,7 @@ const AppContent = () => {
           <Route path="/admin/register" element={<AdminRegistration />} />
           <Route path="/seller/register" element={<SellerRegistration />} />
           <Route path="/affiliate/register" element={<AffiliateRegistration />} />
+          <Route path="/agency" element={<Agency />} />
           <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
           <Route path="/affiliate/dashboard/rewards/store" element={<AffiliateRewardsStore />} />
           <Route path="/student/register" element={<SellerStudentRegistration />} />
