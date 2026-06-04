@@ -1517,6 +1517,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   ? 'bg-[#05294E] hover:bg-[#041f3a]' 
                   : activeTab === 'university'
                   ? 'bg-[#D0151C] hover:bg-[#B01218]'
+                  : activeTab === 'agency'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
                   : 'bg-amber-500 hover:bg-amber-600'
               }`}
             >
@@ -1528,10 +1530,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               ) : (
                 <div className="flex items-center">
                   <span>
-                    {activeTab === 'student' 
-                      ? t('authPage.register.createStudentAccount') 
-                      : activeTab === 'university' 
-                      ? t('authPage.register.createUniversityAccount') 
+                    {activeTab === 'student'
+                      ? t('authPage.register.createStudentAccount')
+                      : activeTab === 'university'
+                      ? t('authPage.register.createUniversityAccount')
+                      : activeTab === 'agency'
+                      ? 'Criar Conta de Agência'
                       : t('authPage.register.createAffiliateAccount', 'Criar Conta de Afiliado')}
                   </span>
                 </div>
