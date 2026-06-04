@@ -84,8 +84,8 @@ function AffiliateRequestsBase(props: AffiliateRequestsProps) {
 				<div className="p-6 border-b border-gray-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<h2 className="text-lg font-semibold text-gray-900">Affiliate Payment Requests</h2>
-							<p className="text-gray-600 mt-1">Manage payout requests submitted by affiliates</p>
+							<h2 className="text-lg font-semibold text-gray-900">Agency Payment Requests</h2>
+							<p className="text-gray-600 mt-1">Manage payout requests submitted by agencies</p>
 						</div>
 						<div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
 							<button
