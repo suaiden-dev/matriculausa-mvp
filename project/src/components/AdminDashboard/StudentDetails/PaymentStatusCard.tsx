@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle } from 'lucide-react';
+import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle, Clock } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
-import { getPlacementFee } from '../../../utils/placementFeeCalculator';
 import { INSTALLMENT_CONFIG, InstallmentPlan, SupportedInstallmentFeeType, computeInstallmentAmounts } from '../../../config/installmentConfig';
 
 interface PaymentStatusCardProps {
@@ -68,8 +67,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onResetFees,
     onEditFeesChange,
     onMarkAsPaid,
-    onEnableInstallment,
-    onDisableInstallment,
     onSetInstallmentPlan,
     installmentPlans = {},
     onEditPaymentMethod,
@@ -736,33 +733,43 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                   <div className="flex flex-col gap-3">
                     {isPaid ? (
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
+                        <div className="w-full">
                           {isInstallmentPartial ? (
-                            <>
-                              <AlertCircle className="h-5 w-5 text-amber-500" />
-                              <span className="text-sm font-medium text-amber-600">
-                                {installmentPlans?.['placement_fee']?.installments_paid ?? 1}/{installmentPlans?.['placement_fee']?.total_installments ?? 2} Paid
-                              </span>
-                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                                Installment {(installmentPlans?.['placement_fee']?.installments_paid ?? 1) + 1} of {installmentPlans?.['placement_fee']?.total_installments ?? 2} pending: ${pendingBalance.toFixed(0)}
-                              </span>
-                            </>
+                            <div className="flex flex-col gap-2.5 w-full">
+                              <div className="flex items-center justify-between w-full gap-4">
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                  <span className="text-sm font-semibold text-amber-700">
+                                    {installmentPlans?.['placement_fee']?.installments_paid ?? 1}/{installmentPlans?.['placement_fee']?.total_installments ?? 2} Paid
+                                  </span>
+                                </div>
+                                {student.placement_fee_due_date && (
+                                  <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Due: <span className="font-bold text-amber-900">{new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
+                                Installment {(installmentPlans?.['placement_fee']?.installments_paid ?? 1) + 1} of {installmentPlans?.['placement_fee']?.total_installments ?? 2} pending: <span className="font-bold">${pendingBalance.toFixed(0)}</span>
+                              </div>
+                            </div>
                           ) : (
-                            <>
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                              <span className="text-sm font-medium text-green-600">Paid</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                              <span className="text-sm font-semibold text-green-700">Paid</span>
                               {installmentPlans?.['placement_fee']?.total_installments && installmentPlans['placement_fee'].total_installments > 1 && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                                <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-lg font-semibold">
                                   {installmentPlans['placement_fee'].total_installments}x installments
                                 </span>
                               )}
-                            </>
+                            </div>
                           )}
                         </div>
                         {isPlatformAdmin && !editingFees && (
-                          <div className="flex flex-col gap-3">
+                          <div className="flex flex-col gap-3 items-end">
                             {editingPaymentMethod === 'placement' ? (
-                              <div className="flex flex-col gap-3">
+                              <div className="flex flex-col gap-3 items-end">
                                 <select
                                   value={newPaymentMethod}
                                   onChange={(e) => onPaymentMethodChange(e.target.value)}
@@ -808,33 +815,39 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center flex-wrap gap-2">
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm font-medium text-red-600">Not Paid</span>
-                          {(() => {
-                            const plan = installmentPlans?.['placement_fee'] ?? null;
-                            if (!plan) return null;
-                            // Only show when the fee amount is actually derivable from scholarship data
-                            const apps = student.all_applications || [];
-                            const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
-                            const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
-                            const feeKnown = currentOverrides?.placement_fee != null || (student as any).placement_fee_amount || sch?.placement_fee_amount || sch?.annual_value_with_scholarship;
-                            if (!feeKnown) return null;
-                            const n = plan.total_installments;
-                            const perInstallment = n > 0 ? formatFeeAmount(placementFeeTotalAmount / n, true) : '—';
-                            return (
-                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                          <span className="text-sm font-semibold text-red-700">Not Paid</span>
+                          {student.placement_fee_due_date && (
+                            <span className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200/60 rounded-lg px-2.5 py-1" title="Due Date">
+                              Due: {new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                            </span>
+                          )}
+                        </div>
+                        {(() => {
+                          const plan = installmentPlans?.['placement_fee'] ?? null;
+                          if (!plan) return null;
+                          // Only show when the fee amount is actually derivable from scholarship data
+                          const apps = student.all_applications || [];
+                          const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
+                          const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                          const feeKnown = currentOverrides?.placement_fee != null || (student as any).placement_fee_amount || sch?.placement_fee_amount || sch?.annual_value_with_scholarship;
+                          if (!feeKnown) return null;
+                          const n = plan.total_installments;
+                          const perInstallment = n > 0 ? formatFeeAmount(placementFeeTotalAmount / n, true) : '—';
+                          return (
+                            <div className="pl-7">
+                              <span className="inline-block text-xs bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-lg font-semibold">
                                 {n}× installments — {perInstallment} each
                               </span>
-                            );
-                          })()}
-                        </div>
+                            </div>
+                          );
+                        })()}
                         {isPlatformAdmin && (() => {
                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                          const installmentEnabled = !!(student as any).placement_fee_installment_enabled;
                           return (
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2 items-end">
                               {approvedApp && (
                                 <button
                                   onClick={() => onMarkAsPaid('placement')}

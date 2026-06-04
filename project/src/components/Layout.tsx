@@ -44,6 +44,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/vsl-transfer' ||
                        location.pathname === '/vsl-cos' ||
                        location.pathname === '/selection-process' ||
+                       location.pathname.startsWith('/school') || // 🎯 Esconder no dashboard da universidade
                        ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname) ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 

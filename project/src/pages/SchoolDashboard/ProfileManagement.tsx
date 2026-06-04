@@ -262,7 +262,7 @@ const ProfileManagement: React.FC = () => {
       <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-4 sm:p-8 text-white relative overflow-hidden mt-6">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between mb-6 gap-4 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full">
               <div className="relative mb-4 sm:mb-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
@@ -273,9 +273,9 @@ const ProfileManagement: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="flex-1 w-full">
+              <div className="flex-1 w-full flex flex-col items-center sm:items-start">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{university.name}</h1>
-                <div className="flex flex-wrap items-center gap-2 text-blue-100 text-sm">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-blue-100 text-sm">
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
                     {university.location}
@@ -293,7 +293,7 @@ const ProfileManagement: React.FC = () => {
                     </a>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mt-3">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                     university.is_approved 
                       ? 'bg-green-500/20 text-green-100 border border-green-400/30' 

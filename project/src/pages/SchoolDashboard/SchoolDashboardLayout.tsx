@@ -386,7 +386,13 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                         ? 'text-slate-400 cursor-not-allowed'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
-                    onClick={(e) => finalIsDisabled && e.preventDefault()}
+                    onClick={(e) => {
+                      if (finalIsDisabled) {
+                        e.preventDefault();
+                      } else {
+                        setSidebarOpen(false);
+                      }
+                    }}
                   >
                     <div className="flex items-center space-x-3">
                       <Icon className={`h-5 w-5 ${isActive ? 'text-white' : finalIsDisabled ? 'text-slate-400' : 'text-slate-500'}`} />

@@ -178,8 +178,8 @@ const SchoolApplicationTrackingView: React.FC = () => {
           <div className="w-full px-2 sm:px-4 py-4 sm:py-6">
             <div className="flex flex-col gap-4 sm:gap-6">
               
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
+              <div className="flex flex-col sm:flex-row justify-between items-center sm:items-center gap-4 text-center sm:text-left">
+                <div className="flex flex-col items-center sm:items-start">
                   <h2 className="text-2xl font-bold text-slate-900">Application Tracking</h2>
                   <p className="text-slate-600">Monitor student applications through all stages of the process</p>
                 </div>

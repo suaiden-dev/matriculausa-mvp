@@ -1217,8 +1217,8 @@ const PaymentManagement: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
               {/* Header: title + note + counter */}
-              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex-1">
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 text-center md:text-left">
+                <div className="flex-1 flex flex-col items-center md:items-start">
                   <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
                     Payment Management
                   </h1>
