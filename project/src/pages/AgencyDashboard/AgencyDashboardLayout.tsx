@@ -65,7 +65,7 @@ const AgencyDashboardLayout: React.FC<AgencyDashboardLayoutProps> = ({
       { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/agency/dashboard/payments', badge: null },
       { id: 'sales', label: 'Sales', icon: GraduationCap, path: '/agency/dashboard/sales', badge: null },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/agency/dashboard/analytics', badge: null },
-      { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/agency/dashboard/utm-tracking', badge: null },
+      // { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/agency/dashboard/utm-tracking', badge: null },
       { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/agency/dashboard/profile', badge: null }
     ];
 

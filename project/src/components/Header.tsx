@@ -207,7 +207,7 @@ const Header: React.FC = () => {
                   }
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{userProfile?.full_name || user.email}</p>
-                    <p className="text-xs text-slate-500 capitalize">{user.role}</p>
+                    <p className="text-xs text-slate-500 capitalize">{user.role === 'affiliate_admin' ? 'Agency' : user.role}</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
@@ -344,7 +344,7 @@ const Header: React.FC = () => {
                         </div>
                         <div>
                           <p className="font-black text-xl leading-tight">{userProfile?.full_name || user.email.split('@')[0]}</p>
-                          <p className="text-blue-200 text-sm font-medium opacity-80 capitalize">{user.role}</p>
+                          <p className="text-blue-200 text-sm font-medium opacity-80 capitalize">{user.role === 'affiliate_admin' ? 'Agency' : user.role}</p>
                         </div>
                       </div>
 

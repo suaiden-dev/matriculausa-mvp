@@ -248,14 +248,14 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           currentPath.startsWith('/agency/onboarding') ||
           currentPath.startsWith('/agency/pending-approval');
 
-        const isRootOrAgencias = currentPath === '/' || currentPath === '/agencias';
+        const isAgenciasPage = currentPath === '/agencias';
 
         // Use userProfile.onboarding_completed as fallback to avoid stale cache issue:
         // user.onboarding_completed comes from cached_user (may be stale on first load),
         // while userProfile is updated by refetchUserProfile() in AgencyOnboarding.
         const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
 
-        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath || isRootOrAgencias) {
+        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath || isAgenciasPage) {
           if (!affiliateOnboardingDone && currentPath !== '/agency/onboarding') {
             navigate('/agency/onboarding', { replace: true });
             return;
@@ -264,7 +264,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             navigate('/agency/pending-approval', { replace: true });
             return;
           }
-          if (affiliateOnboardingDone && user.is_active && (tryingToAccessOtherDashboard || isRootOrAgencias || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
+          if (affiliateOnboardingDone && user.is_active && (tryingToAccessOtherDashboard || isAgenciasPage || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
             navigate('/agency/dashboard', { replace: true });
             return;
           }
