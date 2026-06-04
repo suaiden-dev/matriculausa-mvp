@@ -82,6 +82,7 @@ import {
 import { useAgencyRevenueCalculationQuery } from '../../hooks/useAgencyQueries';
 import { invalidateAffiliateAdminAll } from '../../lib/queryKeys';
 import DirectSalesLink from './DirectSalesLink';
+import StudentStepProgress from '../../components/StudentStepProgress';
 
 // ─── CommissionPlanCard ────────────────────────────────────────────────────────
 
@@ -167,7 +168,14 @@ interface OverviewProps {
   commissionRules?: any;
 }
 
+// True if agency has at least one active commission rate configured
+const hasActiveCommissions = (rules: any) => {
+  if (!rules) return false;
+  return Object.values(rules).some((r: any) => r?.enabled !== false && r?.value > 0);
+};
+
 const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [], onRefresh, userId, commissionRules = null }) => {
+  const showCommission = hasActiveCommissions(commissionRules);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -527,8 +535,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                   <th className="px-5 py-3 font-semibold">Student</th>
                   <th className="px-5 py-3 font-semibold">Seller</th>
                   <th className="px-5 py-3 font-semibold">Registration</th>
-                  <th className="px-5 py-3 font-semibold">Paid steps</th>
-                  <th className="px-5 py-3 font-semibold">Commission</th>
+                  <th className="px-5 py-3 font-semibold">Progress</th>
+                  {showCommission && <th className="px-5 py-3 font-semibold">Commission</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -608,33 +616,24 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                         </div>
                       </td>
 
-                      {/* Paid Steps */}
+                      {/* Progress */}
                       <td className="px-5 py-3">
-                        <div className="flex items-center gap-1">
-                          {fees.map(fee => (
-                            <div key={fee.key} className="flex flex-col items-center gap-0.5" title={`${fee.label}: ${fee.paid ? 'Paid' : 'Pending'}`}>
-                              {fee.paid ? (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-slate-200" />
-                              )}
-                              <span className={`text-[9px] font-semibold ${fee.paid ? 'text-emerald-600' : 'text-slate-300'}`}>{fee.label}</span>
-                            </div>
-                          ))}
-                        </div>
+                        <StudentStepProgress student={student} />
                       </td>
 
-                      {/* Commission */}
-                      <td className="px-5 py-3">
-                        {isActive ? (
-                          <div className="flex items-center gap-1.5">
-                            <DollarSign className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                            <span className="font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(commission)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Waiting</span>
-                        )}
-                      </td>
+                      {/* Commission — only if agency has active commission rates */}
+                      {showCommission && (
+                        <td className="px-5 py-3">
+                          {isActive ? (
+                            <div className="flex items-center gap-1.5">
+                              <DollarSign className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                              <span className="font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(commission)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Waiting</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

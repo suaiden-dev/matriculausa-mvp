@@ -33,13 +33,13 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [studentDependents, setStudentDependents] = useState<{ [key: string]: number }>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{ [key: string]: any }>({});
   const [studentSystemTypes, setStudentSystemTypes] = useState<{ [key: string]: string }>({});
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; placement_fee?: number }>>({});
   // Removido loadingRealPaidAmounts que não estava sendo lido
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
-  const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }>>({});
+  const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: Date; placement_fee?: Date }>>({});
 
 
   // Função para deduplificar estudantes como no MyStudents.tsx e Overview.tsx
@@ -145,14 +145,14 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         setStudentPaymentDates({});
         return;
       }
-      const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      const paymentDatesMap: Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }> = {};
+      const amountsMap: Record<string, { selection_process?: number; placement_fee?: number }> = {};
+      const paymentDatesMap: Record<string, { selection_process?: Date; placement_fee?: Date }> = {};
 
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
         try {
           // Carregar valores pagos
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-          const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          const amounts = await getDisplayAmounts(userId, ['selection_process', 'placement_fee']);
           amountsMap[userId] = amounts;
 
           // Carregar datas de pagamento
@@ -160,14 +160,14 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
             .from('individual_fee_payments')
             .select('fee_type, payment_date')
             .eq('user_id', userId)
-            .in('fee_type', ['selection_process', 'scholarship', 'i20_control'])
+            .in('fee_type', ['selection_process', 'placement_fee'])
             .order('payment_date', { ascending: false });
 
           if (!error && payments) {
-            const dates: { selection_process?: Date; scholarship?: Date; i20_control?: Date } = {};
+            const dates: { selection_process?: Date; placement_fee?: Date } = {};
             payments.forEach((payment: any) => {
               if (payment.payment_date) {
-                const feeType = payment.fee_type as 'selection_process' | 'scholarship' | 'i20_control';
+                const feeType = payment.fee_type as 'selection_process' | 'placement_fee';
                 if (!dates[feeType]) {
                   // Usar a data mais recente para cada tipo de fee
                   dates[feeType] = new Date(payment.payment_date);
@@ -223,35 +223,15 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       }
     }
 
-    // Scholarship Fee
-    if (student.is_scholarship_fee_paid) {
-      // Verificar se o pagamento está no período selecionado
-      const paymentDate = paymentDates.scholarship;
+    // Placement Fee
+    if (student.is_placement_fee_paid) {
+      const paymentDate = paymentDates.placement_fee;
       if (isDateInRange(paymentDate)) {
-        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-          // Usar valor real pago quando disponível
-          total += realPaid.scholarship;
+        if (realPaid.placement_fee !== undefined && realPaid.placement_fee > 0) {
+          total += realPaid.placement_fee;
         } else {
-          // Fallback: calcular baseado no system_type
-          const schBaseDefault = systemType === 'simplified' ? 550 : 900;
-          const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
-          total += schBase;
-        }
-      }
-    }
-
-    // I-20 Control Fee
-    if (student.has_paid_i20_control_fee) {
-      // Verificar se o pagamento está no período selecionado
-      const paymentDate = paymentDates.i20_control;
-      if (isDateInRange(paymentDate)) {
-        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-          // Usar valor real pago quando disponível
-          total += realPaid.i20_control;
-        } else {
-          // Fallback: usar override ou valor padrão
-          const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
-          total += i20Base;
+          const placementBase = overrides.placement_fee != null ? Number(overrides.placement_fee) : 1500;
+          total += placementBase;
         }
       }
     }
@@ -380,8 +360,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           const paymentDates = studentPaymentDates[s.id] || studentPaymentDates[s.user_id] || {};
           return (
             (s.has_paid_selection_process_fee && isDateInRange(paymentDates.selection_process)) ||
-            (s.is_scholarship_fee_paid && isDateInRange(paymentDates.scholarship)) ||
-            (s.has_paid_i20_control_fee && isDateInRange(paymentDates.i20_control))
+            (s.is_placement_fee_paid && isDateInRange(paymentDates.placement_fee))
           );
         }).length;
 

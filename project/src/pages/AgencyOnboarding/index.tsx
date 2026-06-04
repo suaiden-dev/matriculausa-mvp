@@ -92,11 +92,11 @@ const HOW_FOUND_OPTIONS = [
 ];
 
 const STUDENTS_PER_YEAR_OPTIONS = [
-  { value: '1-10', label: '1 to 10 students' },
-  { value: '11-50', label: '11 to 50 students' },
-  { value: '51-100', label: '51 to 100 students' },
-  { value: '101-300', label: '101 to 300 students' },
-  { value: '300+', label: 'More than 300 students' },
+  { value: '1-10', label: '1 to 10' },
+  { value: '11-50', label: '11 to 50' },
+  { value: '51-100', label: '51 to 100' },
+  { value: '101-300', label: '101 to 300' },
+  { value: '300+', label: 'More than 300' },
 ];
 
 const STEPS = [
@@ -668,7 +668,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
                         {/* Volume */}
                         <div>
                           <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-5 ml-1">
-                            How many students does your agency serve per year? *
+                            How many <span className="text-[#05294E]">students</span> does your agency serve per year? *
                           </label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {STUDENTS_PER_YEAR_OPTIONS.map(opt => (

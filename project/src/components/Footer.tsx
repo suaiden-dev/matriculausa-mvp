@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-900">{t('footer.sections.explore')}</h3>
             <ul className="space-y-3">
               <li><Link to="/scholarships" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
-              <li><Link to="/schools" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
+              <li><Link to="/agency" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
               <li><Link to="/matricula-rewards" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.matriculaRewards')}</Link></li>
               <li><Link to="/affiliate" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.becomeAffiliate')}</Link></li>
             </ul>

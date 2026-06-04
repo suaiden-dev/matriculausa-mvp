@@ -97,7 +97,8 @@
       "Read(//tmp/**)",
       "Bash(ls:*)",
       "Bash(command -v rtk)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(rtk grep:*)"
     ]
   }
 }

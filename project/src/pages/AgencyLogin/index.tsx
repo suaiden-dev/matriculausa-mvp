@@ -182,16 +182,19 @@ const HeroSection: React.FC = () => {
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
-              <motion.button
-                onClick={scrollToForm}
+              <motion.div
                 whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(208, 21, 28, 0.4)' }}
                 whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center justify-center px-8 py-4 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group"
               >
-                <Sparkles className="w-5 h-5 mr-2 group-hover:animate-spin" />
-                Quero ser parceiro
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
+                <Link
+                  to="/agency"
+                  className="inline-flex items-center justify-center px-8 py-4 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group"
+                >
+                  <Sparkles className="w-5 h-5 mr-2 group-hover:animate-spin" />
+                  Quero ser parceiro
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </motion.div>
 
               <motion.button
                 onClick={() => document.getElementById('agency-login')?.scrollIntoView({ behavior: 'smooth' })}

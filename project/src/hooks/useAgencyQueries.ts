@@ -158,16 +158,18 @@ export function useRealPaidAmountsQuery(userIds: string[]) {
       if (!userIds.length) return {};
 
       
-      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+      const realPaidAmountsMap: Record<string, { selection_process?: number; placement_fee?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number }> = {};
+
       await Promise.allSettled(
         userIds.map(async (userId) => {
           try {
-            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            const amounts = await getDisplayAmounts(userId, ['selection_process', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package']);
             realPaidAmountsMap[userId] = {
               selection_process: amounts.selection_process,
-              scholarship: amounts.scholarship,
-              i20_control: amounts.i20_control
+              placement_fee: amounts.placement_fee,
+              ds160_package: amounts.ds160_package,
+              i539_cos_package: amounts.i539_cos_package,
+              reinstatement_package: amounts.reinstatement_package
             };
           } catch (error) {
             console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
@@ -394,15 +396,20 @@ export function useAdjustedStudentsCalculation(
       const baseSelection = isSimplified ? 350 : 400;
       const selectionOriginal = ov.selection_process_fee != null
         ? Number(ov.selection_process_fee)
-        : (isSimplified ? baseSelection : baseSelection + dependents * 150);
+        : (isSimplified ? baseSelection : baseSelection + dependents * 100);
       const scholarshipOriginal = ov.scholarship_fee != null
         ? Number(ov.scholarship_fee)
         : (isSimplified ? 550 : 900);
       const i20Original = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
 
+      const placementOrScholarshipPaid = student.placement_fee_flow
+        ? !!student.is_placement_fee_paid
+        : !!student.is_scholarship_fee_paid;
+      const i20Paid = !!(student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package);
+
       if (student.has_paid_selection_process_fee) total += selectionOriginal;
-      if (student.is_scholarship_fee_paid) total += scholarshipOriginal;
-      if (student.is_scholarship_fee_paid && student.has_paid_i20_control_fee) total += i20Original;
+      if (placementOrScholarshipPaid) total += scholarshipOriginal;
+      if (placementOrScholarshipPaid && i20Paid) total += i20Original;
 
       return {
         ...student,
@@ -496,7 +503,7 @@ export function useAgencyCommissionsQuery(userId?: string) {
           profiles.forEach((p: any) => {
             const dependents = p.dependents || 0;
             const baseSelection = isSimplified ? 350 : 400;
-            const selectionFeeAmount = isSimplified ? baseSelection : baseSelection + dependents * 150;
+            const selectionFeeAmount = isSimplified ? baseSelection : baseSelection + dependents * 100;
             const scholarshipFeeAmount = isSimplified ? 550 : 900;
             const i20FeeAmount = 900;
             const applicationFeeAmount = 100;

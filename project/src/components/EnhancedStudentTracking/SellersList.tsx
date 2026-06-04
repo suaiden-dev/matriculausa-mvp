@@ -1,5 +1,6 @@
 import React from 'react';
 import { User } from 'lucide-react';
+import StudentStepProgress from '../StudentStepProgress';
 
 interface SellersListProps {
   filteredSellers: any[];
@@ -243,7 +244,7 @@ const SellersList: React.FC<SellersListProps> = ({
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
           {filteredStudents.map((student) => {
-            const { disponivel, pendente } = getStudentCommissions(student);
+            const { disponivel } = getStudentCommissions(student);
             
             // Buscar nome do vendedor se disponível, senão fallback do referral code
             const sellerName = student.seller_name || 
@@ -285,9 +286,9 @@ const SellersList: React.FC<SellersListProps> = ({
                   </span>
                 </td>
 
-                {/* Progresso Stepper */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {renderProgressStepper(student, disponivel, pendente)}
+                {/* Progress */}
+                <td className="px-6 py-4">
+                  <StudentStepProgress student={student} />
                 </td>
 
               </tr>

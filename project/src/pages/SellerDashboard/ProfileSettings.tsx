@@ -10,14 +10,11 @@ import {
   Save as SaveIcon,
   Key, 
   Shield, 
-  Star,
   Camera,
   Calendar,
-  Target,
   Bell,
   AlertCircle,
   CheckCircle,
-  Building,
   Users
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -166,17 +163,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
     setSuccessMessage(null);
   }, []);
 
-  // Memoize profile completeness calculation
+  // Profile completeness: only name and phone matter for sellers
   const completeness = useMemo(() => {
-    const fields = [
-      formData.name,
-      formData.phone,
-      formData.territory,
-      avatarUrl
-    ];
+    const fields = [formData.name, formData.phone];
     const completedFields = fields.filter(field => field && field !== '').length;
     return Math.round((completedFields / fields.length) * 100);
-  }, [formData.name, formData.phone, formData.territory, avatarUrl]);
+  }, [formData.name, formData.phone]);
 
   return (
     <div className="space-y-6 sm:space-y-8 p-3 sm:p-4">
@@ -322,18 +314,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">SMS Notifications</label>
-                <select
-                  value={formData.notifications.sms ? 'true' : 'false'}
-                  onChange={(e) => handleInputChange('notifications.sms', e.target.value === 'true')}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  aria-label="Configure SMS notifications"
-                >
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </div>
             </div>
           </div>
         ) : (
@@ -379,10 +359,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">{sellerProfile?.name || 'Seller'}</h3>
                 <p className="text-slate-600 mb-3">{sellerProfile?.email || user?.email}</p>
                 <div className="flex items-center space-x-4">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <Users className="h-3 w-3 mr-1" />
-                    MatriculaUSA Seller
-                  </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Verified
@@ -464,14 +440,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <h4 className="text-lg font-bold text-slate-900 mb-6">Account Information</h4>
                 <div className="space-y-4">
                   <div className="flex items-center">
-                    <Star className="h-5 w-5 text-slate-400 mr-3" />
-                    <div>
-                      <label className="text-sm font-medium text-slate-500">Account Type</label>
-                      <p className="text-slate-900">MatriculaUSA Seller</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
                     <Bell className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Email Notifications</label>
@@ -488,12 +456,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                       <p className="text-slate-900">{sellerProfile?.is_active ? 'Active' : 'Inactive'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center">
-                    <Target className="h-5 w-5 text-slate-400 mr-3" />
+                    <Calendar className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Profile Complete</label>
-                      <p className="text-slate-900">{completeness}%</p>
+                      <label className="text-sm font-medium text-slate-500">Member Since</label>
+                      <p className="text-slate-900">
+                        {sellerProfile?.created_at ? new Date(sellerProfile.created_at).toLocaleDateString('en-US') : 'Unknown'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -517,29 +487,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
               </div>
             </div>
 
-            {/* Account Information */}
-            <div className="mt-8 pt-8 border-t border-slate-200">
-              <h4 className="text-lg font-bold text-slate-900 mb-6">Account Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-slate-400 mr-3" />
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Member Since</label>
-                    <p className="text-slate-900">
-                      {sellerProfile?.created_at ? new Date(sellerProfile.created_at).toLocaleDateString('en-US') : 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center">
-                  <Target className="h-5 w-5 text-slate-400 mr-3" />
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Profile Complete</label>
-                    <p className="text-slate-900">{completeness}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -556,19 +503,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 Consider adding the missing information to improve your seller capabilities.
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                {!sellerProfile?.name && (
+                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
+                    Add full name
+                  </span>
+                )}
                 {!sellerProfile?.phone && (
                   <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
                     Add phone
-                  </span>
-                )}
-                {!sellerProfile?.territory && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    Add territory
-                  </span>
-                )}
-                {!avatarUrl && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Add profile photo
                   </span>
                 )}
               </div>

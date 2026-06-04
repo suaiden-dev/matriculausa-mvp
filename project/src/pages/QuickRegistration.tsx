@@ -616,12 +616,15 @@ const QuickRegistration: React.FC = () => {
         }
       }
 
-      // Determinar desconto: TFOE=$300, senão verificar role do referenciador
+      // Determinar desconto: TFOE=$300, sellers sempre $50, afiliados Matricula Rewards verificam role
       let discountAmount = 0;
       if (targetCode === 'TFOE') {
         discountAmount = 300;
+      } else if (codeType === 'seller') {
+        // Sellers sempre dão $50 de desconto via ?ref=
+        discountAmount = 50;
       } else if (affiliateCodeData?.user_id) {
-        // Verificar role do referenciador: alunos (role='student') dão $50, afiliados profissionais dão $0
+        // Afiliados Matricula Rewards: só alunos (role='student') dão $50
         const { data: referrerProfile } = await supabase
           .from('user_profiles')
           .select('role')

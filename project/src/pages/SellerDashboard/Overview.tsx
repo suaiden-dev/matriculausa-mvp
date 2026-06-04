@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import StudentStepProgress from '../../components/StudentStepProgress';
 
 interface OverviewProps {
   stats: {
@@ -32,10 +33,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{ [key: string]: string }>({});
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{ [key: string]: { 
-    selection_process?: number; 
-    scholarship?: number; 
-    i20_control?: number;
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{ [key: string]: {
+    selection_process?: number;
+    placement_fee?: number;
     ds160_package?: number;
     i539_cos_package?: number;
     reinstatement_package?: number;
@@ -174,7 +174,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
             try {
               // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-              const amounts = await getDisplayAmounts(id, ['selection_process', 'scholarship', 'i20_control', 'ds160_package', 'i539_cos_package', 'reinstatement_package']);
+              const amounts = await getDisplayAmounts(id, ['selection_process', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package']);
               return { id, amounts };
             } catch (error) {
               console.warn('⚠️ [OVERVIEW] Erro ao carregar valores pagos para', id, ':', error);
@@ -182,7 +182,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
             }
           }));
 
-          const newRealPaid: { [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number } } = {};
+          const newRealPaid: { [key: string]: { selection_process?: number; placement_fee?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number } } = {};
           results.forEach((res: any, idx: number) => {
             const id = idsToLoadRealPaid[idx];
             if (res.status === 'fulfilled' && res.value) {
@@ -261,19 +261,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       }
     }
 
-    // I-20 Control Fee
-    if (student.has_paid_i20_control_fee) {
-      if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-        // Usar valor real pago quando disponível
-        total += realPaid.i20_control;
-      } else {
-        // Fallback: usar override ou valor padrão
-        const i20BaseDefault = Number(getFeeAmount('i20_control_fee')) || 900;
-        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : i20BaseDefault;
-        total += i20Base;
-      }
-    }
-
     // Application fee não entra na receita do seller
     return total;
   };
@@ -321,8 +308,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
 
   const quickActions = [
     {
-      title: 'View Students',
-      description: 'View all referenced students',
+      title: 'Sales',
+      description: 'View all your referred students',
       icon: GraduationCap,
       color: 'bg-blue-500',
       count: stats.totalStudents,
@@ -382,7 +369,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
+              <p className="text-sm font-medium text-slate-500 mb-1">Sales Volume</p>
               {(loadingCalc || loadingRealPaidAmounts) ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
               ) : (
@@ -482,7 +469,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-slate-900">Top Sales Performance</h2>
                 <p className="text-slate-500 text-sm break-words">
-                  Ranking of your top performing students by revenue
+                  Ranking of your top performing students by sales
                 </p>
               </div>
               <div
@@ -516,8 +503,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                         {/* Student Info */}
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 text-lg break-words">{student.full_name}</p>
-                          <p className="text-sm text-slate-600 break-words">{student.email}</p>
-
+                          <p className="text-sm text-slate-600 break-words mb-2">{student.email}</p>
+                          <StudentStepProgress student={student} />
                         </div>
                       </div>
 
@@ -532,7 +519,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                                 {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                               </span>
                             )}
-                            {!(loadingCalc || loadingRealPaidAmounts) && <span className="text-sm text-slate-500">revenue</span>}
+                            {!(loadingCalc || loadingRealPaidAmounts) && <span className="text-sm text-slate-500">sales</span>}
                           </div>
                           <div className="text-sm font-medium text-slate-700">
                             {loadingCalc ? (
@@ -567,7 +554,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                               </div>
                               <div className="min-w-0">
                                 <p className="font-medium text-slate-900 break-words">{student.full_name}</p>
-                                <p className="text-xs text-slate-500 break-words">{student.email}</p>
+                                <p className="text-xs text-slate-500 break-words mb-1">{student.email}</p>
+                                <StudentStepProgress student={student} />
                               </div>
                             </div>
                             <div className="text-left sm:text-right">

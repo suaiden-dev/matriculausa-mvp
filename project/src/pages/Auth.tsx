@@ -613,6 +613,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           }
         }
 
+        // ✅ Se for cadastro de agência, inserir em agency_requests para aparecer no painel admin
+        if (activeTab === 'agency') {
+          try {
+            await supabase.from('agency_requests').insert({
+              full_name: formData.full_name,
+              company_name: formData.full_name,
+              email: normalizedEmail,
+              status: 'pending',
+            });
+            console.log('✅ [AUTH] agency_requests criado para:', normalizedEmail);
+          } catch (agencyErr) {
+            console.error('❌ [AUTH] Erro ao criar agency_requests:', agencyErr);
+          }
+        }
+
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');

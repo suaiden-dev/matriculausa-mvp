@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Pencil, X } from 'lucide-react';
 import { useSystemType } from '../../hooks/useSystemType';
 import SimplifiedAffiliateTools from './SimplifiedAffiliateTools';
+import { supabase } from '../../lib/supabase';
 
 interface AffiliateToolsProps {
   sellerProfile: any;
@@ -10,15 +11,59 @@ interface AffiliateToolsProps {
 const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile }) => {
   const { systemType } = useSystemType();
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [currentCode, setCurrentCode] = useState<string>(sellerProfile?.referral_code || '');
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [editCodeValue, setEditCodeValue] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [isSavingCode, setIsSavingCode] = useState(false);
 
   // Se for sistema simplified, mostrar interface simplificada
   if (systemType === 'simplified') {
     return <SimplifiedAffiliateTools />;
   }
 
-  const referralCode = sellerProfile?.referral_code || '';
+  const referralCode = currentCode;
   const referralUrl = `${window.location.origin}/selection-fee-registration?ref=${referralCode}`;
   const trackingUrl = `${window.location.origin}/selection-fee-registration?sref=${referralCode}`;
+
+  const startEditCode = () => {
+    setEditCodeValue(currentCode);
+    setCodeError(null);
+    setIsEditingCode(true);
+  };
+
+  const cancelEditCode = () => {
+    setIsEditingCode(false);
+    setCodeError(null);
+  };
+
+  const saveCode = async () => {
+    const trimmed = editCodeValue.trim().toUpperCase();
+    if (!trimmed || trimmed.length < 3 || trimmed.length > 30) {
+      setCodeError('Code must be between 3 and 30 characters.');
+      return;
+    }
+    if (!/^[A-Z0-9_]+$/.test(trimmed)) {
+      setCodeError('Only letters, numbers, and underscores allowed.');
+      return;
+    }
+    setIsSavingCode(true);
+    setCodeError(null);
+    try {
+      const { data, error } = await supabase.rpc('update_seller_referral_code', { new_code: trimmed });
+      if (error) throw error;
+      if (data?.success === false) {
+        setCodeError(data.error || 'Could not update code.');
+      } else {
+        setCurrentCode(data.code);
+        setIsEditingCode(false);
+      }
+    } catch (err: any) {
+      setCodeError(err.message || 'Unexpected error. Please try again.');
+    } finally {
+      setIsSavingCode(false);
+    }
+  };
 
   const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -70,35 +115,84 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile }) => {
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
-          {/* Affiliate Code and Links */}
+          {/* Referral Code and Links */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Affiliate Code</h3>
-              <div className="bg-slate-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-mono font-bold text-[#3B82F6]">{referralCode}</span>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Referral Code</h3>
+                {!isEditingCode && (
                   <button
-                    onClick={() => copyToClipboard(referralCode, 'code')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    onClick={startEditCode}
+                    className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
                   >
-                    {copiedText === 'code' ? (
-                      <>
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-green-600">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4" />
-                        <span>Copy</span>
-                      </>
-                    )}
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span>Edit</span>
                   </button>
-                </div>
+                )}
               </div>
+
+              {isEditingCode ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={editCodeValue}
+                    onChange={(e) => {
+                      setEditCodeValue(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''));
+                      setCodeError(null);
+                    }}
+                    maxLength={30}
+                    placeholder="NEW_CODE"
+                    className="w-full font-mono font-bold text-xl text-blue-600 border border-blue-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  {codeError && (
+                    <p className="text-sm text-red-600">{codeError}</p>
+                  )}
+                  <p className="text-xs text-slate-500">Letters, numbers and underscores only. 3–30 characters.</p>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={saveCode}
+                      disabled={isSavingCode}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {isSavingCode ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={cancelEditCode}
+                      disabled={isSavingCode}
+                      className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-mono font-bold text-[#3B82F6]">{referralCode}</span>
+                    <button
+                      onClick={() => copyToClipboard(referralCode, 'code')}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                      {copiedText === 'code' ? (
+                        <>
+                          <Check className="h-4 w-4 text-green-600" />
+                          <span className="text-green-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Affiliate Link ($50 Off)</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Referral Link ($50 Off)</h3>
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2">
                   <input

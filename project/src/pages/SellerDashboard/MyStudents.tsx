@@ -1,25 +1,22 @@
-import React, { useState as useStateReact, useEffect, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   Search,
   DollarSign,
-  Calendar,
-  MapPin,
-  Mail,
-  ChevronLeft,
-  ChevronRight,
-  Filter as FilterIcon,
+  Users,
+  Clock,
+  Filter,
   TrendingUp,
   TrendingDown,
-  Building,
-  Award,
-  CheckCircle2
+  ChevronLeft,
+  ChevronRight,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 import { formatCurrency } from '../../utils/currency';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import StudentStepProgress, { buildStudentRecord } from '../../components/StudentStepProgress';
 
 interface Student {
   id: string;
@@ -30,1491 +27,444 @@ interface Student {
   created_at: string;
   status: string;
   latest_activity: string;
-  fees_count?: number;
-  scholarship_title?: string;
-  university_name?: string;
-  university_id?: string;
-
-  // Campos específicos da aplicação (para múltiplas aplicações)
-  application_id?: string;
-
-  // Flags de pagamento (agora obrigatórios para cálculos corretos)
   has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee: boolean;
-  is_scholarship_fee_paid: boolean;
+  is_placement_fee_paid: boolean;
+  is_scholarship_fee_paid?: boolean;
   is_application_fee_paid: boolean;
-
-  // Process Context (Modernizado)
-  student_process_type?: string;
+  placement_fee_flow?: boolean;
+  has_paid_i20_control_fee?: boolean;
   has_paid_ds160_package?: boolean;
   has_paid_i539_cos_package?: boolean;
   has_paid_reinstatement_package?: boolean;
-  has_paid_transfer_fee?: boolean;
-
-  // Para o deadline do I-20 (agora com tipos mais precisos)
-  scholarship_fee_paid_date: string | null;
-  i20_deadline: string | null; // Data ISO string
-
-  // Campos da carta de aceite
-  acceptance_letter_sent_at: string | null;
-  acceptance_letter_status: string | null;
-}
-
-interface University {
-  id: string;
-  name: string;
-  logo_url?: string;
-  location?: string;
-}
-
-interface FilterState {
-  searchTerm: string;
-  universityFilter: string;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-  statusFilter: string;
-  paymentFilter: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  visa_transfer_active?: boolean;
+  student_process_type?: string;
+  application_status?: string;
+  total_applications?: number;
+  acceptance_letter_status?: string | null;
+  acceptance_letter_url?: string | null;
+  transfer_form_status?: string | null;
+  sevis_transfer_completed?: boolean;
+  visa_approved?: boolean;
+  has_sent_docs_to_university?: boolean;
+  has_submitted_form?: boolean;
+  selected_scholarship_id?: string | null;
+  documents_uploaded?: boolean;
 }
 
 interface MyStudentsProps {
   students: Student[];
   onRefresh: () => void;
-  onViewStudent: (studentId: { id: string, profile_id: string }) => void;
 }
 
-const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
-  // ✅ CORREÇÃO: useFeeConfig deve ser chamado no top-level do componente, não dentro de funções
-  const { getFeeAmount } = useFeeConfig();
+// ── Condensed 5-step progress bar ──────────────────────────────────────────
+// Maps each summary step to the applicationFlowStages keys used to determine its status
+const SUMMARY_STEPS = [
+  { label: 'Selection',    keys: ['selection_fee'] as const },
+  { label: 'Applying',     keys: ['apply', 'bdp_collection', 'review', 'start_admission'] as const },
+  { label: 'Fees',         keys: ['application_fee', 'placement_fee', 'scholarship_fee', 'reinstatement_fee'] as const },
+  { label: 'Sending Docs', keys: ['university_docs', 'docs_approval', 'send_docs_to_university'] as const },
+  { label: 'Processing',   keys: ['receive_acceptance_letter', 'send_acceptance_letter', 'student_sends_letter', 'sevis_transfer', 'i20_fee', 'visa_approval'] as const },
+  { label: 'Admitted',     keys: ['enrollment'] as const },
+];
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
-
-  // Estado para armazenar as taxas do pacote de cada estudante
-  const [studentPackageFees, setStudentPackageFees] = useStateReact<{ [key: string]: any }>({});
-  // Estado para dependentes por estudante
-  const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
-  // Estado para armazenar overrides de taxas por estudante
-  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
-  // Estado para armazenar system_type por estudante
-  const [studentSystemTypes, setStudentSystemTypes] = useState<{ [key: string]: string }>({});
-  // Estado para armazenar valores reais pagos por estudante
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<{ [key: string]: { 
-    selection_process?: number; 
-    scholarship?: number; 
-    i20_control?: number;
-    ds160_package?: number;
-    i539_cos_package?: number;
-    reinstatement_package?: number;
-  } }>({});
-  // Estado para controlar loading dos valores reais pagos
-  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
-  // Estado para controlar requisições em andamento
-  const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
-  // Métodos de pagamento por estudante (para calcular valor pago manualmente)
-  const [studentPaymentMethods, setStudentPaymentMethods] = useStateReact<{
-    [key: string]: {
-      selection_process?: string | null;
-      i20_control?: string | null;
-      scholarship?: Array<{ is_paid: boolean; method: string | null }>; // múltiplas aplicações
-    }
-  }>({});
-  // Flag para desabilitar user_fee_overrides se não estiver disponível
-  const [userFeeOverridesDisabled, setUserFeeOverridesDisabled] = useStateReact<boolean>(() => {
-    try {
-      // RESETANDO user_fee_overrides_disabled para debug
-      localStorage.removeItem('user_fee_overrides_disabled');
-      console.log('🔄 [MY_STUDENTS] Reset user_fee_overrides_disabled');
-      return false;
-    } catch {
-      return false;
-    }
-  });
-
-  // Função para buscar taxas do pacote de um estudante
-  const loadStudentPackageFees = async (studentUserId: string) => {
-    if (!studentUserId || studentPackageFees[studentUserId] !== undefined) return;
-
-    // Verificar se já está carregando
-    const requestKey = `package_${studentUserId}`;
-    if (loadingRequests.has(requestKey)) return;
-
-    // Marcar como carregando
-    setLoadingRequests(prev => new Set([...prev, requestKey]));
-
-    try {
-      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
-        user_id_param: studentUserId
-      });
-
-      if (error) {
-        console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
-        return;
-      }
-
-      if (packageFees && packageFees.length > 0) {
-        setStudentPackageFees(prev => ({
-          ...prev,
-          [studentUserId]: packageFees[0]
-        }));
-      } else {
-        setStudentPackageFees(prev => ({
-          ...prev,
-          [studentUserId]: null
-        }));
-      }
-    } catch (error) {
-      console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
-    } finally {
-      // Remover da lista de carregando
-      setLoadingRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requestKey);
-        return newSet;
-      });
-    }
+function getStudentRecord(student: Student) {
+  return {
+    user_id: student.id,
+    student_id: student.id,
+    application_id: (student as any).application_id || null,
+    has_paid_selection_process_fee: !!student.has_paid_selection_process_fee,
+    total_applications: student.total_applications || 0,
+    application_status: student.application_status || null,
+    is_application_fee_paid: !!student.is_application_fee_paid,
+    is_scholarship_fee_paid: !!student.is_scholarship_fee_paid,
+    has_paid_i20_control_fee: !!student.has_paid_i20_control_fee,
+    placement_fee_flow: !!student.placement_fee_flow,
+    is_placement_fee_paid: !!student.is_placement_fee_paid,
+    acceptance_letter_status: student.acceptance_letter_status || null,
+    acceptance_letter_url: student.acceptance_letter_url || null,
+    student_process_type: student.student_process_type || null,
+    transfer_form_status: student.transfer_form_status || null,
+    has_paid_ds160_package: !!student.has_paid_ds160_package,
+    has_paid_i539_cos_package: !!student.has_paid_i539_cos_package,
+    has_paid_reinstatement_package: !!student.has_paid_reinstatement_package,
+    documents_uploaded: !!student.documents_uploaded,
+    has_submitted_form: !!student.has_submitted_form,
+    selected_scholarship_id: student.selected_scholarship_id || null,
+    visa_transfer_active: student.visa_transfer_active ?? null,
+    has_sent_docs_to_university: !!student.has_sent_docs_to_university,
+    sevis_transfer_completed: !!student.sevis_transfer_completed,
+    visa_approved: !!student.visa_approved,
   };
+}
 
-  // Buscar dependents do perfil do estudante
-  const loadStudentDependents = async (studentUserId: string) => {
-    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+// Returns: 'completed' | 'current' | 'pending'
+function getSummaryStepState(record: any, stepKeys: readonly string[]): 'completed' | 'current' | 'pending' {
+  const statuses = stepKeys.map(k => getStepStatus(record, k as any));
+  if (statuses.every(s => s === 'completed' || s === 'skipped')) return 'completed';
+  if (statuses.some(s => s === 'in_progress')) return 'current';
+  // If any key before this is completed but this group isn't done → current
+  return 'pending';
+}
 
-    // Verificar se já está carregando
-    const requestKey = `dependents_${studentUserId}`;
-    if (loadingRequests.has(requestKey)) return;
+function getSummarySteps(student: Student) {
+  const record = getStudentRecord(student);
+  const results: ('completed' | 'current' | 'pending')[] = [];
 
-    // Marcar como carregando
-    setLoadingRequests(prev => new Set([...prev, requestKey]));
-
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('dependents, system_type')
-        .eq('user_id', studentUserId)
-        .single();
-      if (!error && data) {
-        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
-        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: data.system_type || 'legacy' }));
-      } else {
-        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
-        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
-      }
-    } catch {
-      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
-      setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
-    } finally {
-      // Remover da lista de carregando
-      setLoadingRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requestKey);
-        return newSet;
-      });
+  let seenPending = false;
+  for (const step of SUMMARY_STEPS) {
+    if (seenPending) {
+      results.push('pending');
+      continue;
     }
-  };
-
-  // Buscar métodos de pagamento por estudante (selection, i20 no profile; scholarship nas applications)
-  const loadStudentPaymentMethods = async (studentUserId: string, studentProfileId?: string) => {
-    if (!studentUserId || studentPaymentMethods[studentUserId] !== undefined) return;
-
-    const requestKey = `paymethods_${studentUserId}`;
-    if (loadingRequests.has(requestKey)) return;
-
-    setLoadingRequests(prev => new Set([...prev, requestKey]));
-
-    try {
-      // user_profiles: selection_process_fee_payment_method, i20_control_fee_payment_method
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('selection_process_fee_payment_method, i20_control_fee_payment_method, id')
-        .eq('user_id', studentUserId)
-        .single();
-
-      const profileSelection = profileData?.selection_process_fee_payment_method ?? null;
-      const profileI20 = profileData?.i20_control_fee_payment_method ?? null;
-
-      // scholarship_applications: buscar por student_id (profile id)
-      let scholarshipList: Array<{ is_paid: boolean; method: string | null }> = [];
-      const resolvedProfileId = studentProfileId || profileData?.id;
-      if (resolvedProfileId) {
-        const { data: apps } = await supabase
-          .from('scholarship_applications')
-          .select('is_scholarship_fee_paid, scholarship_fee_payment_method, student_id')
-          .eq('student_id', resolvedProfileId);
-        scholarshipList = (apps || []).map(a => ({
-          is_paid: !!a.is_scholarship_fee_paid,
-          method: a.scholarship_fee_payment_method ?? null
-        }));
-      }
-
-      setStudentPaymentMethods(prev => ({
-        ...prev,
-        [studentUserId]: {
-          selection_process: profileSelection,
-          i20_control: profileI20,
-          scholarship: scholarshipList
-        }
-      }));
-    } catch (error) {
-      // silencioso
-      setStudentPaymentMethods(prev => ({ ...prev, [studentUserId]: { selection_process: null, i20_control: null, scholarship: [] } }));
-    } finally {
-      setLoadingRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requestKey);
-        return newSet;
-      });
+    const state = getSummaryStepState(record, step.keys);
+    if (state === 'pending') {
+      // Mark as current if the previous was completed
+      results.push(results.length > 0 && results[results.length - 1] === 'completed' ? 'current' : 'pending');
+      seenPending = true;
+    } else if (state === 'current') {
+      results.push('current');
+      seenPending = true;
+    } else {
+      results.push('completed');
     }
-  };
+  }
 
-  // Buscar overrides de taxas para um estudante específico
-  const loadStudentFeeOverrides = async (studentUserId: string) => {
-    if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
+  // If all completed, last one should stay completed
+  return results;
+}
 
-    // DEBUG: Sempre tentar carregar overrides
-    console.log('🔄 [LOAD_OVERRIDES] Carregando overrides para:', studentUserId);
+interface StepProgressProps {
+  student: Student;
+}
 
-    // Verificar se já está carregando
-    const requestKey = `overrides_${studentUserId}`;
-    if (loadingRequests.has(requestKey)) return;
-
-    // Marcar como carregando
-    setLoadingRequests(prev => new Set([...prev, requestKey]));
-
-    try {
-      // Tentar primeiro via RPC function (security definer) 
-      let overrides = null;
-      let error = null;
-
-      try {
-        const rpcResult = await supabase.rpc('get_user_fee_overrides', { target_user_id: studentUserId });
-        if (!rpcResult.error && rpcResult.data) {
-          overrides = rpcResult.data;
-        } else {
-          error = rpcResult.error;
-        }
-      } catch (rpcError) {
-        console.warn('⚠️ [MY_STUDENTS] RPC get_user_fee_overrides failed, trying direct query:', rpcError);
-        // Fallback para query direta
-        const directResult = await supabase
-          .from('user_fee_overrides')
-          .select('*')
-          .eq('user_id', studentUserId)
-          .single();
-        overrides = directResult.data;
-        error = directResult.error;
-      }
-
-      if (!error && overrides) {
-        // Debug log para wilfried8078@uorak.com
-        if (studentUserId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
-          console.log('🔍 [MYSTUDENTS_LOAD] Carregando overrides para wilfried8078@uorak.com:', {
-            studentUserId,
-            overrides,
-            error
-          });
-        }
-        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
-      } else {
-        // Se erro 406 ou similar, desabilitar futuras chamadas
-        if (error?.code === 'PGRST116' || error?.message?.includes('406') || error?.message?.includes('Not Acceptable')) {
-          console.warn('⚠️ [MY_STUDENTS] Tabela user_fee_overrides não disponível. Desabilitando futuras chamadas.');
-          setUserFeeOverridesDisabled(true);
-          try {
-            localStorage.setItem('user_fee_overrides_disabled', 'true');
-          } catch { }
-        }
-        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
-      }
-    } catch (error) {
-      console.warn('⚠️ [MY_STUDENTS] Erro na tabela user_fee_overrides. Desabilitando:', error);
-      setUserFeeOverridesDisabled(true);
-      try {
-        localStorage.setItem('user_fee_overrides_disabled', 'true');
-      } catch { }
-      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
-    } finally {
-      // Remover da lista de carregando
-      setLoadingRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(requestKey);
-        return newSet;
-      });
-    }
-  };
-
-  // Carregar taxas do pacote quando os estudantes mudarem
-  useEffect(() => {
-    // Debounce para evitar chamadas muito frequentes
-    const timeoutId = setTimeout(() => {
-      // Obter IDs únicos para evitar chamadas duplicadas
-      const uniqueStudentIds = Array.from(new Set(students.map(s => s.id).filter(Boolean)));
-
-      console.log('🔍 [MY_STUDENTS] Carregando dados para estudantes únicos:', uniqueStudentIds.length);
-
-      if (userFeeOverridesDisabled) {
-        console.log('ℹ️ [MY_STUDENTS] user_fee_overrides desabilitado - usando valores padrão');
-      }
-
-      uniqueStudentIds.forEach(studentId => {
-        // Debug para wilfried8078@uorak.com
-        if (studentId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
-          console.log('🔍 [MY_STUDENTS_LOAD] Carregando dados para wilfried8078@uorak.com:', studentId);
-          console.log('🔍 [MY_STUDENTS_LOAD] packageFees já carregado?', studentPackageFees[studentId] !== undefined);
-          console.log('🔍 [MY_STUDENTS_LOAD] dependents já carregado?', studentDependents[studentId] !== undefined);
-          console.log('🔍 [MY_STUDENTS_LOAD] overrides já carregado?', studentFeeOverrides[studentId] !== undefined);
-          console.log('🔍 [MY_STUDENTS_LOAD] overridesDisabled?', userFeeOverridesDisabled);
-        }
-
-        if (studentPackageFees[studentId] === undefined) {
-          loadStudentPackageFees(studentId);
-        }
-        if (studentDependents[studentId] === undefined) {
-          loadStudentDependents(studentId);
-        }
-        if (studentFeeOverrides[studentId] === undefined) {
-          // SEMPRE tentar carregar overrides para debug
-          console.log('🔄 [MY_STUDENTS] Forçando carregamento de overrides para:', studentId);
-          loadStudentFeeOverrides(studentId);
-        }
-        // Carregar métodos de pagamento (usa userId e tenta resolver profileId quando possível)
-        const s = students.find(st => st.id === studentId);
-        loadStudentPaymentMethods(s ? s.id : studentId, s?.profile_id);
-      });
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [students, userFeeOverridesDisabled]);
-
-  // Carregar valores reais pagos para todos os estudantes (mantém loading até carregar tudo)
-  useEffect(() => {
-    const loadRealPaidAmounts = async () => {
-      const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
-      if (uniqueUserIds.length === 0) {
-        setStudentRealPaidAmounts({});
-        setLoadingRealPaidAmounts(false);
-        return;
-      }
-
-      setLoadingRealPaidAmounts(true);
-      const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-
-      await Promise.allSettled(uniqueUserIds.map(async (userId) => {
-        try {
-          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-          const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
-          amountsMap[userId] = amounts;
-        } catch (error) {
-          console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
-        }
-      }));
-
-      setStudentRealPaidAmounts(amountsMap);
-      setLoadingRealPaidAmounts(false);
-    };
-    loadRealPaidAmounts();
-  }, [students]);
-
-  // Estado dos filtros
-  const [filters, setFilters] = useState<FilterState>({
-    searchTerm: '',
-    universityFilter: 'all',
-    dateRange: {
-      start: '',
-      end: ''
-    },
-    statusFilter: 'all',
-    paymentFilter: 'all',
-    sortBy: 'date',
-    sortOrder: 'desc'
-  });
-
-  // Carregar universidades
-  React.useEffect(() => {
-    const loadUniversities = async () => {
-      try {
-        const { data: universitiesData, error: universitiesError } = await supabase
-          .from('universities')
-          .select('id, name, logo_url, location')
-          .eq('is_approved', true)
-          .order('name');
-
-        if (!universitiesError && universitiesData) {
-          setUniversities(universitiesData);
-        }
-      } catch (error) {
-        console.warn('Could not load universities:', error);
-      }
-    };
-
-    loadUniversities();
-  }, []);
-
-  // Universidades únicas dos estudantes (fallback)
-  const studentUniversities = React.useMemo(() => {
-    const uniqueUniversities = new Map<string, University>();
-    students.forEach(student => {
-      if (student.university_id && student.university_name) {
-        uniqueUniversities.set(student.university_id, {
-          id: student.university_id,
-          name: student.university_name
-        });
-      }
-    });
-    return Array.from(uniqueUniversities.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [students]);
-
-  // Usar universidades carregadas da tabela, com fallback para as dos estudantes
-  const availableUniversities = universities.length > 0 ? universities : studentUniversities;
-
-  // Pagination constants
-  const STUDENTS_PER_PAGE = 10;
-
-  // Função para agrupar estudantes por ID (para dropdown de aplicações múltiplas)
-  const getGroupedStudentsForDisplay = React.useCallback(() => {
-    // Primeiro aplicar filtros normais
-    let filtered = students.filter(student => {
-      // Filtro por termo de busca
-      if (filters.searchTerm &&
-        !student.full_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
-        !student.email?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
-        return false;
-      }
-
-      // Filtro por universidade
-      if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) {
-        return false;
-      }
-
-      // Filtro por período
-      if (filters.dateRange.start || filters.dateRange.end) {
-        const studentDate = new Date(student.created_at);
-        const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
-        const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
-
-        if (startDate && studentDate < startDate) return false;
-        if (endDate && studentDate > endDate) return false;
-      }
-
-      // Filtro por status
-      if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) {
-        return false;
-      }
-
-      // Filtro por pagamento
-      if (filters.paymentFilter !== 'all') {
-        switch (filters.paymentFilter) {
-          case 'paid':
-            if (calculateStudentTotalPaid(student) <= 0) return false;
-            break;
-          case 'unpaid':
-            if (calculateStudentTotalPaid(student) > 0) return false;
-            break;
-          case 'high_value':
-            if (calculateStudentTotalPaid(student) < 1000) return false; // $1000+
-            break;
-        }
-      }
-
-      return true;
-    });
-
-    // Agrupar por estudante
-    const groupedByStudent = new Map<string, any[]>();
-    filtered.forEach(student => {
-      const studentId = student.id;
-      if (!groupedByStudent.has(studentId)) {
-        groupedByStudent.set(studentId, []);
-      }
-      groupedByStudent.get(studentId)!.push(student);
-    });
-
-    // Converter para array para exibição
-    const displayStudents: any[] = [];
-    groupedByStudent.forEach((applications) => {
-      if (applications.length === 1) {
-        // Estudante com apenas uma aplicação
-        displayStudents.push({ ...applications[0], hasMultipleApplications: false });
-      } else {
-        // Estudante com múltiplas aplicações - criar entrada agrupada
-        const mainStudent = { ...applications[0] };
-        mainStudent.hasMultipleApplications = true;
-        mainStudent.allApplications = applications;
-        mainStudent.applicationCount = applications.length;
-        displayStudents.push(mainStudent);
-      }
-    });
-
-    return displayStudents;
-  }, [students, filters]);
-
-  // Aplicar ordenação aos dados agrupados
-  const getFilteredAndSortedStudents = React.useCallback(() => {
-    const groupedStudents = getGroupedStudentsForDisplay();
-    let filtered = [...groupedStudents]; // Filtros já foram aplicados
-
-    // Aplicar ordenação
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (filters.sortBy) {
-        case 'revenue':
-          aValue = calculateStudentTotalPaid(a);
-          bValue = calculateStudentTotalPaid(b);
-          break;
-        case 'name':
-          aValue = a.full_name || '';
-          bValue = b.full_name || '';
-          break;
-        case 'date':
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-          break;
-        case 'status':
-          aValue = a.status || '';
-          bValue = b.status || '';
-          break;
-        default:
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-      }
-
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (filters.sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-    return filtered;
-  }, [students, filters]);
-
-  const filteredStudents = getFilteredAndSortedStudents();
-
-  // Pagination calculations
-  const totalStudents = filteredStudents.length;
-  const totalPages = Math.ceil(totalStudents / STUDENTS_PER_PAGE);
-  const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
-  const endIndex = startIndex + STUDENTS_PER_PAGE;
-  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
-
-  // Reset page when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [filters]);
-
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // Resetar filtros
-  const resetFilters = () => {
-    setFilters({
-      searchTerm: '',
-      universityFilter: 'all',
-      dateRange: { start: '', end: '' },
-      statusFilter: 'all',
-      paymentFilter: 'all',
-      sortBy: 'date',
-      sortOrder: 'desc'
-    });
-  };
-
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US');
-  };
-
-  // Função para determinar quais taxas estão faltando para um aluno
-  const getMissingFees = (student: Student) => {
-    const missingFees = [];
-    const deps = studentDependents[student.id] || 0;
-    const overrides = studentFeeOverrides[student.id];
-
-    // Selection Process Fee (primeira taxa na ordem do funil)
-    if (!student.has_paid_selection_process_fee) {
-      let selectionProcessFee;
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        selectionProcessFee = Number(overrides.selection_process_fee);
-      } else {
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = Number(getFeeAmount('selection_process')) || (systemType === 'simplified' ? 350 : 400);
-        // ✅ CORREÇÃO: Taxa de dependentes é fixa em $100 por dependente para todos agora
-        selectionProcessFee = baseSelectionFee + (deps * 100);
-      }
-      missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
-    }
-
-    // Application Fee
-    if (!student.is_application_fee_paid) {
-      let applicationFee;
-      if (overrides && overrides.application_fee !== undefined && overrides.application_fee !== null) {
-        applicationFee = Number(overrides.application_fee);
-      } else {
-        // Application fee é variável por universidade, usar valor do pacote se disponível
-        const packageFees = studentPackageFees[student.id];
-        applicationFee = packageFees?.application_fee || 0;
-      }
-      missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
-    }
-    if (!student.is_scholarship_fee_paid) {
-      let scholarshipFee;
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        scholarshipFee = Number(overrides.scholarship_fee);
-      } else {
-        // Sem override: usar taxa baseada no system_type
-        scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
-      }
-      missingFees.push({ name: 'Placement Fee', amount: scholarshipFee, color: 'blue' });
-    }
-
-    // I-20 Control Fee (Still checking field but label as Placement/Process if unified)
-    if (!student.has_paid_i20_control_fee) {
-      let i20ControlFee;
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        i20ControlFee = Number(overrides.i20_control_fee);
-      } else {
-        i20ControlFee = Number(getFeeAmount('i20_control_fee')) || 900;
-      }
-      missingFees.push({ name: 'Process Fee', amount: i20ControlFee, color: 'orange' });
-    }
-
-    return missingFees;
-  };
-
-  // Função para calcular deadline do I-20
-  const calculateI20Deadline = (student: Student): Date | null => {
-    // Se o I-20 já foi pago, não há deadline
-    if (student.has_paid_i20_control_fee) {
-      return null;
-    }
-
-    // Se a carta de aceite foi enviada, devemos mostrar o deadline
-    if (student.acceptance_letter_sent_at && (student.acceptance_letter_status === 'sent' || student.acceptance_letter_status === 'approved')) {
-      // Primeiro tenta usar o deadline específico do I-20
-      if (student.i20_deadline) {
-        return new Date(student.i20_deadline);
-      }
-
-      // Se não tiver deadline específico, usa a data de envio da carta de aceite + 10 dias
-      const acceptanceDate = new Date(student.acceptance_letter_sent_at);
-      return new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
-    }
-
-    return null;
-  };
-  
-  // Estatísticas calculadas dinamicamente
-  // Função para calcular o total pago por um aluno
-  const calculateStudentTotalPaid = (student: Student): number => {
-    let total = 0;
-    // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
-    const realPaid = studentRealPaidAmounts[student.id] || {};
-    const studentId = student.id;
-    const deps = studentDependents[studentId] || 0;
-    const systemType = studentSystemTypes[studentId] || 'legacy';
-    const overrides = studentFeeOverrides[student.id] || {};
-
-    // Selection Process Fee
-    if (student.has_paid_selection_process_fee) {
-      if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-        // Usar valor real pago quando disponível
-        total += realPaid.selection_process;
-      } else {
-        // Fallback: calcular baseado no system_type e dependents
-        const isNewProcess = student.student_process_type === 'initial' || 
-                            student.student_process_type === 'change_of_status' || 
-                            student.student_process_type === 'transfer' || 
-                            student.student_process_type === 'resident';
-
-        const baseSelDefault = Number(getFeeAmount('selection_process')) || 
-                               (isNewProcess ? 400 : (systemType === 'simplified' ? 350 : 400));
-        
-        const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
-        // ✅ CORREÇÃO: Todos os sistemas somam $100 por dependente na Selection Fee agora
-        const selPaid = overrides.selection_process_fee != null
-          ? baseSel
-          : baseSel + (deps * 100);
-        total += selPaid;
-      }
-    }
-
-    // Scholarship Fee
-    if (student.is_scholarship_fee_paid) {
-      if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-        // Usar valor real pago quando disponível
-        total += realPaid.scholarship;
-      } else {
-        // Fallback: calcular baseado no system_type
-        const schBaseDefault = Number(getFeeAmount('scholarship_fee')) || 900;
-        const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
-        total += schBase;
-      }
-    }
-    
-    // Process Packages (Initial / COS / Transfer)
-    if (student.student_process_type === 'initial' && student.has_paid_ds160_package) {
-      if (realPaid.ds160_package !== undefined && realPaid.ds160_package > 0) {
-        total += realPaid.ds160_package;
-      } else {
-        total += 1800;
-      }
-    } else if (student.student_process_type === 'change_of_status' && student.has_paid_i539_cos_package) {
-      if (realPaid.i539_cos_package !== undefined && realPaid.i539_cos_package > 0) {
-        total += realPaid.i539_cos_package;
-      } else {
-        total += 1800;
-      }
-    } else if (student.student_process_type === 'transfer' && (student.has_paid_reinstatement_package || (student as any).has_paid_transfer_fee)) {
-      if (realPaid.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
-        total += realPaid.reinstatement_package;
-      } else {
-        total += 500;
-      }
-    }
-
-    // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
-
-    return total;
-  };
-
-  // Calcular total pago manualmente por um aluno (considera apenas taxas do seller: selection, scholarship, i20)
-  const calculateStudentManualPaid = (student: Student): number => {
-    let total = 0;
-    const deps = studentDependents[student.id] || 0;
-    const overrides = studentFeeOverrides[student.id];
-    const methods = studentPaymentMethods[student.id];
-
-    // Selection Process (pago e método manual)
-    if (student.has_paid_selection_process_fee && methods?.selection_process === 'manual') {
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        total += Number(overrides.selection_process_fee);
-      } else {
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const basePrice = Number(getFeeAmount('selection_process')) || (systemType === 'simplified' ? 350 : 400);
-        total += basePrice + (deps * 100);
-      }
-    }
-
-    // Scholarship Fee (qualquer app paga com manual)
-    if (student.is_scholarship_fee_paid && methods?.scholarship && methods.scholarship.some(a => a.is_paid && a.method === 'manual')) {
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        total += Number(overrides.scholarship_fee);
-      } else {
-        const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
-        total += scholarshipFee;
-      }
-    }
-
-    // I-20 Control (pago e método manual)
-    if (student.has_paid_i20_control_fee && methods?.i20_control === 'manual') {
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        total += Number(overrides.i20_control_fee);
-      } else {
-        // I-20 Control Fee é baseado no config
-        const baseI20Fee = Number(getFeeAmount('i20_control_fee')) || 900;
-        total += baseI20Fee;
-      }
-    }
-
-    return total;
-  };
-
-  const stats = React.useMemo(() => {
-    // Não calcular receita enquanto valores reais pagos estão carregando
-    if (loadingRealPaidAmounts) {
-      return {
-        totalRevenue: 0,
-        activeStudents: 0,
-        manualRevenue: 0,
-        avgRevenuePerStudent: 0,
-        topPerformingUniversity: 'N/A',
-        totalUniqueStudents: 0
-      };
-    }
-
-    const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
-
-    console.log('💰 [MYSTUDENTS_TOTAL] Total calculado no MyStudents.tsx:', totalRevenue);
-    console.log('💰 [MYSTUDENTS_TOTAL] Número de estudantes:', {
-      'students (total)': students.length,
-      'filteredStudents (filtrados)': filteredStudents.length
-    });
-
-    // Debug para comparar com Performance.tsx
-    console.log('🔍 [MYSTUDENTS_COMPARISON] Estudantes no MyStudents:', filteredStudents.map(s => ({
-      id: s.id,
-      email: s.email,
-      has_paid_selection_process: s.has_paid_selection_process_fee,
-      has_paid_scholarship: s.is_scholarship_fee_paid,
-      has_paid_i20: s.has_paid_i20_control_fee,
-      calculated: calculateStudentTotalPaid(s)
-    })));
-
-    // CRITICAL: Comparação com array não filtrado para entender diferença do Performance.tsx
-    const totalRevenueUnfiltered = students.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
-    console.log('🚨 [MYSTUDENTS_UNFILTERED] Se usássemos students (não filtrado) como Performance.tsx:', totalRevenueUnfiltered);
-
-    // Contar estudantes únicos para as estatísticas
-    const uniqueStudentIds = new Set(filteredStudents.map(s => s.id));
-    const uniqueActiveStudentIds = new Set(
-      filteredStudents
-        .filter(s => s.status === 'active' || s.status === 'registered' || s.status === 'enrolled')
-        .map(s => s.id)
-    );
-
-    const activeStudents = uniqueActiveStudentIds.size;
-    const manualRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentManualPaid(student), 0);
-    const avgRevenuePerStudent = uniqueStudentIds.size > 0 ? totalRevenue / uniqueStudentIds.size : 0;
-    const topPerformingUniversity = availableUniversities.length > 0 ? availableUniversities[0]?.name : 'N/A';
-
-    return {
-      totalRevenue,
-      activeStudents,
-      manualRevenue,
-      avgRevenuePerStudent,
-      topPerformingUniversity,
-      totalUniqueStudents: uniqueStudentIds.size
-    };
-  }, [filteredStudents, availableUniversities, loadingRealPaidAmounts]);
+const StepProgress: React.FC<StepProgressProps> = ({ student }) => {
+  const states = getSummarySteps(student);
 
   return (
-    <div className="min-h-screen">
-      {/* Header + Tabs Section */}
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-          <div className="max-w-full mx-auto bg-slate-50">
-            {/* Header: title + note + counter */}
-            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex-1">
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                  My Students
-                </h1>
-                <p className="mt-2 text-sm sm:text-base text-slate-600">
-                  Track and manage the students you have successfully referred.
-                </p>
-                <p className="mt-3 text-sm text-slate-500">
-                  Monitor their progress, payment status, and application journey.
-                </p>
+    <div className="flex items-center gap-0">
+      {SUMMARY_STEPS.map((step, i) => {
+        const state = states[i];
+        const isLast = i === SUMMARY_STEPS.length - 1;
+
+        return (
+          <React.Fragment key={step.label}>
+            <div className="flex flex-col items-center gap-1">
+              {/* Circle */}
+              <div
+                title={`${step.label}: ${state}`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all
+                  ${state === 'completed'
+                    ? 'bg-slate-800'
+                    : state === 'current'
+                    ? 'bg-white border-2 border-slate-800 shadow-sm'
+                    : 'bg-white border-2 border-slate-200'
+                  }`}
+              >
+                {state === 'completed' && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                {state === 'current' && <span className="w-2 h-2 rounded-full bg-slate-800" />}
               </div>
+              {/* Label */}
+              <span className={`text-[9px] font-medium whitespace-nowrap
+                ${state === 'completed' ? 'text-slate-700' : state === 'current' ? 'text-slate-900 font-semibold' : 'text-slate-300'}`}>
+                {step.label}
+              </span>
             </div>
 
-            {/* Action Buttons Section */}
-            <div className="border-t border-slate-200 bg-white">
-              <div className="px-4 sm:px-6 lg:px-8 py-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Student Management
-                    </h2>
-                    <p className="text-sm text-slate-600 mt-1">
-                      Comprehensive tracking and management of your referred students
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={onRefresh}
-                      className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="w-4 h-4 mr-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      </div>
-                      Refresh
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Connector line */}
+            {!isLast && (
+              <div className={`h-0.5 w-5 flex-shrink-0 mb-3 ${state === 'completed' ? 'bg-slate-800' : 'bg-slate-200'}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+
+// ── Main component ──────────────────────────────────────────────────────────
+
+const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh }) => {
+  const { getFeeAmount } = useFeeConfig();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'revenue'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, any>>({});
+  const [loadingRevenue, setLoadingRevenue] = useState(true);
+  const [studentDependents, setStudentDependents] = useState<Record<string, number>>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useState<Record<string, string>>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const ids = Array.from(new Set(students.map(s => s.id).filter(Boolean)));
+    ids.forEach(async (userId) => {
+      if (studentDependents[userId] !== undefined) return;
+      const { data } = await supabase.from('user_profiles').select('dependents, system_type').eq('user_id', userId).single();
+      setStudentDependents(prev => ({ ...prev, [userId]: Number(data?.dependents || 0) }));
+      setStudentSystemTypes(prev => ({ ...prev, [userId]: data?.system_type || 'legacy' }));
+    });
+  }, [students]);
+
+  useEffect(() => {
+    const ids = Array.from(new Set(students.map(s => s.id).filter(Boolean)));
+    ids.forEach(async (userId) => {
+      if (studentFeeOverrides[userId] !== undefined) return;
+      try {
+        const { data } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
+        setStudentFeeOverrides(prev => ({ ...prev, [userId]: data || null }));
+      } catch {
+        setStudentFeeOverrides(prev => ({ ...prev, [userId]: null }));
+      }
+    });
+  }, [students]);
+
+  useEffect(() => {
+    const load = async () => {
+      const ids = Array.from(new Set(students.map(s => s.id).filter(Boolean)));
+      if (!ids.length) { setLoadingRevenue(false); return; }
+      setLoadingRevenue(true);
+      const map: Record<string, any> = {};
+      await Promise.allSettled(ids.map(async (userId) => {
+        try { map[userId] = await getDisplayAmounts(userId, ['selection_process', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package']); }
+        catch { /* silent */ }
+      }));
+      setStudentRealPaidAmounts(map);
+      setLoadingRevenue(false);
+    };
+    load();
+  }, [students]);
+
+  const calculateRevenue = (student: Student): number => {
+    let total = 0;
+    const real = studentRealPaidAmounts[student.id] || {};
+    const deps = studentDependents[student.id] || 0;
+    const systemType = studentSystemTypes[student.id] || 'legacy';
+    const ov = studentFeeOverrides[student.id] || {};
+    if (student.has_paid_selection_process_fee) {
+      if (real.selection_process > 0) total += real.selection_process;
+      else {
+        const base = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : (Number(getFeeAmount('selection_process')) || (systemType === 'simplified' ? 350 : 400));
+        total += ov.selection_process_fee != null ? base : base + deps * 100;
+      }
+    }
+    if (student.student_process_type === 'initial' && student.has_paid_ds160_package) total += real.ds160_package > 0 ? real.ds160_package : 1800;
+    if (student.student_process_type === 'change_of_status' && student.has_paid_i539_cos_package) total += real.i539_cos_package > 0 ? real.i539_cos_package : 1800;
+    if (student.student_process_type === 'transfer' && (student.has_paid_reinstatement_package || (student as any).has_paid_transfer_fee)) total += real.reinstatement_package > 0 ? real.reinstatement_package : 500;
+    if (student.is_placement_fee_paid) total += real.placement_fee > 0 ? real.placement_fee : (ov.placement_fee != null ? Number(ov.placement_fee) : 1500);
+    return total;
+  };
+
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const uniqueStudents = useMemo(() => {
+    const seen = new Set<string>();
+    return students.filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true; });
+  }, [students]);
+
+  const filtered = useMemo(() => {
+    let list = uniqueStudents;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(s => s.full_name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q));
+    }
+    return [...list].sort((a, b) => {
+      let av: any = sortBy === 'name' ? (a.full_name || '') : sortBy === 'revenue' ? calculateRevenue(a) : new Date(a.created_at);
+      let bv: any = sortBy === 'name' ? (b.full_name || '') : sortBy === 'revenue' ? calculateRevenue(b) : new Date(b.created_at);
+      if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      return sortOrder === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+  }, [uniqueStudents, searchTerm, sortBy, sortOrder, studentRealPaidAmounts]);
+
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, sortBy, sortOrder]);
+
+  const ITEMS_PER_PAGE = 15;
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const totalVolume = useMemo(() => {
+    if (loadingRevenue) return 0;
+    return uniqueStudents.reduce((s, st) => s + calculateRevenue(st), 0);
+  }, [uniqueStudents, loadingRevenue, studentRealPaidAmounts, studentDependents]);
+
+  return (
+    <div className="min-h-screen space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Total Students</p>
+            <p className="text-3xl font-bold text-blue-600 mt-1">{uniqueStudents.length}</p>
+          </div>
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+            <Users className="h-6 w-6 text-blue-600" />
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Sales Volume</p>
+            {loadingRevenue
+              ? <div className="h-8 w-36 bg-slate-200 rounded animate-pulse mt-1" />
+              : <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(totalVolume)}</p>}
+          </div>
+          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+            <DollarSign className="h-6 w-6 text-green-600" />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Total Students</p>
-                  {loadingRealPaidAmounts ? (
-                    <div className="h-10 w-20 bg-slate-200 rounded animate-pulse mt-1" />
-                  ) : (
-                    <>
-                      <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
-                      {filteredStudents.length > stats.totalUniqueStudents && (
-                        <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
-                  {loadingRealPaidAmounts ? (
-                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
-                  )}
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                  {loadingRealPaidAmounts ? (
-                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
-                  )}
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
-                  {loadingRealPaidAmounts ? (
-                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
-                  )}
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <Award className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
+      {/* Search + Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all"
+            />
           </div>
-
-          {/* Search and Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex flex-col lg:flex-row gap-4 mb-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search students..."
-                    value={filters.searchTerm}
-                    onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${showAdvancedFilters
-                    ? 'bg-[#05294E] text-white'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                >
-                  <FilterIcon className="h-4 w-4" />
-                  Advanced
-                </button>
-              </div>
-            </div>
-
-            {/* Filtros Avançados Expandidos */}
-            {showAdvancedFilters && (
-              <div className="border-t border-slate-200 pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Filtro por Universidade */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">University</label>
-                    <select
-                      value={filters.universityFilter}
-                      onChange={(e) => setFilters(prev => ({ ...prev, universityFilter: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    >
-                      <option value="all">All Universities</option>
-                      {availableUniversities.map((university) => (
-                        <option key={university.id} value={university.id}>
-                          {university.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filtro por Período - Data Inicial */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
-                    <input
-                      type="date"
-                      value={filters.dateRange.start}
-                      onChange={(e) => setFilters(prev => ({
-                        ...prev,
-                        dateRange: { ...prev.dateRange, start: e.target.value }
-                      }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    />
-                  </div>
-
-                  {/* Filtro por Período - Data Final */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
-                    <input
-                      type="date"
-                      value={filters.dateRange.end}
-                      onChange={(e) => setFilters(prev => ({
-                        ...prev,
-                        dateRange: { ...prev.dateRange, end: e.target.value }
-                      }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    />
-                  </div>
-
-                  {/* Filtro por Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                    <select
-                      value={filters.statusFilter}
-                      onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="active">Active</option>
-                      <option value="registered">Registered</option>
-                      <option value="enrolled">Enrolled</option>
-                      <option value="completed">Completed</option>
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="dropped">Dropped</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Segunda linha de filtros */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Filtro por Pagamento */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Payment Status</label>
-                    <select
-                      value={filters.paymentFilter}
-                      onChange={(e) => setFilters(prev => ({ ...prev, paymentFilter: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    >
-                      <option value="all">All Payments</option>
-                      <option value="paid">Has Paid</option>
-                      <option value="unpaid">No Payments</option>
-                      <option value="high_value">High Value ($1000+)</option>
-                    </select>
-                  </div>
-
-                  {/* Ordenação */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
-                    <select
-                      value={filters.sortBy}
-                      onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    >
-                      <option value="date">Registration Date</option>
-                      <option value="revenue">Revenue</option>
-                      <option value="name">Name</option>
-                      <option value="status">Status</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
-                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'desc'
-                          ? 'bg-[#05294E] text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          }`}
-                      >
-                        <TrendingDown className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
-                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'asc'
-                          ? 'bg-[#05294E] text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          }`}
-                      >
-                        <TrendingUp className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Botão de reset */}
-                <div className="flex justify-start">
-                  <button
-                    onClick={resetFilters}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
-                  >
-                    Reset Filters
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center text-sm text-slate-600">
-                <span className="font-medium">{filteredStudents.length}</span>
-                <span className="ml-1">application{filteredStudents.length !== 1 ? 's' : ''} found</span>
-                {filteredStudents.length !== stats.totalUniqueStudents && (
-                  <span className="ml-2 text-slate-500">
-                    ({stats.totalUniqueStudents} unique student{stats.totalUniqueStudents !== 1 ? 's' : ''})
-                  </span>
-                )}
-                {showAdvancedFilters && (
-                  <span className="ml-4 text-slate-500">
-                    • Sorted by {filters.sortBy === 'revenue' ? 'revenue' :
-                      filters.sortBy === 'name' ? 'name' :
-                        filters.sortBy === 'status' ? 'status' : 'registration date'}
-                  </span>
-                )}
-              </div>
-              {totalPages > 1 && (
-                <div className="text-sm text-slate-500">
-                  Page {currentPage} of {totalPages}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Students List */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-            {paginatedStudents.length > 0 ? (
-              <div className="divide-y divide-slate-200">
-                {paginatedStudents.map((student, index) => (
-                  <div
-                    key={`${student.id}-${student.application_id || 'no-app'}-${index}`}
-                    className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      if (student.hasMultipleApplications) {
-                        // Se tem múltiplas aplicações, expandir dropdown
-                        setExpandedStudents(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(student.id)) {
-                            newSet.delete(student.id);
-                          } else {
-                            newSet.add(student.id);
-                          }
-                          return newSet;
-                        });
-                      } else {
-                        // Se tem apenas uma aplicação, ir para detalhes
-                        onViewStudent({ id: student.id, profile_id: student.profile_id });
-                      }
-                    }}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <span className="text-lg font-medium text-blue-600">
-                            {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-semibold text-slate-900">
-                              {student.full_name || 'Name not provided'}
-                            </h3>
-                            {student.hasMultipleApplications && (
-                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
-                                {student.applicationCount} Applications
-                                <svg
-                                  className={`ml-1 h-3 w-3 transform transition-transform ${expandedStudents.has(student.id) ? 'rotate-180' : ''}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
-                            <div className="flex items-center text-sm text-slate-500">
-                              <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                              <span className="truncate">{student.email}</span>
-                            </div>
-                            {student.country && (
-                              <div className="flex items-center text-sm text-slate-500">
-                                <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-                                <span className="truncate">{student.country}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center text-sm text-slate-500">
-                              <Calendar className="h-4 w-4 mr-1 flex-shrink-0" />
-                              <span className="truncate">{formatDate(student.created_at)}</span>
-                            </div>
-                            {!student.hasMultipleApplications && student.university_name && (
-                              <div className="flex items-center text-sm text-slate-500">
-                                <Building className="h-4 w-4 mr-1 flex-shrink-0" />
-                                <span className="truncate">{student.university_name}</span>
-                              </div>
-                            )}
-                            {student.hasMultipleApplications && (
-                              <div className="flex items-center text-sm text-slate-500">
-                                <Building className="h-4 w-4 mr-1 flex-shrink-0" />
-                                <span className="truncate">Multiple Universities</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : student.status === 'pending' || student.status === 'processing'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : student.status === 'dropped' || student.status === 'cancelled'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {student.status === 'active' ? 'Active' :
-                            student.status === 'registered' ? 'Registered' :
-                              student.status === 'enrolled' ? 'Enrolled' :
-                                student.status === 'completed' ? 'Completed' :
-                                  student.status === 'pending' ? 'Pending' :
-                                    student.status === 'processing' ? 'Processing' :
-                                      student.status === 'dropped' ? 'Dropped' :
-                                        student.status === 'cancelled' ? 'Cancelled' :
-                                          student.status || 'Unknown'}
-                        </span>
-
-                        <div className="flex items-center text-sm font-medium text-green-600">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          {(studentDependents[student.id] === undefined || loadingRealPaidAmounts) ? (
-                            <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
-                          ) : (
-                            formatCurrency(calculateStudentTotalPaid(student))
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Taxas Faltantes */}
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-600">Payment Missing Fees:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {(() => {
-                            const missingFees = getMissingFees(student);
-                            if (missingFees.length === 0) {
-                              return (
-                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  All Paid
-                                </span>
-                              );
-                            }
-                            return missingFees.map((fee, index) => (
-                              <span
-                                key={index}
-                                className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${fee.color === 'red' ? 'text-red-700 bg-red-100' :
-                                  fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
-                                    fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
-                                      'text-gray-700 bg-gray-100'
-                                  }`}
-                              >
-                                {fee.name}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Process Fee Deadline Status (Anteriormente I-20) */}
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-600">Process Fee:</span>
-                        <SellerI20DeadlineTimer
-                          deadline={calculateI20Deadline(student)}
-                          hasPaid={student.has_paid_i20_control_fee || false}
-                          studentName={student.full_name}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Seção Expandida - Múltiplas Aplicações */}
-                    {student.hasMultipleApplications && expandedStudents.has(student.id) && (
-                      <div className="mt-4 pt-4 border-t border-slate-200">
-                        <h4 className="text-sm font-medium text-slate-700 mb-3">All Applications:</h4>
-                        <div className="space-y-3">
-                          {student.allApplications?.map((app: any, appIndex: number) => (
-                            <div
-                              key={`${app.application_id}-${appIndex}`}
-                              className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm text-slate-900">
-                                    {app.scholarship_title || 'No scholarship selected'}
-                                  </span>
-                                  {app.university_name && (
-                                    <span className="text-xs text-slate-600">
-                                      @ {app.university_name}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex gap-2 mt-1">
-                                  {app.is_application_fee_paid && (
-                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                                      Application Fee Paid
-                                    </span>
-                                  )}
-                                  {app.is_scholarship_fee_paid && (
-                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
-                                      Placement Fee Paid
-                                    </span>
-                                  )}
-                                  {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (
-                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
-                                      Pending Payment
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onViewStudent({ id: app.id, profile_id: app.profile_id });
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                View Details
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <GraduationCap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-900 mb-2">
-                  {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all' ? 'No applications found' : 'No referenced students yet'}
-                </h3>
-                <p className="text-slate-500">
-                  {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all'
-                    ? 'Try adjusting your filters'
-                    : 'Share your referral code to get started!'}
-                </p>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-slate-200">
-                {/* Page information centered */}
-                <div className="flex items-center justify-center mb-4">
-                  <div className="text-sm text-slate-500">
-                    Page {currentPage} of {totalPages}
-                  </div>
-                </div>
-
-                {/* Navigation controls centered */}
-                <div className="flex items-center justify-center space-x-2">
-                  <button
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </button>
-
-                  {/* Page numbers */}
-                  <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                      let pageNumber;
-                      if (totalPages <= 5) {
-                        pageNumber = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNumber = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNumber = totalPages - 4 + i;
-                      } else {
-                        pageNumber = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNumber}
-                          onClick={() => goToPage(pageNumber)}
-                          className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#05294E] ${currentPage === pageNumber
-                            ? 'border-[#05294E] bg-[#05294E] text-white'
-                            : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
-                            }`}
-                        >
-                          {pageNumber}
-                        </button>
-                      );
-                    })}
-
-                    {totalPages > 5 && currentPage < totalPages - 2 && (
-                      <>
-                        <span className="px-2 text-slate-500">...</span>
-                        <button
-                          onClick={() => goToPage(totalPages)}
-                          className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]"
-                        >
-                          {totalPages}
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </button>
-                </div>
-              </div>
-            )}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`px-4 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors ${showAdvancedFilters ? 'bg-[#05294E] text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            >
+              <Filter className="h-4 w-4" />
+              Filters
+            </button>
+            <button onClick={onRefresh} title="Refresh" className="px-4 py-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
         </div>
+
+        {showAdvancedFilters && (
+          <div className="border-t border-slate-200 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]">
+                  <option value="date">Registration Date</option>
+                  <option value="name">Name</option>
+                  <option value="revenue">Sales Volume</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setSortOrder('desc')} className={`px-3 py-2 rounded-lg transition-colors ${sortOrder === 'desc' ? 'bg-[#05294E] text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}><TrendingDown className="h-4 w-4" /></button>
+                  <button onClick={() => setSortOrder('asc')} className={`px-3 py-2 rounded-lg transition-colors ${sortOrder === 'asc' ? 'bg-[#05294E] text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}><TrendingUp className="h-4 w-4" /></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 text-sm text-slate-600">
+          <span className="font-medium">{filtered.length}</span> student{filtered.length !== 1 ? 's' : ''} found
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {paginated.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                    <th className="px-5 py-3 font-semibold">Student</th>
+                    <th className="px-5 py-3 font-semibold">Progress</th>
+                    <th className="px-5 py-3 font-semibold">Registration</th>
+                    <th className="px-5 py-3 font-semibold">Sales Volume</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {paginated.map((student, idx) => {
+                    const isActive = !!student.has_paid_selection_process_fee;
+                    const revenue = calculateRevenue(student);
+
+                    return (
+                      <tr key={`${student.id}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
+                        {/* Student */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-emerald-100' : 'bg-orange-100'}`}>
+                              <span className={`text-xs font-bold ${isActive ? 'text-emerald-700' : 'text-orange-600'}`}>
+                                {(student.full_name || '?').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 truncate max-w-[160px]">{student.full_name || 'No name'}</p>
+                              <p className="text-xs text-slate-500 truncate max-w-[160px]">{student.email}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Progress */}
+                        <td className="px-5 py-4">
+                          <StudentStepProgress student={student} />
+                        </td>
+
+                        {/* Registration */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="text-xs whitespace-nowrap">{formatDate(student.created_at)}</span>
+                          </div>
+                        </td>
+
+                        {/* Sales Volume */}
+                        <td className="px-5 py-4">
+                          {isActive ? (
+                            <div className="flex items-center gap-1.5">
+                              <DollarSign className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                              {loadingRevenue
+                                ? <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
+                                : <span className="font-semibold text-slate-900 whitespace-nowrap">{formatCurrency(revenue)}</span>}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Waiting</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-sm text-slate-500">Page {currentPage} of {totalPages}</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                  </button>
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-16">
+            <GraduationCap className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-1">
+              {searchTerm ? 'No students found' : 'No referred students yet'}
+            </h3>
+            <p className="text-sm text-slate-500">
+              {searchTerm ? 'Try a different search term.' : 'Share your referral code to get started!'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
