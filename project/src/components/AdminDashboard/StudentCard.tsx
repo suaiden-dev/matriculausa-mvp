@@ -4,11 +4,12 @@ import { StudentRecord } from './hooks/useStudentApplicationsQueries';
 import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
-import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
+import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation, useSkipTransferFormMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DropStudentModal from './DropStudentModal';
 import RestoreStudentModal from './RestoreStudentModal';
+import SkipTransferFormModal from './SkipTransferFormModal';
 
 
 interface StudentCardProps {
@@ -25,6 +26,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
   const markVisaMutation = useMarkVisaApprovedMutation();
+  const skipTransferFormMutation = useSkipTransferFormMutation();
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
   
@@ -38,6 +40,37 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
 
   const [showDropModal, setShowDropModal] = React.useState(false);
   const [showRestoreModal, setShowRestoreModal] = React.useState(false);
+  const [showSkipModal, setShowSkipModal] = React.useState(false);
+
+  const handleConfirmSkip = async (reason: string) => {
+    if (!student.application_id) return;
+    try {
+      await skipTransferFormMutation.mutateAsync({
+        applicationId: student.application_id,
+        studentId: student.student_id,
+        reason,
+        adminId: userProfile?.user_id,
+        adminName: userProfile?.full_name ?? undefined,
+      });
+
+      await logAction(
+        'transfer_form_skipped',
+        `A etapa de Transfer Form foi pulada. Justificativa: ${reason}`,
+        userProfile?.user_id || '',
+        'admin',
+        {
+          source: 'kanban_card',
+          reason,
+          admin_name: userProfile?.full_name,
+        }
+      );
+
+      toast.success('Etapa pulada com sucesso');
+    } catch (error: any) {
+      console.error('Error skipping stage:', error);
+      throw error;
+    }
+  };
 
   const handleToggleDrop = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -305,6 +338,11 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
                 </span>
               ) : null;
             })()}
+            {student.agency_name && (
+              <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm" title={`Agência: ${student.agency_name}`}>
+                {student.agency_name}
+              </span>
+            )}
           </div>
           {student.university_name && (
             <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
@@ -516,7 +554,30 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
               Form returned — pending approval
             </div>
           )}
+          {student.transfer_form_status === 'skipped' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
+              <CheckCircle className="w-3 h-3 flex-shrink-0 text-green-600" />
+              Transfer Form pulado pelo admin
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Admin action button — Stage: student_sends_letter (Skip step) */}
+      {currentStageKey === 'student_sends_letter' && student.transfer_form_status !== 'skipped' && student.transfer_form_status !== 'approved' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowSkipModal(true);
+          }}
+          disabled={skipTransferFormMutation.isPending}
+          className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+        >
+          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+          </svg>
+          Pular etapa de Transfer Form
+        </button>
       )}
 
       {/* Admin action button — Stage 3: send_docs_to_university */}
@@ -596,6 +657,14 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         isOpen={showRestoreModal}
         onClose={() => setShowRestoreModal(false)}
         onConfirm={handleConfirmRestore}
+        studentName={student.student_name}
+      />
+
+      {/* Modal de confirmação de Skip Transfer Form */}
+      <SkipTransferFormModal
+        isOpen={showSkipModal}
+        onClose={() => setShowSkipModal(false)}
+        onConfirm={handleConfirmSkip}
         studentName={student.student_name}
       />
     </div>

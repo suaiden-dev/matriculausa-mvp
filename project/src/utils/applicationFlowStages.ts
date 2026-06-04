@@ -1,52 +1,47 @@
 import {
+  CreditCard,
+  FileText,
+  Eye,
+  DollarSign,
   Award,
   BookOpen,
-  ClipboardCheck,
-  CreditCard,
-  DollarSign,
-  Eye,
-  FileText,
   GraduationCap,
-  LucideIcon,
+  Upload,
+  ClipboardCheck,
+  Send,
   Mail,
   RefreshCw,
-  Send,
   Shield,
-  Upload,
-} from "lucide-react";
+  LucideIcon
+} from 'lucide-react';
 
 export type ApplicationFlowStageKey =
-  | "selection_fee"
-  | "bdp_collection"
-  | "apply"
-  | "review"
-  | "start_admission"
-  | "application_fee"
-  | "placement_fee"
-  | "reinstatement_fee"
-  | "scholarship_fee"
-  | "university_docs"
-  | "docs_approval"
-  | "send_docs_to_university"
-  | "receive_acceptance_letter"
-  | "send_acceptance_letter"
-  | "student_sends_letter"
-  | "sevis_transfer"
-  | "i20_fee"
-  | "ds160_package"
-  | "i539_cos_package"
-  | "visa_approval"
-  | "acceptance_letter"
-  | "transfer_form"
-  | "enrollment"
-  | "dropped";
+  | 'selection_fee'
+  | 'bdp_collection'
+  | 'apply'
+  | 'review'
+  | 'start_admission'
+  | 'application_fee'
+  | 'placement_fee'
+  | 'reinstatement_fee'
+  | 'scholarship_fee'
+  | 'university_docs'
+  | 'docs_approval'
+  | 'send_docs_to_university'
+  | 'receive_acceptance_letter'
+  | 'send_acceptance_letter'
+  | 'student_sends_letter'
+  | 'sevis_transfer'
+  | 'i20_fee'
+  | 'ds160_package'
+  | 'i539_cos_package'
+  | 'visa_approval'
+  | 'acceptance_letter'
+  | 'transfer_form'
+  | 'enrollment'
+  | 'dropped';
 
-export type StageStatus =
-  | "pending"
-  | "in_progress"
-  | "completed"
-  | "rejected"
-  | "skipped";
+export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'skipped';
 
 export interface ApplicationFlowStage {
   key: ApplicationFlowStageKey;
@@ -56,7 +51,7 @@ export interface ApplicationFlowStage {
   description: string;
   requiresTransfer?: boolean;
   requiresProcessType?: string;
-  actor: "student" | "admin" | "both";
+  actor: 'student' | 'admin' | 'both';
   team?: string;
 }
 
@@ -106,187 +101,178 @@ export interface StudentRecord {
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
   {
-    key: "selection_fee",
-    label: "Selection Process Fee Paid",
-    shortLabel: "Sel. Fee Paid",
+    key: 'selection_fee',
+    label: 'Selection Process Fee Paid',
+    shortLabel: 'Sel. Fee Paid',
     icon: CreditCard,
-    description: "Student has paid the Selection Process Fee",
-    actor: "student",
-    team: "Closer",
+    description: 'Student has paid the Selection Process Fee',
+    actor: 'student',
+    team: 'Closer'
   },
   {
-    key: "apply",
-    label: "Choosing Scholarship",
-    shortLabel: "Choosing",
+    key: 'apply',
+    label: 'Choosing Scholarship',
+    shortLabel: 'Choosing',
     icon: FileText,
-    description:
-      "Student selected scholarships but has not yet uploaded the 3 main documents",
-    actor: "student",
-    team: "Closer",
+    description: 'Student selected scholarships but has not yet uploaded the 3 main documents',
+    actor: 'student',
+    team: 'Closer'
   },
   {
-    key: "bdp_collection",
-    label: "Passport Collection",
-    shortLabel: "Passport",
+    key: 'bdp_collection',
+    label: 'Passport Collection',
+    shortLabel: 'Passport',
     icon: FileText,
-    description: "Pending: Passport upload",
-    actor: "student",
-    team: "Document Specialist",
+    description: 'Pending: Passport upload',
+    actor: 'student',
+    team: 'Document Specialist'
   },
   {
-    key: "review",
-    label: "Scholarship Eligibility",
-    shortLabel: "Eligibility",
+    key: 'review',
+    label: 'Scholarship Eligibility',
+    shortLabel: 'Eligibility',
     icon: Eye,
-    description:
-      "Awaiting University approval of submitted documents and application",
-    actor: "admin",
-    team: "Academic Advisor / University",
+    description: 'Awaiting admin approval of submitted documents and selected scholarship',
+    actor: 'admin',
+    team: 'Academic Advisor / University'
   },
   {
-    key: "start_admission",
-    label: "Start Admission",
-    shortLabel: "Start Admission",
+    key: 'start_admission',
+    label: 'Start Admission',
+    shortLabel: 'Start Admission',
     icon: BookOpen,
-    description:
-      "Scholarship approved — student selects a scholarship to proceed with admission",
-    actor: "student",
-    team: "Academic Advisor / University",
+    description: 'Scholarship approved — student selects a scholarship to proceed with admission',
+    actor: 'student',
+    team: 'Academic Advisor / University'
   },
   {
-    key: "application_fee",
-    label: "Awaiting Application Fee",
-    shortLabel: "App Fee",
+    key: 'application_fee',
+    label: 'Awaiting Application Fee',
+    shortLabel: 'App Fee',
     icon: DollarSign,
-    description: "Pending Student Application Fee payment",
-    actor: "student",
-    team: "Customer Service",
+    description: 'Student selected a scholarship — pending Application Fee payment',
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
-    key: "placement_fee",
-    label: "Awaiting Placement Fee",
-    shortLabel: "Placement Fee",
+    key: 'placement_fee',
+    label: 'Awaiting Placement Fee',
+    shortLabel: 'Placement Fee',
     icon: DollarSign,
-    description: "Pending Student Placement Fee payment",
-    actor: "student",
-    team: "Customer Service",
+    description: 'Application fee paid — pending Placement Fee payment',
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
-    key: "reinstatement_fee",
-    label: "Awaiting Reinstatement Fee",
-    shortLabel: "Reinstatement",
+    key: 'reinstatement_fee',
+    label: 'Awaiting Reinstatement Fee',
+    shortLabel: 'Reinstatement',
     icon: DollarSign,
-    description:
-      "Pending Student Reinstatement Fee payment (Transfer with inactive visa only)",
-    actor: "student",
-    team: "Customer Service",
+    description: 'Placement fee paid — pending Reinstatement Fee payment (transfer with inactive visa only)',
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
-    key: "scholarship_fee",
-    label: "Scholarship Fee",
-    shortLabel: "Scholarship Fee",
+    key: 'scholarship_fee',
+    label: 'Scholarship Fee',
+    shortLabel: 'Scholarship Fee',
     icon: Award,
-    description: "Student has paid the Scholarship Fee",
-    actor: "student",
-    team: "Customer Service",
+    description: 'Student has paid the Scholarship Fee',
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
-    key: "university_docs",
-    label: "Awaiting University Docs",
-    shortLabel: "Univ. Docs",
+    key: 'university_docs',
+    label: 'Awaiting University Docs',
+    shortLabel: 'Univ. Docs',
     icon: Upload,
-    description:
-      "Student must upload university documents (filled and translated)",
-    actor: "student",
-    team: "Document Specialist / University",
+    description: 'Student must upload university documents (filled and translated)',
+    actor: 'student',
+    team: 'Document Specialist / University'
   },
   {
-    key: "docs_approval",
-    label: "Document Approval",
-    shortLabel: "Doc Approval",
+    key: 'docs_approval',
+    label: 'Document Approval',
+    shortLabel: 'Doc Approval',
     icon: ClipboardCheck,
-    description: "University reviews uploaded Global Documents",
-    actor: "admin",
-    team: "Admission / University",
+    description: 'Admin reviews uploaded documents — approve or reject each one',
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "send_docs_to_university",
-    label: "Send Docs to University",
-    shortLabel: "Send Docs",
+    key: 'send_docs_to_university',
+    label: 'Send Docs to University',
+    shortLabel: 'Send Docs',
     icon: Send,
-    description: "Admin confirms documents were sent to the university",
-    actor: "admin",
-    team: "Admission / University",
+    description: 'Admin confirms documents were sent to the university',
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "receive_acceptance_letter",
-    label: "Receive Acceptance Letter",
-    shortLabel: "Recv. Letter",
+    key: 'receive_acceptance_letter',
+    label: 'Receive Acceptance Letter',
+    shortLabel: 'Recv. Letter',
     icon: Mail,
-    description: "Admin uploads acceptance letter received from university",
-    actor: "admin",
-    team: "Admission / University",
+    description: 'Admin uploads acceptance letter received from university',
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "send_acceptance_letter",
-    label: "Send Acceptance Letter to Student",
-    shortLabel: "Send Letter",
+    key: 'send_acceptance_letter',
+    label: 'Send Acceptance Letter to Student',
+    shortLabel: 'Send Letter',
     icon: Send,
-    description: "University sends Acceptance Letter to the Student",
-    actor: "admin",
-    team: "Admission / University",
+    description: 'Admin sends acceptance letter to the student',
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "i20_fee",
-    label: "Awaiting I-20 Control Fee",
-    shortLabel: "I-20 Fee",
+    key: 'i20_fee',
+    label: 'Awaiting I-20 Control Fee',
+    shortLabel: 'I-20 Fee',
     icon: CreditCard,
-    description:
-      "Pending Student I-20 Control Fee payment (Initial, COS, Transfer/Reinstatement)",
-    actor: "student",
-    team: "Customer Service",
+    description: 'Student pays the I-20 Control Fee (Initial, COS, Transfer/Reinstatement)',
+    actor: 'student',
+    team: 'Customer Service'
   },
   {
-    key: "student_sends_letter",
-    label: "Transfer Form",
-    shortLabel: "Transfer Form",
+    key: 'student_sends_letter',
+    label: 'Transfer Form',
+    shortLabel: 'Transfer Form',
     icon: FileText,
-    description:
-      "University sends the Transfer Form to the Student, then approves or rejects the transfer request",
+    description: 'Admin sends transfer form to student → student submits to current institution → student uploads completed form → admin approves.',
     requiresTransfer: true,
-    actor: "both",
-    team: "Admission / University",
+    actor: 'both',
+    team: 'Admission / University'
   },
   {
-    key: "sevis_transfer",
-    label: "Awaiting SEVIS Transfer",
-    shortLabel: "SEVIS",
+    key: 'sevis_transfer',
+    label: 'Awaiting SEVIS Transfer',
+    shortLabel: 'SEVIS',
     icon: RefreshCw,
-    description:
-      "University confirms SEVIS transfer completed (happens outside the platform)",
+    description: 'Admin confirms SEVIS transfer completed (happens outside the platform)',
     requiresTransfer: true,
-    actor: "admin",
-    team: "Admission / University",
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "visa_approval",
-    label: "Awaiting Visa Approval",
-    shortLabel: "Visa",
+    key: 'visa_approval',
+    label: 'Awaiting Visa Approval',
+    shortLabel: 'Visa',
     icon: Shield,
-    description:
-      "University confirms Visa approval. Student must send documentation to lawyer (Aplikei) outside the platform.",
-    actor: "admin",
-    team: "Admission / University",
+    description: 'Admin confirms visa approved. Student must send documentation to lawyer (Aplikei) outside the platform.',
+    actor: 'admin',
+    team: 'Admission / University'
   },
   {
-    key: "enrollment",
-    label: "Admitted Enrollment",
-    shortLabel: "Admitted",
+    key: 'enrollment',
+    label: 'Admitted Enrollment',
+    shortLabel: 'Admitted',
     icon: GraduationCap,
-    description: "Student has been enrolled in the program",
-    actor: "admin",
-    team: "Support / Customer Service",
-  },
+    description: 'Student has been enrolled in the program',
+    actor: 'admin',
+    team: 'Support / Customer Service'
+  }
 ];
 
 /**
@@ -297,238 +283,204 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
  */
 function getRawStepStatus(
   student: StudentRecord,
-  step: ApplicationFlowStageKey,
+  step: ApplicationFlowStageKey
 ): StageStatus {
-  const isMigma = (student as any).source === "migma";
+  const isMigma = (student as any).source === 'migma';
 
   switch (step) {
-    case "selection_fee":
-      if (student.application_status === "enrolled") return "completed";
-      if (!student.has_paid_selection_process_fee && !isMigma) return "pending";
-      return student.has_submitted_form ? "completed" : "in_progress";
+    case 'selection_fee':
+      if (student.application_status === 'enrolled') return 'completed';
+      if (!student.has_paid_selection_process_fee && !isMigma) return 'pending';
+      return student.has_submitted_form ? 'completed' : 'in_progress';
 
-    case "apply":
-      if (student.application_status === "enrolled") return "completed";
-      return student.total_applications > 0 ? "completed" : "pending";
+    case 'apply':
+      if (student.application_status === 'enrolled') return 'completed';
+      return student.total_applications > 0 ? 'completed' : 'pending';
 
-    case "bdp_collection":
-      if (student.application_status === "enrolled") return "completed";
+    case 'bdp_collection':
+      if (student.application_status === 'enrolled') return 'completed';
       // If student has progressed past BDP (approved or app fee paid), consider complete
-      if (
-        student.application_status === "approved" ||
-        student.is_application_fee_paid
-      ) return "completed";
-      return student.documents_uploaded ? "completed" : "pending";
+      if (student.application_status === 'approved' || student.is_application_fee_paid) return 'completed';
+      return student.documents_uploaded ? 'completed' : 'pending';
 
-    case "review":
-      if (
-        student.application_status === "enrolled" ||
-        student.application_status === "approved"
-      ) {
-        return "completed";
+    case 'review':
+      if (student.application_status === 'enrolled' || student.application_status === 'approved') {
+        return 'completed';
       }
-      if (student.application_status === "rejected") {
-        return "rejected";
+      if (student.application_status === 'rejected') {
+        return 'rejected';
       }
-      if (student.application_status === "under_review") {
-        return "in_progress";
+      if (student.application_status === 'under_review') {
+        return 'in_progress';
       }
-      return "pending";
+      return 'pending';
 
-    case "start_admission":
-      if (student.is_application_fee_paid) return "completed";
-      if (
-        student.application_status === "approved" ||
-        student.application_status === "enrolled"
-      ) return "completed";
-      return student.selected_scholarship_id ? "completed" : "pending";
+    case 'start_admission':
+      if (student.is_application_fee_paid) return 'completed';
+      if (student.application_status === 'approved' || student.application_status === 'enrolled') return 'completed';
+      return student.selected_scholarship_id ? 'completed' : 'pending';
 
-    case "application_fee":
-      return student.is_application_fee_paid ? "completed" : "pending";
+    case 'application_fee':
+      return student.is_application_fee_paid ? 'completed' : 'pending';
 
-    case "placement_fee":
-      if (!student.placement_fee_flow || isMigma) return "skipped";
-      return student.is_placement_fee_paid ? "completed" : "pending";
+    case 'placement_fee':
+      if (!student.placement_fee_flow || isMigma) return 'skipped';
+      return student.is_placement_fee_paid ? 'completed' : 'pending';
 
-    case "reinstatement_fee":
-      if (
-        student.student_process_type !== "transfer" ||
-        student.visa_transfer_active !== false
-      ) return "skipped";
-      return student.has_paid_reinstatement_package ? "completed" : "pending";
+    case 'reinstatement_fee':
+      if (student.student_process_type !== 'transfer' || student.visa_transfer_active !== false) return 'skipped';
+      return student.has_paid_reinstatement_package ? 'completed' : 'pending';
 
-    case "scholarship_fee":
-      if (student.placement_fee_flow) return "skipped";
-      return student.is_scholarship_fee_paid ? "completed" : "pending";
+    case 'scholarship_fee':
+      if (student.placement_fee_flow) return 'skipped';
+      return student.is_scholarship_fee_paid ? 'completed' : 'pending';
 
-    case "university_docs": {
+    case 'university_docs': {
       const total = student.docs_total_required ?? 0;
-      const alreadyProgressed = !!student.acceptance_letter_url ||
-        student.acceptance_letter_status === "sent" ||
+      const alreadyProgressed =
+        !!student.acceptance_letter_url ||
+        student.acceptance_letter_status === 'sent' ||
         student.has_sent_docs_to_university ||
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
 
-      if (alreadyProgressed || student.application_status === "enrolled") {
-        return "completed";
-      }
-      if (total === 0) return "pending";
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
 
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
       const uploaded = student.docs_total_uploaded ?? 0;
-
-      if (rejected > 0) return "pending";
-      if (underReview > 0) return "completed";
-      if (uploaded < total) return "pending";
-      return "completed";
+      
+      if (rejected > 0) return 'pending';
+      if (underReview > 0) return 'completed';
+      if (uploaded < total) return 'pending';
+      return 'completed';
     }
 
-    case "docs_approval": {
+    case 'docs_approval': {
       const total = student.docs_total_required ?? 0;
-      const alreadyProgressed = !!student.acceptance_letter_url ||
-        student.acceptance_letter_status === "sent" ||
+      const alreadyProgressed =
+        !!student.acceptance_letter_url ||
+        student.acceptance_letter_status === 'sent' ||
         student.has_sent_docs_to_university ||
         student.has_paid_i20_control_fee ||
         student.has_paid_i539_cos_package ||
         student.has_paid_ds160_package;
-
-      if (alreadyProgressed || student.application_status === "enrolled") {
-        return "completed";
-      }
-      if (total === 0) return "pending";
+      
+      if (alreadyProgressed || student.application_status === 'enrolled') return 'completed';
+      if (total === 0) return 'pending';
 
       const approved = student.docs_total_approved ?? 0;
       const rejected = student.docs_total_rejected ?? 0;
       const underReview = student.docs_total_under_review ?? 0;
-
-      if (approved >= total) return "completed";
-      if (rejected > 0) return "pending";
-      if (underReview > 0 || approved > 0) return "in_progress";
-      return "pending";
+      
+      if (approved >= total) return 'completed';
+      if (rejected > 0) return 'pending';
+      if (underReview > 0 || approved > 0) return 'in_progress';
+      return 'pending';
     }
 
-    case "send_docs_to_university":
+    case 'send_docs_to_university':
       // 'pending' é valor default da application — só conta URL ou status 'sent'
-      return (student.has_sent_docs_to_university ||
-          !!student.acceptance_letter_url ||
-          student.acceptance_letter_status === "sent" ||
-          student.application_status === "enrolled")
-        ? "completed"
-        : "pending";
+      return (student.has_sent_docs_to_university || !!student.acceptance_letter_url || student.acceptance_letter_status === 'sent' || student.application_status === 'enrolled')
+        ? 'completed'
+        : 'pending';
 
-    case "receive_acceptance_letter":
+    case 'receive_acceptance_letter':
       // Só completa quando admin fez upload da carta (URL existe)
-      return (student.acceptance_letter_url ||
-          student.application_status === "enrolled")
-        ? "completed"
-        : "pending";
+      return (student.acceptance_letter_url || student.application_status === 'enrolled') ? 'completed' : 'pending';
 
-    case "send_acceptance_letter": {
-      const alreadyProgressed = student.acceptance_letter_status === "sent" ||
-        student.application_status === "enrolled" ||
+    case 'send_acceptance_letter': {
+      const alreadyProgressed =
+        student.acceptance_letter_status === 'sent' ||
+        student.application_status === 'enrolled' ||
         student.has_paid_i20_control_fee ||
         student.has_paid_ds160_package ||
         student.has_paid_i539_cos_package ||
         student.sevis_transfer_completed ||
         student.visa_approved;
 
-      if (alreadyProgressed) return "completed";
-      return student.acceptance_letter_url ? "in_progress" : "pending";
+      if (alreadyProgressed) return 'completed';
+      return student.acceptance_letter_url ? 'in_progress' : 'pending';
     }
 
-    case "student_sends_letter": {
-      if (student.student_process_type !== "transfer") return "skipped";
+    case 'student_sends_letter': {
+      if (student.student_process_type !== 'transfer') return 'skipped';
       // If SEVIS is done, this step is clearly complete
-      if (student.sevis_transfer_completed) return "completed";
+      if (student.sevis_transfer_completed) return 'completed';
 
-      const isExpiredVisaTransfer =
-        student.student_process_type === "transfer" &&
-        student.visa_transfer_active === false;
-      const i20FeePaid = student.has_paid_i20_control_fee ||
-        student.has_paid_ds160_package || student.has_paid_i539_cos_package;
+      const isExpiredVisaTransfer = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+      const i20FeePaid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
 
-      if (student.transfer_form_status === "approved") {
-        return (isExpiredVisaTransfer && !i20FeePaid)
-          ? "in_progress"
-          : "completed";
+      if (student.transfer_form_status === 'approved' || student.transfer_form_status === 'skipped') {
+        return (isExpiredVisaTransfer && !i20FeePaid) ? 'in_progress' : 'completed';
       }
-      if (student.transfer_form_status === "returned") return "in_progress";
-      if (student.transfer_form_status === "sent") return "in_progress";
-      return "pending";
+      if (student.transfer_form_status === 'returned') return 'in_progress';
+      if (student.transfer_form_status === 'sent') return 'in_progress';
+      return 'pending';
     }
 
-    case "sevis_transfer":
-      if (student.student_process_type !== "transfer") return "skipped";
-      return student.sevis_transfer_completed ? "completed" : "pending";
+    case 'sevis_transfer':
+      if (student.student_process_type !== 'transfer') return 'skipped';
+      return student.sevis_transfer_completed ? 'completed' : 'pending';
 
-    case "i20_fee": {
-      const isApplicable = student.student_process_type === "initial" ||
-        student.student_process_type === "change_of_status" ||
-        (student.student_process_type === "transfer" &&
-          student.visa_transfer_active === false);
-      if (!isApplicable) return "skipped";
+    case 'i20_fee': {
+      const isApplicable =
+        student.student_process_type === 'initial' ||
+        student.student_process_type === 'change_of_status' ||
+        (student.student_process_type === 'transfer' && student.visa_transfer_active === false);
+      if (!isApplicable) return 'skipped';
 
-      const alreadyProgressed = student.application_status === "enrolled" ||
+      const alreadyProgressed =
+        student.application_status === 'enrolled' ||
         student.sevis_transfer_completed ||
         student.visa_approved;
 
-      if (alreadyProgressed) return "completed";
+      if (alreadyProgressed) return 'completed';
 
       // Retrocompatibilidade: aceita pagamento via qualquer um dos campos antigos
       const hasPaid = student.has_paid_i20_control_fee ||
-        student.has_paid_ds160_package ||
-        student.has_paid_i539_cos_package;
-      return hasPaid ? "completed" : "pending";
+                      student.has_paid_ds160_package ||
+                      student.has_paid_i539_cos_package;
+      return hasPaid ? 'completed' : 'pending';
     }
 
-    case "ds160_package":
-      return "skipped";
+    case 'ds160_package':
+      return 'skipped';
 
-    case "i539_cos_package":
-      return "skipped";
+    case 'i539_cos_package':
+      return 'skipped';
 
-    case "visa_approval":
+    case 'visa_approval':
       // Visa approval only applies to initial (new F-1) students.
       // COS students do status change via I-539; transfer students use SEVIS transfer.
-      if (student.student_process_type !== "initial") return "skipped";
-      return student.visa_approved ? "completed" : "pending";
+      if (student.student_process_type !== 'initial') return 'skipped';
+      return student.visa_approved ? 'completed' : 'pending';
 
     // Legacy stages — kept for backward compat, no longer in flow array
-    case "acceptance_letter":
-      if (
-        student.acceptance_letter_status === "approved" ||
-        student.acceptance_letter_status === "sent"
-      ) {
-        return "completed";
+    case 'acceptance_letter':
+      if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') {
+        return 'completed';
       }
-      return "pending";
+      return 'pending';
 
-    case "transfer_form":
-      if (student.student_process_type !== "transfer") return "skipped";
-      if (
-        student.transfer_form_status === "approved" ||
-        student.transfer_form_status === "sent"
-      ) {
-        return "completed";
+    case 'transfer_form':
+      if (student.student_process_type !== 'transfer') return 'skipped';
+      if (student.transfer_form_status === 'approved' || student.transfer_form_status === 'sent') {
+        return 'completed';
       }
-      return "pending";
+      return 'pending';
 
-    case "enrollment":
+    case 'enrollment':
       // Transfer students must complete SEVIS before being considered enrolled
-      if (
-        student.student_process_type === "transfer" &&
-        !student.sevis_transfer_completed
-      ) {
-        return "pending";
+      if (student.student_process_type === 'transfer' && !student.sevis_transfer_completed) {
+        return 'pending';
       }
-      return student.application_status === "enrolled"
-        ? "completed"
-        : "pending";
+      return student.application_status === 'enrolled' ? 'completed' : 'pending';
 
     default:
-      return "pending";
+      return 'pending';
   }
 }
 
@@ -537,23 +489,23 @@ function getRawStepStatus(
  */
 export function getStepStatus(
   student: StudentRecord,
-  step: ApplicationFlowStageKey,
+  step: ApplicationFlowStageKey
 ): StageStatus {
   // 1. Se o status bruto for 'skipped', mantemos 'skipped'
   const rawStatus = getRawStepStatus(student, step);
-  if (rawStatus === "skipped") {
-    return "skipped";
+  if (rawStatus === 'skipped') {
+    return 'skipped';
   }
 
   // 2. Se o status da matrícula for 'enrolled', todas as etapas ativas são marcadas como 'completed'
   // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
-  if (student.application_status === "enrolled") {
+  if (student.application_status === 'enrolled') {
     const isTransferPendingSevis =
-      student.student_process_type === "transfer" &&
+      student.student_process_type === 'transfer' &&
       !student.sevis_transfer_completed &&
-      (step === "sevis_transfer" || step === "student_sends_letter");
+      (step === 'sevis_transfer' || step === 'student_sends_letter');
     if (!isTransferPendingSevis) {
-      return "completed";
+      return 'completed';
     }
   }
 
@@ -563,18 +515,16 @@ export function getStepStatus(
   for (let i = 0; i < APPLICATION_FLOW_STAGES.length; i++) {
     const stageKey = APPLICATION_FLOW_STAGES[i].key;
     const stageRaw = getRawStepStatus(student, stageKey);
-    if (stageRaw === "completed") {
+    if (stageRaw === 'completed') {
       maxCompletedIndex = i;
     }
   }
 
   // 5. Se a etapa atual estiver posicionada antes ou no mesmo índice da etapa concluída mais avançada,
   // nós a promovemos automaticamente a 'completed' para garantir a linearidade visual.
-  const currentStepIndex = APPLICATION_FLOW_STAGES.findIndex((s) =>
-    s.key === step
-  );
+  const currentStepIndex = APPLICATION_FLOW_STAGES.findIndex(s => s.key === step);
   if (currentStepIndex !== -1 && currentStepIndex <= maxCompletedIndex) {
-    return "completed";
+    return 'completed';
   }
 
   return rawStatus;
@@ -586,11 +536,11 @@ export function getStepStatus(
 export function isStudentInStage(
   student: StudentRecord,
   stage: ApplicationFlowStageKey,
-  stageStatus?: StageStatus,
+  stageStatus?: StageStatus
 ): boolean {
   const status = getStepStatus(student, stage);
   if (stageStatus === undefined) {
-    return status !== "skipped";
+    return status !== 'skipped';
   }
   return status === stageStatus;
 }
@@ -605,49 +555,40 @@ export function getCurrentStage(student: StudentRecord): {
   // Se o aluno já está matriculado (enrolled), força-o para a coluna final do Kanban
   // evitando que fique preso em etapas anteriores (ex: taxas não pagas)
   // Exception: transfer students who haven't completed SEVIS must still pass through sevis_transfer
-  const isTransferPendingSevis = student.student_process_type === "transfer" &&
-    !student.sevis_transfer_completed;
-  if (student.application_status === "enrolled" && !isTransferPendingSevis) {
-    return { stage: "enrollment", status: "completed" };
+  const isTransferPendingSevis =
+    student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+  if (student.application_status === 'enrolled' && !isTransferPendingSevis) {
+    return { stage: 'enrollment', status: 'completed' };
   }
 
   for (const stageDef of APPLICATION_FLOW_STAGES) {
-    if (
-      stageDef.requiresTransfer && student.student_process_type !== "transfer"
-    ) {
+    if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;
     }
-    if (
-      stageDef.requiresProcessType &&
-      student.student_process_type !== stageDef.requiresProcessType
-    ) {
+    if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) {
       continue;
     }
 
     const status = getStepStatus(student, stageDef.key);
 
-    if (status !== "completed" && status !== "skipped") {
+    if (status !== 'completed' && status !== 'skipped') {
       return { stage: stageDef.key, status };
     }
   }
 
-  return { stage: "enrollment", status: "completed" };
+  return { stage: 'enrollment', status: 'completed' };
 }
 
 /**
  * Obtém metadados de um estágio específico
  */
-export function getStageMetadata(
-  stageKey: ApplicationFlowStageKey,
-): ApplicationFlowStage | undefined {
-  return APPLICATION_FLOW_STAGES.find((stage) => stage.key === stageKey);
+export function getStageMetadata(stageKey: ApplicationFlowStageKey): ApplicationFlowStage | undefined {
+  return APPLICATION_FLOW_STAGES.find(stage => stage.key === stageKey);
 }
 
 /**
  * Valida se uma chave de estágio é válida
  */
-export function isValidStageKey(
-  stageKey: string,
-): stageKey is ApplicationFlowStageKey {
-  return APPLICATION_FLOW_STAGES.some((stage) => stage.key === stageKey);
+export function isValidStageKey(stageKey: string): stageKey is ApplicationFlowStageKey {
+  return APPLICATION_FLOW_STAGES.some(stage => stage.key === stageKey);
 }
