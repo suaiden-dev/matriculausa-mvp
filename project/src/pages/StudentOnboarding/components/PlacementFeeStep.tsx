@@ -10,7 +10,6 @@ import {
     RefreshCw,
     Building,
     Shield,
-    X,
     Loader2
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
@@ -84,8 +83,8 @@ const StripeIcon = ({ className }: { className?: string }) => (
 
 export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentStep }) => {
     const { t } = useTranslation('payment');
-    const { userProfile } = useAuth();
-    const { formatFeeAmount } = useFeeConfig(userProfile?.user_id);
+    const { user, userProfile } = useAuth();
+    const { formatFeeAmount } = useFeeConfig(user?.id || userProfile?.user_id);
     const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
 
     const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
@@ -94,9 +93,6 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
     const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
     const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null);
-    const [inlineCpf, setInlineCpf] = useState('');
-    const [savingCpf, setSavingCpf] = useState(false);
-    const [cpfError, setCpfError] = useState<string | null>(null);
 
     // Estados do cupom promocional
     const [hasCoupon, setHasCoupon] = useState(false);
@@ -112,16 +108,42 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     // Plano de parcelamento ativo (novo sistema dinâmico)
     const [activePlan, setActivePlan] = useState<InstallmentPlan | null>(null);
     useEffect(() => {
-        if (!userProfile?.user_id) return;
-        supabase
-            .from('fee_installment_plans')
-            .select('*')
-            .eq('user_id', userProfile.user_id)
-            .eq('fee_type', 'placement_fee')
-            .eq('status', 'active')
-            .maybeSingle()
-            .then(({ data }) => setActivePlan(data ?? null));
-    }, [userProfile?.user_id]);
+        const userId = user?.id || userProfile?.user_id;
+        if (!userId) return;
+
+        const fetchPlan = () => {
+            supabase
+                .from('fee_installment_plans')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('fee_type', 'placement_fee')
+                .eq('status', 'active')
+                .maybeSingle()
+                .then(({ data }) => setActivePlan(data ?? null));
+        };
+
+        fetchPlan();
+
+        const channel = supabase
+            .channel(`realtime-placement-plans-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'fee_installment_plans',
+                    filter: `user_id=eq.${userId}`
+                },
+                () => {
+                    fetchPlan();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id, userProfile?.user_id]);
 
     // Backward compat: also accept legacy flag if no plan found yet
     const installmentEnabled = !!activePlan || !!(userProfile as any)?.placement_fee_installment_enabled;
@@ -256,8 +278,6 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         method: 'stripe' | 'pix' | 'parcelow',
         couponFinalAmount?: number
     ) => {
-        // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
-        const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
         try {
             setIsProcessingCheckout(`${application.id}_${method}`);
             const { data: sessionData } = await supabase.auth.getSession();
@@ -344,34 +364,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         }
     };
 
-    const saveCpfAndCheckout = async (application: ApplicationWithScholarship) => {
-        const cleaned = inlineCpf.replace(/\D/g, '');
-        if (cleaned.length !== 11) {
-            setCpfError('CPF deve ter 11 dígitos');
-            return;
-        }
 
-        try {
-            setSavingCpf(true);
-            setCpfError(null);
-
-            const { error: updateError } = await supabase
-                .from('user_profiles')
-                .update({ cpf_document: cleaned })
-                .eq('user_id', userProfile?.user_id);
-
-            if (updateError) throw updateError;
-
-            // Se salvou com sucesso, limpa o estado inline e prossegue
-            setShowInlineCpf(null);
-            await processCheckout(application, 'parcelow');
-        } catch (err: any) {
-            console.error('[PlacementFeeStep] Error saving CPF:', err);
-            setCpfError('Erro ao salvar CPF. Tente novamente.');
-        } finally {
-            setSavingCpf(false);
-        }
-    };
 
     const handleParcelowClick = (app: ApplicationWithScholarship) => {
         // Verificar se há informações de titular de Cartão de Outra Pessoa
@@ -867,6 +860,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                             annual_tuition: annualValue,
                                                                             is_installment: installmentEnabled,
                                                                             installment_number: installmentEnabled ? 1 : undefined,
+                                                                            total_installments: installmentEnabled ? totalInstallments : undefined,
                                                                             promotional_coupon: couponValidation?.isValid ? promotionalCoupon.trim().toUpperCase() : null,
                                                                             final_amount: effectiveAmount
                                                                         }}

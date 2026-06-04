@@ -74,7 +74,7 @@ function getSchoolStudentSendsLetterRaw(student: StudentRecord): StageStatus {
   const paid = i20FeePaid(student);
 
   const status = (student as any).transfer_form_status as string | null;
-  if (status === 'approved') {
+  if (status === 'approved' || status === 'skipped') {
     return isExpiredVisaTransfer && !paid ? 'in_progress' : 'completed';
   }
   if (status === 'returned' || status === 'sent') return 'in_progress';
