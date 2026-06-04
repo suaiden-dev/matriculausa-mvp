@@ -28,92 +28,89 @@ const SellersList: React.FC<SellersListProps> = ({
     }).format(amount || 0);
   };
 
-  const STAGES = [
-    { key: 'registered',  label: 'Cadastro'    },
-    { key: 'selection',   label: 'Seleção'     },
-    { key: 'documents',   label: 'Documentos'  },
-    { key: 'application', label: 'Candidatura' },
-  ];
+  const renderProgressStepper = (student: any, disponivel: number, pendente: number) => {
+    // Conditions per applicationFlowStages.ts
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
+    const isI20Applicable =
+      student.student_process_type === 'initial' ||
+      student.student_process_type === 'change_of_status' ||
+      isTransferInactiveVisa;
+    const isPlacementApplicable = !!student.placement_fee_flow;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
 
-  const getStudentStageIndex = (student: any): number => {
-    if (student.has_paid_selection_process_fee) return 3;
-    const step = student.onboarding_current_step;
-    const docs = student.documents_status;
-    if (step === 'identity_verification' || step === 'documents_upload' ||
-        docs === 'under_review' || docs === 'approved') return 2;
-    if (step === 'selection_survey' || step === 'selection_fee' || step != null) return 1;
-    return 0;
-  };
+    // Placement or Scholarship — mutually exclusive
+    // placement_fee_flow=true → Placement Fee path; false → Scholarship Fee path
+    const placementOrScholarshipPaid = isPlacementApplicable
+      ? !!student.is_placement_fee_paid
+      : !!student.is_scholarship_fee_paid;
 
-  const getStageMessage = (student: any, stageIndex: number, pendente: number): string => {
-    const firstName = student.full_name?.split(' ')[0] || 'O cliente';
-    switch (stageIndex) {
-      case 0: return `${firstName} se cadastrou. Incentive-o a iniciar o processo de seleção.`;
-      case 1: return `Na etapa de seleção. Ajude-o a pagar a taxa para avançar.`;
-      case 2:
-        return student.documents_status === 'under_review'
-          ? 'Documentos em análise. Aguardando aprovação da equipe.'
-          : student.documents_status === 'rejected'
-          ? 'Documentos rejeitados. O aluno precisa reenviar.'
-          : 'Documentos aprovados. Avancando para candidatura.';
-      case 3:
-        if (pendente > 0) {
-          const nextFee = !student.is_application_fee_paid ? 'Application Fee'
-            : student.placement_fee_flow && !student.is_placement_fee_paid ? 'Placement Fee'
-            : !student.has_paid_i20_control_fee ? 'Control Fee'
-            : 'próxima taxa';
-          return `Aguardando ${nextFee} para liberar ${formatCurrency(pendente)}.`;
-        }
-        return 'Todas as etapas concluidas.';
-      default: return '';
+    const steps = [
+      { label: 'Reg.', tooltip: 'Registered', active: true, skip: false },
+      { label: 'Sel.', tooltip: 'Selection Process Fee', active: !!student.has_paid_selection_process_fee, skip: false },
+      { label: 'App.', tooltip: 'Application Fee', active: !!student.is_application_fee_paid, skip: false },
+      {
+        label: isPlacementApplicable ? 'Plac.' : 'Schol.',
+        tooltip: isPlacementApplicable ? 'Placement Fee' : 'Scholarship Fee',
+        active: placementOrScholarshipPaid,
+        skip: false
+      },
+      {
+        label: 'Rein.',
+        tooltip: 'Reinstatement Fee',
+        active: !!student.has_paid_reinstatement_package,
+        skip: !isReinstatementApplicable
+      },
+      {
+        label: 'Ctrl.',
+        tooltip: 'I-20 Control Fee',
+        active: !!student.has_paid_i20_control_fee || !!student.has_paid_ds160_package || !!student.has_paid_i539_cos_package,
+        skip: !isI20Applicable
+      },
+      {
+        label: 'Com.',
+        tooltip: 'Commission released',
+        active: disponivel > 0,
+        skip: false
+      }
+    ];
+
+    // Dynamic status message
+    let message = '';
+    const firstName = student.full_name?.split(' ')[0] || 'The client';
+
+    if (!student.has_paid_selection_process_fee) {
+      message = `${firstName} registered. Help them pay the Selection Process Fee.`;
+    } else if (!student.is_application_fee_paid) {
+      message = `Selection Process Fee paid. Awaiting Application Fee payment to release ${formatCurrency(pendente)}.`;
+    } else if (!placementOrScholarshipPaid) {
+      const feeLabel = isPlacementApplicable ? 'Placement Fee' : 'Scholarship Fee';
+      message = `Application Fee paid. Awaiting ${feeLabel} payment to release ${formatCurrency(pendente)}.`;
+    } else if (isReinstatementApplicable && !student.has_paid_reinstatement_package) {
+      message = `Placement Fee paid. Awaiting Reinstatement Fee payment to release ${formatCurrency(pendente)}.`;
+    } else if (isI20Applicable && !(student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package)) {
+      message = `Awaiting I-20 Control Fee payment to release ${formatCurrency(pendente)}.`;
+    } else {
+      message = `Commission of ${formatCurrency(disponivel)} released!`;
     }
-  };
 
-  const renderPipeline = (student: any, disponivel: number, pendente: number) => {
-    const currentStage = getStudentStageIndex(student);
-    const message = getStageMessage(student, currentStage, pendente);
     return (
-      <div className="flex flex-col gap-2 min-w-[260px]">
-        {/* Pipeline */}
-        <div className="flex items-center gap-0">
-          {STAGES.map((stage, index) => {
-            const isCompleted = index < currentStage;
-            const isCurrent = index === currentStage;
-            const isPending = index > currentStage;
-
-            return (
-              <React.Fragment key={stage.key}>
-                <div className="flex flex-col items-center gap-0.5">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                      isCompleted
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : isCurrent
-                        ? 'bg-blue-500 border-blue-500 text-white ring-2 ring-blue-200'
-                        : 'bg-white border-slate-200 text-slate-400'
-                    }`}
-                    title={stage.label}
-                  >
-                    {isCompleted ? '✓' : String(index + 1)}
-                  </div>
-                  <span className={`text-[9px] font-medium whitespace-nowrap ${
-                    isCompleted ? 'text-emerald-600' : isCurrent ? 'text-blue-600' : 'text-slate-300'
-                  }`}>
-                    {stage.label}
-                  </span>
-                </div>
-                {index < STAGES.length - 1 && (
-                  <div className={`flex-1 h-0.5 mb-3 mx-0.5 ${
-                    index < currentStage ? 'bg-emerald-400' : 'bg-slate-200'
-                  }`} />
-                )}
-              </React.Fragment>
-            );
-          })}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1">
+        {steps.filter(step => !step.skip).map((step, index) => (
+            <span 
+              key={index}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-all duration-200 ${
+                step.active 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-slate-50 text-slate-400 border-slate-200'
+              }`}
+              title={`${step.tooltip}: ${step.active ? 'Completed' : 'Pending'}`}
+            >
+              {step.label}
+            </span>
+          ))}
         </div>
-
-        {/* Message */}
-        <span className="text-xs font-medium whitespace-normal leading-snug text-slate-500">
+        <span className="text-xs text-slate-600 font-medium mt-1.5 block whitespace-normal">
           {message}
         </span>
       </div>
@@ -123,9 +120,6 @@ const SellersList: React.FC<SellersListProps> = ({
   // Helper para calcular comissões do aluno (pendente e disponível)
   const getStudentCommissions = (student: any) => {
     const studentId = student.profile_id || student.id || student.user_id;
-    // Comissões reais gravadas no banco (Disponível)
-    const studentComms = commissions.filter(c => c.student_id === studentId);
-    const disponivel = studentComms.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
     // Calcular potencial pendente
     let pendente = 0;
@@ -152,13 +146,13 @@ const SellersList: React.FC<SellersListProps> = ({
     const applicationFeeAmount = 100;
 
     // Condições idênticas ao stepper
-    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
     const isI20Applicable =
       student.student_process_type === 'initial' ||
       student.student_process_type === 'change_of_status' ||
       isTransferInactiveVisa;
     const isPlacementApplicable = !!student.placement_fee_flow;
-    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+    const isReinstatementApplicable = student.student_process_type === 'transfer' && student.visa_transfer_active !== true;
 
     const placementOrScholarshipPaid = isPlacementApplicable
       ? !!student.is_placement_fee_paid
@@ -184,6 +178,33 @@ const SellersList: React.FC<SellersListProps> = ({
     }
     if (isI20Applicable && !i20Paid) {
       pendente += calculateRuleComm('i20_control', i20FeeAmount);
+    }
+
+    // Comissões reais gravadas no banco (Disponível)
+    const studentComms = commissions.filter(c => c.student_id === studentId);
+    let disponivel = studentComms.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+    // Se no banco vier zerado, calcula dinamicamente com base nas taxas pagas
+    if (disponivel === 0) {
+      if (student.has_paid_selection_process_fee) {
+        disponivel += calculateRuleComm('selection_process', selectionFeeAmount);
+      }
+      if (student.is_application_fee_paid) {
+        disponivel += calculateRuleComm('application', applicationFeeAmount);
+      }
+      if (placementOrScholarshipPaid) {
+        if (isPlacementApplicable) {
+          disponivel += calculateRuleComm('placement', scholarshipFeeAmount);
+        } else {
+          disponivel += calculateRuleComm('scholarship', scholarshipFeeAmount);
+        }
+      }
+      if (isReinstatementApplicable && student.has_paid_reinstatement_package) {
+        disponivel += calculateRuleComm('reinstatement', 500);
+      }
+      if (isI20Applicable && i20Paid) {
+        disponivel += calculateRuleComm('i20_control', i20FeeAmount);
+      }
     }
 
     return { disponivel, pendente };
@@ -213,10 +234,7 @@ const SellersList: React.FC<SellersListProps> = ({
               Seller
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Pending Amount
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Available Amount
+              Commission
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Progress
@@ -261,23 +279,16 @@ const SellersList: React.FC<SellersListProps> = ({
                   </div>
                 </td>
 
-                {/* Valor Pendente */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-slate-700">
-                    {formatCurrency(pendente)}
-                  </span>
-                </td>
-
-                {/* Valor Disponível */}
+                {/* Commission */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`text-sm font-bold ${disponivel > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
                     {formatCurrency(disponivel)}
                   </span>
                 </td>
 
-                {/* Pipeline */}
-                <td className="px-6 py-4">
-                  {renderPipeline(student, disponivel, pendente)}
+                {/* Progresso Stepper */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {renderProgressStepper(student, disponivel, pendente)}
                 </td>
 
               </tr>

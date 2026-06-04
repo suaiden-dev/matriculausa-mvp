@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -18,13 +18,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
-import { getDisplayAmounts } from '../../utils/paymentConverter';
+
 import { 
   useAgencyRevenueCalculationQuery, 
   useFinancialStatsQuery, 
   useAgencyCommissionsQuery,
   useAgencyPaymentRequestsQuery,
-  useAgencyDataQuery
+  useAgencyDataQuery,
+  useAgencySellersQuery
 } from '../../hooks/useAgencyQueries';
 
 const PaymentManagement: React.FC = () => {
@@ -49,6 +50,17 @@ const PaymentManagement: React.FC = () => {
   const { data: statsData, isLoading: loadingStats, refetch: refetchStats } = useFinancialStatsQuery(user?.id);
   const { data: commissionsData, isLoading: loadingCommissions, refetch: refetchCommissions } = useAgencyCommissionsQuery(user?.id);
   const { data: requestsData, isLoading: loadingRequests, refetch: refetchRequests } = useAgencyPaymentRequestsQuery(user?.id);
+  const { data: sellersData } = useAgencySellersQuery(adminData?.affiliateAdminId);
+
+  const sellerMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (sellersData || []).forEach((s: any) => {
+      if (s.referral_code) {
+        map[s.referral_code.toUpperCase()] = s.name;
+      }
+    });
+    return map;
+  }, [sellersData]);
 
   // Affiliate credits and balance derived from hooks
   const totalEarned = statsData?.stats.totalCredits ?? 0;
@@ -59,7 +71,7 @@ const PaymentManagement: React.FC = () => {
   // Commission balance state (legacy structure for minimal disruption)
   const commissionSummary = statsData ? {
     commission_per_sale: null,
-    commission_rules: (revenueData as any)?.commission_rules || (adminData as any)?.commission_rules,
+    commission_rules: (revenueData as any)?.commissionRules || (adminData as any)?.commissionRules,
     vendas: statsData.stats.totalReferrals,
     total_acumulado: statsData.stats.totalCredits,
     total_pago: (statsData as any).payouts?.paid ?? 0,
@@ -102,9 +114,7 @@ const PaymentManagement: React.FC = () => {
 
   const loadingCommission = loadingCommissions || loadingStats;
 
-  // Flags para evitar requisições redundantes (can be cleaned up later)
-  const hasLoadedBalanceForUser = useRef<string | null>(null);
-  const hasLoadedRequestsForUser = useRef<string | null>(null);
+
   const [refreshing, setRefreshing] = useState(false);
   const [forceReloadToken, setForceReloadToken] = useState(0);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
@@ -704,7 +714,7 @@ const PaymentManagement: React.FC = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller Code</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Student Fee Paid</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
                     </tr>
@@ -718,8 +728,8 @@ const PaymentManagement: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {row.fee_type}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-700 font-mono">{row.affiliate_code}</span>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {sellerMap[row.affiliate_code?.toUpperCase()] || '—'} - {row.affiliate_code}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">{formatCurrency(row.payment_amount)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right text-blue-600">{formatCurrency(row.commission_amount)}</td>

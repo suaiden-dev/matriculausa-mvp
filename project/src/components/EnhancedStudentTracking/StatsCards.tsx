@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, Users, BarChart3, UserCheck, UserX } from 'lucide-react';
+import { DollarSign, Users, UserCheck, UserX } from 'lucide-react';
 
 interface StatsCardsProps {
   filteredStudents: any[];
@@ -21,10 +21,9 @@ const StatsCards: React.FC<StatsCardsProps> = ({ allStudents, commissions = [] }
   const registeredOnlyStudents = allStudents.filter(s => !s.has_paid_selection_process_fee);
 
   const totalCommission = commissions.reduce((sum, comm) => sum + (Number(comm.amount) || 0), 0);
-  const avgCommissionPerStudent = paidStudents.length > 0 ? totalCommission / paidStudents.length : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Estudantes que pagaram */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between">
@@ -85,21 +84,6 @@ const StatsCards: React.FC<StatsCardsProps> = ({ allStudents, commissions = [] }
         </div>
       </div>
 
-      {/* Média de Comissão por Aluno Pago */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-600">Avg. Commission</p>
-            <p className="text-3xl font-bold text-teal-600 mt-1">
-              {formatCurrency(avgCommissionPerStudent)}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">Per paid student</p>
-          </div>
-          <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-            <BarChart3 className="h-6 w-6 text-teal-600" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
