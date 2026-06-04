@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
+import { Paperclip } from 'lucide-react';
 
 interface DocumentRequest {
   id: string;
@@ -647,7 +648,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                 <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="global-attachment">Attachment</label>
                 <div className="flex items-center gap-3">
                   <label htmlFor="global-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" /></svg>
+                    <Paperclip className="h-5 w-5" />
                     <span>{newRequest.attachment ? 'Change file' : 'Select file'}</span>
                     <input
                       id="global-attachment"
@@ -876,7 +877,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                 <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-attachment">Attachment</label>
                 <div className="flex items-center gap-3">
                   <label htmlFor="edit-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" /></svg>
+                    <Paperclip className="h-5 w-5" />
                     <span>{editForm.attachment ? 'Change file' : 'Select file'}</span>
                     <input
                       id="edit-attachment"

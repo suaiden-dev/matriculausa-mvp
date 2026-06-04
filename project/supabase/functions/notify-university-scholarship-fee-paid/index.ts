@@ -132,19 +132,19 @@ Deno.serve(async (req) => {
     if (isApprovedByUniversity) {
       if (applicationFeePaid) {
         // Student approved and both fees paid
-        mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student has paid both fees and is ready for enrollment. Please access the Students page to track the process.`;
-        redirectUrl = '/school/dashboard/students';
+        mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student has paid both fees and is ready for enrollment. Please access the student's details page to track the process.`;
+        redirectUrl = `/school/dashboard/student/${applicationData.id}`;
         tipoNotf = 'Approved Student - Scholarship Fee Paid (Both Fees Paid)';
       } else {
         // Student approved, Scholarship Fee paid, but Application Fee pending (rare case)
-        mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student still needs to pay the Application Fee ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount / 100).toFixed(2) : '350.00'}) to complete the process. Please access the Students page to track the progress.`;
-        redirectUrl = '/school/dashboard/students';
+        mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student still needs to pay the Application Fee ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount / 100).toFixed(2) : '350.00'}) to complete the process. Please access the student's details page to track the progress.`;
+        redirectUrl = `/school/dashboard/student/${applicationData.id}`;
         tipoNotf = 'Approved Student - Scholarship Fee Paid (Application Fee Pending)';
       }
     } else {
       // Student not yet approved - redirect to Selection Process
-      mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the Selection Process page to review the application.`;
-      redirectUrl = '/school/dashboard/selection-process';
+      mensagem = `Student ${alunoData.full_name} has completed the Scholarship Fee payment ($400.00) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the student's details page to review the application.`;
+      redirectUrl = `/school/dashboard/student/${applicationData.id}`;
       tipoNotf = 'Student Awaiting Approval - Scholarship Fee Paid';
     }
 

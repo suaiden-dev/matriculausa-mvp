@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useUniversityLogos } from '../hooks/useUniversityLogos';
 import SmartChat from '../components/SmartChat';
 import {
@@ -16,8 +15,20 @@ import {
 } from '../components/ForUniversities';
 
 const ForUniversities: React.FC = () => {
+  const navigate = useNavigate();
   const { universities, loading } = useUniversityLogos();
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+  useEffect(() => {
+    const isLocalhost = 
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1' || 
+      window.location.hostname === '[::1]';
+    
+    if (!isLocalhost) {
+      navigate('/register?tab=university');
+    }
+  }, [navigate]);
 
   // Função para scroll suave para uma seção
   const scrollToSection = (sectionId: string) => {

@@ -27,8 +27,8 @@ const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
               <li><Link to="/how-it-works" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
-              <li><Link to="/for-students" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.forStudents')}</Link></li>
-              <li><Link to="/for-universities" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.title')}</Link></li>
+              {/* <li><Link to="/for-students" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.forStudents')}</Link></li> */}
+              {/* <li><Link to="/for-universities" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.title')}</Link></li> */}
             </ul>
           </div>
 
@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
               <li><Link to="/scholarships" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.scholarships')}</Link></li>
               <li><Link to="/schools" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
               <li><Link to="/matricula-rewards" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.matriculaRewards')}</Link></li>
-              <li><Link to="/affiliate/register" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.becomeAffiliate')}</Link></li>
+              <li><Link to="/affiliate" className="text-slate-600 hover:text-[#05294E] transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.becomeAffiliate')}</Link></li>
             </ul>
           </div>
 

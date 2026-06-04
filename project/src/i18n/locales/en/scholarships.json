@@ -213,7 +213,8 @@
       "annualCost": "Annual Investment",
       "withScholarship": "With Scholarship",
       "perYear": "/year",
-      "annualSavings": "Annual Savings"
+      "annualSavings": "Annual Savings",
+      "situationalFees": "Situational Fees"
     },
     "frequencies": {
       "oneTime": "One-time",

@@ -313,6 +313,8 @@ Deno.serve(async (req) => {
       );
     }
 
+    const resolvedRedirectUrl = redirectUrl || (applicationId ? `/school/dashboard/student/${applicationId}` : "/school/dashboard/application-tracking");
+
     // 6. Send to n8n Webhook
     const n8nPayload = {
       tipo_notf: tipoNotf,
@@ -322,7 +324,7 @@ Deno.serve(async (req) => {
       nome_universidade: university.name,
       email_universidade: emailUniversidade,
       o_que_enviar: formattedMessage,
-      redirect_url: redirectUrl || "/school/dashboard/students",
+      redirect_url: resolvedRedirectUrl,
       application_id: applicationId,
       student_id: studentId,
       scholarship_id: scholarshipId,
@@ -357,7 +359,7 @@ Deno.serve(async (req) => {
       type: "system_event",
       idempotency_key: idempotencyKey,
       metadata: n8nPayload,
-      link: redirectUrl || "/school/dashboard/students"
+      link: resolvedRedirectUrl
     });
 
     if (logError) {

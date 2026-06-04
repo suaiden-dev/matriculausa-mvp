@@ -1,37 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { 
+import {
   Coins,
-  Users,
-  GraduationCap,
-  Gift,
   ArrowRight,
+  CheckCircle,
+  ChevronDown,
+  Mail,
   Share2,
-  Play,
-  Sparkles,
   DollarSign,
-  BookOpen,
-  Copy
+  ArrowDownToLine,
+  MessageCircle,
+  Copy,
+  Link2
 } from 'lucide-react';
-import { 
+import {
   AffiliateCode
 } from '../types';
+
+// Número que conta suavemente até o valor alvo
+const AnimatedNumber: React.FC<{ value: number; prefix?: string }> = ({ value, prefix = '' }) => {
+  const count = useMotionValue(value);
+  const rounded = useTransform(count, (latest) => `${prefix}${Math.round(latest).toLocaleString()}`);
+
+  useEffect(() => {
+    const controls = animate(count, value, { duration: 0.6, ease: 'easeOut' });
+    return controls.stop;
+  }, [value, count]);
+
+  return <motion.span>{rounded}</motion.span>;
+};
 
 const MatriculaRewardsLanding: React.FC = () => {
   const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [isVisible, setIsVisible] = useState(false);
   const [calculatorFriends, setCalculatorFriends] = useState(5);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [userAffiliateCode, setUserAffiliateCode] = useState<AffiliateCode | null>(null);
-
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
 
   // Carregar código de afiliado se usuário estiver logado
   useEffect(() => {
@@ -93,49 +101,6 @@ const MatriculaRewardsLanding: React.FC = () => {
   //   { number: "$500K+", label: t('matriculaRewardsLanding.stats.discountsGiven'), icon: Gift },
   //   { number: "95%", label: t('matriculaRewardsLanding.stats.satisfactionRate'), icon: Star }
   // ];
-
-  const howItWorksSteps = [
-    {
-      number: "01",
-      icon: Share2,
-      title: t('matriculaRewardsLanding.howItWorks.steps.step1.title'),
-      description: t('matriculaRewardsLanding.howItWorks.steps.step1.description'),
-      details: t('matriculaRewardsLanding.howItWorks.steps.step1.details'),
-      color: "from-blue-500 to-cyan-500",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600"
-    },
-    {
-      number: "02", 
-      icon: Users,
-      title: t('matriculaRewardsLanding.howItWorks.steps.step2.title'),
-      description: t('matriculaRewardsLanding.howItWorks.steps.step2.description'),
-      details: t('matriculaRewardsLanding.howItWorks.steps.step2.details'),
-      color: "from-purple-500 to-pink-500",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600"
-    },
-    {
-      number: "03",
-      icon: Coins,
-      title: t('matriculaRewardsLanding.howItWorks.steps.step3.title'),
-      description: t('matriculaRewardsLanding.howItWorks.steps.step3.description'),
-      details: t('matriculaRewardsLanding.howItWorks.steps.step3.details'),
-      color: "from-green-500 to-emerald-500",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600"
-    },
-    {
-      number: "04",
-      icon: GraduationCap,
-      title: t('matriculaRewardsLanding.howItWorks.steps.step4.title'),
-      description: t('matriculaRewardsLanding.howItWorks.steps.step4.description'),
-      details: t('matriculaRewardsLanding.howItWorks.steps.step4.details'),
-      color: "from-orange-500 to-red-500",
-      bgColor: "bg-orange-50",
-      iconColor: "text-orange-600"
-    }
-  ];
 
   // const benefits = [
   //   {
@@ -199,31 +164,7 @@ const MatriculaRewardsLanding: React.FC = () => {
         navigate('/student/dashboard/rewards');
       }
     } else {
-      navigate('/affiliate/register');
-    }
-  };
-
-  const scrollToHowItWorks = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ 
-      behavior: 'smooth' 
-    });
-  };
-
-  const copyReferralCode = async () => {
-    if (userAffiliateCode) {
-      try {
-        const shareUrl = `${window.location.origin}?ref=${userAffiliateCode.code}`;
-        await navigator.clipboard.writeText(shareUrl);
-        setCopiedCode(true);
-        setTimeout(() => setCopiedCode(false), 2000);
-      } catch (error) {
-        console.error('Erro ao copiar:', error);
-      }
-    } else {
-      // Fallback para usuários não logados
-      navigator.clipboard.writeText(t('matriculaRewardsLanding.hero.demo.referralCode.code'));
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+      navigate('/register');
     }
   };
 
@@ -234,162 +175,127 @@ const MatriculaRewardsLanding: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
-        {/* Background Image - University campus scene to reinforce educational context */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* University campus image */}
-          <img 
-            src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-            alt="University Campus Background"
-            className="w-full h-[110%] object-cover opacity-12 blur-sm transition-all duration-700 hover:opacity-8 transform scale-105"
-            style={{ objectPosition: 'center 30%' }}
-            onError={(e) => {
-              // Fallback se a imagem não carregar
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
+    <div className="relative min-h-screen bg-white overflow-hidden">
+      {/* Efeito de luminosidade vermelho no topo */}
+      <div className="absolute inset-x-0 top-0 h-[900px] z-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/4 w-[1000px] h-[700px] bg-red-500/20 rounded-full blur-[150px]"></div>
+        <div className="absolute top-[200px] left-1/4 w-[600px] h-[500px] bg-[#D0151C]/12 rounded-full blur-[130px]"></div>
+        <div className="absolute top-[200px] right-1/4 w-[600px] h-[500px] bg-rose-400/20 rounded-full blur-[130px]"></div>
+      </div>
+
+      {/* Hero header — transparente */}
+      <section className="relative pt-20 pb-24 lg:pt-24 lg:pb-28 overflow-hidden">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] leading-tight tracking-tight">
+            {t('matriculaRewardsLanding.hero.title')}
+            <span className="block text-[#05294E] mt-1">
+              {t('matriculaRewardsLanding.hero.titleHighlight')}
+            </span>
+            <span className="block text-[#05294E] mt-1">
+              {t('matriculaRewardsLanding.hero.subtitle')}
+            </span>
+          </h1>
+          <p 
+            className="text-lg lg:text-xl text-[#05294E]/70 mt-4 max-w-2xl mx-auto leading-relaxed font-medium"
+            dangerouslySetInnerHTML={{ __html: t('matriculaRewardsLanding.hero.description') }}
           />
-          
-          {/* Multi-layer gradient overlay for optimal text contrast and visual hierarchy */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/85 via-blue-50/65 to-indigo-50/75"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-50/30 via-transparent to-slate-50/20"></div>
+          <button
+            onClick={handleGetStarted}
+            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full border border-[#05294E]/20 text-[#05294E] text-sm font-semibold hover:bg-[#05294E]/5 transition-colors"
+          >
+            {t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
+      </section>
 
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-slate-200/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+      {/* Showcase — prova social estilo "céu" */}
+      <section className="relative z-10 py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative rounded-3xl bg-gradient-to-br from-[#D0151C] via-[#b01016] to-[#7a0a0f] overflow-x-clip overflow-y-visible lg:overflow-visible lg:min-h-[560px] flex flex-col lg:block">
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-2xl border border-blue-100/50">
-              <Sparkles className="h-4 w-4 animate-pulse" />
-              {t('matriculaRewardsLanding.badge')}
+            {/* Glows de iluminação dentro do painel */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-400/25 rounded-full blur-[120px]"></div>
+              <div className="absolute bottom-0 -left-24 w-[450px] h-[450px] bg-red-500/20 rounded-full blur-[110px]"></div>
+              <div className="absolute -bottom-20 -right-24 w-[450px] h-[450px] bg-rose-400/15 rounded-full blur-[110px]"></div>
             </div>
 
-            {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-8 leading-tight">
-              <span className="text-gray-900 drop-shadow-sm">
-                {t('matriculaRewardsLanding.hero.title')}
-              </span>
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm">
-                {t('matriculaRewardsLanding.hero.titleHighlight')}
-              </span>
-              <span className="block text-3xl sm:text-4xl lg:text-5xl text-gray-700 font-medium mt-2 drop-shadow-sm">
-                {t('matriculaRewardsLanding.hero.subtitle')}
-              </span>
-            </h1>
-
-            {/* Subtitle */}
-
-            {/* Value Proposition Cards */}
-            {!user || !userAffiliateCode ? (
-              // 3 cards in a row when user is not logged in
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Share2 className="h-6 w-6 text-blue-600" />
+            {/* Cards — diferenciais */}
+            <div className="relative z-10 order-4 flex flex-col items-start gap-3 sm:gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:p-0 lg:absolute lg:left-8 lg:top-1/2 lg:-translate-y-1/2 lg:w-auto">
+              {[
+                t('matriculaRewardsLanding.hero.valueCards.referFriends.title'),
+                t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title'),
+                t('matriculaRewardsLanding.hero.valueCards.payLess.title'),
+              ].map((title, i) => (
+                <motion.div
+                  key={title}
+                  initial={{ opacity: 0, x: -40 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 + i * 0.15 }}
+                  style={{ ['--ml' as any]: `${i * 1.5}rem` }}
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-2xl rounded-2xl px-6 py-5 sm:px-7 sm:py-6 ml-[var(--ml)] lg:ml-[calc(var(--ml)*1.66)]"
+                >
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.referFriends.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
-                </div>
-                
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Coins className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.description')}</p>
-                </div>
-                
-                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <GraduationCap className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.payLess.title')}</h3>
-                  <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.payLess.description')}</p>
-                </div>
-              </div>
-            ) : (
-              // 2+2 layout when user is logged in
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <Share2 className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.referFriends.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
-                  </div>
-                  
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <Coins className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.description')}</p>
-                  </div>
-                </div>
-
-                {/* Pay Less Card + Referral Code Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-                  {/* Pay Less Card */}
-                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                      <GraduationCap className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{t('matriculaRewardsLanding.hero.valueCards.payLess.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.payLess.description')}</p>
-                  </div>
-
-                  {/* Referral Code Section */}
-                  <div className="bg-blue-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-xl">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-                    <div className="relative text-center">
-                      <h4 className="font-semibold mb-3 text-blue-100">{t('matriculaRewardsLanding.hero.demo.referralCode.title')}</h4>
-                      <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center mb-4">
-                        <span className="text-2xl font-bold tracking-wider">{userAffiliateCode.code}</span>
-                      </div>
-                      <button 
-                        onClick={copyReferralCode}
-                        className="w-full bg-white/20 hover:bg-white/30 rounded-lg py-2 px-3 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                      >
-                        <Copy className="h-4 w-4" />
-                        {copiedCode ? t('matriculaRewardsLanding.hero.demo.referralCode.copied') : t('matriculaRewardsLanding.hero.demo.referralCode.copy')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-              <button
-                onClick={handleGetStarted}
-                className="group bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-3xl"
-              >
-                {t('matriculaRewardsLanding.hero.cta.getStarted')}
-                <ArrowRight className="inline-block ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-              </button>
-              <button
-                onClick={scrollToHowItWorks}
-                className="group bg-white/90 backdrop-blur-sm text-gray-700 px-10 py-5 rounded-2xl font-bold text-lg border-2 border-gray-200 hover:border-blue-300 hover:text-blue-600 transition-all duration-300 shadow-xl"
-              >
-                <Play className="inline-block mr-3 h-6 w-6" />
-                {t('matriculaRewardsLanding.hero.cta.learnMore')}
-              </button>
+                  <p className="font-bold text-white text-base sm:text-lg leading-snug lg:whitespace-nowrap">{title}</p>
+                </motion.div>
+              ))}
             </div>
 
+            {/* Cards — estatísticas */}
+            <div className="relative z-20 order-3 -mt-14 sm:-mt-[4.5rem] flex flex-col gap-3 sm:gap-4 px-6 pb-6 sm:px-8 sm:pb-8 lg:mt-0 lg:p-0 lg:absolute lg:right-8 lg:top-10 lg:w-auto lg:max-w-[260px]">
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.3 }}
+                className="bg-white rounded-2xl px-6 py-5 sm:px-7 sm:py-6 shadow-lg"
+              >
+                <p className="text-4xl sm:text-5xl font-black text-[#05294E] leading-none">100</p>
+                <p className="text-slate-500 text-sm sm:text-base mt-2 leading-snug">
+                  {t('matriculaRewardsLanding.howItWorks.calculator.coinsPerFriend')} {t('matriculaRewardsLanding.howItWorks.calculator.perFriend')}
+                </p>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.45 }}
+                className="bg-white rounded-2xl px-6 py-5 sm:px-7 sm:py-6 shadow-lg"
+              >
+                <div className="flex -space-x-2 mb-3">
+                  {[
+                    'https://i.pravatar.cc/64?img=12',
+                    'https://i.pravatar.cc/64?img=32',
+                    'https://i.pravatar.cc/64?img=45',
+                    'https://i.pravatar.cc/64?img=68',
+                  ].map((src) => (
+                    <img key={src} src={src} alt="" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-white object-cover" />
+                  ))}
+                </div>
+                <p className="text-slate-700 text-sm sm:text-base leading-snug">
+                  <strong className="text-[#05294E]">300+</strong> {t('matriculaRewardsLanding.stats.activeStudents')}
+                </p>
+              </motion.div>
+            </div>
 
+            {/* Imagem — afiliadas (transbordando pelo topo no mobile e no desktop) */}
+            <div className="relative z-[1] order-2 -mt-48 flex justify-center overflow-x-clip overflow-y-visible lg:mt-0 lg:overflow-visible lg:absolute lg:inset-x-0 lg:bottom-0 pointer-events-none">
+              <motion.img
+                src="/indicacao.png"
+                alt="Indicação MatriculaUSA"
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+                className="block w-auto max-w-none h-[26rem] object-contain object-bottom lg:h-[48rem]"
+              />
+            </div>
           </div>
         </div>
-
       </section>
 
       {/* Stats Section */}
@@ -410,288 +316,218 @@ const MatriculaRewardsLanding: React.FC = () => {
       </section> */}
 
       {/* How It Works Section - Mobile Optimized */}
-      <section id="how-it-works" className="py-16 md:py-24 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 relative overflow-hidden">
-        {/* Simplified Background for Mobile */}
+      <section id="how-it-works" className="py-16 md:py-24 relative overflow-hidden">
+        {/* Floating elements - only on desktop */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/40"></div>
-          {/* Simplified floating elements - only on desktop */}
           <div className="hidden md:block absolute top-1/4 left-1/4 w-2 h-2 bg-blue-300/40 rounded-full animate-pulse"></div>
           <div className="hidden md:block absolute top-3/4 right-1/4 w-1 h-1 bg-indigo-300/50 rounded-full animate-ping"></div>
           <div className="hidden md:block absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-slate-300/30 rounded-full animate-bounce"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 md:mb-20">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">
+          {/* Título */}
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#05294E] tracking-tight">
               {t('matriculaRewardsLanding.howItWorks.title')}
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              {t('matriculaRewardsLanding.howItWorks.subtitle')}
-            </p>
           </div>
 
-          {/* Mobile-First Steps Layout */}
-          <div className="relative max-w-6xl mx-auto">
-            {/* Desktop Journey Path Line */}
-            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300/50 to-transparent transform -translate-y-1/2"></div>
-            
-            {/* Mobile: Vertical Stack, Desktop: Horizontal Grid */}
-            <div className="space-y-8 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 lg:gap-8">
-              {howItWorksSteps.map((step, index) => (
-                <div key={index} className="group relative">
-                  {/* Step Number Circle - Mobile Optimized */}
-                  <div className="relative mb-6 md:mb-8">
-                    <div className="w-16 h-16 md:w-20 md:h-20 mx-auto relative">
-                      {/* Simplified Ring for Mobile */}
-                      <div className="absolute inset-0 rounded-full border-2 border-gray-300/50 md:group-hover:border-blue-400/60 transition-all duration-700"></div>
-                      <div className="absolute inset-2 rounded-full border border-gray-400/60 md:group-hover:border-blue-500/70 transition-all duration-700 md:group-hover:animate-pulse"></div>
-                      
-                      {/* Number */}
-                      <div className="absolute inset-3 md:inset-4 rounded-full bg-white text-gray-700 flex items-center justify-center font-bold text-lg md:text-xl md:group-hover:bg-blue-500 md:group-hover:text-white transition-all duration-300 shadow-lg">
-                        {index + 1}
+          {/* Grid de cards com mockups */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+            {[
+              {
+                title: t('matriculaRewardsLanding.howItWorks.cards.step1Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step1Desc'),
+                mockup: (
+                  <div className="w-full space-y-3 text-left">
+                    <div className="bg-slate-50 border-2 border-dashed border-[#05294E]/20 rounded-xl px-3 py-2.5 text-center">
+                      <span className="text-base font-black text-[#05294E] tracking-[0.15em]">{userAffiliateCode?.code || 'MUSA-7K3D'}</span>
+                    </div>
+                    <button disabled className="w-full bg-[#05294E] text-white py-2 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default">
+                      <CheckCircle className="w-3 h-3" />
+                      {t('matriculaRewardsLanding.howItWorks.cards.codeCopied')}
+                    </button>
+                  </div>
+                ),
+              },
+              {
+                title: t('matriculaRewardsLanding.howItWorks.cards.step2Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step2Desc'),
+                mockup: (
+                  <div className="w-full space-y-3 text-left">
+                    {/* Campo do link com botão copiar */}
+                    <div>
+                      <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{t('matriculaRewardsLanding.howItWorks.cards.referralLink')}</p>
+                      <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl pl-2.5 pr-1.5 py-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                        <span className="text-[9px] font-bold text-slate-700 truncate flex-1">matriculausa.com/r/{userAffiliateCode?.code || 'MUSA-7K3D'}</span>
+                        <button disabled className="flex items-center gap-1 bg-[#05294E] text-white px-2 py-1 rounded-lg text-[7px] font-black uppercase tracking-wider cursor-default flex-shrink-0">
+                          <Copy className="w-2.5 h-2.5" />
+                          {t('matriculaRewardsLanding.howItWorks.cards.copy')}
+                        </button>
                       </div>
-                      
-                      {/* Progress Indicator - Desktop Only */}
-                      <div className="hidden md:block absolute -inset-1 rounded-full border-2 border-transparent md:group-hover:border-blue-500/50 transition-all duration-500 md:group-hover:animate-spin"></div>
                     </div>
 
-                    {/* Desktop Connecting Line */}
-                    {index < howItWorksSteps.length - 1 && (
-                      <div className="hidden lg:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-white/20 to-transparent transform translate-x-1/2 md:group-hover:from-blue-400/50 transition-all duration-700"></div>
-                    )}
-                  </div>
+                    {/* Botões de canal */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'WhatsApp', icon: MessageCircle, color: 'bg-green-50 text-green-600' },
+                        { label: 'E-mail', icon: Mail, color: 'bg-blue-50 text-blue-600' },
+                        { label: t('matriculaRewardsLanding.howItWorks.cards.more'), icon: Share2, color: 'bg-slate-50 text-slate-600' },
+                      ].map(({ label, icon: ChannelIcon, color }) => (
+                        <div key={label} className={`rounded-xl ${color} flex flex-col items-center justify-center py-2.5 gap-1`}>
+                          <ChannelIcon className="w-4 h-4" />
+                          <span className="text-[7px] font-black uppercase tracking-wider">{label}</span>
+                        </div>
+                      ))}
+                    </div>
 
-                  {/* Content Card - Mobile Optimized */}
-                  <div className="bg-white/90 md:bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-6 border border-gray-200 md:group-hover:bg-white md:group-hover:border-blue-300 transition-all duration-500 md:group-hover:-translate-y-2 shadow-lg">
-                    {/* Step Title */}
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 text-center md:group-hover:text-blue-600 transition-colors duration-300">
-                      {step.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="text-sm md:text-base text-gray-600 text-center mb-4 md:mb-6 leading-relaxed">
-                      {step.description}
-                    </p>
-                    
-                    {/* Key Point */}
-                    <div className="bg-blue-50 rounded-xl p-3 md:p-4 border border-blue-100 md:group-hover:bg-blue-100 md:group-hover:border-blue-200 transition-all duration-300">
-                      <p className="text-xs md:text-sm text-gray-700 font-medium text-center">
-                        {step.details}
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50 rounded-xl px-2.5 py-2 text-center">
+                        <p className="text-sm font-black text-[#05294E] leading-none">12</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('matriculaRewardsLanding.howItWorks.cards.invitesSent')}</p>
+                      </div>
+                      <div className="bg-emerald-50/60 rounded-xl px-2.5 py-2 text-center">
+                        <p className="text-sm font-black text-emerald-600 leading-none">8</p>
+                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t('matriculaRewardsLanding.howItWorks.cards.linkClicks')}</p>
+                      </div>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: t('matriculaRewardsLanding.howItWorks.cards.step3Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step3Desc'),
+                mockup: (
+                  <div className="w-full space-y-3 text-left">
+                    {/* Resultados — atualizam em tempo real */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <Coins className="w-3 h-3 text-yellow-500" />
+                          <span className="text-[7px] font-bold uppercase tracking-wider">{t('matriculaRewardsLanding.howItWorks.cards.coinsEarned')}</span>
+                        </div>
+                        <p className="text-xl font-black text-[#05294E] tabular-nums leading-tight mt-0.5">
+                          <AnimatedNumber value={calculateSavings(calculatorFriends).coins} />
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50/60 rounded-xl px-3 py-2.5 border border-emerald-100">
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          <span className="text-[7px] font-bold uppercase tracking-wider">{t('matriculaRewardsLanding.howItWorks.cards.discount')}</span>
+                        </div>
+                        <p className="text-xl font-black text-emerald-600 tabular-nums leading-tight mt-0.5">
+                          <AnimatedNumber value={calculateSavings(calculatorFriends).dollars} prefix="$" />
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Slider — controla o número de amigos */}
+                    <div className="bg-slate-50 rounded-xl px-3 py-3 border border-slate-100">
+                      <input
+                        type="range"
+                        min="1"
+                        max="50"
+                        value={calculatorFriends}
+                        onChange={(e) => setCalculatorFriends(parseInt(e.target.value))}
+                        className="w-full h-2 rounded-full appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, #D0151C 0%, #D0151C ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
+                        }}
+                      />
+                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider mt-2 text-center">
+                        <span className="text-[#05294E] tabular-nums">{calculatorFriends}</span> {t('matriculaRewardsLanding.howItWorks.cards.friendsReferred')}
+                      </p>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: t('matriculaRewardsLanding.howItWorks.cards.step4Title'),
+                desc: t('matriculaRewardsLanding.howItWorks.cards.step4Desc'),
+                mockup: (
+                  <div className="w-full rounded-2xl overflow-hidden text-left">
+                    {/* Header — saldo disponível em dólares (verde) */}
+                    <div className="bg-gradient-to-br from-emerald-500 to-green-600 px-4 py-3.5 text-white rounded-2xl shadow-md shadow-green-500/20">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[7px] font-bold uppercase tracking-widest text-white/80">{t('matriculaRewardsLanding.howItWorks.cards.availableBalance')}</p>
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-wider">USD</span>
+                      </div>
+                      <div className="flex items-end gap-1 mt-1">
+                        <DollarSign className="w-5 h-5 mb-0.5" />
+                        <span className="text-3xl font-black leading-none tabular-nums">
+                          <AnimatedNumber value={calculateSavings(calculatorFriends).dollars} />.00
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1.5 text-white/80">
+                        <Coins className="w-3 h-3 text-yellow-300" />
+                        <span className="text-[8px] font-bold">{calculateSavings(calculatorFriends).coins.toLocaleString('pt-BR')} {t('matriculaRewardsLanding.howItWorks.cards.coins')} · {t('matriculaRewardsLanding.howItWorks.cards.coinValueText')}</span>
+                      </div>
+                    </div>
+
+                    {/* Corpo — aplicar desconto */}
+                    <div className="pt-3 space-y-2.5">
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <ArrowDownToLine className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-[9px] font-black text-slate-800">{t('matriculaRewardsLanding.howItWorks.cards.applyTuition')}</span>
+                        </div>
+                        <span className="text-[9px] font-black text-emerald-600">-${calculateSavings(calculatorFriends).dollars.toLocaleString('pt-BR')}.00</span>
+                      </div>
+                      <button disabled className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-default shadow-md shadow-green-500/20">
+                        <ArrowDownToLine className="w-3 h-3" />
+                        {t('matriculaRewardsLanding.howItWorks.cards.useDiscount')}
+                      </button>
+                    </div>
+                  </div>
+                ),
+              },
+            ].map(({ title, desc, mockup }, i) => {
+              const isLarge = i === 1 || i === 2;
+              return (
+                <motion.div
+                  key={title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.12 }}
+                  className={`relative h-full bg-white rounded-3xl border border-slate-200/70 shadow-[0_10px_40px_rgba(0,0,0,0.05)] p-7 hover:shadow-[0_20px_50px_rgba(5,41,78,0.10)] hover:-translate-y-1 transition-all duration-300 ${
+                    isLarge ? 'lg:col-span-3' : 'lg:col-span-2'
+                  }`}
+                >
+                  <div className={`relative h-full flex flex-col ${isLarge ? 'lg:flex-row lg:items-center lg:gap-7' : ''}`}>
+                    {/* Texto */}
+                    <div className={isLarge ? 'order-2 lg:order-1 lg:flex-1' : ''}>
+                      <h3 className="text-xl md:text-2xl font-bold text-[#05294E] tracking-tight leading-snug mb-2.5">
+                        {title}
+                      </h3>
+                      <p className="text-base md:text-lg text-slate-400 leading-relaxed font-medium">
+                        {desc}
                       </p>
                     </div>
 
-                    {/* Mobile Action Button */}
-                    {/* <div className="mt-4 md:hidden">
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
-                          →
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1 font-medium">
-                          {index === 0 && t('matriculaRewardsLanding.howItWorks.actions.shareNow')}
-                          {index === 1 && t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
-                          {index === 2 && t('matriculaRewardsLanding.howItWorks.actions.seeEarnings')}
-                          {index === 3 && t('matriculaRewardsLanding.howItWorks.actions.useDiscount')}
-                        </p>
-                      </div>
-                    </div> */}
-
-                    {/* Desktop Hover Effect */}
-                    <div className="hidden md:block mt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
-                      <div className="text-center">
-                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 animate-bounce">
-                          →
-                        </div>
-                        <p className="text-xs text-blue-600 mt-1">
-                          {index === 0 && t('matriculaRewardsLanding.howItWorks.actions.shareNow')}
-                          {index === 1 && t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
-                          {index === 2 && t('matriculaRewardsLanding.howItWorks.actions.seeEarnings')}
-                          {index === 3 && t('matriculaRewardsLanding.howItWorks.actions.useDiscount')}
-                        </p>
-                      </div>
+                    {/* Mockup ilustrativo */}
+                    <div className={`relative ${isLarge ? 'order-1 lg:order-2 mb-5 lg:mb-0 lg:w-1/2 lg:flex-shrink-0' : 'mt-8'}`}>
+                      {mockup}
                     </div>
                   </div>
-
-
-                </div>
-              ))}
-            </div>
-
-            {/* Success Animation - Mobile Optimized */}
-            <div className="mt-12 md:mt-16 text-center">
-              <div className="inline-flex items-center gap-3 md:gap-4 bg-green-50 backdrop-blur-sm rounded-full px-6 md:px-8 py-3 md:py-4 border border-green-200">
-                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
-                  ✓
-                </div>
-                <span className="text-sm md:text-base text-green-700 font-medium">{t('matriculaRewardsLanding.howItWorks.journey.startMessage')}</span>
-              </div>
-            </div>
+                </motion.div>
+              );
+            })}
           </div>
 
-          {/* Interactive Calculator - Mobile Optimized */}
-          <div className="mt-12 md:mt-20 bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-8 lg:p-12 border border-gray-100 shadow-2xl">
-            {/* Calculator Header */}
-            <div className="text-center mb-6 md:mb-8">
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 md:mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
-              <p className="text-gray-600 text-sm md:text-base">{t('matriculaRewardsLanding.howItWorks.calculator.description')}</p>
-            </div>
-
-            <div className="max-w-4xl mx-auto">
-              {/* Mobile Calculator Layout - Enhanced */}
-              <div className="md:hidden space-y-6">
-                {/* Mobile Calculator Input - Improved */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
-                  <label className="block text-base font-bold text-gray-800 mb-4 text-center">
-                    {t('matriculaRewardsLanding.howItWorks.calculator.label')}
-                  </label>
-                  
-                  {/* Current Value Display - More Prominent */}
-                  <div className="text-center mb-5">
-                    <div className="inline-flex items-center gap-3 bg-white rounded-2xl px-5 py-3 shadow-lg border border-blue-200">
-                      <Users className="h-5 w-5 text-blue-500" />
-                      <span className="text-3xl font-bold text-blue-600">{calculatorFriends}</span>
-                      <span className="text-gray-600 font-medium text-sm">{t('matriculaRewardsLanding.howItWorks.calculator.friends')}</span>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Slider */}
-                  <div className="relative px-1">
-                    <input
-                      type="range"
-                      min="1"
-                      max="50"
-                      value={calculatorFriends}
-                      onChange={(e) => setCalculatorFriends(parseInt(e.target.value))}
-                      className="w-full h-4 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg appearance-none cursor-pointer slider"
-                      style={{
-                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
-                      }}
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-                      <span className="font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.minValue')}</span>
-                      <span className="font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.maxValue')}</span>
-                    </div>
-                  </div>
-
-                  {/* Quick Select Buttons - Improved */}
-                  <div className="grid grid-cols-4 gap-2 mt-4">
-                    {[5, 10, 20, 50].map((value) => (
-                      <button
-                        key={value}
-                        onClick={() => setCalculatorFriends(value)}
-                        className={`px-2 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          calculatorFriends === value 
-                            ? 'bg-blue-500 text-white shadow-lg transform scale-105' 
-                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                        }`}
-                      >
-                        {value}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile Results - Enhanced Layout */}
-                <div className="space-y-4">
-                  {/* Coins Earned - Improved */}
-                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-5 border border-yellow-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                          <Coins className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinsEarned')}</p>
-                          <p className="text-2xl font-bold text-yellow-600">{calculateSavings(calculatorFriends).coins.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinsPerFriend')}</div>
-                        <div className="text-xs text-gray-500">{t('matriculaRewardsLanding.howItWorks.calculator.perFriend')}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Total Savings - Improved */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <DollarSign className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.totalSavings')}</p>
-                          <p className="text-2xl font-bold text-green-600">${calculateSavings(calculatorFriends).dollars}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinValue')}</div>
-                        <div className="text-xs text-gray-500">{t('matriculaRewardsLanding.howItWorks.calculator.usdValue')}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Desktop Calculator Layout */}
-              <div className="hidden md:grid md:grid-cols-2 gap-8 items-center">
-                {/* Calculator Input */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg">
-                  <label className="block text-sm font-semibold text-gray-700 mb-4">
-                    {t('matriculaRewardsLanding.howItWorks.calculator.label')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="range"
-                      min="1"
-                      max="50"
-                      value={calculatorFriends}
-                      onChange={(e) => setCalculatorFriends(parseInt(e.target.value))}
-                      className="w-full h-3 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg appearance-none cursor-pointer slider"
-                      style={{
-                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
-                      }}
-                    />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>{t('matriculaRewardsLanding.howItWorks.calculator.minValue')}</span>
-                      <span>{t('matriculaRewardsLanding.howItWorks.calculator.maxValue')}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-center">
-                    <span className="text-4xl font-bold text-blue-600">{calculatorFriends}</span>
-                    <span className="text-gray-600 ml-2">{t('matriculaRewardsLanding.howItWorks.calculator.friends')}</span>
-                  </div>
-                </div>
-
-                {/* Results */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-3 mx-auto">
-                      <Coins className="h-6 w-6 text-yellow-600" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.coinsEarned')}</p>
-                    <p className="text-2xl font-bold text-yellow-600">{calculateSavings(calculatorFriends).coins.toLocaleString()}</p>
-                  </div>
-                  
-                  <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-3 mx-auto">
-                      <DollarSign className="h-6 w-6 text-green-600" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">{t('matriculaRewardsLanding.howItWorks.calculator.totalSavings')}</p>
-                    <p className="text-2xl font-bold text-green-600">${calculateSavings(calculatorFriends).dollars}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA */}
-              <div className="text-center mt-8">
-                <button
-                  onClick={handleGetStarted}
-                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-2xl border border-white/20"
-                >
-                  {t('matriculaRewardsLanding.howItWorks.calculator.cta')}
-                </button>
-              </div>
-            </div>
+          {/* CTA */}
+          <div className="text-center mt-14">
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex items-center justify-center gap-2 bg-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-[#b01016] transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#D0151C]/25"
+            >
+              {t('matriculaRewardsLanding.howItWorks.calculator.cta')}
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </section>
@@ -752,152 +588,8 @@ const MatriculaRewardsLanding: React.FC = () => {
         </div>
       </section> */}
 
-      
-
-      {/* Final CTA Section - Enhanced */}
-      <section className="relative py-24 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/70 overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-          <div className="absolute top-0 -right-4 w-72 h-72 bg-indigo-100 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-slate-100 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-        </div>
-
-        <div className="relative max-w-6xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          {/* Main Content */}
-          <div className="mb-12">
-            <h2 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-8">
-              {t('matriculaRewardsLanding.finalCta.title')}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"> {t('matriculaRewardsLanding.finalCta.titleHighlight')}</span>
-            </h2>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
-              {t('matriculaRewardsLanding.finalCta.description')}
-            </p>
-          </div>
-
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Primary CTA */}
-            <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <Gift className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('matriculaRewardsLanding.finalCta.cards.startNow.title')}</h3>
-              <p className="text-gray-600 mb-6">
-                {t('matriculaRewardsLanding.finalCta.cards.startNow.description')}
-              </p>
-              <button
-                onClick={handleGetStarted}
-                className="w-full bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-xl"
-              >
-                {t('matriculaRewardsLanding.finalCta.cards.startNow.cta')}
-              </button>
-            </div>
-
-            {/* Secondary CTA */}
-            <div className="bg-white/90 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 hover:bg-white hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 mx-auto group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                <BookOpen className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('matriculaRewardsLanding.finalCta.cards.learnMore.title')}</h3>
-              <p className="text-gray-600 mb-6">
-                {t('matriculaRewardsLanding.finalCta.cards.learnMore.description')}
-              </p>
-              <Link
-                to="/how-it-works"
-                className="w-full inline-block bg-transparent text-gray-700 border-2 border-gray-300 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 text-center"
-              >
-                {t('matriculaRewardsLanding.finalCta.cards.learnMore.cta')}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* QR Code Section - Desktop Only */}
-      <section className="hidden lg:block py-20 bg-white border-t border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Two Column Layout: Text + QR Code */}
-          <div className="grid grid-cols-2 gap-16 items-center">
-            {/* Left Side - Call to Action Text */}
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-6">
-                  {t('matriculaRewardsLanding.howItWorks.qrCode.title')}
-                </h2>
-                <p className="text-xl text-gray-600 leading-relaxed mb-8">
-                  {t('matriculaRewardsLanding.howItWorks.qrCode.subtitle')}
-                </p>
-              </div>
-
-              {/* Benefits List */}
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.description')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.description')}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-3 flex-shrink-0"></div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.title')}</h3>
-                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.description')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side - QR Code */}
-            <div className="flex justify-center">
-              <div className="relative group">
-                {/* Outer Frame */}
-                <div className="absolute -inset-6 bg-gray-50 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* Main Container */}
-                <div className="relative bg-white rounded-2xl p-8 shadow-xl border border-gray-200 group-hover:shadow-2xl transition-all duration-500">
-                  {/* Corner Decorations */}
-                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gray-300 rounded-tl-lg"></div>
-                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gray-300 rounded-tr-lg"></div>
-                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gray-300 rounded-bl-lg"></div>
-                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gray-300 rounded-br-lg"></div>
-                  
-                  {/* QR Code */}
-                  <img 
-                    src="/qr_code_register.svg" 
-                    alt="QR Code para registro"
-                    className="w-80 h-80 mx-auto rounded-xl"
-                  />
-                  
-                  {/* Description */}
-                  <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-600 font-medium mb-2">
-                      {t('matriculaRewardsLanding.howItWorks.qrCode.description')}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {t('matriculaRewardsLanding.howItWorks.qrCode.instruction')}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Floating Elements */}
-                <div className="absolute -top-3 -right-3 w-6 h-6 bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-100"></div>
-                <div className="absolute -bottom-3 -left-3 w-4 h-4 bg-green-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-200"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* FAQ */}
+      <MatriculaRewardsFAQ />
 
       {/* Custom Styles */}
       <style dangerouslySetInnerHTML={{
@@ -946,19 +638,20 @@ const MatriculaRewardsLanding: React.FC = () => {
           .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            background: #3b82f6;
-            height: 20px;
-            width: 20px;
+            background: #D0151C;
+            height: 22px;
+            width: 22px;
             border-radius: 50%;
+            border: 3px solid #ffffff;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 6px rgba(208, 21, 28, 0.4);
             transition: all 0.2s ease;
           }
 
           .slider::-webkit-slider-thumb:hover {
-            background: #2563eb;
-            transform: scale(1.1);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            background: #b01016;
+            transform: scale(1.15);
+            box-shadow: 0 4px 10px rgba(208, 21, 28, 0.5);
           }
 
           .slider::-moz-range-track {
@@ -969,20 +662,20 @@ const MatriculaRewardsLanding: React.FC = () => {
           }
 
           .slider::-moz-range-thumb {
-            background: #3b82f6;
-            height: 20px;
-            width: 20px;
+            background: #D0151C;
+            height: 22px;
+            width: 22px;
             border-radius: 50%;
+            border: 3px solid #ffffff;
             cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 6px rgba(208, 21, 28, 0.4);
             transition: all 0.2s ease;
           }
 
           .slider::-moz-range-thumb:hover {
-            background: #2563eb;
-            transform: scale(1.1);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            background: #b01016;
+            transform: scale(1.15);
+            box-shadow: 0 4px 10px rgba(208, 21, 28, 0.5);
           }
 
           /* Mobile touch improvements */
@@ -1008,6 +701,73 @@ const MatriculaRewardsLanding: React.FC = () => {
         `
       }} />
     </div>
+  );
+};
+
+const MatriculaRewardsFAQ: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqs = (t('matriculaRewardsLanding.faq.items', { returnObjects: true }) as any[]) || [];
+
+  return (
+    <section className="py-16 sm:py-20 bg-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-3xl md:text-4xl font-black mb-10 text-center text-[#05294E]">
+            {t('matriculaRewardsLanding.faq.title')}
+          </h2>
+
+          <div className="max-w-3xl mx-auto space-y-1">
+            {faqs.map((faq, num) => (
+              <div
+                key={num}
+                className={`group transition-all duration-300 border-b border-slate-200 ${
+                  openFaq === num ? 'bg-gradient-to-br from-white to-slate-50/30' : ''
+                }`}
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === num ? null : num)}
+                  className="w-full text-left p-4 sm:p-5 flex items-center gap-4 group focus:outline-none"
+                >
+                  <div className="flex-1">
+                    <h3 className="text-sm sm:text-base font-bold leading-tight text-slate-900">
+                      {faq.question}
+                    </h3>
+                  </div>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-500 ${
+                    openFaq === num ? 'bg-slate-100 text-slate-600 rotate-180' : 'bg-slate-50 text-slate-300 group-hover:text-slate-400'
+                  }`}>
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </button>
+                <AnimatePresence>
+                  {openFaq === num && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+                    >
+                      <div className="px-4 sm:px-5 pb-5 pt-0">
+                        <p className="text-slate-600 text-sm sm:text-base leading-relaxed border-t border-slate-100 pt-3 pr-2 sm:pr-4">
+                          {faq.answer}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 };
 

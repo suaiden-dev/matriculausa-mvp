@@ -18,7 +18,8 @@ import {
   Info,
   ExternalLink,
   Target,
-  Lock
+  Lock,
+  ChevronDown
 } from 'lucide-react';
 import { is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
 import { getPlacementFee } from '../utils/placementFeeCalculator';
@@ -38,6 +39,7 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
   userRole
 }) => {
   const { t } = useTranslation();
+  const [showSituationalFees, setShowSituationalFees] = React.useState(false);
 
   if (!scholarship) return null;
 
@@ -317,30 +319,49 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                       );
                     })()}
 
-                    <tr>
+                    <tr 
+                      className="bg-slate-50/70 hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => setShowSituationalFees(!showSituationalFees)}
+                    >
                       <td className="py-3 px-4">
-                        <div className="flex flex-col text-left">
-                          <span className="text-slate-600 font-medium">Control Fee</span>
-                          <span className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
-                            {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
-                          </span>
+                        <div className="flex items-center gap-2 text-slate-700 font-semibold text-left">
+                          <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 ${showSituationalFees ? 'rotate-180' : ''}`} />
+                          <span>{t('scholarshipsPage.detail.situationalFees', 'Situational Fees')}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right text-slate-700 font-medium">$1,800</td>
+                      <td className="py-3 px-4 text-right text-slate-400 text-xs font-medium">
+                        {showSituationalFees ? t('common.hideDetails', 'Hide details') : t('common.showDetails', 'Show details')}
+                      </td>
                     </tr>
 
-                    {(!processType || (processType === 'transfer' && visaTransferActive === false)) && (
-                      <tr>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col text-left">
-                            <span className="text-slate-600 font-medium">Reinstatement Fee</span>
-                            <span className="text-[10px] text-slate-400 leading-relaxed mt-0.5">
-                              {t('scholarshipsPage.modal.reinstatementPackageDescription', 'Taxa necessária para estudantes transfer que possuem o status do visto inativo/terminado.')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right text-slate-700 font-medium">$500</td>
-                      </tr>
+                    {showSituationalFees && (
+                      <>
+                        <tr>
+                          <td className="py-3 px-4 pl-8">
+                            <div className="flex flex-col text-left">
+                              <span className="text-slate-600 font-medium">Control Fee</span>
+                              <span className="text-xs text-slate-400 leading-relaxed mt-0.5">
+                                {t('scholarshipsPage.detail.controlFeeDetail', 'Taxa necessária para estudantes que solicitam o visto do tipo Initial/Mudança de Status (COS)/Transfer - visto vencido')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right text-slate-700 font-medium">$1,800</td>
+                        </tr>
+
+                        {(!processType || (processType === 'transfer' && visaTransferActive === false)) && (
+                          <tr>
+                            <td className="py-3 px-4 pl-8">
+                              <div className="flex flex-col text-left">
+                                <span className="text-slate-600 font-medium">Reinstatement Fee</span>
+                                <span className="text-xs text-slate-400 leading-relaxed mt-0.5">
+                                  {t('scholarshipsPage.modal.reinstatementPackageDescription', 'Taxa necessária para estudantes transfer que possuem o status do visto inativo/terminado.')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-right text-slate-700 font-medium">$500</td>
+                          </tr>
+                        )}
+                      </>
                     )}
                     
                     {scholarship.original_value_per_credit && (

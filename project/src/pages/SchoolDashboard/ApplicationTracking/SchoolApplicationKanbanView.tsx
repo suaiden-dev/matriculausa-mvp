@@ -8,8 +8,6 @@ import {
 import { getSchoolStepStatus } from '../../../utils/schoolApplicationFlowStages';
 import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import { UserX, RefreshCw } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
-import { toast } from 'react-hot-toast';
 
 interface SchoolApplicationKanbanViewProps {
   students: StudentRecord[];
@@ -58,21 +56,6 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     setIsRefreshing(false);
   };
 
-  const handleMarkLost = async (studentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_dropped: true, updated_at: new Date().toISOString() })
-        .eq('id', studentId);
-
-      if (error) throw error;
-
-      toast.success('Aluno movido para Lost');
-      await onRefresh();
-    } catch {
-      toast.error('Erro ao marcar aluno como lost');
-    }
-  };
 
   // Função centralizada para pegar unread counts
   const getStudentTotalUnread = (studentId: string) => {
@@ -81,12 +64,20 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
 
   // Separar dropped dos demais
   const droppedStudents = useMemo(() => {
-    return students.filter(s => s.is_dropped || s.status === 'rejected');
+    return students.filter(s => {
+      const selectedAppId = (s as any).selected_application_id;
+      const choseAnother = !!selectedAppId && selectedAppId !== s.application_id;
+      return s.is_dropped || s.status === 'rejected' || choseAnother;
+    });
   }, [students]);
 
   // Filtramos apenas os alunos ativos no pipeline da faculdade
   const displayStudents = useMemo(() => {
-    return students.filter(s => !s.is_dropped && s.status !== 'rejected');
+    return students.filter(s => {
+      const selectedAppId = (s as any).selected_application_id;
+      const choseAnother = !!selectedAppId && selectedAppId !== s.application_id;
+      return !s.is_dropped && s.status !== 'rejected' && !choseAnother;
+    });
   }, [students]);
 
   // Filter out stages that should be hidden or are not relevant
@@ -196,6 +187,45 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     return stageMap;
   }, [displayStudents, visibleStages]);
 
+  const lastLoggedRef = useRef<string>('');
+
+  useEffect(() => {
+    if (students.length === 0) return;
+
+    const debugInfo: any[] = [];
+
+    // Track normal stages
+    visibleStages.forEach(stage => {
+      const stageStudents = studentsByStage.get(stage.key) || [];
+      stageStudents.forEach((student, index) => {
+        debugInfo.push({
+          id: student.student_id,
+          name: student.student_name,
+          email: student.student_email,
+          column: stage.label,
+          position: index + 1
+        });
+      });
+    });
+
+    // Track Lost/Dropped column
+    droppedStudents.forEach((student, index) => {
+      debugInfo.push({
+        id: student.student_id,
+        name: student.student_name,
+        email: student.student_email,
+        column: 'Lost',
+        position: index + 1
+      });
+    });
+
+    const stringified = JSON.stringify(debugInfo);
+    if (lastLoggedRef.current !== stringified) {
+      console.log('[KANBAN_DEBUG] Render Positions:', debugInfo);
+      lastLoggedRef.current = stringified;
+    }
+  }, [studentsByStage, droppedStudents, visibleStages, students.length]);
+
   const handleStudentClick = (student: StudentRecord) => {
     // Navigate to student detail page on the university dashboard
     if (student.status === 'enrolled') {
@@ -253,7 +283,6 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
                   getUnreadCount={getStudentTotalUnread}
                   showSelectionTags={false}
                   showTeamLabel={false}
-                  onMarkLost={handleMarkLost}
                 />
               </div>
             );

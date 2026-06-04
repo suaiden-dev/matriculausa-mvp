@@ -1,7 +1,7 @@
 import React from 'react';
 import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
 import { StudentRecord } from './hooks/useStudentApplicationsQueries';
-import { ApplicationFlowStageKey, APPLICATION_FLOW_STAGES } from '../../utils/applicationFlowStages';
+import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
 import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation } from './hooks/useStudentApplicationsQueries';
@@ -28,88 +28,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
   
-  // Lógica de Débito Proativa
-  const totalDebt = React.useMemo(() => {
-    // Alunos MIGMA gerenciam taxas no próprio sistema — sem exibição de débito
-    if ((student as any).source === 'migma') return 0;
 
-    try {
-      let total = 0;
-
-      // 1. Balanço pendente direto do banco (Placement Fee parcial ou outras)
-      const pendingBalance = Number(student.placement_fee_pending_balance || 0);
-      total += pendingBalance;
-
-      // Se não sabemos o estágio, retornamos apenas o balanço pendente
-      if (!propCurrentStageKey) return total;
-
-      const stages = APPLICATION_FLOW_STAGES.map(s => s.key);
-      const currentIndex = stages.indexOf(propCurrentStageKey);
-      
-      // 2. Verificação Proativa de Taxas (Baseado em estágios passados)
-      
-      // A. Selection Fee ($400)
-      const selectionPaid = student.has_paid_selection_process_fee || (student as any).source === 'migma';
-      const selectionIndex = stages.indexOf('selection_fee');
-      if (!selectionPaid && currentIndex > selectionIndex && selectionIndex !== -1) {
-        total += 400;
-      }
-
-      // B. Application Fee ($350) - Cobrada após aprovação da bolsa
-      const appFeeIndex = stages.indexOf('application_fee');
-      if (!student.is_application_fee_paid && currentIndex > appFeeIndex && appFeeIndex !== -1) {
-        total += 350;
-      }
-
-      // C. Placement Fee / Scholarship Fee
-      if (student.placement_fee_flow) {
-        const placementIndex = stages.indexOf('placement_fee');
-        if (!student.is_placement_fee_paid && currentIndex > placementIndex && placementIndex !== -1) {
-          if (pendingBalance === 0) {
-            // Prioridade: override > placement_fee_amount da scholarship > $550 padrão
-            const overrideAmt = student.fee_override_placement_fee != null ? Number(student.fee_override_placement_fee) : null;
-            const scholarshipAmt = student.placement_fee_amount ? Number(student.placement_fee_amount) : null;
-            total += overrideAmt ?? scholarshipAmt ?? 550;
-          }
-        }
-      } else {
-        // Fluxo Antigo (Scholarship Fee $1600)
-        const scholarshipIndex = stages.indexOf('scholarship_fee');
-        if (!student.is_scholarship_fee_paid && currentIndex > scholarshipIndex && scholarshipIndex !== -1) {
-          total += 1600;
-        }
-      }
-
-      // D. Control Fee / I-20 Fee
-      const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
-      const i20Index = stages.indexOf('i20_fee');
-
-      if (isTransferInactiveVisa) {
-        // Transfer com visa inativo: Reinstatement Fee ($500) + Control Fee ($1800)
-        if (!student.has_paid_reinstatement_package && currentIndex > i20Index && i20Index !== -1) {
-          total += 500;
-        }
-        if (!student.has_paid_i539_cos_package && currentIndex > i20Index && i20Index !== -1) {
-          total += 1800;
-        }
-      } else {
-        // Outros (initial, change_of_status): I-20 / DS-160 fee
-        const isI20Applicable =
-          student.student_process_type === 'initial' ||
-          student.student_process_type === 'change_of_status';
-        const i20Paid = student.has_paid_i20_control_fee || student.has_paid_ds160_package || student.has_paid_i539_cos_package;
-        const i20Amount = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : 250;
-        if (!i20Paid && isI20Applicable && currentIndex > i20Index && i20Index !== -1) {
-          total += i20Amount;
-        }
-      }
-
-      return total;
-    } catch (err) {
-      console.error('[StudentCard] Erro no cálculo de débito:', err);
-      return 0;
-    }
-  }, [student, propCurrentStageKey]);
   
   // Pode editar se: não for admin (super) ou se o admin não for restrito
   // Post Sales sempre pode editar (parity)
@@ -150,20 +69,24 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         isDropped: false 
       });
       
-      await logAction(
-        'student_restored',
-        'Student was restored to the process',
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          admin_name: userProfile?.full_name 
-        }
-      );
+      try {
+        await logAction(
+          'student_restored',
+          'Student was restored to the process',
+          userProfile?.user_id || '',
+          userProfile?.role === 'school' ? 'university' : 'admin',
+          { 
+            source: 'kanban_card',
+            admin_name: userProfile?.full_name 
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log student restore:', logError);
+      }
       
-      toast.success('Aluno restaurado');
+      toast.success('Student restored');
     } catch {
-      toast.error('Erro ao restaurar aluno');
+      toast.error('Error restoring student');
     }
   };
 
@@ -177,19 +100,23 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         adminName: userProfile?.full_name ?? undefined
       });
       
-      await logAction(
-        'student_dropped',
-        `Student was marked as dropped: ${reason}`,
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          reason,
-          admin_name: userProfile?.full_name 
-        }
-      );
+      try {
+        await logAction(
+          'student_dropped',
+          `Student was marked as dropped: ${reason}`,
+          userProfile?.user_id || '',
+          userProfile?.role === 'school' ? 'university' : 'admin',
+          { 
+            source: 'kanban_card',
+            reason,
+            admin_name: userProfile?.full_name 
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log student drop:', logError);
+      }
       
-      toast.success('Aluno marcado como dropped');
+      toast.success('Student marked as dropped');
     } catch (error) {
       console.error('Error in handleConfirmDrop:', error);
       throw error; // Repassar para o modal tratar
@@ -202,21 +129,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     try {
       await markSentDocsMutation.mutateAsync(student.application_id);
       
-      await logAction(
-        'docs_sent_to_university',
-        'Documents were marked as sent to the university',
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          application_id: student.application_id,
-          admin_name: userProfile?.full_name 
-        }
-      );
+      try {
+        await logAction(
+          'docs_sent_to_university',
+          'Documents were marked as sent to the university',
+          userProfile?.user_id || '',
+          userProfile?.role === 'school' ? 'university' : 'admin',
+          { 
+            source: 'kanban_card',
+            application_id: student.application_id,
+            admin_name: userProfile?.full_name 
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log docs sent to university:', logError);
+      }
 
-      toast.success('Docs marcados como enviados para a universidade');
+      toast.success('Documents marked as sent to the university');
     } catch {
-      toast.error('Erro ao atualizar');
+      toast.error('Error updating');
     }
   };
 
@@ -226,21 +157,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     try {
       await markSevisMutation.mutateAsync(student.application_id);
       
-      await logAction(
-        'sevis_transfer_completed',
-        'SEVIS transfer was marked as completed',
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          application_id: student.application_id,
-          admin_name: userProfile?.full_name 
-        }
-      );
+      try {
+        await logAction(
+          'sevis_transfer_completed',
+          'SEVIS transfer was marked as completed',
+          userProfile?.user_id || '',
+          userProfile?.role === 'school' ? 'university' : 'admin',
+          { 
+            source: 'kanban_card',
+            application_id: student.application_id,
+            admin_name: userProfile?.full_name 
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log sevis transfer completion:', logError);
+      }
 
-      toast.success('SEVIS transfer marcado como concluído');
+      toast.success('SEVIS transfer marked as completed');
     } catch {
-      toast.error('Erro ao atualizar');
+      toast.error('Error updating');
     }
   };
 
@@ -251,21 +186,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     try {
       await markVisaMutation.mutateAsync(student.application_id);
       
-      await logAction(
-        'visa_approved',
-        'Visa was marked as approved',
-        userProfile?.user_id || '',
-        'admin',
-        { 
-          source: 'kanban_card',
-          application_id: student.application_id,
-          admin_name: userProfile?.full_name 
-        }
-      );
+      try {
+        await logAction(
+          'visa_approved',
+          'Visa was marked as approved',
+          userProfile?.user_id || '',
+          userProfile?.role === 'school' ? 'university' : 'admin',
+          { 
+            source: 'kanban_card',
+            application_id: student.application_id,
+            admin_name: userProfile?.full_name 
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log visa approval:', logError);
+      }
 
-      toast.success('Visto marcado como aprovado');
+      toast.success('Visa marked as approved');
     } catch {
-      toast.error('Erro ao atualizar');
+      toast.error('Error updating');
     }
   };
 
@@ -308,12 +247,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return 'Hoje';
-    if (diffDays === 1) return '1 dia atrás';
-    if (diffDays < 7) return `${diffDays} dias atrás`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} meses atrás`;
-    return `${Math.floor(diffDays / 365)} anos atrás`;
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+    return `${Math.floor(diffDays / 365)} years ago`;
   };
 
   const renderDocNames = (names?: string[]) => {
@@ -378,7 +317,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         {onMarkLost ? (
           <button
             onClick={handleMarkLostClick}
-            title="Mover para Lost"
+            title="Move to Lost"
             className="flex-shrink-0 p-1 rounded transition-colors text-gray-300 hover:text-red-400 hover:bg-red-50"
           >
             <UserX className="w-3.5 h-3.5" />
@@ -386,7 +325,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         ) : (
           <button
             onClick={handleToggleDrop}
-            title={student.is_dropped ? 'Restaurar aluno' : 'Marcar como dropped'}
+            title={student.is_dropped ? 'Restore student' : 'Mark as dropped'}
             className={`flex-shrink-0 p-1 rounded transition-colors ${
               student.is_dropped
                 ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
@@ -440,7 +379,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} rejected file(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>
@@ -450,7 +389,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} documento(s) pendente(s)
+                {pending} pending document(s)
               </div>
             ) : null;
           })()}
@@ -458,7 +397,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_under_review} documento(s) em revisão
+                {student.docs_total_under_review} document(s) under review
               </div>
               {renderDocNames(student.docs_under_review_names)}
             </div>
@@ -473,7 +412,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_under_review} documento(s) em revisão
+                {student.docs_total_under_review} document(s) under review
               </div>
               {renderDocNames(student.docs_under_review_names)}
             </div>
@@ -482,7 +421,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} arquivo(s) recusado(s)
+                {(student.docs_total_rejected_files ?? student.docs_total_rejected)} rejected file(s)
               </div>
               {renderDocNames(student.docs_rejected_names)}
             </div>
@@ -491,7 +430,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
                 <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                {student.docs_total_approved}/{student.docs_total_required} documento(s) aprovado(s)
+                {student.docs_total_approved}/{student.docs_total_required} approved document(s)
               </div>
               {renderDocNames(student.docs_approved_names)}
             </div>
@@ -501,7 +440,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} documento(s) pendente(s) de upload
+                {pending} document(s) pending upload
               </div>
             ) : null;
           })()}
@@ -515,7 +454,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {student.basic_docs_total_under_review} documento(s) em revisão
+                {student.basic_docs_total_under_review} document(s) under review
               </div>
               {renderDocNames(student.basic_docs_under_review_names)}
             </div>
@@ -524,7 +463,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-red-200 bg-red-50 text-red-700">
                 <XCircle className="w-3 h-3 flex-shrink-0" />
-                {student.basic_docs_total_rejected} documento(s) recusado(s)
+                {student.basic_docs_total_rejected} rejected document(s)
               </div>
               {renderDocNames(student.basic_docs_rejected_names)}
             </div>
@@ -533,7 +472,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700">
                 <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                {student.basic_docs_total_approved}/{student.basic_docs_total_required} documento(s) aprovado(s)
+                {student.basic_docs_total_approved}/{student.basic_docs_total_required} approved document(s)
               </div>
               {renderDocNames(student.basic_docs_approved_names)}
             </div>
@@ -543,7 +482,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             return pending > 0 ? (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                {pending} documento(s) pendente(s)
+                {pending} pending document(s)
               </div>
             ) : null;
           })()}
@@ -556,25 +495,25 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           {!student.transfer_form_status && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-500">
               <Clock className="w-3 h-3 flex-shrink-0" />
-              Aguardando envio do transfer form
+              Awaiting transfer form submission
             </div>
           )}
           {student.transfer_form_status === 'sent' && (
             <>
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-blue-200 bg-blue-50 text-blue-700">
                 <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                Transfer form enviado ao aluno
+                Transfer form sent to student
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-yellow-200 bg-yellow-50 text-yellow-700">
                 <Clock className="w-3 h-3 flex-shrink-0" />
-                Aguardando devolução do aluno
+                Awaiting student return
               </div>
             </>
           )}
           {student.transfer_form_status === 'returned' && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border border-amber-200 bg-amber-50 text-amber-700">
               <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              Form devolvido — pendente aprovação
+              Form returned — pending approval
             </div>
           )}
         </div>
@@ -588,7 +527,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
         >
           <Send className="w-3 h-3 flex-shrink-0" />
-          Marcar como enviado para universidade
+          Mark as sent to university
         </button>
       )}
 
@@ -600,7 +539,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
         >
           <RefreshCw className="w-3 h-3 flex-shrink-0" />
-          Marcar SEVIS como transferido
+          Mark SEVIS as Transferred
         </button>
       )}
 
@@ -612,7 +551,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           className="w-full mb-2 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] font-medium border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
         >
           <Shield className="w-3 h-3 flex-shrink-0" />
-          Marcar visto como aprovado
+          Mark visa as approved
         </button>
       )}
 
@@ -622,19 +561,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           <Calendar className="w-3 h-3" />
           <span>{getRelativeTime(student.student_created_at)}</span>
         </div>
-
         <div className="flex items-center gap-1 flex-wrap">
-          {student.total_applications > 0 && !(['application_fee', 'placement_fee', 'reinstatement_fee', 'scholarship_fee', 'university_docs', 'docs_approval', 'send_docs_to_university', 'receive_acceptance_letter', 'send_acceptance_letter', 'i20_fee', 'student_sends_letter', 'sevis_transfer', 'visa_approval', 'enrollment'] as ApplicationFlowStageKey[]).includes(currentStageKey!) && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-              {student.total_applications} app{student.total_applications > 1 ? 's' : ''}
-            </span>
-          )}
-          {totalDebt > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-              <AlertCircle className="w-3 h-3" />
-              Debt: ${totalDebt.toFixed(0)}
-            </span>
-          )}
         </div>
       </div>
 

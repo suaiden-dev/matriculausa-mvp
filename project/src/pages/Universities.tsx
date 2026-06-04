@@ -341,13 +341,11 @@ const Universities: React.FC = () => {
                   
                   {/* University Image */}
                   <div className="relative h-48 overflow-hidden flex-shrink-0">
-                    {(school.image_url || school.logo_url) ? (
+                    {!isLocked && (school.image_url || school.logo_url) ? (
                       <img
                         src={school.image_url || school.logo_url}
                         alt={`${school.name} campus`}
-                        className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${
-                          isLocked ? 'blur-lg' : ''
-                        }`}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           // Fallback para div com ícone se a imagem falhar
                           const target = e.target as HTMLImageElement;
@@ -360,8 +358,8 @@ const Universities: React.FC = () => {
                       />
                     ) : null}
                     <div 
-                      className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(school.image_url || school.logo_url) ? 'hidden' : 'flex'}`}
-                      style={{ display: (school.image_url || school.logo_url) ? 'none' : 'flex' }}
+                      className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(!isLocked && (school.image_url || school.logo_url)) ? 'hidden' : 'flex'}`}
+                      style={{ display: (!isLocked && (school.image_url || school.logo_url)) ? 'none' : 'flex' }}
                     >
                       <Building className="h-16 w-16 text-slate-400" />
                     </div>
@@ -489,13 +487,11 @@ const Universities: React.FC = () => {
               )}
               {/* University Image */}
               <div className="relative h-48 overflow-hidden flex-shrink-0">
-                {(school.image_url || school.logo_url) ? (
+                {!isLocked && (school.image_url || school.logo_url) ? (
                   <img
                     src={school.image_url || school.logo_url}
                     alt={`${school.name} campus`}
-                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
-                      isLocked ? 'blur-lg' : ''
-                    }`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback para div com ícone se a imagem falhar
                       const target = e.target as HTMLImageElement;
@@ -508,8 +504,8 @@ const Universities: React.FC = () => {
                   />
                 ) : null}
                 <div 
-                  className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(school.image_url || school.logo_url) ? 'hidden' : 'flex'}`}
-                  style={{ display: (school.image_url || school.logo_url) ? 'none' : 'flex' }}
+                  className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(!isLocked && (school.image_url || school.logo_url)) ? 'hidden' : 'flex'}`}
+                  style={{ display: (!isLocked && (school.image_url || school.logo_url)) ? 'none' : 'flex' }}
                 >
                   <Building className="h-16 w-16 text-slate-400" />
                 </div>

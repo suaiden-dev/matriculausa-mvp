@@ -101,8 +101,8 @@ Deno.serve(async (req) => {
     console.log(`[DEBUG] is_scholarship_fee_paid: ${applicationData.is_scholarship_fee_paid}`);
     
     // Sempre enviar notificação de "Application Fee Payment Received" para pagamentos Zelle
-    const mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the Selection Process page to review the application.`;
-    const redirectUrl = '/school/dashboard/selection-process';
+    const mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the student's details page to review the application.`;
+    const redirectUrl = `/school/dashboard/student/${applicationData.id}`;
     const tipoNotf = 'Application Fee Payment Received';
     
     // Para o payload, sempre usar valores padrão para notificação de application fee

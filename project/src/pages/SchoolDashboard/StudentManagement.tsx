@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Globe, Calendar, MessageSquare } from 'lucide-react';
+import { Search, Users, Globe, Calendar, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Scholarship } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -9,10 +9,11 @@ const StudentManagement: React.FC = () => {
   const navigate = useNavigate();
   const { applications, university } = useUniversity();
   
-  // States para filtros e pesquisa
+  // States para filtros, pesquisa e paginação
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   // Removido o activeTab e selectedStatus pois agora foca em "Enrolled Students"
 
   // Extrai bolsas únicas das aplicações
@@ -26,15 +27,7 @@ const StudentManagement: React.FC = () => {
       }, new Map<string, Scholarship>()).values()
   );
 
-  // Extrai países únicos
-  const countries = useMemo(() => {
-    const countrySet = new Set<string>();
-    applications.forEach(app => {
-      const country = (app as any).user_profiles?.country;
-      if (country) countrySet.add(country);
-    });
-    return Array.from(countrySet).sort();
-  }, [applications]);
+
 
   // Filtra aplicações baseado no status 'enrolled'
   const filteredApplications = useMemo(() => {
@@ -47,11 +40,6 @@ const StudentManagement: React.FC = () => {
     // Filtro por bolsa
     if (selectedScholarship) {
       filtered = filtered.filter(app => app.scholarship_id === selectedScholarship);
-    }
-
-    // Filtro por país
-    if (selectedCountry) {
-      filtered = filtered.filter(app => (app as any).user_profiles?.country === selectedCountry);
     }
 
     // Filtro por termo de pesquisa
@@ -72,7 +60,15 @@ const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [applications, selectedScholarship, selectedCountry, searchTerm]);
+  }, [applications, selectedScholarship, searchTerm]);
+
+  // Paginação - Cálculo e fatiamento
+  const totalPages = Math.ceil(filteredApplications.length / ITEMS_PER_PAGE);
+
+  const paginatedApplications = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredApplications.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredApplications, currentPage]);
 
   return (
     <ProfileCompletionGuard 
@@ -110,9 +106,9 @@ const StudentManagement: React.FC = () => {
 
               {/* Filters row */}
               <div className="bg-white px-4 sm:px-6 lg:px-8 py-4 border-b border-slate-100">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Search Bar */}
-                    <div className="lg:col-span-2">
+                    <div className="md:col-span-2">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                         <input
@@ -120,7 +116,10 @@ const StudentManagement: React.FC = () => {
                           placeholder="Search enrolled students..."
                           className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                           value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                          }}
                         />
                       </div>
                     </div>
@@ -130,25 +129,14 @@ const StudentManagement: React.FC = () => {
                       <select
                         className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                         value={selectedScholarship}
-                        onChange={(e) => setSelectedScholarship(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedScholarship(e.target.value);
+                          setCurrentPage(1);
+                        }}
                       >
                         <option value="">All Scholarships</option>
                         {scholarships.map(s => (
                           <option key={s.id} value={s.id}>{s.title}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Country Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedCountry}
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                      >
-                        <option value="">All Countries</option>
-                        {countries.map(country => (
-                          <option key={country} value={country}>{country}</option>
                         ))}
                       </select>
                     </div>
@@ -184,7 +172,7 @@ const StudentManagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
-                    {filteredApplications.map((app) => {
+                    {paginatedApplications.map((app) => {
                       const student = (app as any).user_profiles;
 
                       return (
@@ -261,6 +249,77 @@ const StudentManagement: React.FC = () => {
                 </table>
               )}
             </div>
+
+            {/* Controles de Paginação */}
+            {filteredApplications.length > ITEMS_PER_PAGE && (
+              <div className="bg-white px-4 py-4 flex items-center justify-between border-t border-slate-200 sm:px-6">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-slate-700">
+                      Showing <span className="font-semibold">{Math.min(filteredApplications.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)}</span> to{' '}
+                      <span className="font-semibold">
+                        {Math.min(filteredApplications.length, currentPage * ITEMS_PER_PAGE)}
+                      </span>{' '}
+                      of <span className="font-semibold">{filteredApplications.length}</span> students
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        const isCurrent = page === currentPage;
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-semibold transition-colors ${
+                              isCurrent
+                                ? 'z-10 bg-[#05294E] border-[#05294E] text-white'
+                                : 'bg-white border-slate-300 text-slate-500 hover:bg-slate-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-lg border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                      >
+                        <span className="sr-only">Next</span>
+                        <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

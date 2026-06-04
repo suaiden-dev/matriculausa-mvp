@@ -18,8 +18,8 @@
     }
   },
   "story": {
-    "badge": "Nossa História",
-    "title": "Transformando Sonhos em Realidade",
+    "badge": "Sobre Nós",
+    "title": "Transformando <0>Sonhos</0> em Realidade",
     "p1": "A MatriculaUSA foi fundada por especialistas em educação internacional que entendem os desafios únicos enfrentados por estudantes que buscam estudar nos Estados Unidos. Nossa equipe já ajudou milhares de alunos de diversas origens a garantir bolsas de estudo, admissões e uma transição tranquila para a vida nos campi americanos.",
     "p2": "Fazemos parcerias com as principais universidades e organizações dos EUA para oferecer oportunidades exclusivas, processos transparentes e suporte contínuo — tornando o sonho americano acessível a todos.",
     "stats": {
@@ -53,5 +53,38 @@
     "title": "Pronto para Começar sua Jornada?",
     "description": "Junte-se a milhares de estudantes que tornaram seu sonho americano realidade com a MatriculaUSA.",
     "button": "Começar"
+  },
+  "partners": {
+    "badge": "Nossas Parceiras",
+    "title": "Reconhecidas pela Excelência em Acreditação",
+    "description": "Trabalhamos com as melhores universidades americanas para oferecer bolsas exclusivas e oportunidades reais de transformação."
+  },
+  "contactSection": {
+    "title": "Vamos Conversar & Conectar",
+    "description": "Tem dúvidas sobre o processo seletivo, vistos, bolsas de estudo ou universidades parceiras? Nossa equipe especializada está pronta para guiar você.",
+    "button": "FALE CONOSCO",
+    "infoTitle": "Informações de Contato",
+    "emailLabel": "E-mail de Suporte",
+    "phoneLabel": "Telefone / WhatsApp",
+    "officeLabel": "Nosso Escritório",
+    "officeValue": "Los Angeles, CA, EUA"
+  },
+  "stats": {
+    "students": {
+      "title": "Estudantes Atendidos",
+      "desc": "Jovens que já deram o primeiro passo para transformar o sonho americano em uma jornada real."
+    },
+    "scholarships": {
+      "title": "Em Bolsas de Estudos",
+      "desc": "Oportunidades que tornam estudar em universidades americanas mais acessível e possível."
+    },
+    "partners": {
+      "title": "Universidades Parceiras",
+      "desc": "Mais opções para encontrar a universidade certa para o seu perfil, sua área e seu futuro."
+    },
+    "visas": {
+      "title": "Taxa de Satisfação",
+      "desc": "Um resultado que reflete processos bem direcionados, escolhas estratégicas e candidaturas mais fortes."
+    }
   }
 }

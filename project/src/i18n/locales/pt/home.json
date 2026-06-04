@@ -5,7 +5,7 @@
       "titleMain": "Estude nos EUA com",
       "titleHighlight": "bolsa em universidades americanas.",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "A Matrícula USA ajuda você a encontrar universidades americanas com bolsas híbridas, poucas aulas presenciais e oportunidades com permissão de trabalho, para estudar nos EUA com mais estratégia, economia e liberdade.",
+      "description": "Estudantes descobrem bolsas de estudo que mudam vidas todos os anos — seu ponto de partida é o Processo Seletivo.",
       "cta": "Começar Agora",
       "watchVideo": "Assistir Vídeo",
       "stats": {
@@ -232,7 +232,7 @@
     "steps": {
       "profile": {
         "title": "Inicie o Processo Seletivo",
-        "description": "Faça nosso questionário e escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
+        "description": "Preencha nosso questionário e escolha até 4 bolsas exclusivas em universidades americanas alinhadas ao seu futuro.",
         "items": [
           "Histórico acadêmico e conquistas",
           "Objetivos de carreira e preferências",
@@ -241,7 +241,7 @@
         ]
       },
       "selectionFee": {
-        "title": "Avance com sua bolsa aprovado",
+        "title": "Avance com sua bolsa aprovada",
         "description": "Selecione a melhor bolsa para continuar seu processo de matricula",
         "items": [
           "Acesso para navegar pelas bolsas",
