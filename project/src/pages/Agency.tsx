@@ -228,7 +228,7 @@ const Agency: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
             <Link
-              to="/login"
+              to="/register?tab=agency"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#05294E] text-white text-sm font-black tracking-wide hover:bg-[#041f38] transition-colors shadow-lg shadow-[#05294E]/20"
             >
               Quero ser uma agência parceira
@@ -577,7 +577,7 @@ const Agency: React.FC = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
                 <Link
-                  to="/login"
+                  to="/register?tab=agency"
                   className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white text-[#05294E] font-black tracking-wide hover:bg-slate-100 transition-colors shadow-lg"
                 >
                   Quero ser uma agência parceira
