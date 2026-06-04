@@ -553,6 +553,23 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           <Shield className="w-3 h-3 flex-shrink-0" />
           Mark visa as approved
         </button>
+      )}      {/* Placement Fee Installment Info */}
+      {student.placement_fee_installment_enabled && (student.placement_fee_pending_balance ?? 0) > 0 && (
+        <div className="mt-2 mb-2 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[11px] font-medium text-amber-800 flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+              Installment {student.placement_fee_installment_number + 1} pending
+            </span>
+            <span className="font-bold">${student.placement_fee_pending_balance}</span>
+          </div>
+          {student.placement_fee_due_date && (
+            <div className="flex items-center gap-1 text-amber-900 mt-0.5 font-semibold">
+              <Clock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+              <span>Due: {new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Footer with badges */}

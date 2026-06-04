@@ -17,7 +17,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const hideHeader = location.pathname.startsWith('/school/') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
-                     location.pathname.startsWith('/affiliate-admin') ||
+                     location.pathname.startsWith('/agency') ||
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant' ||
                      location.pathname.startsWith('/pre-qualification') ||
@@ -25,6 +25,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/vsl-transfer' ||
                      location.pathname === '/vsl-cos' ||
                      location.pathname === '/selection-process' ||
+                     location.pathname === '/agency/onboarding' ||
                      ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname);
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
 
@@ -44,6 +45,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/vsl-transfer' ||
                        location.pathname === '/vsl-cos' ||
                        location.pathname === '/selection-process' ||
+                       location.pathname.startsWith('/school') || // 🎯 Esconder no dashboard da universidade
                        ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname) ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 

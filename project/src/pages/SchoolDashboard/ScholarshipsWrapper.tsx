@@ -32,7 +32,7 @@ const ScholarshipsWrapper: React.FC = () => {
     <div className="space-y-6">
       {/* Shared Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-8 bg-slate-50 border-b border-slate-200">
+        <div className="px-6 py-8 bg-slate-50 border-b border-slate-200 text-center sm:text-left">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
             Scholarships & Global Documents
           </h1>

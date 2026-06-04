@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { usePaymentBlockedContext } from '../contexts/PaymentBlockedContext';
 
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
@@ -60,6 +60,25 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, [paymentIsBlocked, pendingPayment, rejectedPayment]);
 
   useEffect(() => {
+    const currentPath = location.pathname;
+
+    // Redirecionamentos de Legado (Affiliate Admin -> Agency)
+    // Executado antes de qualquer verificação de auth para garantir que a URL esteja correta
+    const legacyRedirects: Record<string, string> = {
+      '/affiliate-admin/onboarding': '/agency/onboarding',
+      '/affiliate-admin/pending-approval': '/agency/pending-approval',
+      '/affiliate-admin/dashboard': '/agency/dashboard',
+      '/admin/dashboard/affiliate-management': '/admin/dashboard/agencies'
+    };
+
+    for (const [oldPath, newPath] of Object.entries(legacyRedirects)) {
+      if (currentPath === oldPath || currentPath.startsWith(oldPath + '/')) {
+        const remainingPath = currentPath.substring(oldPath.length);
+        navigate(newPath + remainingPath + location.search, { replace: true });
+        return;
+      }
+    }
+
     // Tratar erros de verificação de email no hash da URL
     const hash = window.location.hash;
     if (hash && !user && !loading) {
@@ -104,16 +123,13 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Aguardar carregamento primordial
     if (loading) return;
-
-    const currentPath = location.pathname;
-
     // Se não há usuário autenticado, verificar se está tentando acessar rota protegida
     if (!user) {
       const protectedPaths = [
         '/student/dashboard',
         '/school/dashboard',
         '/admin/dashboard',
-        '/affiliate-admin/dashboard',
+        '/agency/dashboard',
         '/seller/dashboard',
         '/affiliate/dashboard'
       ];
@@ -127,8 +143,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
 
-    // Detectar fluxo de recuperação de senha
+    // Detectar fluxo de recuperação de senha ou de aceitação de convite de seller
     const isPasswordResetFlow = currentPath.startsWith('/forgot-password') ||
+      currentPath === '/seller/accept-invite' ||
       window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
     if (isPasswordResetFlow) return;
 
@@ -137,14 +154,17 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) return;
 
     // Evitar re-execução se o path e o role não mudaram e o estado de pagamento é estável
-    const checkKey = `${user?.id}-${user?.role}-${currentPath}`;
+    const affiliateOnboardingDoneKey = user?.role === 'affiliate_admin'
+      ? String(user?.onboarding_completed || userProfile?.onboarding_completed)
+      : '';
+    const checkKey = `${user?.id}-${user?.role}-${currentPath}-${affiliateOnboardingDoneKey}`;
     if (lastCheckedPath.current === checkKey && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
       return;
     }
-    
+
     // REDIRECIONAMENTO DE SEGURANÇA SE O USUÁRIO ESTÁ EM PATH ERRADO PARA O ROLE DELE
     // Mas só fazemos se não for uma rota pública
-    
+
     const checkAndRedirect = async () => {
       lastCheckedPath.current = checkKey;
       const isWhitelistedInternalRegister = currentPath === '/student/register';
@@ -168,7 +188,12 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
 
         if (user.role === 'admin' || user.role === 'post_sales') { navigate('/admin/dashboard', { replace: true }); return; }
-        if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate_admin') {
+          const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
+          if (!affiliateOnboardingDone) { navigate('/agency/onboarding', { replace: true }); return; }
+          if (!user.is_active) { navigate('/agency/pending-approval', { replace: true }); return; }
+          navigate('/agency/dashboard', { replace: true }); return;
+        }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
 
@@ -200,28 +225,57 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
 
       // PROTEÇÃO DE ROTAS POR ROLE
-      if ((user.role === 'school' || user.role === 'school_manager') && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+      if ((user.role === 'school' || user.role === 'school_manager') && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
         navigate('/school/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
         if (hasPendingOrRejectedSelectionPayment) { navigate('/student/onboarding?step=selection_fee', { replace: true }); return; }
         navigate('/student/dashboard', { replace: true }); return;
       }
 
-      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
+      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/agency') || currentPath.startsWith('/seller/'))) {
         navigate('/admin/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'affiliate_admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
-        navigate('/affiliate-admin/dashboard', { replace: true }); return;
+      if (user.role === 'affiliate_admin') {
+        const tryingToAccessOtherDashboard = (currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) ||
+          currentPath.startsWith('/school/') ||
+          currentPath.startsWith('/admin/') ||
+          currentPath.startsWith('/seller/');
+
+        const isProtectedAffiliatePath = currentPath.startsWith('/agency/dashboard') ||
+          currentPath.startsWith('/agency/onboarding') ||
+          currentPath.startsWith('/agency/pending-approval');
+
+        const isAgenciasPage = currentPath === '/agencias';
+
+        // Use userProfile.onboarding_completed as fallback to avoid stale cache issue:
+        // user.onboarding_completed comes from cached_user (may be stale on first load),
+        // while userProfile is updated by refetchUserProfile() in AgencyOnboarding.
+        const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
+
+        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath || isAgenciasPage) {
+          if (!affiliateOnboardingDone && currentPath !== '/agency/onboarding') {
+            navigate('/agency/onboarding', { replace: true });
+            return;
+          }
+          if (affiliateOnboardingDone && !user.is_active && currentPath !== '/agency/pending-approval') {
+            navigate('/agency/pending-approval', { replace: true });
+            return;
+          }
+          if (affiliateOnboardingDone && user.is_active && (tryingToAccessOtherDashboard || isAgenciasPage || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
+            navigate('/agency/dashboard', { replace: true });
+            return;
+          }
+        }
       }
 
-      if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
+      if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/agency/'))) {
         navigate('/seller/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/') || currentPath.startsWith('/seller/'))) {
+      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/agency/') || currentPath.startsWith('/seller/'))) {
         navigate('/affiliate/dashboard', { replace: true }); return;
       }
 
@@ -240,13 +294,13 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           setCheckingUniversity(false);
           return;
         }
-        
+
         // Admins e pós-vendas podem navegar livremente na Home (/) sem serem redirecionados de volta para o dashboard
         // if (user.role === 'admin' || user.role === 'post_sales') {
         //   navigate('/admin/dashboard', { replace: true });
         //   return;
         // }
-        
+
         // Estudantes podem navegar livremente na Home (/) sem serem redirecionados de volta para o dashboard
         // if (user.role === 'student') {
         //   if (hasPendingOrRejectedSelectionPayment) {
@@ -256,14 +310,14 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         //   }
         //   return;
         // }
-        
+
         if (user.role === 'seller') {
           navigate('/seller/dashboard', { replace: true });
           return;
         }
-        
+
         if (user.role === 'affiliate' || user.role === 'affiliate_admin') {
-          const path = user.role === 'affiliate_admin' ? '/affiliate-admin/dashboard' : '/affiliate/dashboard';
+          const path = user.role === 'affiliate_admin' ? '/agency/dashboard' : '/affiliate/dashboard';
           navigate(path, { replace: true });
           return;
         }
@@ -272,7 +326,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     };
 
     checkAndRedirect();
-  }, [user?.id, user?.role, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
+  }, [user?.id, user?.role, user?.onboarding_completed, user?.is_active, userProfile?.onboarding_completed, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
 
   if (checkingUniversity) {
     return (

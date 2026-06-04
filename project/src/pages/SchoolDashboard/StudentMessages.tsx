@@ -23,8 +23,8 @@ const StudentMessages: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between text-center sm:text-left w-full">
+        <div className="w-full flex flex-col items-center sm:items-start">
           <h1 className="text-3xl font-bold text-[#05294E]">Student Messages</h1>
           <p className="text-slate-500 mt-1">Direct communication channel with your applicants</p>
         </div>

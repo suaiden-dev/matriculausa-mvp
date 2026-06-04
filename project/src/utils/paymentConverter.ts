@@ -186,10 +186,10 @@ export async function getDisplayAmounts(
   trustRealPaidAmounts: boolean = false
 ): Promise<Record<string, number>> {
   try {
-    // 1. Buscar system_type, dependents, no_referral_discount e student_process_type do usuário
+    // 1. Buscar perfil do usuário
     const { data: userProfile, error: profileError } = await supabase
       .from("user_profiles")
-      .select("system_type, dependents, scholarship_package_id, no_referral_discount, student_process_type")
+      .select("system_type, dependents, scholarship_package_id, no_referral_discount, seller_referral_code")
       .eq("user_id", userId)
       .single();
 
@@ -201,17 +201,18 @@ export async function getDisplayAmounts(
       return {};
     }
 
-    const systemType = userProfile.system_type || "legacy";
     const dependents = Number(userProfile.dependents) || 0;
-    const processType = userProfile.student_process_type;
     // Alunos via ?sref= pagam preço cheio ($400) mesmo em sistema simplified
     const noReferralDiscount = userProfile.no_referral_discount === true;
 
-    // ✅ NOVO: Identificar se é um dos novos processos que SEMPRE custam $400
-    const isNewProcess = processType === 'initial' || 
-                        processType === 'change_of_status' || 
-                        processType === 'transfer' || 
-                        processType === 'resident';
+    // O preço $350 vs $400 é determinado APENAS pela flag simplified_pricing_for_students da agência.
+    // student_process_type NÃO determina o preço (é definido no final da step 2, após o pagamento na step 1).
+    let simplifiedPricing = false;
+    if (userProfile.seller_referral_code && !noReferralDiscount) {
+      const { data: systemTypeResult } = await supabase
+        .rpc('get_seller_admin_system_type_by_code', { seller_code: userProfile.seller_referral_code });
+      simplifiedPricing = systemTypeResult === 'simplified';
+    }
 
     // 2. Buscar overrides do usuário
     // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
@@ -343,14 +344,10 @@ export async function getDisplayAmounts(
     // 4. Calcular valores esperados "Zelle" baseados no system_type
     const amounts: Record<string, number> = {};
 
-    // Valores base por system_type e tipo de processo
-    // Se o aluno veio via ?sref= (no_referral_discount) OU é um dos novos processos (Initial, COS, Transfer, Resident), usa $400.
-    // Se student_process_type for null (não preenchido), usa $400 como padrão seguro.
-    // Apenas alunos com sistema simplified E process_type explicitamente não definido como novo processo pagam $350.
-    const hasExplicitSimplifiedDiscount = systemType === "simplified" && !isNewProcess && !noReferralDiscount && processType !== null;
-    const baseSelectionFee = (isNewProcess || noReferralDiscount || processType === null)
-                            ? 400
-                            : (hasExplicitSimplifiedDiscount ? 350 : 400);
+    // O preço base é determinado APENAS pela flag simplified_pricing_for_students da agência
+    // $350 se agência tem simplified pricing E aluno não veio via ?sref=
+    // $400 em todos os outros casos
+    const baseSelectionFee = simplifiedPricing ? 350 : 400;
     const baseScholarshipFee = 900; // Sempre 900 para ambos os sistemas
     const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
@@ -366,7 +363,7 @@ export async function getDisplayAmounts(
       } else {
         // Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
-        amounts.selection_process = systemType === "simplified"
+        amounts.selection_process = simplifiedPricing
           ? baseSelectionFee
           : baseSelectionFee + (dependents * 150);
       }

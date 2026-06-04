@@ -35,12 +35,8 @@ interface Student {
   application_id?: string;
   // Flags de pagamento usados em MyStudents
   has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee: boolean;
-  is_scholarship_fee_paid: boolean;
+  is_placement_fee_paid: boolean;
   is_application_fee_paid: boolean;
-  // Datas auxiliares
-  scholarship_fee_paid_date: string | null;
-  i20_deadline: string | null;
   // Campos da carta de aceite
   acceptance_letter_sent_at: string | null;
   acceptance_letter_status: string | null;
@@ -203,11 +199,8 @@ const SellerDashboard: React.FC = () => {
         university_name: referral.university_name || 'No university selected',
         // valores padrão até carregarmos das tabelas corretas
         has_paid_selection_process_fee: !!referral.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: !!referral.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: !!referral.is_scholarship_fee_paid,
+        is_placement_fee_paid: false,
         is_application_fee_paid: !!referral.is_application_fee_paid,
-        scholarship_fee_paid_date: referral.scholarship_fee_paid_date || null,
-        i20_deadline: null as string | null,
         acceptance_letter_sent_at: null as string | null,
         acceptance_letter_status: null as string | null
       }));
@@ -222,11 +215,19 @@ const SellerDashboard: React.FC = () => {
       const [userProfilesResp, schAppsResp] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('id, has_paid_selection_process_fee, has_paid_i20_control_fee, i20_control_fee_due_date')
+          .select(`id, has_paid_selection_process_fee, is_placement_fee_paid, is_scholarship_fee_paid,
+            has_paid_i20_control_fee, has_paid_ds160_package, has_paid_i539_cos_package,
+            has_paid_reinstatement_package, placement_fee_flow, student_process_type,
+            visa_transfer_active, sevis_transfer_completed, visa_approved,
+            has_sent_docs_to_university, has_submitted_form, selected_scholarship_id,
+            documents_uploaded`)
           .in('id', profileIds),
         supabase
           .from('scholarship_applications')
-          .select('id, student_id, scholarship_id, is_scholarship_fee_paid, is_application_fee_paid, acceptance_letter_sent_at, acceptance_letter_status, scholarships(title, universities(name))')
+          .select(`id, student_id, scholarship_id, status, is_application_fee_paid, is_scholarship_fee_paid,
+            acceptance_letter_sent_at, acceptance_letter_status, acceptance_letter_url,
+            transfer_form_status, student_process_type, selected_scholarship_id,
+            scholarships(title, universities(name))`)
           .in('student_id', profileIds)
       ]);
 
@@ -244,8 +245,21 @@ const SellerDashboard: React.FC = () => {
       (userProfilesResp.data || []).forEach((p: any) => {
         profileIdToFlags.set(p.id, {
           has_paid_selection_process_fee: !!p.has_paid_selection_process_fee,
+          is_placement_fee_paid: !!p.is_placement_fee_paid,
+          is_scholarship_fee_paid: !!p.is_scholarship_fee_paid,
           has_paid_i20_control_fee: !!p.has_paid_i20_control_fee,
-          i20_deadline: p.i20_control_fee_due_date ? String(p.i20_control_fee_due_date) : null
+          has_paid_ds160_package: !!p.has_paid_ds160_package,
+          has_paid_i539_cos_package: !!p.has_paid_i539_cos_package,
+          has_paid_reinstatement_package: !!p.has_paid_reinstatement_package,
+          placement_fee_flow: !!p.placement_fee_flow,
+          student_process_type: p.student_process_type || null,
+          visa_transfer_active: p.visa_transfer_active ?? null,
+          sevis_transfer_completed: !!p.sevis_transfer_completed,
+          visa_approved: !!p.visa_approved,
+          has_sent_docs_to_university: !!p.has_sent_docs_to_university,
+          has_submitted_form: !!p.has_submitted_form,
+          selected_scholarship_id: p.selected_scholarship_id || null,
+          documents_uploaded: !!p.documents_uploaded,
         });
       });
 
@@ -260,42 +274,45 @@ const SellerDashboard: React.FC = () => {
         const studentApplications = scholarshipApplications.filter((app: any) => app.student_id === baseStudent.profile_id);
         
         if (studentApplications.length === 0) {
-          // Se não tem aplicações, criar entrada padrão
           studentsData.push({
             ...baseStudent,
             ...profileFlags,
             application_id: `no-app-${baseStudent.profile_id}`,
-            is_scholarship_fee_paid: false,
+            total_applications: 0,
+            application_status: null,
             is_application_fee_paid: false,
+            is_scholarship_fee_paid: profileFlags.is_scholarship_fee_paid || false,
             acceptance_letter_sent_at: null,
             acceptance_letter_status: null,
-            scholarship_fee_paid_date: null
+            acceptance_letter_url: null,
+            transfer_form_status: null,
           });
         } else {
-          // ✅ CORREÇÃO: Verificar se QUALQUER aplicação foi paga (não filtrar)
-          const hasAnyScholarshipPaid = studentApplications.some((app: any) => !!app.is_scholarship_fee_paid);
           const hasAnyApplicationPaid = studentApplications.some((app: any) => !!app.is_application_fee_paid);
+          const hasAnyScholarshipPaid = studentApplications.some((app: any) => !!app.is_scholarship_fee_paid);
           const hasAnyAcceptanceLetter = studentApplications.some((app: any) => !!app.acceptance_letter_sent_at);
-          
-          // Usar a aplicação mais recente para dados de exibição
-          const mostRecentApp = studentApplications.sort((a: any, b: any) => 
+
+          const mostRecentApp = studentApplications.sort((a: any, b: any) =>
             new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
           )[0];
 
-          // Criar UMA entrada por estudante com flags de QUALQUER aplicação paga
           studentsData.push({
             ...baseStudent,
             ...profileFlags,
             application_id: mostRecentApp.id,
-            // ✅ CORREÇÃO: Usar flags de QUALQUER aplicação paga
-            is_scholarship_fee_paid: hasAnyScholarshipPaid,
+            total_applications: studentApplications.length,
+            application_status: mostRecentApp.status || null,
             is_application_fee_paid: hasAnyApplicationPaid,
+            is_scholarship_fee_paid: hasAnyScholarshipPaid || profileFlags.is_scholarship_fee_paid || false,
             acceptance_letter_sent_at: hasAnyAcceptanceLetter ? mostRecentApp.acceptance_letter_sent_at : null,
             acceptance_letter_status: hasAnyAcceptanceLetter ? mostRecentApp.acceptance_letter_status : null,
-            scholarship_fee_paid_date: null,
-            // Usar dados da aplicação mais recente para exibição
+            acceptance_letter_url: mostRecentApp.acceptance_letter_url || null,
+            transfer_form_status: mostRecentApp.transfer_form_status || null,
+            // Use process type from app if not set at profile level
+            student_process_type: profileFlags.student_process_type || mostRecentApp.student_process_type || null,
+            selected_scholarship_id: profileFlags.selected_scholarship_id || mostRecentApp.selected_scholarship_id || null,
             scholarship_title: mostRecentApp.scholarships?.[0]?.title || baseStudent.scholarship_title,
-            university_name: mostRecentApp.scholarships?.[0]?.universities?.[0]?.name || baseStudent.university_name
+            university_name: mostRecentApp.scholarships?.[0]?.universities?.[0]?.name || baseStudent.university_name,
           });
         }
       });
@@ -467,17 +484,10 @@ const SellerDashboard: React.FC = () => {
           />
         );
       case 'students':
-        console.log('🚨🚨🚨 [INDEX] Rendering MyStudents with students:', students.length);
-        console.log('🚨🚨🚨 [INDEX] Students emails:', students.map(s => s.email));
         return (
-          <MyStudents 
+          <MyStudents
             students={students}
             onRefresh={handleRefresh}
-            onViewStudent={(student: {id: string, profile_id: string}) => {
-              setSelectedStudentId(student.id);
-              setCurrentView('student-details');
-              saveStateToStorage('student-details', student.id);
-            }}
           />
         );
       case 'student-details':

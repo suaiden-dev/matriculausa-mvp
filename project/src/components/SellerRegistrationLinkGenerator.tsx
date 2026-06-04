@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
+import { useAgencyId } from '../hooks/useAgencyId';
 
 interface SellerRegistrationCode {
   id: string;
@@ -14,7 +14,7 @@ interface SellerRegistrationCode {
 
 const SellerRegistrationLinkGenerator: React.FC = () => {
   const { user } = useAuth();
-  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAffiliateAdminId();
+  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAgencyId();
   const [codes, setCodes] = useState<SellerRegistrationCode[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);

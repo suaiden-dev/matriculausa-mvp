@@ -72,6 +72,7 @@ export interface ReferralInfo {
   affiliateName?: string;
   affiliateEmail?: string;
   isRewards?: boolean;
+  isAgency?: boolean; // true when the affiliate_program referrer is an affiliate_admin (agency)
   affiliateId?: string; // affiliate_codes.id — used to link to AffiliateDetails page
 }
 

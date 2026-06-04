@@ -78,8 +78,8 @@ const AffiliateRequestsSection: React.FC<AffiliateRequestsSectionProps> = ({
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Affiliate Payment Requests</h2>
-              <p className="text-gray-600 mt-1">Manage payout requests submitted by affiliates</p>
+              <h2 className="text-lg font-semibold text-gray-900">Agency Payment Requests</h2>
+              <p className="text-gray-600 mt-1">Manage payout requests submitted by agencies</p>
             </div>
             <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
               <button onClick={() => setUniversityRequestsViewMode('grid')} className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${universityRequestsViewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} title="Grid view">

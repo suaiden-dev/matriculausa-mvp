@@ -50,7 +50,7 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
       description: 'University payout requests awaiting approval',
     },
     {
-      title: 'Affiliate Payment Requests',
+      title: 'Agency Payment Requests',
       icon: Users,
       count: affiliateRequestsCount,
       amount: affiliateRequestsAmount,

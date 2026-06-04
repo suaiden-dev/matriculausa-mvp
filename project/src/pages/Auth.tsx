@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle, Handshake } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle, Handshake, Building2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -18,7 +18,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ mode }) => {
   const { t } = useTranslation(['auth', 'common']);
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'student' | 'university' | 'affiliate'>('student');
+  const [activeTab, setActiveTab] = useState<'student' | 'university' | 'affiliate' | 'agency'>('student');
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -103,8 +103,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     if (mode === 'register') {
       const params = new URLSearchParams(location.search);
       const tabParam = params.get('tab');
-      if (tabParam === 'student' || tabParam === 'university' || tabParam === 'affiliate') {
-        setActiveTab(tabParam);
+      if (tabParam === 'student' || tabParam === 'university' || tabParam === 'affiliate' || tabParam === 'agency') {
+        setActiveTab(tabParam as 'student' | 'university' | 'affiliate' | 'agency');
       }
     }
   }, [location.search, mode]);
@@ -413,13 +413,20 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       );
 
       const isAffiliateMissing = activeTab === 'affiliate' && (
-        !formData.full_name?.trim() || 
-        !formData.email?.trim() || 
-        !formData.password?.trim() || 
+        !formData.full_name?.trim() ||
+        !formData.email?.trim() ||
+        !formData.password?.trim() ||
         !formData.confirmPassword?.trim()
       );
 
-      if (isStudentMissing || isUniversityMissing || isAffiliateMissing) {
+      const isAgencyMissing = activeTab === 'agency' && (
+        !formData.full_name?.trim() ||
+        !formData.email?.trim() ||
+        !formData.password?.trim() ||
+        !formData.confirmPassword?.trim()
+      );
+
+      if (isStudentMissing || isUniversityMissing || isAffiliateMissing || isAgencyMissing) {
         setError('Por favor, preencha todos os campos obrigatórios.');
         return;
       }
@@ -486,7 +493,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }
         
         // Validar telefone (obrigatório para estudante/universidade, opcional para afiliado)
-        if (activeTab !== 'affiliate') {
+        if (activeTab !== 'affiliate' && activeTab !== 'agency') {
           if (!formData.phone || formData.phone.length < 8) {
             console.log('❌ [AUTH] Validação de telefone falhou:', {
               phone: formData.phone,
@@ -544,7 +551,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         const userData = {
           full_name: formData.full_name,
-          role: (activeTab === 'student' ? 'student' : activeTab === 'university' ? 'school' : 'affiliate') as 'student' | 'school' | 'affiliate',
+          role: (
+            activeTab === 'student'    ? 'student' :
+            activeTab === 'university' ? 'school' :
+            activeTab === 'agency'     ? 'affiliate_admin' :
+            'affiliate'
+          ) as 'student' | 'school' | 'affiliate' | 'affiliate_admin',
           // Newsletter consent - save for all users
           newsletter_consent: newsletterConsent,
           // Add additional registration data only for universities
@@ -554,10 +566,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             location: formData.location || '',
             phone: formData.phone || ''
           }),
-           // Add phone for student or affiliate
-           ...((activeTab === 'student' || activeTab === 'affiliate') && {
+           // Add phone for student, affiliate or agency
+           ...((activeTab === 'student' || activeTab === 'affiliate' || activeTab === 'agency') && {
              phone: formData.phone || '',
-             ...(activeTab === 'student' && {
+             ...((activeTab === 'student') && {
                // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
                ...(referralCodeType === 'seller' && formData.referralCode && {
                  seller_referral_code: formData.referralCode
@@ -601,6 +613,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           }
         }
 
+        // ✅ Se for cadastro de agência, inserir em agency_requests para aparecer no painel admin
+        if (activeTab === 'agency') {
+          try {
+            await supabase.from('agency_requests').insert({
+              full_name: formData.full_name,
+              company_name: formData.full_name,
+              email: normalizedEmail,
+              status: 'pending',
+            });
+            console.log('✅ [AUTH] agency_requests criado para:', normalizedEmail);
+          } catch (agencyErr) {
+            console.error('❌ [AUTH] Erro ao criar agency_requests:', agencyErr);
+          }
+        }
+
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
@@ -617,7 +644,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
          // O AuthRedirect vai redirecionar para o dashboard
          // Para universidades ou afiliados, definir isRegistered para mostrar a mensagem de sucesso e redirecionar em 10 segundos (só para universidades)
-         if (activeTab === 'university' || activeTab === 'affiliate') {
+         if (activeTab === 'university' || activeTab === 'affiliate' || activeTab === 'agency') {
            setIsRegistered(true);
            setLoading(false);
            if (activeTab === 'university') {
@@ -625,6 +652,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                navigate(`/login${location.search}`);
              }, 10000);
            }
+           // agency: sem redirect automático — usuário confirma email e vai para /agency/onboarding
          }
          return;
       } else {
@@ -679,7 +707,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }));
   };
 
-  const handleTabChange = (tab: 'student' | 'university' | 'affiliate') => {
+  const handleTabChange = (tab: 'student' | 'university' | 'affiliate' | 'agency') => {
     setActiveTab(tab);
   };
 
@@ -843,11 +871,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   }
 
   // Dynamic styles based on active tab for inputs
-  const ringColor = activeTab === 'affiliate' ? 'focus:ring-amber-500/20' : 'focus:ring-[#05294E]/20';
-  const borderColor = activeTab === 'affiliate' ? 'focus:border-amber-500' : 'focus:border-[#05294E]';
-  const iconColor = activeTab === 'affiliate' ? 'group-focus-within:text-amber-500' : 'group-focus-within:text-[#05294E]';
-  const phoneBorderColor = activeTab === 'affiliate' ? 'focus-within:border-amber-500' : 'focus-within:border-[#05294E]';
-  const phoneFocusColor = activeTab === 'affiliate' ? '#f59e0b' : '#05294E';
+  const ringColor = activeTab === 'affiliate' ? 'focus:ring-amber-500/20' : activeTab === 'agency' ? 'focus:ring-emerald-600/20' : 'focus:ring-[#05294E]/20';
+  const borderColor = activeTab === 'affiliate' ? 'focus:border-amber-500' : activeTab === 'agency' ? 'focus:border-emerald-600' : 'focus:border-[#05294E]';
+  const iconColor = activeTab === 'affiliate' ? 'group-focus-within:text-amber-500' : activeTab === 'agency' ? 'group-focus-within:text-emerald-600' : 'group-focus-within:text-[#05294E]';
+  const phoneBorderColor = activeTab === 'affiliate' ? 'focus-within:border-amber-500' : activeTab === 'agency' ? 'focus-within:border-emerald-600' : 'focus-within:border-[#05294E]';
+  const phoneFocusColor = activeTab === 'affiliate' ? '#f59e0b' : activeTab === 'agency' ? '#059669' : '#05294E';
   const passwordHoverColor = activeTab === 'affiliate' ? 'hover:text-amber-500' : 'hover:text-[#05294E]';
   const textLinkColor = 'text-[#05294E] hover:underline';
   const checkboxColor = 'text-[#05294E] focus:ring-[#05294E]/20 accent-[#05294E]';
@@ -875,11 +903,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             }`}
           />
           {/* Affiliate Image */}
-          <img 
-            src="https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=1200&auto=format&fit=crop" 
-            alt="Parceiros e Afiliados" 
+          <img
+            src="https://images.unsplash.com/photo-1556761175-b413da4baf72?q=80&w=1200&auto=format&fit=crop"
+            alt="Parceiros e Afiliados"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
               activeTab === 'affiliate' ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          {/* Agency Image */}
+          <img
+            src="https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1200&auto=format&fit=crop"
+            alt="Agência Parceira"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              activeTab === 'agency' ? 'opacity-100' : 'opacity-0'
             }`}
           />
           <div className="absolute inset-0 bg-[#05294E]/60 mix-blend-multiply"></div>
@@ -903,6 +939,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             {activeTab === 'student' && t('authPage.sideTitle', 'Transforme seu sonho de estudar nos EUA em realidade.')}
             {activeTab === 'university' && t('authPage.sideTitleUniversity', 'Conecte sua universidade a estudantes prontos para viver o sonho americano.')}
             {activeTab === 'affiliate' && t('authPage.sideTitleAffiliate', 'Faça parte da ponte entre estudantes e universidades americanas.')}
+            {activeTab === 'agency' && 'Expanda seu negócio conectando estudantes às melhores universidades americanas.'}
           </h1>
         </div>
       </div>
@@ -929,13 +966,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <div className="flex justify-center mb-6 border-b border-slate-200">
             <div className="flex relative w-full">
               {/* Active Indicator Line */}
-              <div 
-                className={`absolute bottom-0 left-0 w-1/3 h-0.5 transition-all duration-500 ease-in-out ${
-                  activeTab === 'student' 
-                    ? 'translate-x-0 bg-[#05294E]' 
+              <div
+                className={`absolute bottom-0 left-0 w-1/4 h-0.5 transition-all duration-500 ease-in-out ${
+                  activeTab === 'student'
+                    ? 'translate-x-0 bg-[#05294E]'
                     : activeTab === 'university'
                     ? 'translate-x-full bg-[#D0151C]'
-                    : 'translate-x-[200%] bg-amber-500'
+                    : activeTab === 'affiliate'
+                    ? 'translate-x-[200%] bg-amber-500'
+                    : 'translate-x-[300%] bg-emerald-600'
                 }`}
               />
               
@@ -977,6 +1016,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 <Handshake className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'affiliate' ? 'text-amber-500' : 'text-slate-400'}`} />
                 <span>{t('authPage.register.tabAffiliate', 'Sou um Afiliado')}</span>
               </button>
+
+              <button
+                onClick={() => handleTabChange('agency')}
+                type="button"
+                className={`relative z-10 flex items-center justify-center px-2 py-3 flex-1 font-bold transition-all duration-300 text-xs sm:text-sm ${
+                  activeTab === 'agency'
+                    ? 'text-emerald-600'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Building2 className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'agency' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <span>Sou uma Agência</span>
+              </button>
             </div>
           </div>
 
@@ -1013,6 +1065,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <span>
                       Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, acesse seu e-mail e clique no link para ativar sua conta de afiliado e começar a indicar.
                     </span>
+                  ) : activeTab === 'agency' ? (
+                    <span>
+                      Cadastro recebido! Enviamos um link de confirmação para <strong>{formData.email}</strong>. Confirme seu e-mail e em seguida complete o perfil da sua agência.
+                    </span>
                   ) : (
                     <span>
                       Enviamos um link de confirmação para o endereço <strong>{formData.email}</strong>. Por favor, confirme seu e-mail antes de fazer o login. Redirecionando para a tela de login em 10 segundos...
@@ -1025,7 +1081,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Form Fields Grid */}
-            {(activeTab === 'student' || activeTab === 'affiliate') && (
+            {(activeTab === 'student' || activeTab === 'affiliate' || activeTab === 'agency') && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Full Name — full width */}
                   <div className="sm:col-span-2">
@@ -1073,7 +1129,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   {/* Phone — col 2 */}
                   <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                      {t('authPage.register.phoneNumber')} {activeTab === 'affiliate' && <span className="text-slate-400 font-normal">(opcional)</span>}
+                      {t('authPage.register.phoneNumber')} {(activeTab === 'affiliate' || activeTab === 'agency') && <span className="text-slate-400 font-normal">(opcional)</span>}
                     </label>
                     <div className="relative">
                       <PhoneInput
@@ -1476,6 +1532,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   ? 'bg-[#05294E] hover:bg-[#041f3a]' 
                   : activeTab === 'university'
                   ? 'bg-[#D0151C] hover:bg-[#B01218]'
+                  : activeTab === 'agency'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
                   : 'bg-amber-500 hover:bg-amber-600'
               }`}
             >
@@ -1487,10 +1545,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               ) : (
                 <div className="flex items-center">
                   <span>
-                    {activeTab === 'student' 
-                      ? t('authPage.register.createStudentAccount') 
-                      : activeTab === 'university' 
-                      ? t('authPage.register.createUniversityAccount') 
+                    {activeTab === 'student'
+                      ? t('authPage.register.createStudentAccount')
+                      : activeTab === 'university'
+                      ? t('authPage.register.createUniversityAccount')
+                      : activeTab === 'agency'
+                      ? 'Criar Conta de Agência'
                       : t('authPage.register.createAffiliateAccount', 'Criar Conta de Afiliado')}
                   </span>
                 </div>

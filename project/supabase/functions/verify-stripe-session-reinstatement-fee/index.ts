@@ -93,6 +93,25 @@ Deno.serve(async (req) => {
       p_fee_amount_usd: stripeInfo.fee_amount_usd,
     });
 
+    // Registrar comissão via register_payment_billing
+    // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+    // Fallback to amountPaid (net) if metadata is missing (e.g. old sessions).
+    const commissionBaseAmount = session.metadata?.base_amount
+      ? parseFloat(session.metadata.base_amount)
+      : amountPaid;
+    try {
+      await supabase.rpc('register_payment_billing', {
+        user_id_param: userId,
+        fee_type_param: 'reinstatement_package',
+        amount_param: commissionBaseAmount,
+        payment_session_id_param: sessionId,
+        payment_method_param: 'stripe',
+      });
+      console.log('[Commission] register_payment_billing called for reinstatement_package, user', userId);
+    } catch (billingErr) {
+      console.error('[Commission] register_payment_billing failed:', billingErr);
+    }
+
     // Logar ação
     await supabase.rpc('log_student_action', {
       p_student_id: userProfile.id,

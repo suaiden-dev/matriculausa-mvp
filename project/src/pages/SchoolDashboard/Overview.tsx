@@ -356,7 +356,7 @@ const Overview: React.FC = () => {
 
     return (
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mt-6 sm:mt-8 lg:mt-10">
-        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 text-center sm:text-left">
           <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate-900">Applications Received</h3>
           <p className="text-slate-500 text-xs sm:text-sm">Track all student applications for your scholarships</p>
         </div>
@@ -548,13 +548,13 @@ const Overview: React.FC = () => {
 
     return (
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
               <Clock className="h-6 w-6 text-indigo-600" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-col items-center sm:items-start">
+              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">Pending Actions & Approvals</h3>
                 {pendingActions.length > 0 && (
                   <span className="bg-indigo-100 text-indigo-700 font-bold text-xs px-2.5 py-0.5 rounded-full">
@@ -733,7 +733,7 @@ const Overview: React.FC = () => {
 
         {renderPendingActionsPanel()}        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Profile Status */}
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 lg:p-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 lg:p-6 text-center sm:text-left">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4">Profile Status</h3>
             
             <div className="space-y-3 sm:space-y-4">
@@ -782,25 +782,25 @@ const Overview: React.FC = () => {
           </div>
 
           {/* Tips */}
-          <div className="bg-gradient-to-br from-[#05294E] to-blue-700 rounded-xl sm:rounded-2xl shadow-lg text-white p-4 sm:p-5 lg:p-6 flex flex-col justify-between">
+          <div className="bg-gradient-to-br from-[#05294E] to-blue-700 rounded-xl sm:rounded-2xl shadow-lg text-white p-4 sm:p-5 lg:p-6 flex flex-col justify-between text-center sm:text-left">
             <div>
               <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">💡 Success Tips</h3>
               <div className="space-y-2 sm:space-y-3">
-                <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="flex items-start justify-center sm:justify-start space-x-2 sm:space-x-3 text-left">
                   <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-                  <p className="text-xs sm:text-sm text-blue-100">
+                  <p className="text-xs sm:text-sm text-blue-100 max-w-[280px] sm:max-w-none">
                     Scholarships with attractive amounts receive 3x more applications
                   </p>
                 </div>
-                <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="flex items-start justify-center sm:justify-start space-x-2 sm:space-x-3 text-left">
                   <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-                  <p className="text-xs sm:text-sm text-blue-100">
+                  <p className="text-xs sm:text-sm text-blue-100 max-w-[280px] sm:max-w-none">
                     Detailed descriptions increase the quality of candidates
                   </p>
                 </div>
-                <div className="flex items-start space-x-2 sm:space-x-3">
+                <div className="flex items-start justify-center sm:justify-start space-x-2 sm:space-x-3 text-left">
                   <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
-                  <p className="text-xs sm:text-sm text-blue-100">
+                  <p className="text-xs sm:text-sm text-blue-100 max-w-[280px] sm:max-w-none">
                     Respond quickly to applications to maintain engagement
                   </p>
                 </div>

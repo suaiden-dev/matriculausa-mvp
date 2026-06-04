@@ -12,6 +12,8 @@ interface User {
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
+  onboarding_completed?: boolean;
+  is_active?: boolean;
 }
 
 // Definição completa do tipo para o perfil do usuário (incluindo todas as colunas do seu schema)
@@ -78,6 +80,7 @@ export interface UserProfile {
 
   // New field for admin restrictions
   is_restricted_admin?: boolean;
+  is_active?: boolean;
 
   // ... outras colunas se existirem
 }
@@ -209,6 +212,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         university_id: currentProfile?.university_id ?? undefined,
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
         university_image: (sessionUser as any).university_image || null,
+        onboarding_completed: currentProfile?.onboarding_completed,
+        is_active: currentProfile?.is_active,
       };
       // Usuario construído com sucesso
       return builtUser;
@@ -342,9 +347,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } catch (error) {
                   console.log('❌ [USEAUTH] Erro geral ao atualizar perfil existente:', error);
                 }
-              } else {
-                console.log('ℹ️ [USEAUTH] Perfil existente já está correto, não precisa de atualização.');
               }
+            }
+          }
+
+          // ✅ NOVO: Se o role for affiliate_admin, buscar dados adicionais da tabela affiliate_admins
+          if (profile && profile.role === 'affiliate_admin') {
+            try {
+              const { data: affiliateData, error: affiliateError } = await supabase
+                .from('affiliate_admins')
+                .select('is_active, onboarding_completed, company_name, phone, website, logo_url')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+
+              if (!affiliateError && affiliateData) {
+                profile = {
+                  ...profile,
+                  is_active: affiliateData.is_active,
+                  onboarding_completed: affiliateData.onboarding_completed,
+                  company_name: affiliateData.company_name || profile.company_name,
+                  phone: affiliateData.phone || profile.phone,
+                  website: affiliateData.website || profile.website,
+                  logo_url: affiliateData.logo_url || (profile as any).logo_url,
+                };
+              }
+            } catch (err) {
+              console.error('❌ [USEAUTH] Erro ao buscar status de affiliate_admin:', err);
             }
           }
         } catch (error) {
@@ -352,6 +380,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profile = null;
         }
         if (!profile) {
+          if (session.user.user_metadata?.role === 'seller') {
+            console.log('🔍 [USEAUTH] Invited seller detected without profile. Skipping auto-creation to allow manual registration.');
+            setSupabaseUser(session.user);
+            setUser(null);
+            setUserProfile(null);
+            setLoading(false);
+            return;
+          }
           try {
             console.log('🔍 [USEAUTH] Perfil não encontrado, criando novo perfil');
             console.log('🔍 [USEAUTH] session.user.id:', session.user.id);
@@ -850,8 +886,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_, session) => {
+      async (event, session) => {
         if (!isMounted) return;
+        if (event === 'PASSWORD_RECOVERY') {
+          // Don't process as a normal login — the user needs to set a new password first.
+          // ForgotPassword.tsx reads the tokens from the URL hash and handles the reset form.
+          return;
+        }
         handleAuthEvent(session);
       }
     );
@@ -1161,11 +1202,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     }
 
+    const emailRedirectTo = userData.role === 'affiliate_admin'
+      ? `${window.location.origin}/agencias`
+      : undefined;
+
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
         data: signUpData,
+        ...(emailRedirectTo ? { emailRedirectTo } : {}),
       }
     });
 
@@ -1183,6 +1229,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] data.user:', data?.user);
 
     // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
+    // Nota: affiliate_admin (agências) NÃO deve ser auto-confirmado — aguarda confirmação manual de email
     if (data?.user && userData.role === 'student') {
       try {
         // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)

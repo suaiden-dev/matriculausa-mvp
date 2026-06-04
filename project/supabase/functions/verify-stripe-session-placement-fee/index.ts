@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
 
     // Evitar duplicação
     const { data: existingLog } = await supabase.from("student_action_logs")
-      .select("id").eq("action_type", "fee_payment").eq(
+      .select("id").in("action_type", ["checkout_session_processed", "fee_payment"]).eq(
         "metadata->>session_id",
         sessionId,
       ).maybeSingle();
@@ -168,6 +168,25 @@ Deno.serve(async (req) => {
       p_gross_amount_usd: stripeInfo.gross_amount_usd,
       p_fee_amount_usd: stripeInfo.fee_amount_usd,
     });
+
+    // Registrar comissão via register_payment_billing
+    // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+    // Fallback to amountPaid (net) if metadata is missing (e.g. old sessions).
+    const commissionBaseAmount = session.metadata?.base_amount
+      ? parseFloat(session.metadata.base_amount)
+      : amountPaid;
+    try {
+      await supabase.rpc("register_payment_billing", {
+        user_id_param: userId,
+        fee_type_param: "placement_fee",
+        amount_param: commissionBaseAmount,
+        payment_session_id_param: sessionId,
+        payment_method_param: "stripe",
+      });
+      console.log("[Commission] register_payment_billing called for placement_fee, user", userId);
+    } catch (billingErr) {
+      console.error("[Commission] register_payment_billing failed:", billingErr);
+    }
 
     // Linkar pagamento ao plano de installments
     if (plan && indivPayment) {

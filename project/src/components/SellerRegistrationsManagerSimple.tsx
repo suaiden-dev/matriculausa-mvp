@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
+import { useAgencyId } from '../hooks/useAgencyId';
 
 interface SellerRegistration {
   id: string;
@@ -23,7 +23,7 @@ interface SellerRegistrationsManagerProps {
 
 const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps> = ({ onRefresh }) => {
   const { user } = useAuth();
-  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAffiliateAdminId();
+  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAgencyId();
   const [registrations, setRegistrations] = useState<SellerRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

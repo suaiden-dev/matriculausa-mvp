@@ -591,9 +591,10 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
   const { data: existingLog } = await supabase
     .from("student_action_logs")
     .select("id")
-    .eq("action_type", "checkout_session_processed")
+    .in("action_type", ["checkout_session_processed", "fee_payment"])
     .eq("metadata->>session_id", sessionId)
-    .single();
+    .limit(1)
+    .maybeSingle();
 
   if (existingLog) {
     console.log(
@@ -993,6 +994,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         console.error("[stripe-webhook] Exception recording application payment:", recordError);
       }
 
+      try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: finalUserId,
+          fee_type_param: "application_fee",
+          amount_param: commissionBaseAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: metadata?.payment_method || "stripe",
+        });
+        console.log("[stripe-webhook] register_payment_billing called for application_fee, user", finalUserId);
+      } catch (billingErr) {
+        console.error("[stripe-webhook] register_payment_billing failed for application_fee:", billingErr);
+      }
+
       // Limpar carrinho
       const { error: cartError } = await supabase.from("user_cart").delete().eq(
         "user_id",
@@ -1119,28 +1137,22 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           // Error logged silently or handled if needed
         }
 
-        // 5. Registrar faturamento (affiliate_referrals)
+        // 5. Registrar comissão da agência
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : paymentAmount;
         try {
-          const { data: usedCode } = await supabase.from("used_referral_codes")
-            .select("referrer_id, affiliate_code").eq("user_id", userId)
-            .single();
-
-          if (usedCode) {
-            const baseAmount = metadata.base_amount
-              ? Number(metadata.base_amount)
-              : (session.amount_total ? session.amount_total / 100 : 0);
-            await supabase.from("affiliate_referrals").upsert({
-              referrer_id: usedCode.referrer_id,
-              referred_id: userId,
-              affiliate_code: usedCode.affiliate_code,
-              payment_amount: baseAmount,
-              status: "completed",
-              payment_session_id: session.id,
-              completed_at: new Date().toISOString(),
-            }, { onConflict: "referred_id" });
-          }
-        } catch (billingError) {
-          console.error("[FATURAMENTO] Erro:", billingError);
+          await supabase.rpc("register_payment_billing", {
+            user_id_param: userId,
+            fee_type_param: "scholarship_fee",
+            amount_param: commissionBaseAmount,
+            payment_session_id_param: sessionId,
+            payment_method_param: "stripe",
+          });
+          console.log("[stripe-webhook] register_payment_billing called for scholarship_fee, user", userId);
+        } catch (billingErr) {
+          console.error("[stripe-webhook] register_payment_billing failed for scholarship_fee:", billingErr);
         }
 
         // 6. Registrar em scholarship_fee_payments
@@ -1382,6 +1394,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         } catch (recordError) {
           console.error("[Individual Fee Payment] Error recording payment:", recordError);
         }
+
+        try {
+          // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+          const commissionBaseAmount = metadata?.base_amount
+            ? parseFloat(metadata.base_amount)
+            : (session.amount_total ? session.amount_total / 100 : 0);
+          await supabase.rpc("register_payment_billing", {
+            user_id_param: userId,
+            fee_type_param: "i20_control",
+            amount_param: commissionBaseAmount,
+            payment_session_id_param: sessionId,
+            payment_method_param: metadata?.payment_method || "stripe",
+          });
+          console.log("[stripe-webhook] register_payment_billing called for i20_control_fee, user", userId);
+        } catch (billingErr) {
+          console.error("[stripe-webhook] register_payment_billing failed for i20_control_fee:", billingErr);
+        }
       }
     }
   }
@@ -1463,6 +1492,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       } catch (recordError) {
         console.error("[stripe-webhook] Error processing placement payment:", recordError);
       }
+
+      try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: userId,
+          fee_type_param: "placement_fee",
+          amount_param: commissionBaseAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: metadata?.payment_method || "stripe",
+        });
+        console.log("[stripe-webhook] register_payment_billing called for placement_fee, user", userId);
+      } catch (billingErr) {
+        console.error("[stripe-webhook] register_payment_billing failed for placement_fee:", billingErr);
+      }
     }
   }
   if (paymentType === "selection_process") {
@@ -1531,6 +1577,24 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
 
         if (insertError) {
           // Error handled silently
+        }
+
+        // Registrar comissão da agência
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : paymentAmount;
+        try {
+          await supabase.rpc("register_payment_billing", {
+            user_id_param: userId,
+            fee_type_param: "selection_process",
+            amount_param: commissionBaseAmount,
+            payment_session_id_param: sessionId,
+            payment_method_param: "stripe",
+          });
+          console.log("[stripe-webhook] register_payment_billing called for selection_process, user", userId);
+        } catch (billingErr) {
+          console.error("[stripe-webhook] register_payment_billing failed:", billingErr);
         }
       } catch (recordError) {
         // Error handled
@@ -1680,6 +1744,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         else console.log(`[stripe-webhook] ${paymentType} payment record inserted successfully.`);
       } catch (recordError) {
         console.error(`[stripe-webhook] Exception recording ${paymentType} payment:`, recordError);
+      }
+
+      try {
+        // Use base_amount from session metadata (pre-surcharge price) for commission calculation.
+        const commissionBaseAmount = metadata?.base_amount
+          ? parseFloat(metadata.base_amount)
+          : (session.amount_total ? session.amount_total / 100 : 0);
+        await supabase.rpc("register_payment_billing", {
+          user_id_param: finalUserId,
+          fee_type_param: paymentType,
+          amount_param: commissionBaseAmount,
+          payment_session_id_param: sessionId,
+          payment_method_param: paymentMethod || "stripe",
+        });
+        console.log(`[stripe-webhook] register_payment_billing called for ${paymentType}, user`, finalUserId);
+      } catch (billingErr) {
+        console.error(`[stripe-webhook] register_payment_billing failed for ${paymentType}:`, billingErr);
       }
 
       // Log da ação do estudante

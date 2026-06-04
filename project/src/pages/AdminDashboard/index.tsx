@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
@@ -28,7 +28,8 @@ const FinancialAnalytics = lazy(() => import('./FinancialAnalytics'));
 const TermsManagement = lazy(() => import('./TermsManagement'));
 const CouponManagement = lazy(() => import('./CouponManagement'));
 const NewsletterManagement = lazy(() => import('./NewsletterManagement'));
-const AffiliateManagement = lazy(() => import('./AffiliateManagement'));
+const AgencyManagement = lazy(() => import('./AgencyManagement'));
+const AgencyDetail = lazy(() => import('./AgencyDetail'));
 const ReferralAffiliatesManagement = lazy(() => import('./ReferralAffiliatesManagement'));
 const AffiliateDetails = lazy(() => import('./AffiliateDetails'));
 const AdminStudentDetailsRefactored = lazy(() => import('./AdminStudentDetails.refactored'));
@@ -635,7 +636,9 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
                 <Route path="/payout-requests" element={<AdminPayoutRequests />} />
                 <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
-                <Route path="affiliate-management" element={<AffiliateManagement />} />
+                <Route path="agencies" element={<AgencyManagement />} />
+                <Route path="agencies/:agencyId" element={<AgencyDetail />} />
+                <Route path="affiliate-management" element={<Navigate to="/admin/dashboard/agencies" replace />} />
                 <Route path="referral-affiliates" element={<ReferralAffiliatesManagement />} />
                 <Route path="referral-affiliates/:affiliateId" element={<AffiliateDetails />} />
                 <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
