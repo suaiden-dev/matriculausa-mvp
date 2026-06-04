@@ -897,7 +897,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           />
           {/* Agency Image */}
           <img
-            src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1200&auto=format&fit=crop"
             alt="Agência Parceira"
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
               activeTab === 'agency' ? 'opacity-100' : 'opacity-0'
