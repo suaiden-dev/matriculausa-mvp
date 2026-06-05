@@ -8,7 +8,8 @@ export type TermType =
   | "affiliate_terms"
   | "seller_terms"
   | "checkout_terms"
-  | "university_terms";
+  | "university_terms"
+  | "agency_terms";
 
 interface Term {
   id: string;

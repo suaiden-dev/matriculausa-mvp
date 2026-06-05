@@ -1,11 +1,16 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, Mail } from 'lucide-react';
 
 const AffiliateAdminPendingApproval: React.FC = () => {
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <Link to="/" className="mb-6 hover:opacity-90 transition-opacity">
+        <img src="/logo.png.png" alt="Matrícula USA" className="h-12 w-auto" />
+      </Link>
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

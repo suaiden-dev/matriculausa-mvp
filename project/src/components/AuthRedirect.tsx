@@ -9,8 +9,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
+  const [checkingAgency, setCheckingAgency] = useState(false);
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
+  const agencyCache = useRef<{ [userId: string]: any }>({});
 
   const checkUniversityStatus = useCallback(async (userId: string, universityId?: string) => {
     const cacheKey = universityId || userId;
@@ -38,6 +40,34 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return result;
     } catch (error) {
       return { error, university: null };
+    }
+  }, []);
+
+  const checkAgencyStatus = useCallback(async (userId: string) => {
+    if (agencyCache.current[userId]) {
+      return agencyCache.current[userId];
+    }
+
+    try {
+      const { data: agency, error } = await supabase
+        .from('affiliate_admins')
+        .select('terms_accepted, onboarding_completed, is_active')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const result = {
+        error: error && error.code !== 'PGRST116' ? error : null,
+        agency: agency || null
+      };
+
+      agencyCache.current[userId] = result;
+      setTimeout(() => {
+        delete agencyCache.current[userId];
+      }, 30000);
+
+      return result;
+    } catch (error) {
+      return { error, agency: null };
     }
   }, []);
 
@@ -189,10 +219,15 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
         if (user.role === 'admin' || user.role === 'post_sales') { navigate('/admin/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate_admin') {
-          const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
-          if (!affiliateOnboardingDone) { navigate('/agency/onboarding', { replace: true }); return; }
-          if (!user.is_active) { navigate('/agency/pending-approval', { replace: true }); return; }
-          navigate('/agency/dashboard', { replace: true }); return;
+          setCheckingAgency(true);
+          const { error, agency } = await checkAgencyStatus(user.id);
+          if (error) { navigate('/agency/dashboard', { replace: true }); setCheckingAgency(false); return; }
+          if (!agency || !agency.terms_accepted) { navigate('/agency/termsandconditions', { replace: true }); setCheckingAgency(false); return; }
+          if (!agency.onboarding_completed) { navigate('/agency/onboarding', { replace: true }); setCheckingAgency(false); return; }
+          if (!agency.is_active) { navigate('/agency/pending-approval', { replace: true }); setCheckingAgency(false); return; }
+          navigate('/agency/dashboard', { replace: true });
+          setCheckingAgency(false);
+          return;
         }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
         if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
@@ -246,28 +281,42 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
         const isProtectedAffiliatePath = currentPath.startsWith('/agency/dashboard') ||
           currentPath.startsWith('/agency/onboarding') ||
-          currentPath.startsWith('/agency/pending-approval');
+          currentPath.startsWith('/agency/pending-approval') ||
+          currentPath.startsWith('/agency/termsandconditions');
 
         const isAgenciasPage = currentPath === '/agencias';
 
-        // Use userProfile.onboarding_completed as fallback to avoid stale cache issue:
-        // user.onboarding_completed comes from cached_user (may be stale on first load),
-        // while userProfile is updated by refetchUserProfile() in AgencyOnboarding.
-        const affiliateOnboardingDone = user.onboarding_completed || userProfile?.onboarding_completed;
-
         if (tryingToAccessOtherDashboard || isProtectedAffiliatePath || isAgenciasPage) {
+          setCheckingAgency(true);
+          const { error, agency } = await checkAgencyStatus(user.id);
+          if (error) { setCheckingAgency(false); return; }
+
+          if (!agency || !agency.terms_accepted) {
+            if (currentPath !== '/agency/termsandconditions') {
+              navigate('/agency/termsandconditions', { replace: true });
+            }
+            setCheckingAgency(false);
+            return;
+          }
+
+          const affiliateOnboardingDone = agency.onboarding_completed;
+
           if (!affiliateOnboardingDone && currentPath !== '/agency/onboarding') {
             navigate('/agency/onboarding', { replace: true });
+            setCheckingAgency(false);
             return;
           }
-          if (affiliateOnboardingDone && !user.is_active && currentPath !== '/agency/pending-approval') {
+          if (affiliateOnboardingDone && !agency.is_active && currentPath !== '/agency/pending-approval') {
             navigate('/agency/pending-approval', { replace: true });
+            setCheckingAgency(false);
             return;
           }
-          if (affiliateOnboardingDone && user.is_active && (tryingToAccessOtherDashboard || isAgenciasPage || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval')) {
+          if (affiliateOnboardingDone && agency.is_active && (tryingToAccessOtherDashboard || isAgenciasPage || currentPath === '/agency/onboarding' || currentPath === '/agency/pending-approval' || currentPath === '/agency/termsandconditions')) {
             navigate('/agency/dashboard', { replace: true });
+            setCheckingAgency(false);
             return;
           }
+          setCheckingAgency(false);
         }
       }
 
@@ -328,7 +377,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     checkAndRedirect();
   }, [user?.id, user?.role, user?.onboarding_completed, user?.is_active, userProfile?.onboarding_completed, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
 
-  if (checkingUniversity) {
+  if (checkingUniversity || checkingAgency) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>

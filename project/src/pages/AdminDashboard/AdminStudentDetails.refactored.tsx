@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, Suspense, lazy, useCallback, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -30,7 +30,7 @@ import {
   ExternalLink,
   Download
 } from 'lucide-react';
-import { useFilterDataQuery } from '../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
+
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
 
@@ -95,8 +95,7 @@ const AdminStudentDetails: React.FC = () => {
   const student = studentDetailsQuery.data || null;
   const loading = studentDetailsQuery.isLoading;
 
-  // Hooks para Dados de Filtro (se necessário em outras partes)
-  const filterDataQuery = useFilterDataQuery();
+
 
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
@@ -277,7 +276,7 @@ const AdminStudentDetails: React.FC = () => {
         has_paid_i20: boolean;
         has_paid_placement: boolean;
         has_paid_reinstatement?: boolean;
-        selection_process_fee_payment_method?: string;
+        selection_process_fee_payment_method?: string | null;
         source?: string | null;
       },
       applications?: any[]
@@ -4023,20 +4022,16 @@ const AdminStudentDetails: React.FC = () => {
                     // Atualizar todas as aplicações do estudante com o novo process type
                     const applicationIds = applications.map((app: any) => app.id).filter(Boolean);
 
-                    if (applicationIds.length > 0) {
-                      console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
+                    console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações para o user_id:', student.user_id);
 
-                      const { error: updateError } = await supabase
-                        .from('scholarship_applications')
-                        .update({ student_process_type: dbType })
-                        .in('id', applicationIds);
+                    const { error: updateError } = await supabase
+                      .from('scholarship_applications')
+                      .update({ student_process_type: dbType })
+                      .eq('user_id', student.user_id);
 
-                      if (updateError) {
-                        console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
-                        throw updateError;
-                      }
-                    } else {
-                      console.log('ℹ️ [onSaveProcessType] Aluno sem aplicações, pulando atualização de scholarship_applications');
+                    if (updateError) {
+                      console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
+                      throw updateError;
                     }
 
                     // ✅ SINCRONIZAR TAMBÉM COM USER_PROFILES
