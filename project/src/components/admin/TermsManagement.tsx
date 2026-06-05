@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Eye, Save, X, History, Users, Calendar, Globe } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, History, Users, Calendar, Globe, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useTermsAcceptance, TermType } from '../../hooks/useTermsAcceptance';
+import { TermType } from '../../hooks/useTermsAcceptance';
 
 interface Term {
   id: string;
@@ -30,7 +29,6 @@ interface TermAcceptance {
 }
 
 export const TermsManagement: React.FC = () => {
-  const { t } = useTranslation();
   const [terms, setTerms] = useState<Term[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,9 +177,6 @@ export const TermsManagement: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = async (termId: string) => {
-    if (!confirm('Are you sure you want to delete this term?')) return;
-
   const handleViewAcceptanceHistory = async (term: Term) => {
     setSelectedTermForHistory(term);
     setShowAcceptanceHistory(true);
@@ -193,6 +188,9 @@ export const TermsManagement: React.FC = () => {
     setShowAcceptanceHistory(true);
     await loadAcceptanceHistory();
   };
+
+  const handleDelete = async (termId: string) => {
+    if (!confirm('Are you sure you want to delete this term?')) return;
 
     try {
       setLoading(true);
@@ -230,7 +228,8 @@ export const TermsManagement: React.FC = () => {
       affiliate_terms: 'Affiliate Terms',
       seller_terms: 'Seller Terms',
       checkout_terms: 'Checkout Terms',
-      university_terms: 'University Terms'
+      university_terms: 'University Terms',
+      agency_terms: 'Agency Terms'
     };
     return labels[type];
   };
@@ -376,6 +375,7 @@ export const TermsManagement: React.FC = () => {
                   >
                     <option value="terms_of_service">Terms of Service</option>
                     <option value="privacy_policy">Privacy Policy</option>
+                    <option value="agency_terms">Agency Terms</option>
                     <option value="affiliate_terms">Affiliate Terms</option>
                     <option value="seller_terms">Seller Terms</option>
                     <option value="checkout_terms">Checkout Terms</option>
