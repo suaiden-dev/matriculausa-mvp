@@ -34,7 +34,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+  return new Date(dateStr).toLocaleDateString('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -44,39 +44,39 @@ function formatDate(dateStr: string): string {
 
 function buildStudentSubject(daysUntilDue: number): string {
   if (daysUntilDue < 0) {
-    return '⚠️ IMPORTANTE: Sua parcela do Placement Fee está atrasada';
+    return '⚠️ IMPORTANT: Your Placement Fee installment is overdue';
   }
   const map: Record<number, string> = {
-    20: '⏰ Lembrete: sua parcela do Placement Fee vence em 20 dias',
-    13: '⏰ Lembrete: sua parcela do Placement Fee vence em 13 dias',
-    6:  '⚠️ Urgente: sua parcela do Placement Fee vence em 6 dias',
-    0:  '🔴 Último aviso: sua parcela do Placement Fee vence HOJE',
+    20: '⏰ Reminder: Your Placement Fee installment is due in 20 days',
+    13: '⏰ Reminder: Your Placement Fee installment is due in 13 days',
+    6:  '⚠️ Urgent: Your Placement Fee installment is due in 6 days',
+    0:  '🔴 Final Notice: Your Placement Fee installment is due TODAY',
   };
-  return map[daysUntilDue] ?? 'Lembrete de parcela — Matrícula USA';
+  return map[daysUntilDue] ?? 'Installment Reminder — Matrícula USA';
 }
 
 function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): string {
   const pendingAmount = Number(student.placement_fee_pending_balance ?? 0);
   const formattedAmount = formatCurrency(pendingAmount);
   const formattedDate = formatDate(student.placement_fee_due_date);
-  const studentName = student.full_name ?? 'Aluno(a)';
+  const studentName = student.full_name ?? 'Student';
   const siteUrl = Deno.env.get('SITE_URL') || 'https://matriculausa.com';
 
   let urgencyLine = '';
   if (daysUntilDue < 0) {
     const daysOverdue = -daysUntilDue;
-    urgencyLine = `Sua parcela está atrasada há <strong>${daysOverdue} dia${daysOverdue > 1 ? 's' : ''}</strong> (venceu em ${formattedDate}). Por favor, regularize o pagamento para evitar suspensão ou bloqueio do seu acesso.`;
+    urgencyLine = `Your installment is overdue by <strong>${daysOverdue} day${daysOverdue > 1 ? 's' : ''}</strong> (due on ${formattedDate}). Please settle the payment to avoid suspension or block of your access.`;
   } else if (daysUntilDue === 0) {
-    urgencyLine = 'Sua parcela vence <strong>hoje</strong>. Realize o pagamento para evitar o bloqueio do seu acesso.';
+    urgencyLine = 'Your installment is due <strong>today</strong>. Please submit payment to avoid suspension of your access.';
   } else {
-    urgencyLine = `Sua parcela vence em <strong>${daysUntilDue} dia${daysUntilDue > 1 ? 's' : ''}</strong> (${formattedDate}).`;
+    urgencyLine = `Your installment is due in <strong>${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}</strong> (${formattedDate}).`;
   }
 
   return `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Lembrete de Parcela — Matrícula USA</title>
+  <title>Installment Reminder — Matrícula USA</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f9f9f9; color: #333; }
     .wrapper { max-width: 600px; margin: 0 auto; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
@@ -99,29 +99,29 @@ function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): st
       <img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA">
     </div>
     <div class="content">
-      <p>Olá, <strong>${studentName}</strong>,</p>
+      <p>Hello, <strong>${studentName}</strong>,</p>
       <p>${urgencyLine}</p>
-      <p>Para manter seu acesso ao painel e garantir a liberação dos seus documentos finais, realize o pagamento da parcela pendente via <strong>Zelle</strong> pelo seu painel de aluno:</p>
+      <p>To maintain access to your dashboard and ensure the release of your final documents, please make the payment for the pending installment via <strong>Zelle</strong> through your student dashboard:</p>
       <div class="amount-box">
-        <div style="font-size: 14px; color: #78350f; margin-bottom: 4px;">Valor da parcela</div>
+        <div style="font-size: 14px; color: #78350f; margin-bottom: 4px;">Installment Amount</div>
         <div class="amount">${formattedAmount}</div>
-        <div class="due-date">Vencimento: ${formattedDate}</div>
+        <div class="due-date">Due Date: ${formattedDate}</div>
       </div>
       <div style="text-align: center; margin: 25px 0;">
-        <a href="${siteUrl}/student/onboarding" target="_blank" class="btn-cta">Acessar meu Painel e Pagar</a>
+        <a href="${siteUrl}/student/onboarding" target="_blank" class="btn-cta">Access My Dashboard and Pay</a>
       </div>
-      <p>Se o botão acima não funcionar, copie e cole este link no seu navegador:<br>
+      <p>If the button above does not work, copy and paste this link into your browser:<br>
         <a href="${siteUrl}/student/onboarding">${siteUrl}/student/onboarding</a>
       </p>
-      <p><strong>Por favor, não responda a este e-mail.</strong></p>
+      <p><strong>Please do not reply to this email.</strong></p>
       <br>
-      <p>Atenciosamente,<br>
-        <strong>Equipe Matrícula USA</strong><br>
+      <p>Best regards,<br>
+        <strong>Matrícula USA Team</strong><br>
         <a href="https://matriculausa.com/">https://matriculausa.com/</a>
       </p>
     </div>
     <div class="footer">
-      Você está recebendo este e-mail porque possui uma parcela pendente na plataforma Matrícula USA. Esta é uma notificação automática.
+      You are receiving this email because you have a pending installment on the Matrícula USA platform. This is an automated notification.
     </div>
   </div>
 </body>
@@ -129,7 +129,7 @@ function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): st
 }
 
 function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]): string {
-  const todayFormatted = new Date().toLocaleDateString('pt-BR', {
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
     day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',
   });
 
@@ -143,10 +143,10 @@ function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]
   }).join('');
 
   return `<!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Parcelas Vencendo Hoje — Matrícula USA</title>
+  <title>Installments Due Today — Matrícula USA</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f9f9f9; color: #333; }
     .wrapper { max-width: 700px; margin: 0 auto; background-color: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
@@ -162,27 +162,27 @@ function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>🔴 Parcelas Vencendo Hoje</h1>
+      <h1>🔴 Installments Due Today</h1>
       <p>${todayFormatted}</p>
     </div>
     <div class="content">
-      <p>Olá, <strong>${memberName}</strong>,</p>
-      <p>Os seguintes alunos possuem parcela de <strong>Placement Fee vencendo hoje</strong> e ainda não realizaram o pagamento:</p>
+      <p>Hello, <strong>${memberName}</strong>,</p>
+      <p>The following students have a <strong>Placement Fee installment due today</strong> and have not completed their payment yet:</p>
       <table>
         <thead>
           <tr>
-            <th>Nome do Aluno</th>
-            <th>E-mail</th>
-            <th>Valor Pendente</th>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th>Pending Amount</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <p style="margin-top: 20px;">Por favor, entre em contato com esses alunos para acompanhar a regularização do pagamento.</p>
+      <p style="margin-top: 20px;">Please contact these students to follow up on the payment settlement.</p>
       <br>
-      <p>Atenciosamente,<br><strong>Sistema Matrícula USA</strong></p>
+      <p>Best regards,<br><strong>Matrícula USA System</strong></p>
     </div>
-    <div class="footer">Esta é uma notificação automática gerada diariamente pelo sistema.</div>
+    <div class="footer">This is an automated notification generated daily by the system.</div>
   </div>
 </body>
 </html>`;
@@ -281,8 +281,8 @@ Deno.serve(async (req: Request) => {
           adminClient.functions.invoke('send-email', {
             body: {
               to: member.email,
-              subject: `🔴 [Matrícula USA] ${overdueToday.length} aluno(s) com parcela vencendo hoje`,
-              html: buildTeamEmailHtml(member.full_name ?? 'Time de Pós-Vendas', overdueToday),
+              subject: `🔴 [Matrícula USA] ${overdueToday.length} student(s) with installment due today`,
+              html: buildTeamEmailHtml(member.full_name ?? 'Post-Sales Team', overdueToday),
             },
           }).then(({ error: emailError }: { error: any }) => {
             if (emailError) {

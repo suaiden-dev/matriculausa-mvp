@@ -112,6 +112,7 @@ export function useStudentsQuery() {
             has_paid_ds160_package,
             placement_fee_flow,
             is_placement_fee_paid,
+            is_application_fee_paid,
             role,
             system_type,
             seller_referral_code,
@@ -403,6 +404,7 @@ export function useStudentsQuery() {
           application_status: applicationStatus,
           applied_at: lockedApplication?.applied_at || null,
           is_application_fee_paid: lockedApplication?.is_application_fee_paid ||
+            student.is_application_fee_paid ||
             false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid ||
             false,
