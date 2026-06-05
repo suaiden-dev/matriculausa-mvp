@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
-import { sendTermAcceptanceNotification } from '../utils/termAcceptanceNotification';
 
 export type TermType = 
   | 'terms_of_service'
@@ -9,7 +8,8 @@ export type TermType =
   | 'affiliate_terms'
   | 'seller_terms'
   | 'checkout_terms'
-  | 'university_terms';
+  | 'university_terms'
+  | 'agency_terms';
 
 // Hook específico para affiliates registrarem aceitações de termos de seus estudantes
 export const useAffiliateTermsAcceptance = () => {

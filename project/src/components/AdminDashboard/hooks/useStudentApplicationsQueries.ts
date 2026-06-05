@@ -33,9 +33,12 @@ export interface StudentRecord {
   reviewed_by: string | null;
   placement_fee_flow?: boolean;
   is_placement_fee_paid?: boolean;
+  system_type?: string | null;
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
+  application_fee_amount?: number | null;
+  scholarship_fee_amount?: number | null;
   most_recent_activity?: Date;
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
@@ -45,6 +48,7 @@ export interface StudentRecord {
   placement_fee_amount?: number | null;
   fee_override_placement_fee?: number | null;
   fee_override_i20_fee?: number | null;
+  fee_override_selection_process_fee?: number | null;
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
@@ -54,6 +58,7 @@ export interface StudentRecord {
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
   agency_name?: string | null;
+  agency_email?: string | null;
   // New stage fields
   has_sent_docs_to_university?: boolean;
   sevis_transfer_completed?: boolean;
@@ -108,6 +113,7 @@ export function useStudentsQuery() {
             placement_fee_flow,
             is_placement_fee_paid,
             role,
+            system_type,
             seller_referral_code,
             has_paid_reinstatement_package,
             visa_transfer_active,
@@ -149,6 +155,8 @@ export function useStudentsQuery() {
                   field_of_study,
                   university_id,
                   placement_fee_amount,
+                  application_fee_amount,
+                  scholarship_fee_amount,
                   universities (
                     name
                   )
@@ -167,7 +175,7 @@ export function useStudentsQuery() {
           .eq("is_active", true),
         supabase
           .from("user_profiles")
-          .select("user_id, full_name")
+          .select("user_id, full_name, email")
           .eq("role", "affiliate_admin"),
       ]);
 
@@ -180,24 +188,38 @@ export function useStudentsQuery() {
       const affiliateAdminsData = affiliateAdminsResult.data || [];
       const affiliateProfiles = affiliateProfilesResult.data || [];
 
-      // Mapear administradores de agência para nome exibível
+      // Mapear administradores de agência para nome exibível e e-mail
       const adminNamesMap = new Map(
         affiliateProfiles.map((p: any) => [p.user_id, p.full_name]) || [],
       );
+      const adminEmailsMap = new Map(
+        affiliateProfiles.map((p: any) => [p.user_id, p.email]) || [],
+      );
       const agencyMap = new Map<string, string>();
+      const agencyEmailMap = new Map<string, string>();
       affiliateAdminsData.forEach((aa: any) => {
         const name = aa.company_name || aa.legal_name ||
           adminNamesMap.get(aa.user_id) || "Agência";
         agencyMap.set(aa.id, name);
+        
+        const email = adminEmailsMap.get(aa.user_id) || "";
+        if (email) {
+          agencyEmailMap.set(aa.id, email);
+        }
       });
 
-      // Mapear código de indicação do vendedor para o nome da agência
+      // Mapear código de indicação do vendedor para o nome da agência e e-mail do admin
       const referralCodeToAgencyMap = new Map<string, string>();
+      const referralCodeToAgencyEmailMap = new Map<string, string>();
       sellersData.forEach((s: any) => {
         if (s.referral_code && s.affiliate_admin_id) {
           const agencyName = agencyMap.get(s.affiliate_admin_id);
           if (agencyName) {
             referralCodeToAgencyMap.set(s.referral_code, agencyName);
+          }
+          const agencyEmail = agencyEmailMap.get(s.affiliate_admin_id);
+          if (agencyEmail) {
+            referralCodeToAgencyEmailMap.set(s.referral_code, agencyEmail);
           }
         }
       });
@@ -364,9 +386,14 @@ export function useStudentsQuery() {
           has_paid_ds160_package: student.has_paid_ds160_package || false,
           placement_fee_flow: student.placement_fee_flow || false,
           is_placement_fee_paid: student.is_placement_fee_paid || false,
+          system_type: student.system_type || "legacy",
           seller_referral_code: student.seller_referral_code || null,
           agency_name: student.seller_referral_code
             ? (referralCodeToAgencyMap.get(student.seller_referral_code) ||
+              null)
+            : null,
+          agency_email: student.seller_referral_code
+            ? (referralCodeToAgencyEmailMap.get(student.seller_referral_code) ||
               null)
             : null,
           // Dados da aplicação só aparecem se locked
@@ -417,10 +444,16 @@ export function useStudentsQuery() {
             student.placement_fee_pending_balance ?? 0,
           placement_fee_amount:
             lockedApplication?.scholarships?.placement_fee_amount ?? null,
+          application_fee_amount:
+            lockedApplication?.scholarships?.application_fee_amount ?? null,
+          scholarship_fee_amount:
+            lockedApplication?.scholarships?.scholarship_fee_amount ?? null,
           fee_override_placement_fee:
             feeOverridesMap[student.user_id]?.placement_fee ?? null,
           fee_override_i20_fee:
             feeOverridesMap[student.user_id]?.i20_control_fee ?? null,
+          fee_override_selection_process_fee:
+            feeOverridesMap[student.user_id]?.selection_process_fee ?? null,
           placement_fee_due_date: student.placement_fee_due_date || null,
           placement_fee_installment_number:
             student.placement_fee_installment_number ?? 0,

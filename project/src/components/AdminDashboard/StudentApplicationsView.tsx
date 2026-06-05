@@ -20,7 +20,6 @@ import { supabase } from '../../lib/supabase';
 import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
 import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
 import { useStudentsQuery, useFilterDataQuery, StudentRecord } from './hooks/useStudentApplicationsQueries';
-import { useAuth } from '../../hooks/useAuth';
 import RefreshButton from '../RefreshButton';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -54,6 +53,27 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     return 'kanban';
   });
 
+  // React Query Hooks
+  const studentsQuery = useStudentsQuery();
+  const filterDataQuery = useFilterDataQuery();
+
+  // Estados para geração em massa de documentos
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+
+  // Listener para capturar o scroll da window
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      sessionStorage.setItem('admin_page_scroll_position', window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', handleWindowScroll);
+    return () => {
+      window.removeEventListener('scroll', handleWindowScroll);
+    };
+  }, []);
+
   // Atualizar localStorage quando mudar o modo de visualização
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -61,15 +81,24 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     }
   }, [viewMode]);
 
-  // Estados para geração em massa de documentos
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
-  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+  // Restaurar e salvar posição do scroll vertical da página principal (window)
+  useEffect(() => {
+    // Restaurar scroll salvo
+    const savedScroll = sessionStorage.getItem('admin_page_scroll_position');
+    if (savedScroll && !studentsQuery.isLoading) {
+      const parsedScroll = parseInt(savedScroll, 10);
+      
+      // Tentativas em cascata para cobrir diferentes tempos de renderização e layouts
+      const attempts = [50, 150, 300, 500, 800];
+      const timers = attempts.map(delay => 
+        setTimeout(() => {
+          window.scrollTo({ top: parsedScroll, behavior: 'instant' as any });
+        }, delay)
+      );
 
-  const { userProfile } = useAuth();
-  // React Query Hooks
-  const studentsQuery = useStudentsQuery();
-  const filterDataQuery = useFilterDataQuery();
+      return () => timers.forEach(clearTimeout);
+    }
+  }, [studentsQuery.isLoading]);
 
   // Extrair dados dos queries — useMemo garante referência estável (evita re-renders infinitos)
   const students = useMemo(() => studentsQuery.data ?? [], [studentsQuery.data]);

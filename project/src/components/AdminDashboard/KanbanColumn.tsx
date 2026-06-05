@@ -14,6 +14,7 @@ interface KanbanColumnProps {
   showSelectionTags?: boolean;
   showTeamLabel?: boolean;
   onMarkLost?: (studentId: string) => void;
+  showDebtTag?: boolean;
 }
 
 const actorHeaderStyles = {
@@ -45,7 +46,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   isDropped = false, 
   showSelectionTags = false,
   showTeamLabel = true,
-  onMarkLost
+  onMarkLost,
+  showDebtTag = false
 }) => {
   const Icon = stage.icon;
   const actor = (stage as any).actor as 'student' | 'admin' | 'both' | undefined;
@@ -86,6 +88,21 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     });
   }, [students, sortOrder, showSelectionTags]);
 
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      const savedScroll = sessionStorage.getItem(`admin_kanban_col_scroll_${stage.key}`);
+      if (savedScroll) {
+        scrollRef.current.scrollTop = parseInt(savedScroll, 10);
+      }
+    }
+  }, [stage.key]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    sessionStorage.setItem(`admin_kanban_col_scroll_${stage.key}`, e.currentTarget.scrollTop.toString());
+  };
+
   return (
     <div className={`flex flex-col rounded-lg border h-full ${isDropped ? 'bg-red-50/40 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
       {/* Column Header */}
@@ -102,31 +119,31 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 {stage.label}
               </h3>
             </div>
-          <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.badge}`}>
-              {students.length}
-            </span>
-            {showSelectionTags && (
-              <button 
-                onClick={handleSortToggle}
-                className={`p-1 rounded hover:bg-black/5 transition-colors flex items-center justify-center ${sortOrder !== 'default' ? 'text-gray-900 bg-black/5' : 'text-gray-400'}`}
-                title={sortOrder === 'default' ? 'Sort by completion status' : sortOrder === 'pendingFirst' ? 'Pending first' : 'Completed first'}
-              >
-                {sortOrder === 'default' && <ArrowDownUp className="w-3 h-3" />}
-                {sortOrder === 'pendingFirst' && <ArrowUp className="w-3 h-3 text-amber-600" />}
-                {sortOrder === 'completedFirst' && <ArrowDown className="w-3 h-3 text-green-600" />}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles.badge}`}>
+                {students.length}
+              </span>
+              {showSelectionTags && (
+                <button 
+                  onClick={handleSortToggle}
+                  className={`p-1 rounded hover:bg-black/5 transition-colors flex items-center justify-center ${sortOrder !== 'default' ? 'text-gray-900 bg-black/5' : 'text-gray-400'}`}
+                  title={sortOrder === 'default' ? 'Sort by completion status' : sortOrder === 'pendingFirst' ? 'Pending first' : 'Completed first'}
+                >
+                  {sortOrder === 'default' && <ArrowDownUp className="w-3 h-3" />}
+                  {sortOrder === 'pendingFirst' && <ArrowUp className="w-3 h-3 text-amber-600" />}
+                  {sortOrder === 'completedFirst' && <ArrowDown className="w-3 h-3 text-green-600" />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
         <p className="text-xs text-gray-500 mt-1 line-clamp-2" title={stage.description}>
           {stage.description}
         </p>
       </div>
 
       {/* Column Body - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {sortedStudents.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <Icon className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -142,6 +159,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               showSelectionTags={showSelectionTags}
               currentStageKey={stage.key as ApplicationFlowStageKey}
               onMarkLost={onMarkLost}
+              showDebtTag={showDebtTag}
             />
           ))
         )}
