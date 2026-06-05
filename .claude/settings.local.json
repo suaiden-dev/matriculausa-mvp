@@ -98,7 +98,8 @@
       "Bash(ls:*)",
       "Bash(command -v rtk)",
       "WebSearch",
-      "Bash(rtk grep:*)"
+      "Bash(rtk grep:*)",
+      "Bash(python3 -c:*)"
     ]
   }
 }
