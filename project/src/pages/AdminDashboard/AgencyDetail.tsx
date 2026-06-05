@@ -24,6 +24,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
@@ -314,6 +316,15 @@ const AgencyDetail: React.FC = () => {
 
   // Commission balance (calculated)
   const [commissionBalance, setCommissionBalance] = useState<{ total: number; paid: number; saldo: number } | null>(null);
+
+  // Copy link
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const handleCopySellerLink = (referralCode: string) => {
+    const link = `https://matriculausa.com/selection-fee-registration?ref=${referralCode}`;
+    navigator.clipboard.writeText(link);
+    setCopiedCode(referralCode);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
 
   // Actions
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -843,7 +854,6 @@ const AgencyDetail: React.FC = () => {
                 <tr className="text-left text-xs text-slate-500 uppercase tracking-wider">
                   <th className="px-5 py-3 font-semibold">Seller</th>
                   <th className="px-5 py-3 font-semibold">Code</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 font-semibold text-right">Students</th>
                   <th className="px-5 py-3 font-semibold text-right">Revenue</th>
                   <th className="px-5 py-3 font-semibold">Joined</th>
@@ -866,14 +876,18 @@ const AgencyDetail: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-5 py-3">
-                        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded">{seller.referral_code}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          seller.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {seller.is_active ? 'Active' : 'Inactive'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded">{seller.referral_code}</span>
+                          <button
+                            onClick={() => handleCopySellerLink(seller.referral_code)}
+                            title="Copy registration link"
+                            className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            {copiedCode === seller.referral_code
+                              ? <Check className="h-3.5 w-3.5 text-green-500" />
+                              : <Copy className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
                       </td>
                       <td className="px-5 py-3 text-right font-medium text-slate-900">{stats.count}</td>
                       <td className="px-5 py-3 text-right font-medium text-green-600">{formatCurrency(stats.revenue)}</td>

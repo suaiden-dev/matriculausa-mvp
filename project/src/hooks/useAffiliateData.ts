@@ -112,7 +112,7 @@ export const useAffiliateData = () => {
       // 1. Buscar todos os affiliate admins
       const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
         .from('affiliate_admins')
-        .select('id, user_id, is_active, created_at, commission_per_sale, commission_rules')
+        .select('id, user_id, is_active, created_at, commission_per_sale, commission_rules, logo_url')
         .order('created_at', { ascending: false });
 
       if (affiliateAdminsError) throw affiliateAdminsError;
@@ -160,10 +160,10 @@ export const useAffiliateData = () => {
             if (stdData) {
               const filtered = isDevelopment() ? stdData : stdData.filter(p => !shouldExcludeStudent(p.email));
 
-              // Fetch real payment amounts for these students (skip protected agencies)
+              // Fetch real payment amounts for these students
               const studentUserIds = filtered.map((p: any) => p.user_id).filter(Boolean);
               let realPaymentsMap: Record<string, number> = {};
-              if (studentUserIds.length > 0 && !PROTECTED_AGENCY_IDS.has(affiliateId)) {
+              if (studentUserIds.length > 0) {
                 const { data: feePayments } = await supabase
                   .from('individual_fee_payments')
                   .select('user_id, amount')
@@ -219,8 +219,8 @@ export const useAffiliateData = () => {
             }
           }
 
-          // Fetch commission totals from affiliate_referrals (skip protected agencies)
-          if (!PROTECTED_AGENCY_IDS.has(affiliateId) && sellers.length > 0) {
+          // Fetch commission totals from affiliate_referrals
+          if (sellers.length > 0) {
             const sellerCodes = sellers.map((s: any) => s.referral_code);
             const { data: referrals } = await supabase
               .from('affiliate_referrals')
@@ -247,6 +247,7 @@ export const useAffiliateData = () => {
             total_revenue: totalRevenue,
             total_commission: totalCommission,
             is_active: !!affiliateAdmin.is_active,
+            logo_url: affiliateAdmin.logo_url ?? null,
             commission_per_sale: affiliateAdmin.commission_per_sale ?? null,
             commission_rules: affiliateAdmin.commission_rules,
             sellers: sellers.map(s => ({

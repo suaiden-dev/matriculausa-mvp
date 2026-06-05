@@ -577,6 +577,7 @@ const AdminStudentDetails: React.FC = () => {
   const [isEditingEnrollmentStatus, setIsEditingEnrollmentStatus] = useState(false);
   const [savingEnrollmentStatus, setSavingEnrollmentStatus] = useState(false);
   const [editingFees, setEditingFees] = useState<any>(null);
+  const [initialEditingFees, setInitialEditingFees] = useState<any>(null);
   const [savingFees, setSavingFees] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
@@ -1198,15 +1199,20 @@ const AdminStudentDetails: React.FC = () => {
           .maybeSingle();
 
         if (affiliateAdmin) {
-          affiliateName = (affiliateAdmin as any)?.company_name || null;
           const affiliateUserId = (affiliateAdmin as any)?.user_id || null;
           if (affiliateUserId) {
             const { data: affiliateProfile } = await supabase
               .from('user_profiles')
-              .select('email')
+              .select('email, company_name, full_name')
               .eq('user_id', affiliateUserId)
               .maybeSingle();
             affiliateEmail = (affiliateProfile as any)?.email || null;
+            affiliateName = (affiliateAdmin as any)?.company_name
+              || (affiliateProfile as any)?.company_name
+              || (affiliateProfile as any)?.full_name
+              || null;
+          } else {
+            affiliateName = (affiliateAdmin as any)?.company_name || null;
           }
         }
 
@@ -3407,11 +3413,41 @@ const AdminStudentDetails: React.FC = () => {
         i539_cos_package: editingFees.i539_cos_package
       });
 
-      // Log da ação
+      // Log da ação — descrição específica com valores antes/depois
       try {
+        const FEE_LABELS: Record<string, string> = {
+          selection_process: 'Selection Process Fee',
+          scholarship: 'Scholarship Fee',
+          i20_control: 'Control Fee (I-20)',
+          placement: 'Placement Fee',
+          ds160_package: 'Control Fee',
+          i539_cos_package: 'Control Fee',
+        };
+        const FEE_OVERRIDE_KEYS: Record<string, string> = {
+          selection_process: 'selection_process_fee',
+          scholarship: 'scholarship_fee',
+          i20_control: 'i20_control_fee',
+          placement: 'placement_fee',
+          ds160_package: 'ds160_package_fee',
+          i539_cos_package: 'i539_cos_package_fee',
+        };
+        const changes: string[] = [];
+        for (const [key, label] of Object.entries(FEE_LABELS)) {
+          const newVal = (editingFees as any)[key];
+          const oldVal = (initialEditingFees as any)?.[key];
+          if (newVal !== undefined && newVal !== null && oldVal !== undefined && oldVal !== null) {
+            if (Number(newVal) !== Number(oldVal)) {
+              changes.push(`${label}: $${Number(oldVal).toLocaleString()} → $${Number(newVal).toLocaleString()}`);
+            }
+          }
+        }
+        const description = changes.length > 0
+          ? `Fee amounts updated: ${changes.join(' | ')}`
+          : 'Fee overrides saved (no value changes)';
+
         await logAction(
           'fee_override_update',
-          `Fee overrides updated by platform admin`,
+          description,
           user?.id || '',
           'admin',
           {
@@ -3468,15 +3504,35 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
-      // Log da ação
+      // Log da ação — mostrar quais valores foram resetados
       try {
+        const FEE_LABELS: Record<string, string> = {
+          selection_process_fee: 'Selection Process Fee',
+          scholarship_fee: 'Scholarship Fee',
+          i20_control_fee: 'Control Fee (I-20)',
+          placement_fee: 'Placement Fee',
+          ds160_package_fee: 'Control Fee',
+          i539_cos_package_fee: 'Control Fee',
+        };
+        const resetDetails: string[] = [];
+        for (const [key, label] of Object.entries(FEE_LABELS)) {
+          const val = (userFeeOverrides as any)?.[key];
+          if (val !== undefined && val !== null) {
+            resetDetails.push(`${label}: $${Number(val).toLocaleString()} → default`);
+          }
+        }
+        const description = resetDetails.length > 0
+          ? `Fee amounts reset: ${resetDetails.join(' | ')}`
+          : 'Fee overrides reset to defaults';
+
         await logAction(
           'fee_override_reset',
-          `Fee overrides reset to default by platform admin`,
+          description,
           user?.id || '',
           'admin',
           {
-            reset_by: user?.email || 'Platform Admin'
+            reset_by: user?.email || 'Platform Admin',
+            previous_overrides: userFeeOverrides || {}
           }
         );
       } catch (logError) {
@@ -3711,6 +3767,7 @@ const AdminStudentDetails: React.FC = () => {
     console.log('✅ [handleStartEditFees] Overrides usados:', currentOverrides);
 
     setEditingFees(finalFees);
+    setInitialEditingFees(finalFees);
 
     // ✅ Verificar se o estado foi atualizado (usar setTimeout para verificar após o próximo render)
     setTimeout(() => {

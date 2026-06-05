@@ -14,6 +14,7 @@ const UniversityDetails = lazy(() => import('./UniversityDetails'));
 import UsersHub from './UsersHub';
 const ScholarshipManagement = lazy(() => import('./ScholarshipManagement'));
 const AdminScholarshipEdit = lazy(() => import('./AdminScholarshipEdit'));
+const AdminScholarshipView = lazy(() => import('./AdminScholarshipView'));
 const PaymentManagement = lazy(() => import('./PaymentManagement'));
 const ApplicationMonitoring = lazy(() => import('./ApplicationMonitoring'));
 const AdminApplicationView = lazy(() => import('./AdminApplicationView'));
@@ -156,6 +157,8 @@ const AdminDashboard: React.FC = () => {
     monthlyGrowth: 12.5
   });
 
+  const [pendingAgencyRequests, setPendingAgencyRequests] = useState<any[]>([]);
+
   // Novos estados consolidados para o Overview
   const [pendingStats, setPendingStats] = useState({
     universityRequestsCount: 0,
@@ -240,7 +243,8 @@ const AdminDashboard: React.FC = () => {
         usersRes,
         statsRes,
         universityPayoutsRes,
-        zellePaymentsRes
+        zellePaymentsRes,
+        pendingAgencyReqsRes
       ] = await Promise.all([
         supabase.from('universities').select('*').order('created_at', { ascending: false }),
         supabase.from('scholarships').select('*, universities!inner(name)').order('created_at', { ascending: false }),
@@ -249,7 +253,8 @@ const AdminDashboard: React.FC = () => {
         supabase.rpc('get_admin_dashboard_stats_v2'),
         // Busca consolidada de solicitações de pagamento (university e affiliate)
         supabase.from('university_payout_requests').select('status, amount_usd, request_type').eq('status', 'pending').in('request_type', ['university_payment', 'affiliate_payout']),
-        supabase.from('zelle_payments').select('amount, user_id').eq('status', 'pending_verification').gt('amount', 0)
+        supabase.from('zelle_payments').select('amount, user_id').eq('status', 'pending_verification').gt('amount', 0),
+        supabase.from('agency_requests').select('id, company_name, full_name, email, created_at').eq('status', 'pending').order('created_at', { ascending: false })
       ]);
 
 
@@ -405,6 +410,7 @@ const AdminDashboard: React.FC = () => {
       };
 
       setStats(newStats);
+      setPendingAgencyRequests(pendingAgencyReqsRes.data || []);
       setHasLoadedData(true);
     } catch (error: any) {
       console.error('Error loading admin data:', error);
@@ -607,7 +613,7 @@ const AdminDashboard: React.FC = () => {
             <Route 
               index 
               element={
-                <Overview 
+                <Overview
                   stats={stats}
                   universities={universities}
                   users={users}
@@ -615,6 +621,8 @@ const AdminDashboard: React.FC = () => {
                   error={error}
                   onApprove={handleApproveUniversity}
                   onReject={handleRejectUniversity}
+                  isAdmin={isAdmin}
+                  pendingAgencyRequests={pendingAgencyRequests}
                 />
               } 
             />
@@ -626,6 +634,7 @@ const AdminDashboard: React.FC = () => {
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
+            <Route path="scholarships/view/:id" element={<AdminScholarshipView />} />
             
             {/* Rotas restritas para Pós-Vendas (Se houver alguma que precise ser estritamente admin) */}
             {!isPostSales ? (

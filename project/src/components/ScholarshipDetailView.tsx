@@ -307,7 +307,7 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                       <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
                     </tr>
                     
-                    {userProfile?.placement_fee_flow && (() => {
+                    {(userProfile?.placement_fee_flow || userRole === 'admin') && (() => {
                       const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
                       const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
                       const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
