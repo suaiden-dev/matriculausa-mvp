@@ -176,7 +176,7 @@ export function useStudentsQuery() {
           .eq("is_active", true),
         supabase
           .from("user_profiles")
-          .select("user_id, full_name, email")
+          .select("user_id, full_name, company_name, email")
           .eq("role", "affiliate_admin"),
       ]);
 
@@ -193,6 +193,9 @@ export function useStudentsQuery() {
       const adminNamesMap = new Map(
         affiliateProfiles.map((p: any) => [p.user_id, p.full_name]) || [],
       );
+      const adminCompanyMap = new Map(
+        affiliateProfiles.map((p: any) => [p.user_id, p.company_name]).filter(([, v]) => v) || [],
+      );
       const adminEmailsMap = new Map(
         affiliateProfiles.map((p: any) => [p.user_id, p.email]) || [],
       );
@@ -200,7 +203,7 @@ export function useStudentsQuery() {
       const agencyEmailMap = new Map<string, string>();
       affiliateAdminsData.forEach((aa: any) => {
         const name = aa.company_name || aa.legal_name ||
-          adminNamesMap.get(aa.user_id) || "Agência";
+          adminCompanyMap.get(aa.user_id) || adminNamesMap.get(aa.user_id) || "Agência";
         agencyMap.set(aa.id, name);
         
         const email = adminEmailsMap.get(aa.user_id) || "";

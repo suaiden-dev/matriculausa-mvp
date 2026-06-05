@@ -135,7 +135,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 												<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
 												{payment.metadata?.is_installment && (
 													<span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase">
-														Part {payment.metadata.installment_number}/{payment.metadata.total_installments ?? 2}
+														Part {payment.metadata.installment_number}{payment.metadata.total_installments ? `/${payment.metadata.total_installments}` : ''}
 													</span>
 												)}
 											</div>
@@ -207,7 +207,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 															{payment.fee_type.replace('_', ' ')}
 															{payment.metadata?.is_installment && (
 																<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-																	PART {payment.metadata.installment_number}/{payment.metadata.total_installments ?? 2}
+																	PART {payment.metadata.installment_number}{payment.metadata.total_installments ? `/${payment.metadata.total_installments}` : ''}
 																</span>
 															)}
 														</div>

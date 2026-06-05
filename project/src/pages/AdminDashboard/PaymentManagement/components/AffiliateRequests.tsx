@@ -136,14 +136,14 @@ function AffiliateRequestsBase(props: AffiliateRequestsProps) {
 										<div className="flex items-start justify-between mb-4">
 											<div className="flex-1">
 												<h3 className="font-semibold text-gray-900 text-lg mb-1">
-													Affiliate Request
+													{request.company_name || request.user_full_name || 'Affiliate'}
 												</h3>
-												<p className="text-sm text-gray-500">
-													{request.user_full_name || request.user_email || `ID: ${String(request.referrer_user_id).slice(0,8)}...`}
-												</p>
-												{request.user_full_name && request.user_email && (
-													<p className="text-xs text-gray-400">{request.user_email}</p>
+												{request.company_name && request.user_full_name && (
+													<p className="text-xs text-gray-500">{request.user_full_name}</p>
 												)}
+												<p className="text-xs text-gray-400">
+													{request.user_email || `ID: ${String(request.referrer_user_id).slice(0,8)}...`}
+												</p>
 											</div>
 											<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
 												request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -233,7 +233,8 @@ function AffiliateRequestsBase(props: AffiliateRequestsProps) {
 																</div>
 															</div>
 															<div className="ml-4">
-																<div className="text-sm font-medium text-gray-900">{request.user_full_name || 'Affiliate'}</div>
+																<div className="text-sm font-medium text-gray-900">{request.company_name || request.user_full_name || 'Affiliate'}</div>
+																{request.company_name && request.user_full_name && <div className="text-xs text-gray-400">{request.user_full_name}</div>}
 																<div className="text-sm text-gray-500">{request.user_email || `ID: ${String(request.referrer_user_id).slice(0,8)}...`}</div>
 															</div>
 														</div>

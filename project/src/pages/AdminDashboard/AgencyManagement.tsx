@@ -632,96 +632,85 @@ const AffiliateManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* ── Header ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      {/* ── Header + Stats unificado ── */}
+      <div className="bg-white rounded-2xl border border-slate-200 px-6 py-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Agency Management</h1>
-            <p className="text-slate-600 mt-1">Manage and monitor all B2B agency partners and their performance</p>
+            <h1 className="text-2xl font-bold text-slate-900">Agency Management</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Manage and monitor all B2B agency partners</p>
           </div>
           <button
             onClick={refetch}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start md:self-auto"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors self-start md:self-auto text-sm"
           >
             <Activity className="h-4 w-4" />
             Refresh
           </button>
         </div>
-      </div>
-
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between">
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-6">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 rounded-lg"><Building2 className="h-4 w-4 text-blue-600" /></div>
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Agencies</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalStats.totalAffiliates}</p>
-              <p className="text-xs text-green-600 mt-0.5">{totalStats.activeAffiliates} active</p>
-            </div>
-            <div className="p-2.5 bg-blue-100 rounded-lg">
-              <Building2 className="h-5 w-5 text-blue-600" />
+              <p className="text-xs text-slate-400">Agencies</p>
+              <p className="text-lg font-bold text-slate-900 leading-tight">{totalStats.totalAffiliates} <span className="text-xs font-normal text-green-600">{totalStats.activeAffiliates} active</span></p>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-purple-100 rounded-lg"><Users className="h-4 w-4 text-purple-600" /></div>
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Sellers</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalStats.totalSellers}</p>
-              <p className="text-xs text-purple-600 mt-0.5">{totalStats.activeSellers} active</p>
-            </div>
-            <div className="p-2.5 bg-purple-100 rounded-lg">
-              <Users className="h-5 w-5 text-purple-600" />
+              <p className="text-xs text-slate-400">Sellers</p>
+              <p className="text-lg font-bold text-slate-900 leading-tight">{totalStats.totalSellers} <span className="text-xs font-normal text-purple-600">{totalStats.activeSellers} active</span></p>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-100 rounded-lg"><Users className="h-4 w-4 text-indigo-600" /></div>
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Students</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalStats.totalStudents}</p>
-            </div>
-            <div className="p-2.5 bg-indigo-100 rounded-lg">
-              <Users className="h-5 w-5 text-indigo-600" />
+              <p className="text-xs text-slate-400">Students</p>
+              <p className="text-lg font-bold text-slate-900 leading-tight">{totalStats.totalStudents}</p>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-green-100 rounded-lg"><DollarSign className="h-4 w-4 text-green-600" /></div>
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Revenue</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(totalStats.totalRevenue)}</p>
-            </div>
-            <div className="p-2.5 bg-green-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <p className="text-xs text-slate-400">Revenue</p>
+              <p className="text-lg font-bold text-green-600 leading-tight">{formatCurrency(totalStats.totalRevenue)}</p>
             </div>
           </div>
-        </div>
-        {pendingRequests.length > 0 && (
-          <div className="bg-amber-50 rounded-xl border border-amber-200 p-5">
-            <div className="flex items-center justify-between">
+          {pendingRequests.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-amber-100 rounded-lg"><AlertCircle className="h-4 w-4 text-amber-600" /></div>
               <div>
-                <p className="text-xs font-medium text-amber-600 uppercase tracking-wider">Pending Requests</p>
-                <p className="text-2xl font-bold text-amber-700 mt-1">{pendingRequests.length}</p>
-              </div>
-              <div className="p-2.5 bg-amber-100 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <p className="text-xs text-slate-400">Pending Requests</p>
+                <p className="text-lg font-bold text-amber-600 leading-tight">{pendingRequests.length}</p>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Partnership Requests ── */}
       {(loadingAgencyRequests || agencyRequests.length > 0) && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#05294E]" />
-              <h2 className="text-lg font-semibold text-slate-900">Partnership Requests</h2>
-              {pendingRequests.length > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  {pendingRequests.length} pending
+            <div className="flex items-center gap-3 flex-wrap">
+              <Building2 className="w-4 h-4 text-slate-500" />
+              <h2 className="text-base font-semibold text-slate-900">Partnership Requests</h2>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                {agencyRequests.length} total
+              </span>
+              {agencyRequests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                  {agencyRequests.filter(r => r.status === 'pending').length} pending
+                </span>
+              )}
+              {agencyRequests.filter(r => r.status === 'approved').length > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                  {agencyRequests.filter(r => r.status === 'approved').length} approved
+                </span>
+              )}
+              {agencyRequests.filter(r => r.status === 'rejected').length > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  {agencyRequests.filter(r => r.status === 'rejected').length} rejected
                 </span>
               )}
             </div>
@@ -936,9 +925,17 @@ const AffiliateManagement: React.FC = () => {
                       {/* Agency */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
-                            <span className="text-white font-bold">{displayName.charAt(0).toUpperCase()}</span>
-                          </div>
+                          {affiliate.logo_url ? (
+                            <img
+                              src={affiliate.logo_url}
+                              alt={displayName}
+                              className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 shrink-0 shadow-sm"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                              <span className="text-white font-bold">{displayName.charAt(0).toUpperCase()}</span>
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-900 truncate">{displayName}</p>
                             <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
