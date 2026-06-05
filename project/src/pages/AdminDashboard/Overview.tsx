@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Building,
   Users,
@@ -37,17 +37,22 @@ interface OverviewProps {
   error: string | null;
   onApprove?: (universityId: string) => void;
   onReject?: (universityId: string) => void;
+  isAdmin?: boolean;
+  pendingAgencyRequests?: any[];
 }
 
-const Overview: React.FC<OverviewProps> = ({ 
-  stats, 
-  universities, 
-  users, 
+const Overview: React.FC<OverviewProps> = ({
+  stats,
+  universities,
+  users,
   pendingStats,
-  error, 
-  onApprove, 
-  onReject 
+  error,
+  onApprove,
+  onReject,
+  isAdmin = false,
+  pendingAgencyRequests = []
 }) => {
+  const navigate = useNavigate();
   const { notifications: allNotifications, loading: loadingConversations } = useAdminNotifications();
   const [currentPage, setCurrentPage] = useState(1);
   const UNIVERSITIES_PER_PAGE = 4;
@@ -168,6 +173,61 @@ const Overview: React.FC<OverviewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Pending Payment Approvals - 2/3 width */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Pending Agency Requests — admin only */}
+          {isAdmin && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-900">Agency Partnership Requests</span>
+                  {pendingAgencyRequests.length > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700">
+                      {pendingAgencyRequests.length} pending
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                      All reviewed
+                    </span>
+                  )}
+                </div>
+                {pendingAgencyRequests.length > 0 && (
+                  <button
+                    onClick={() => navigate('/admin/dashboard/agencies')}
+                    className="text-xs font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                  >
+                    View All
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              {/* List */}
+              {pendingAgencyRequests.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  {pendingAgencyRequests.map((a: any) => (
+                    <div key={a.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                          <span className="text-white text-[10px] font-bold">
+                            {a.company_name?.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">{a.company_name}</p>
+                          <p className="text-xs text-slate-400 truncate">{a.email}</p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs text-slate-400">
+                        {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-5 py-4 text-center text-sm text-slate-400">No pending requests</div>
+              )}
+            </div>
+          )}
+
           <PendingPaymentsSummary
             universityRequestsCount={pendingStats.universityRequestsCount}
             affiliateRequestsCount={pendingStats.affiliateRequestsCount}

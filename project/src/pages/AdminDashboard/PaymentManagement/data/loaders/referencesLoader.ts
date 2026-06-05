@@ -49,18 +49,20 @@ export async function loadAffiliatesLoader(supabase: SupabaseClient) {
   const userIds = affiliateAdminsData.map(admin => admin.user_id);
   const { data: affiliateAdminsBatch, error: affiliateAdminsBatchError } = await supabase
     .from('affiliate_admins')
-    .select('id, user_id')
+    .select('id, user_id, company_name')
     .in('user_id', userIds);
 
   if (affiliateAdminsBatchError) {
     console.warn('⚠️ [loadAffiliatesLoader] Erro ao buscar affiliate_admins em batch:', affiliateAdminsBatchError);
   }
 
-  // Criar mapa de user_id -> affiliate_admin_id
+  // Criar mapa de user_id -> affiliate_admin_id e company_name
   const adminIdMap = new Map<string, string>();
+  const companyNameMap = new Map<string, string>();
   affiliateAdminsBatch?.forEach(admin => {
     if (admin.user_id) {
       adminIdMap.set(admin.user_id, admin.id);
+      if (admin.company_name) companyNameMap.set(admin.user_id, admin.company_name);
     }
   });
 
@@ -133,10 +135,12 @@ export async function loadAffiliatesLoader(supabase: SupabaseClient) {
       sellers = sellersByEmailMap.get(admin.email) || [];
     }
 
+    const companyName = companyNameMap.get(admin.user_id);
     return {
       id: admin.user_id,
       user_id: admin.user_id,
-      name: admin.full_name || admin.email,
+      name: companyName || admin.full_name || admin.email,
+      company_name: companyName || null,
       email: admin.email,
       referral_code: sellers[0]?.referral_code || null,
       sellers,

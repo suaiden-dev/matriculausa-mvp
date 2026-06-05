@@ -27,6 +27,7 @@ export interface AffiliatePaymentRequest {
   payment_reference?: string | null;
   user_full_name?: string | null;
   user_email?: string | null;
+  company_name?: string | null;
   user?: { full_name?: string | null; email?: string | null };
 }
 

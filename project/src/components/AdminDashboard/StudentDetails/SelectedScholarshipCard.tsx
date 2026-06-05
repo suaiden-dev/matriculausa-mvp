@@ -1,5 +1,6 @@
 import React from 'react';
-import { Award, Building } from 'lucide-react';
+import { Award, Building, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { StudentRecord } from './types';
 
 interface SelectedScholarshipCardProps {
@@ -14,6 +15,7 @@ interface SelectedScholarshipCardProps {
 const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.memo(({
   student,
 }) => {
+  const navigate = useNavigate();
   // Show if fee paid OR if there's an approved application (selected before payment)
   const approvedApplication = (student.all_applications || []).find(
     (app: any) => app.is_application_fee_paid || app.status === 'approved' || app.status === 'enrolled'
@@ -27,13 +29,24 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
     ? (Array.isArray(approvedApplication.scholarships) ? approvedApplication.scholarships[0] : approvedApplication.scholarships)
     : null;
 
+  const scholarshipId = approvedApplication?.scholarship_id || scholarship?.id || student.scholarship_id;
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-      <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
+      <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white flex items-center">
           <Award className="w-6 h-6 mr-3" />
           Selected Scholarship
         </h2>
+        {scholarshipId && (
+          <button
+            onClick={() => navigate(`/admin/dashboard/scholarships/view/${scholarshipId}`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            View Scholarship
+          </button>
+        )}
       </div>
       <div className="p-6 space-y-3">
         <div>

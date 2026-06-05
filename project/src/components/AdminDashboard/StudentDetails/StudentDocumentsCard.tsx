@@ -117,7 +117,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
         <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
           <h2 className="text-xl font-semibold text-white flex items-center">
             <FileText className="w-6 h-6 mr-3" />
-            Student Documents
+            Scholarship Eligibility
           </h2>
         </div>
         <div className="p-6">
@@ -146,7 +146,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
       <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
         <h2 className="text-xl font-semibold text-white flex items-center">
           <FileText className="w-6 h-6 mr-3" />
-          Student Documents
+          Scholarship Eligibility
         </h2>
       </div>
       <div className="p-6">
