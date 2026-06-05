@@ -72,7 +72,7 @@ const DirectSalesLink: React.FC = () => {
   const generateDirectSalesLink = (code?: string) => {
     const ref = code ?? directSalesSeller?.referral_code ?? '';
     if (!ref) return '';
-    return `${baseUrl}/selection-fee-registration?ref=${ref}`;
+    return `${baseUrl}/selection-fee-registration?sref=${ref}`;
   };
 
   const copyToClipboard = async (text: string) => {
