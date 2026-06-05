@@ -91,10 +91,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       // E. Control Fees — espelha exatamente o PaymentStatusCard
       const i20Index = stages.indexOf('i20_fee');
       if (currentIndex > i20Index && i20Index !== -1) {
-        // I-20 Control Fee ($900) - aplicável para Initial, COS, e Transfer com visto inativo
-        const needsI20Fee = student.student_process_type === 'initial' || 
+        // I-20 Control Fee ($900) - aplicável para Initial, COS, e Transfer com visto inativo (apenas no fluxo legado)
+        const needsI20Fee = !student.placement_fee_flow && (
+                             student.student_process_type === 'initial' || 
                              student.student_process_type === 'change_of_status' ||
-                             isTransferInactiveVisa;
+                             isTransferInactiveVisa
+                            );
                              
         if (needsI20Fee && !student.has_paid_i20_control_fee) {
           const overrideI20 = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : null;
