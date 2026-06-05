@@ -126,6 +126,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const isProcessingRef = useRef<boolean>(false);
+  // undefined = never processed; null = processed with no session; string = last access_token processed
+  const lastProcessedTokenRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     // Detectar fluxo de recuperação de senha
@@ -863,9 +865,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    const handleAuthEvent = async (session: any) => {
+    const handleAuthEvent = async (event: string | null, session: any) => {
+      // Token refreshes never change user profile data — skip entirely
+      if (event === 'TOKEN_REFRESHED') return;
+
+      const currentToken = session?.access_token ?? null;
+
+      // Deduplicate: skip if same session already processed (avoids getSession + INITIAL_SESSION double-run)
+      // SIGNED_OUT always processes so logout state is applied even when currentToken stays null
+      if (event !== 'SIGNED_OUT' && currentToken === lastProcessedTokenRef.current) return;
+
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
+      lastProcessedTokenRef.current = currentToken;
+
       try {
         console.log('🔄 [USEAUTH] Iniciando processamento de auth event...');
         await fetchAndSetUser(session);
@@ -882,7 +895,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
-      handleAuthEvent(session);
+      handleAuthEvent(null, session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -893,7 +906,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // ForgotPassword.tsx reads the tokens from the URL hash and handles the reset form.
           return;
         }
-        handleAuthEvent(session);
+        handleAuthEvent(event, session);
       }
     );
     return () => {
