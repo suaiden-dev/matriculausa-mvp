@@ -17,7 +17,7 @@ interface NotificationRequest {
   metadata?: any;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       
       // Detecção de evento baseada no delta
       if (record.is_application_fee_paid && (!old_record || !old_record.is_application_fee_paid)) {
-        tipoNotf = 'Application Fee Paga - Universidade';
+        tipoNotf = 'Application Fee Paid - University';
       } else if (old_record?.documents && Array.isArray(record.documents) && JSON.stringify(record.documents) !== JSON.stringify(old_record.documents)) {
         // É uma alteração em documentos já existentes. 
         // Vamos verificar se realmente é um re-upload (algo que estava rejeitado e agora está em revisão)
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         });
 
         if (hasReupload) {
-          tipoNotf = 'Documento reenviado pelo aluno - Universidade';
+          tipoNotf = 'Document resubmitted by student - University';
           metadata.tipos_documentos = record.documents
             .filter((newDoc: any) => {
                const oldDoc = oldDocs.find((d: any) => d.type === newDoc.type);
@@ -89,12 +89,12 @@ Deno.serve(async (req) => {
       universityId = record.university_id; // Pega o university_id direto do perfil se disponível
       
       if (record.selected_application_id && (!old_record || record.selected_application_id !== old_record.selected_application_id)) {
-        tipoNotf = 'Bolsa de estudo confirmada pelo aluno - Universidade';
+        tipoNotf = 'Scholarship confirmed by student - University';
         applicationId = record.selected_application_id;
       } else if (record.documents_uploaded && (!old_record || !old_record.documents_uploaded)) {
-        tipoNotf = 'Documentos do onboarding enviados - Universidade';
+        tipoNotf = 'Onboarding documents submitted - University';
       } else if (record.has_paid_reinstatement_package && (!old_record || !old_record.has_paid_reinstatement_package)) {
-        tipoNotf = 'Reinstatement Fee Paga - Universidade';
+        tipoNotf = 'Reinstatement Fee Paid - University';
       }
     }
     else if (body.table === 'document_request_uploads' && body.record) {
@@ -126,12 +126,12 @@ Deno.serve(async (req) => {
         if (type === 'INSERT' || (type === 'UPDATE' && record.status === 'under_review' && old_record?.status !== 'under_review')) {
           if (isResubmission) {
             tipoNotf = requestData.is_global 
-              ? 'Documento global reenviado - Universidade' 
-              : 'Documento reenviado pelo aluno - Universidade';
+              ? 'Global document resubmitted - University' 
+              : 'Document resubmitted by student - University';
           } else {
             tipoNotf = requestData.is_global 
-              ? 'Novo documento global enviado - Universidade' 
-              : 'Novo documento enviado para análise - Universidade';
+              ? 'New global document submitted - University' 
+              : 'New document submitted for review - University';
           }
         }
         
@@ -170,8 +170,8 @@ Deno.serve(async (req) => {
 
       if (type === 'INSERT' || (type === 'UPDATE' && record.status === 'under_review' && old_record?.status !== 'under_review')) {
         tipoNotf = isResubmission 
-          ? 'Transfer Form reenviado - Universidade' 
-          : 'Transfer Form Enviado - Universidade';
+          ? 'Transfer Form resubmitted - University' 
+          : 'Transfer Form Submitted - University';
       }
       
       metadata.document_title = 'Transfer Form';
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
     }
 
     // 0.1 Fetch missing IDs (applicationId, scholarshipId, universityId)
-    if (!applicationId && studentId && (tipoNotf.includes('Documentos') || tipoNotf.includes('onboarding') || tipoNotf.includes('Reinstatement') || tipoNotf.includes('global'))) {
+    if (!applicationId && studentId && (tipoNotf.toLowerCase().includes('document') || tipoNotf.toLowerCase().includes('onboarding') || tipoNotf.toLowerCase().includes('reinstatement') || tipoNotf.toLowerCase().includes('global'))) {
       const { data: appData } = await supabaseClient
         .from("scholarship_applications")
         .select("id, scholarship_id")
@@ -277,19 +277,19 @@ Deno.serve(async (req) => {
 
     // 4. Build Formatted Message
     const formattedMessage = customMessage || 
-      (tipoNotf.includes('Application Fee') 
-        ? `O aluno ${studentInfo.full_name} realizou o pagamento da Application Fee para a bolsa ${scholarshipTitle}.`
-        : tipoNotf.includes('Documento reenviado') || tipoNotf.includes('global reenviado')
-        ? `O aluno ${studentInfo.full_name} reenviou o documento "${metadata.document_title || 'pendente'}" para a bolsa ${scholarshipTitle}.`
-        : tipoNotf.includes('global enviado')
-        ? `O aluno ${studentInfo.full_name} enviou o documento "${metadata.document_title || 'Documento Global'}" para análise.`
-        : tipoNotf.includes('confirmada')
-        ? `O aluno ${studentInfo.full_name} confirmou a escolha da bolsa ${scholarshipTitle} para prosseguir.`
-        : tipoNotf.includes('Reinstatement Fee')
-        ? `O aluno ${studentInfo.full_name} realizou o pagamento da Reinstatement Fee para a bolsa ${scholarshipTitle}.`
-        : tipoNotf.includes('Transfer Form')
-        ? `O aluno ${studentInfo.full_name} ${tipoNotf.includes('reenviado') ? 'reenviou' : 'enviou'} o Transfer Form para a bolsa ${scholarshipTitle}.`
-        : `O aluno ${studentInfo.full_name} disparou o evento: ${tipoNotf} para a bolsa ${scholarshipTitle}.`);
+      (tipoNotf.toLowerCase().includes('application fee') 
+        ? `Student ${studentInfo.full_name} has paid the Application Fee for the scholarship ${scholarshipTitle}.`
+        : tipoNotf.toLowerCase().includes('resubmitted')
+        ? `Student ${studentInfo.full_name} has resubmitted the document "${metadata.document_title || 'pending'}" for the scholarship ${scholarshipTitle}.`
+        : tipoNotf.toLowerCase().includes('global document') || tipoNotf.toLowerCase().includes('new global')
+        ? `Student ${studentInfo.full_name} has submitted the document "${metadata.document_title || 'Global Document'}" for review.`
+        : tipoNotf.toLowerCase().includes('confirmed')
+        ? `Student ${studentInfo.full_name} has confirmed the scholarship choice ${scholarshipTitle} to proceed.`
+        : tipoNotf.toLowerCase().includes('reinstatement fee')
+        ? `Student ${studentInfo.full_name} has paid the Reinstatement Fee for the scholarship ${scholarshipTitle}.`
+        : tipoNotf.toLowerCase().includes('transfer form')
+        ? `Student ${studentInfo.full_name} has ${tipoNotf.toLowerCase().includes('resubmitted') ? 'resubmitted' : 'submitted'} the Transfer Form for the scholarship ${scholarshipTitle}.`
+        : `Student ${studentInfo.full_name} triggered the event: ${tipoNotf} for the scholarship ${scholarshipTitle}.`);
 
     // 5. Idempotency Check & In-App Notification Log
     let idempotencyKey = `${tipoNotf}-${studentId}-${scholarshipId || 'general'}-${new Date().toISOString().split('T')[0]}`;

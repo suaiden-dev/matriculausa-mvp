@@ -114,15 +114,15 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', caller.id)
       .maybeSingle();
 
-    const agencyName = agencyProfile?.full_name || 'Uma Agência Parceira';
+    const agencyName = agencyProfile?.full_name || 'A Partner Agency';
 
-    const subject = `Convite de ${agencyName} para se tornar Seller na Matrícula USA`;
+    const subject = `Invitation from ${agencyName} to become a Seller at Matrícula USA`;
     const htmlContent = `
       <!DOCTYPE html>
-      <html lang="pt-br">
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <title>✉️ Convite para se tornar Seller na Matrícula USA</title>
+        <title>✉️ Invitation to become a Seller at Matrícula USA</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -189,27 +189,27 @@ Deno.serve(async (req: Request) => {
             <img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA">
           </div>
           <div class="content">
-            <p>Olá,</p>
-            <p>Você foi convidado por <strong>${agencyName}</strong> para fazer parte da plataforma <strong>Matrícula USA</strong> como um parceiro de vendas (Seller).</p>
+            <p>Hello,</p>
+            <p>You have been invited by <strong>${agencyName}</strong> to join the <strong>Matrícula USA</strong> platform as a sales partner (Seller).</p>
             
-            <p>Como Seller, você terá acesso a um painel exclusivo para gerenciar seus contatos, acompanhar as inscrições dos alunos e monitorar suas comissões em tempo real.</p>
+            <p>As a Seller, you will have access to an exclusive dashboard to manage your contacts, track student applications, and monitor your commissions in real time.</p>
 
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${inviteLink}" target="_blank" class="btn-cta">Aceitar Convite e Concluir Cadastro</a>
+              <a href="${inviteLink}" target="_blank" class="btn-cta">Accept Invitation and Complete Registration</a>
             </div>
 
-            <p>Se o botão acima não funcionar, copie e cole este link no seu navegador:<br>
+            <p>If the button above does not work, copy and paste this link into your browser:<br>
             <a href="${inviteLink}">${inviteLink}</a></p>
 
-            <p><strong>Por favor, não responda a este e-mail.</strong> Este convite é válido por 7 dias.</p>
+            <p><strong>Please do not reply to this email.</strong> This invitation is valid for 7 days.</p>
 
             <br>
-            <p>Atenciosamente,<br>
-            <strong>Equipe Matrícula USA</strong><br>
+            <p>Best regards,<br>
+            <strong>Matrícula USA Team</strong><br>
             <a href="https://matriculausa.com/">https://matriculausa.com/</a></p>
           </div>
           <div class="footer">
-            Você está recebendo esta mensagem porque foi convidado para se tornar um Seller na plataforma Matrícula USA. Esta é uma notificação automática.
+            You are receiving this email because you have been invited to become a Seller on the Matrícula USA platform. This is an automated notification.
           </div>
         </div>
       </body>
@@ -223,13 +223,14 @@ Deno.serve(async (req: Request) => {
         subject: subject,
         html: htmlContent,
       }
-    }).then(({ error: emailError }) => {
+    }).then((res: { error: unknown }) => {
+      const emailError = res.error;
       if (emailError) {
         console.error('Error invoking send-email in background:', emailError);
       } else {
         console.log(`[invite-seller] Email successfully sent in background to ${email}`);
       }
-    }).catch(e => {
+    }).catch((e: Error) => {
       console.error('Unexpected error sending email in background:', e);
     });
 
@@ -237,8 +238,9 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ success: true, message: 'Invite sent' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message || 'Internal error' }), {
+  } catch (e: unknown) {
+    const errorMsg = e instanceof Error ? e.message : 'Internal error';
+    return new Response(JSON.stringify({ error: errorMsg }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
