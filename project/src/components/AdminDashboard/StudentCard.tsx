@@ -1,7 +1,7 @@
 import React from 'react';
 import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
 import { StudentRecord } from './hooks/useStudentApplicationsQueries';
-import { ApplicationFlowStageKey } from '../../utils/applicationFlowStages';
+import { ApplicationFlowStageKey, APPLICATION_FLOW_STAGES } from '../../utils/applicationFlowStages';
 
 import { toast } from 'react-hot-toast';
 import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation, useSkipTransferFormMutation } from './hooks/useStudentApplicationsQueries';
@@ -19,9 +19,10 @@ interface StudentCardProps {
   showSelectionTags?: boolean;
   currentStageKey?: ApplicationFlowStageKey;
   onMarkLost?: (studentId: string) => void;
+  showDebtTag?: boolean;
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey, onMarkLost }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, showSelectionTags = false, currentStageKey: propCurrentStageKey, onMarkLost, showDebtTag = false }) => {
   const dropStudentMutation = useDropStudentMutation();
   const markSentDocsMutation = useMarkSentDocsToUniversityMutation();
   const markSevisMutation = useMarkSevisCompletedMutation();
@@ -29,6 +30,124 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const skipTransferFormMutation = useSkipTransferFormMutation();
   const { userProfile } = useAuth();
   const { logAction } = useStudentLogs(student.student_id);
+
+  // Lógica de Débito Proativa (Cenário 2 - Avanço indevido de taxas)
+  const totalDebt = React.useMemo(() => {
+    if ((student as any).source === 'migma') return 0;
+
+    try {
+      let total = 0;
+
+      if (!propCurrentStageKey) return 0;
+
+      const stages = APPLICATION_FLOW_STAGES.map(s => s.key);
+      const currentIndex = stages.indexOf(propCurrentStageKey);
+
+      // Brant Immigration override check
+      const isBrantImmigrationAffiliate = student.agency_email?.toLowerCase() === 'contato@brantimmigration.com';
+
+      // A. Selection Fee
+      const selectionPaid = student.has_paid_selection_process_fee || (student as any).source === 'migma';
+      const selectionIndex = stages.indexOf('selection_fee');
+      if (!selectionPaid && currentIndex > selectionIndex && selectionIndex !== -1) {
+        const overrideAmt = student.fee_override_selection_process_fee != null ? Number(student.fee_override_selection_process_fee) : null;
+        total += overrideAmt ?? (student.system_type === 'simplified' ? 350 : 400);
+      }
+
+      // B. Application Fee ($350 default)
+      const appFeeIndex = stages.indexOf('application_fee');
+      if (!student.is_application_fee_paid && currentIndex > appFeeIndex && appFeeIndex !== -1) {
+        const appFeeAmt = student.application_fee_amount ? Number(student.application_fee_amount) : null;
+        total += appFeeAmt ?? 350;
+      }
+
+      // C. Placement Fee / Scholarship Fee
+      if (student.placement_fee_flow) {
+        const placementIndex = stages.indexOf('placement_fee');
+        if (!student.is_placement_fee_paid && currentIndex > placementIndex && placementIndex !== -1) {
+          const overrideAmt = student.fee_override_placement_fee != null ? Number(student.fee_override_placement_fee) : null;
+          const scholarshipAmt = student.placement_fee_amount ? Number(student.placement_fee_amount) : null;
+          total += overrideAmt ?? scholarshipAmt ?? (student.system_type === 'simplified' ? 550 : 1200);
+        }
+      } else {
+        const scholarshipIndex = stages.indexOf('scholarship_fee');
+        if (!student.is_scholarship_fee_paid && currentIndex > scholarshipIndex && scholarshipIndex !== -1) {
+          if (isBrantImmigrationAffiliate) {
+            total += 900;
+          } else {
+            const scholarshipAmt = student.scholarship_fee_amount ? Number(student.scholarship_fee_amount) : null;
+            total += scholarshipAmt ?? (student.system_type === 'simplified' ? 550 : 900);
+          }
+        }
+      }
+
+      // D. Reinstatement Fee ($500)
+      const reinstatementIndex = stages.indexOf('reinstatement_fee');
+      const isTransferInactiveVisa = student.student_process_type === 'transfer' && student.visa_transfer_active === false;
+      if (isTransferInactiveVisa && !student.has_paid_reinstatement_package && currentIndex > reinstatementIndex && reinstatementIndex !== -1) {
+        total += 500;
+      }
+
+      // E. Control Fees — espelha exatamente o PaymentStatusCard
+      const i20Index = stages.indexOf('i20_fee');
+      if (currentIndex > i20Index && i20Index !== -1) {
+        // I-20 Control Fee ($900) - aplicável para Initial, COS, e Transfer com visto inativo
+        const needsI20Fee = student.student_process_type === 'initial' || 
+                             student.student_process_type === 'change_of_status' ||
+                             isTransferInactiveVisa;
+                             
+        if (needsI20Fee && !student.has_paid_i20_control_fee) {
+          const overrideI20 = student.fee_override_i20_fee != null ? Number(student.fee_override_i20_fee) : null;
+          total += overrideI20 ?? 900;
+        }
+
+        // Control Fee adicional ($1800)
+        if (isTransferInactiveVisa) {
+          // Transfer + visto inativo → I-539 COS Package ($1800)
+          if (!student.has_paid_i539_cos_package) {
+            total += 1800;
+          }
+        } else if (student.student_process_type === 'initial') {
+          // Initial → DS-160 Package ($1800)
+          if (!student.has_paid_ds160_package) {
+            total += 1800;
+          }
+        } else if (student.student_process_type === 'change_of_status') {
+          // COS → I-539 COS Package ($1800)
+          if (!student.has_paid_i539_cos_package) {
+            total += 1800;
+          }
+        }
+      }
+
+      return total;
+    } catch (err) {
+      console.error('[StudentCard] Erro no cálculo de débito:', err);
+      return 0;
+    }
+  }, [
+    student.has_paid_selection_process_fee,
+    student.is_application_fee_paid,
+    student.is_placement_fee_paid,
+    student.is_scholarship_fee_paid,
+    student.has_paid_reinstatement_package,
+    student.has_paid_i539_cos_package,
+    student.has_paid_i20_control_fee,
+    student.has_paid_ds160_package,
+    student.fee_override_placement_fee,
+    student.fee_override_i20_fee,
+    student.fee_override_selection_process_fee,
+    student.placement_fee_amount,
+    student.placement_fee_flow,
+    student.application_fee_amount,
+    student.scholarship_fee_amount,
+    student.student_process_type,
+    student.visa_transfer_active,
+    student.system_type,
+    student.source,
+    student.agency_email,
+    propCurrentStageKey
+  ]);
   
 
   
@@ -640,6 +759,12 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           <span>{getRelativeTime(student.student_created_at)}</span>
         </div>
         <div className="flex items-center gap-1 flex-wrap">
+          {showDebtTag && totalDebt > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+              <AlertCircle className="w-3 h-3 text-red-500 flex-shrink-0" />
+              Debt: ${totalDebt.toFixed(0)}
+            </span>
+          )}
         </div>
       </div>
 

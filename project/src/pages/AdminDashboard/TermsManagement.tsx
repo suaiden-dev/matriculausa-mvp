@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText, Download } from 'lucide-react';
+import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText, Download, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useConfirmation } from '../../contexts/AdminConfirmationContext';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor';
+
 
 
 // Estilos adicionais para o conteúdo
@@ -131,6 +132,12 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
+  const [creatingTerm, setCreatingTerm] = useState<{
+    title: string;
+    content: string;
+    term_type: string;
+    is_active: boolean;
+  } | null>(null);
   const [viewingTerm, setViewingTerm] = useState<Term | null>(null);
   const [showRawContent, setShowRawContent] = useState(false);
 
@@ -163,17 +170,7 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
       .trim();
   };
 
-  // Função para preservar HTML original com GHS
-  const preserveHtmlWithGHS = (html: string) => {
-    if (!html) return '';
 
-    // Armazenar HTML original apenas uma vez
-    if (!originalHtml && html) {
-      setOriginalHtml(html);
-    }
-
-    return html;
-  };
 
   // Função para restaurar HTML original
   const restoreOriginalHtml = () => {
@@ -293,6 +290,47 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
     }
   }, [activeTab]);
 
+
+  // Criar termo
+  const handleCreateTerm = async () => {
+    if (!creatingTerm) return;
+
+    try {
+      if (!creatingTerm.title || !creatingTerm.content) {
+        throw new Error('Título e conteúdo são obrigatórios');
+      }
+
+      // Se o termo será ativado, desativar todos os outros do mesmo tipo primeiro
+      if (creatingTerm.is_active) {
+        await supabase
+          .from('application_terms')
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('is_active', true)
+          .eq('term_type', creatingTerm.term_type);
+      }
+
+      const newTermData = {
+        title: creatingTerm.title.trim(),
+        content: creatingTerm.content,
+        term_type: creatingTerm.term_type,
+        is_active: creatingTerm.is_active,
+        version: 1, // Versão inicial
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('application_terms')
+        .insert([newTermData]);
+
+      if (error) throw error;
+
+      await loadTerms();
+      setCreatingTerm(null);
+    } catch (err: any) {
+      console.error('❌ Erro ao criar termo:', err);
+      setError(err.message);
+    }
+  };
 
   // Atualizar termo
   const handleUpdateTerm = async () => {
@@ -491,6 +529,98 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
         {/* Conteúdo baseado na aba ativa */}
         {activeTab === 'terms' && (
           <>
+            <div className="flex justify-end mb-6">
+              <button
+                onClick={() => setCreatingTerm({
+                  title: '',
+                  content: '',
+                  term_type: 'agency_terms',
+                  is_active: true
+                })}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Criar Novo Termo
+              </button>
+            </div>
+
+            {creatingTerm && (
+              <div className="bg-white rounded-xl shadow-md border border-blue-300 p-6 mb-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Novo Termo</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Título
+                    </label>
+                    <input
+                      type="text"
+                      value={creatingTerm.title}
+                      onChange={(e) => setCreatingTerm({ ...creatingTerm, title: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ex: Termos de Parceria para Agências"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tipo de Termo
+                    </label>
+                    <select
+                      value={creatingTerm.term_type}
+                      onChange={(e) => setCreatingTerm({ ...creatingTerm, term_type: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="agency_terms">Termos de Agência (agency_terms)</option>
+                      <option value="affiliate_terms">Termos de Afiliado (affiliate_terms)</option>
+                      <option value="checkout_terms">Termos de Checkout (checkout_terms)</option>
+                      <option value="terms_of_service">Termos de Serviço (terms_of_service)</option>
+                      <option value="privacy_policy">Política de Privacidade (privacy_policy)</option>
+                      <option value="seller_terms">Termos do Vendedor (seller_terms)</option>
+                      <option value="university_terms">Termos da Universidade (university_terms)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Conteúdo
+                    </label>
+                    <RichTextEditor
+                      content={creatingTerm.content}
+                      onChange={(html) => setCreatingTerm({ ...creatingTerm, content: html })}
+                      placeholder="Escreva os termos aqui..."
+                    />
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={creatingTerm.is_active}
+                        onChange={(e) => setCreatingTerm({ ...creatingTerm, is_active: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <span className="text-sm font-medium text-slate-700">
+                      Termo Ativo (irá desativar outros do mesmo tipo)
+                    </span>
+                  </div>
+                  <div className="flex justify-end space-x-4 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => setCreatingTerm(null)}
+                      className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleCreateTerm}
+                      disabled={!creatingTerm.title || !creatingTerm.content}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Criar Termo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Terms List */}
             <div className="space-y-6">
               {terms.map((term) => (

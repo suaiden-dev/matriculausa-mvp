@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, Eye, EyeOff, AlertCircle, Handshake, Building2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import LanguageSelector from '../components/LanguageSelector';
 
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
@@ -749,10 +750,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="relative w-full lg:w-1/2 flex-1 flex flex-col justify-center items-center bg-white overflow-y-auto custom-scrollbar p-8 sm:p-12 lg:p-16 xl:p-24">
+        <div className="relative w-full lg:w-1/2 flex-1 flex flex-col justify-start items-center bg-white overflow-y-auto custom-scrollbar pt-12 pb-20 px-8 sm:px-12 lg:pt-32 lg:px-16 xl:px-24">
+          {/* Language Selector (Desktop only) */}
+          <div className="hidden lg:block absolute top-6 right-6 z-40">
+            <LanguageSelector variant="dashboard" />
+          </div>
           <div className="w-full max-w-lg">
-            {/* Mobile Logo — fixed at top (Hidden on Desktop) */}
-            <div className="lg:hidden absolute top-6 left-0 right-0 flex justify-center">
+            {/* Mobile Logo & Language Selector (Hidden on Desktop) */}
+            <div className="lg:hidden relative w-full flex items-center justify-center mb-8">
               <Link to="/">
                 <img 
                   src="/logo.png.png" 
@@ -760,6 +765,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   className="h-10 w-auto"
                 />
               </Link>
+              <div className="absolute right-1">
+                <LanguageSelector variant="dashboard" />
+              </div>
             </div>
 
             {/* Mobile Header (Hidden on Desktop) */}
@@ -945,18 +953,23 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       </div>
 
       {/* Right Side: Registration Form */}
-      <div className="w-full lg:w-1/2 flex flex-col h-screen bg-white overflow-y-auto custom-scrollbar">
-        <div className="max-w-3xl w-full mx-auto p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center min-h-full">
-          {/* Mobile Logo Only */}
-          <div className="lg:hidden text-center mb-4">
-            <div className="flex justify-center">
-              <Link to="/">
-                <img 
-                  src="/logo.png.png" 
-                  alt="Matrícula USA" 
-                  className="h-10 w-auto"
-                />
-              </Link>
+      <div className="relative w-full lg:w-1/2 flex flex-col h-screen bg-white overflow-y-auto custom-scrollbar">
+        {/* Language Selector (Desktop only) */}
+        <div className="hidden lg:block absolute top-6 right-6 z-40">
+          <LanguageSelector variant="dashboard" />
+        </div>
+        <div className="max-w-3xl w-full mx-auto flex flex-col justify-start pt-12 pb-20 px-6 sm:px-8 lg:pt-32 lg:px-10 xl:px-12 min-h-full">
+          {/* Mobile Logo & Language Selector (Hidden on Desktop) */}
+          <div className="lg:hidden relative w-full flex items-center justify-center mb-6">
+            <Link to="/">
+              <img 
+                src="/logo.png.png" 
+                alt="Matrícula USA" 
+                className="h-10 w-auto"
+              />
+            </Link>
+            <div className="absolute right-1">
+              <LanguageSelector variant="dashboard" />
             </div>
           </div>
 
@@ -1027,7 +1040,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 }`}
               >
                 <Building2 className={`h-5 w-5 mr-1.5 transition-colors duration-300 ${activeTab === 'agency' ? 'text-emerald-600' : 'text-slate-400'}`} />
-                <span>Sou uma Agência</span>
+                <span>{t('authPage.register.tabAgency', 'Agência')}</span>
               </button>
             </div>
           </div>

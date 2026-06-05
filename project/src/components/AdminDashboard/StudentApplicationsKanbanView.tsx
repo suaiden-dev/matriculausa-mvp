@@ -135,6 +135,30 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return stageMap;
   }, [displayStudents, visibleStages]);
 
+  const boardRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const savedScroll = sessionStorage.getItem('admin_kanban_scroll_position');
+    if (savedScroll) {
+      const parsedScroll = parseInt(savedScroll, 10);
+      
+      const attempts = [50, 150, 300, 500, 800];
+      const timers = attempts.map(delay => 
+        setTimeout(() => {
+          if (boardRef.current) {
+            boardRef.current.scrollLeft = parsedScroll;
+          }
+        }, delay)
+      );
+
+      return () => timers.forEach(clearTimeout);
+    }
+  }, []);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    sessionStorage.setItem('admin_kanban_scroll_position', e.currentTarget.scrollLeft.toString());
+  };
+
   const handleStudentClick = (student: StudentRecord) => {
     // Navigate to student detail page
     navigate(`/admin/dashboard/students/${student.student_id}`);
@@ -181,7 +205,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       </div>
 
       {/* Kanban Board - Horizontal Scrollable */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
+      <div ref={boardRef} onScroll={handleScroll} className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
         <div className="flex gap-4 h-full min-w-max">
           {/* Coluna especial: Registered (primeiro) */}
           <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
@@ -198,6 +222,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
               students={registeredStudents}
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
+              showDebtTag={true}
             />
           </div>
 
@@ -216,6 +241,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
                   showSelectionTags={stage.key === 'selection_fee'}
+                  showDebtTag={true}
                 />
               </div>
             );
@@ -237,6 +263,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
               onStudentClick={handleStudentClick}
               getUnreadCount={getStudentTotalUnread}
               isDropped
+              showDebtTag={true}
             />
           </div>
         </div>
