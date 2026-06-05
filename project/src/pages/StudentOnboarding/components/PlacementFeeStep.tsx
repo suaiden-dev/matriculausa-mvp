@@ -152,7 +152,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         if (!userProfile?.id) return;
 
         try {
-            setLoading(applications.length === 0);
+            setLoading(true);
             const { data, error } = await supabase
                 .from('scholarship_applications')
                 .select(`
@@ -185,7 +185,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         } finally {
             setLoading(false);
         }
-    }, [userProfile?.id, applications.length]);
+    }, [userProfile?.id]);
 
     useEffect(() => {
         fetchApplications();
