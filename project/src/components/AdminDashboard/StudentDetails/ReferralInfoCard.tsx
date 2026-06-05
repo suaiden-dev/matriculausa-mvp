@@ -47,27 +47,36 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  referralInfo.type === 'seller' ? 'bg-green-500' :
+                  referralInfo.type === 'seller' ? (referralInfo.affiliateName ? 'bg-purple-500' : 'bg-green-500') :
                   (referralInfo.type === 'affiliate_program' && referralInfo.isAgency) ? 'bg-purple-500' :
                   'bg-blue-500'
                 }`}></div>
                 <span className="text-sm font-medium text-slate-700">
-                  {referralInfo.type === 'seller' ? 'Seller' :
-                    referralInfo.type === 'affiliate' ? 'Affiliate' :
-                      referralInfo.type === 'affiliate_program'
-                        ? (referralInfo.isAgency ? 'Agency' : 'Affiliate Program')
-                        : (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
+                  {referralInfo.type === 'seller'
+                    ? (referralInfo.affiliateName ? 'Agency Seller' : 'Seller')
+                    : referralInfo.type === 'affiliate'
+                    ? 'Affiliate'
+                    : referralInfo.type === 'affiliate_program'
+                    ? (referralInfo.isAgency ? 'Agency' : 'Affiliate Program')
+                    : (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
                 </span>
               </div>
               <div className="text-sm text-slate-600">
-                <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
-                <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
-                {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
-                  <div className="mt-2 pl-3 border-l-2 border-blue-200">
-                    <div className="text-xs text-slate-500 mb-1">Agency</div>
-                    <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
-                    <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
-                  </div>
+                {referralInfo.type === 'seller' && referralInfo.affiliateName ? (
+                  <>
+                    <div className="font-semibold text-slate-800">{referralInfo.affiliateName}</div>
+                    <div className="text-xs text-slate-400 mb-2">{referralInfo.affiliateEmail || ''}</div>
+                    <div className="pl-3 border-l-2 border-purple-200">
+                      <div className="text-xs text-slate-400 mb-0.5">Seller</div>
+                      <div className="font-medium text-slate-700">{referralInfo.name || 'Unknown'}</div>
+                      <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
+                    <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
+                  </>
                 )}
                 {referralInfo.type === 'affiliate_program' && referralInfo.affiliateId && (
                   <button

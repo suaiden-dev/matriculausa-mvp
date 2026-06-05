@@ -845,7 +845,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           );
                         })()}
                         {isPlatformAdmin && (() => {
-                          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
                           return (
                             <div className="flex flex-col gap-2 items-end">
                               {approvedApp && (
