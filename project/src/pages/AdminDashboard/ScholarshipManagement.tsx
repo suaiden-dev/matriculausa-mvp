@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
+import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 
 interface ScholarshipManagementProps {
   scholarships: any[];
@@ -65,6 +66,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
     newStatus: boolean;
   } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [viewingScholarship, setViewingScholarship] = useState<any | null>(null);
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(savedFilters.currentPage || 1);
   const [itemsPerPage, setItemsPerPage] = useState(savedFilters.itemsPerPage || 12);
@@ -803,7 +805,15 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                 </div>
 
                 <div className="px-6 pb-6 pt-2">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className="w-full border border-slate-200 text-slate-700 py-2 px-4 rounded-xl hover:bg-slate-50 transition-colors font-medium text-sm flex items-center justify-center gap-1.5"
+                      onClick={() => setViewingScholarship(scholarship)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View Details
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
                     <button
                       className="bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#05294E]/90 transition-colors font-medium text-sm flex items-center justify-center"
                       onClick={() => handleEdit(scholarship.id)}
@@ -818,6 +828,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                       <Power className="h-4 w-4 mr-1" />
                       {scholarship.is_active ? 'ON' : 'OFF'}
                     </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -888,9 +899,16 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-center gap-2">
-
-                      <button 
-                        className="bg-[#05294E] text-white py-1 px-3 rounded-lg hover:bg-[#05294E]/90 transition-colors text-xs font-medium flex items-center" 
+                      <button
+                        className="border border-slate-200 text-slate-600 py-1 px-3 rounded-lg hover:bg-slate-50 transition-colors text-xs font-medium flex items-center"
+                        title="View Details"
+                        onClick={() => setViewingScholarship(scholarship)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </button>
+                      <button
+                        className="bg-[#05294E] text-white py-1 px-3 rounded-lg hover:bg-[#05294E]/90 transition-colors text-xs font-medium flex items-center"
                         title="Edit scholarship"
                         onClick={() => handleEdit(scholarship.id)}
                       >
@@ -1047,6 +1065,17 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
             </div>
           </div>
         </Dialog>
+      )}
+
+      {viewingScholarship && (
+        <ScholarshipDetailModal
+          scholarship={viewingScholarship}
+          isOpen={!!viewingScholarship}
+          onClose={() => setViewingScholarship(null)}
+          userProfile={null}
+          user={null}
+          userRole="admin"
+        />
       )}
     </div>
   );
