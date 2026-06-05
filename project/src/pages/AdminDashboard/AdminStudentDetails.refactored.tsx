@@ -922,6 +922,13 @@ const AdminStudentDetails: React.FC = () => {
         return;
       }
 
+      // Se o referenciador é um seller, deixar o fetchReferralInfo tratar via seller_referral_code
+      // (já retorna type:'seller' com nome da agência)
+      if (profile?.role === 'seller') {
+        setAffiliateProgramReferral(null);
+        return;
+      }
+
       setAffiliateProgramReferral({
         code: referral.affiliate_code,
         affiliateId: codeData?.id || referral.referrer_id,
@@ -1183,24 +1190,22 @@ const AdminStudentDetails: React.FC = () => {
         let affiliateName: string | null = null;
         let affiliateEmail: string | null = null;
 
-        // Mapear affiliate_admin_id -> user_id via affiliate_admins
+        // Buscar company_name e email da agência diretamente em affiliate_admins
         const { data: affiliateAdmin } = await supabase
           .from('affiliate_admins')
-          .select('user_id')
+          .select('user_id, company_name')
           .eq('id', (sellerData as any).affiliate_admin_id)
           .maybeSingle();
 
-        const affiliateUserId = (affiliateAdmin as any)?.user_id || null;
-
-        if (affiliateUserId) {
-          const { data: affiliateProfile } = await supabase
-            .from('user_profiles')
-            .select('full_name, email')
-            .eq('user_id', affiliateUserId)
-            .maybeSingle();
-
-          if (affiliateProfile) {
-            affiliateName = (affiliateProfile as any)?.full_name || null;
+        if (affiliateAdmin) {
+          affiliateName = (affiliateAdmin as any)?.company_name || null;
+          const affiliateUserId = (affiliateAdmin as any)?.user_id || null;
+          if (affiliateUserId) {
+            const { data: affiliateProfile } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', affiliateUserId)
+              .maybeSingle();
             affiliateEmail = (affiliateProfile as any)?.email || null;
           }
         }
