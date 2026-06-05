@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
     // Helper para gerar o invólucro do HTML (Layout Padrão)
     const getHtmlLayout = (title: string, innerHtml: string) => `
       <!DOCTYPE html>
-      <html lang="pt-br">
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
         <title>${title}</title>
@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
             ${innerHtml}
           </div>
           <div class="footer">
-            Esta é uma notificação automática da plataforma Matrícula USA.
+            This is an automated notification from the Matrícula USA platform.
           </div>
         </div>
       </body>
@@ -172,18 +172,18 @@ Deno.serve(async (req: Request) => {
       // EVENTOS DO SELLER (agora direcionados à Agência)
       case 'client_registered': {
         recipientEmail = data.agencyEmail || data.sellerEmail || '';
-        subject = '🎉 Novo estudante cadastrado via link de vendas!';
+        subject = '🎉 New student registered via sales link!';
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>Temos uma ótima notícia! Um novo estudante acabou de se cadastrar na plataforma Matrícula USA utilizando o link de vendas do seu vendedor <strong>${data.sellerName || 'Vendedor'}</strong>.</p>
-          <p><strong>Detalhes do Estudante:</strong></p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>We have great news! A new student has just registered on the Matrícula USA platform using the sales link of your seller <strong>${data.sellerName || 'Seller'}</strong>.</p>
+          <p><strong>Student Details:</strong></p>
           <ul>
-            <li><strong>Nome:</strong> ${data.studentName || 'Não informado'}</li>
-            <li><strong>E-mail:</strong> ${data.studentEmail || 'Não informado'}</li>
+            <li><strong>Name:</strong> ${data.studentName || 'Not provided'}</li>
+            <li><strong>Email:</strong> ${data.studentEmail || 'Not provided'}</li>
           </ul>
-          <p>Acompanhe a jornada dele e o status das comissões pelo seu painel.</p>
+          <p>Track their journey and commission status via your dashboard.</p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Acessar Painel da Agência</a>
+            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Access Agency Dashboard</a>
           </div>
         `;
         htmlContent = getHtmlLayout(subject, inner);
@@ -192,13 +192,13 @@ Deno.serve(async (req: Request) => {
 
       case 'selection_process_fee_paid': {
         recipientEmail = data.agencyEmail || data.sellerEmail || '';
-        subject = '💳 Taxa de Processo Seletivo Paga!';
+        subject = '💳 Selection Process Fee Paid!';
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>O estudante <strong>${data.studentName || 'Estudante'}</strong> (indicado pelo vendedor <strong>${data.sellerName || 'Vendedor'}</strong>) realizou com sucesso o pagamento da <strong>Selection Process Fee</strong>.</p>
-          <p>O processo seletivo dele já está seguindo as próximas etapas na plataforma.</p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>The student <strong>${data.studentName || 'Student'}</strong> (referred by seller <strong>${data.sellerName || 'Seller'}</strong>) has successfully paid the <strong>Selection Process Fee</strong>.</p>
+          <p>Their selection process is now moving forward to the next steps on the platform.</p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Verificar Painel</a>
+            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Check Dashboard</a>
           </div>
         `;
         htmlContent = getHtmlLayout(subject, inner);
@@ -207,13 +207,13 @@ Deno.serve(async (req: Request) => {
 
       case 'application_fee_paid': {
         recipientEmail = data.agencyEmail || data.sellerEmail || '';
-        subject = '🔥 Taxa de Aplicação Paga!';
+        subject = '🔥 Application Fee Paid!';
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>O estudante <strong>${data.studentName || 'Estudante'}</strong> (indicado pelo vendedor <strong>${data.sellerName || 'Vendedor'}</strong>) realizou o pagamento da <strong>Application Fee</strong>.</p>
-          <p>Isso representa mais um passo importante no andamento das matrículas dele.</p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>The student <strong>${data.studentName || 'Student'}</strong> (referred by seller <strong>${data.sellerName || 'Seller'}</strong>) has paid the <strong>Application Fee</strong>.</p>
+          <p>This marks another important step in their enrollment process.</p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Verificar Vendas</a>
+            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Check Sales</a>
           </div>
         `;
         htmlContent = getHtmlLayout(subject, inner);
@@ -222,14 +222,14 @@ Deno.serve(async (req: Request) => {
 
       case 'fee_paid': {
         recipientEmail = data.agencyEmail || data.sellerEmail || '';
-        const feeLabel = data.feeName || 'Taxa';
-        subject = `💳 Taxa de ${feeLabel} Paga!`;
+        const feeLabel = data.feeName || 'Fee';
+        subject = `💳 ${feeLabel} Paid!`;
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>O estudante <strong>${data.studentName || 'Estudante'}</strong> (indicado pelo vendedor <strong>${data.sellerName || 'Vendedor'}</strong>) realizou com sucesso o pagamento da <strong>${feeLabel}</strong>.</p>
-          <p>Uma nova comissão no valor de <strong>USD ${data.amount || '0.00'}</strong> foi gerada para o seu vendedor!</p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>The student <strong>${data.studentName || 'Student'}</strong> (referred by seller <strong>${data.sellerName || 'Seller'}</strong>) has successfully paid the <strong>${feeLabel}</strong>.</p>
+          <p>A new commission of <strong>USD ${data.amount || '0.00'}</strong> has been generated for your seller!</p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Verificar Comissões</a>
+            <a href="${siteUrl}/agency/dashboard" target="_blank" class="btn-cta">Check Commissions</a>
           </div>
         `;
         htmlContent = getHtmlLayout(subject, inner);
@@ -238,11 +238,11 @@ Deno.serve(async (req: Request) => {
 
       case 'commission_cleared': {
         recipientEmail = data.agencyEmail || data.sellerEmail || '';
-        subject = '💰 Comissão Liberada!';
+        subject = '💰 Commission Cleared!';
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>A comissão no valor de <strong>USD ${data.amount || '0.00'}</strong> do seu vendedor <strong>${data.sellerName || 'Vendedor'}</strong> foi liberada e está disponível para resgate.</p>
-          <p>Ele poderá solicitar a transferência deste saldo pelo painel dele.</p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>The commission of <strong>USD ${data.amount || '0.00'}</strong> for your seller <strong>${data.sellerName || 'Seller'}</strong> has been cleared and is available for payout.</p>
+          <p>They can request a payout of this balance from their dashboard.</p>
         `;
         htmlContent = getHtmlLayout(subject, inner);
         break;
@@ -250,16 +250,16 @@ Deno.serve(async (req: Request) => {
 
       case 'payment_request_processed': {
         recipientEmail = data.sellerEmail || '';
-        subject = '✅ Solicitação de Payout Processada/Paga!';
+        subject = '✅ Payout Request Processed/Paid!';
         const inner = `
-          <p>Olá, <strong>${data.sellerName || 'Seller'}</strong>,</p>
-          <p>Sua solicitação de saque no valor de <strong>USD ${data.amount || '0.00'}</strong> foi processada com sucesso.</p>
-          <p><strong>Detalhes do Pagamento:</strong></p>
+          <p>Hello, <strong>${data.sellerName || 'Seller'}</strong>,</p>
+          <p>Your payout request of <strong>USD ${data.amount || '0.00'}</strong> has been successfully processed.</p>
+          <p><strong>Payment Details:</strong></p>
           <ul>
-            <li><strong>Método:</strong> ${data.payoutMethod || 'Zelle'}</li>
-            ${data.paymentReference ? `<li><strong>Referência/Comprovante:</strong> ${data.paymentReference}</li>` : ''}
+            <li><strong>Method:</strong> ${data.payoutMethod || 'Zelle'}</li>
+            ${data.paymentReference ? `<li><strong>Reference/Receipt:</strong> ${data.paymentReference}</li>` : ''}
           </ul>
-          <p>O saldo deve estar disponível na sua conta em breve.</p>
+          <p>The funds should be available in your account shortly.</p>
         `;
         htmlContent = getHtmlLayout(subject, inner);
         break;
@@ -276,18 +276,18 @@ Deno.serve(async (req: Request) => {
           const emailPromises = admins
             .filter((adm: { email: string | null }) => adm.email)
             .map((adm: { email: string | null; full_name: string | null }) => {
-              const subject = '🛎️ Nova Solicitação de Payout Recebida';
+              const subject = '🛎️ New Payout Request Received';
               const inner = `
-                <p>Olá, <strong>${adm.full_name || 'Administrador'}</strong>,</p>
-                <p>A Agência <strong>${data.agencyName || 'Agência'}</strong> (${data.agencyEmail || ''}) solicitou um payout/saque de comissões.</p>
-                <p><strong>Resumo do Pedido:</strong></p>
+                <p>Hello, <strong>${adm.full_name || 'Administrator'}</strong>,</p>
+                <p>Agency <strong>${data.agencyName || 'Agency'}</strong> (${data.agencyEmail || ''}) has requested a commission payout.</p>
+                <p><strong>Request Summary:</strong></p>
                 <ul>
-                  <li><strong>Valor:</strong> USD ${data.amount || '0.00'}</li>
-                  <li><strong>Método Escolhido:</strong> ${data.payoutMethod || 'Zelle'}</li>
+                  <li><strong>Amount:</strong> USD ${data.amount || '0.00'}</li>
+                  <li><strong>Method:</strong> ${data.payoutMethod || 'Zelle'}</li>
                 </ul>
-                <p>Por favor, revise os detalhes e processe o pagamento no painel financeiro.</p>
+                <p>Please review the details and process the payment in the financial panel.</p>
                 <div style="text-align: center; margin: 25px 0;">
-                  <a href="${siteUrl}/admin/dashboard/payments" target="_blank" class="btn-cta">Gerenciar Pagamentos</a>
+                  <a href="${siteUrl}/admin/dashboard/payments" target="_blank" class="btn-cta">Manage Payments</a>
                 </div>
               `;
               const html = getHtmlLayout(subject, inner);
@@ -313,11 +313,11 @@ Deno.serve(async (req: Request) => {
 
       case 'commission_payout_completed': {
         recipientEmail = data.agencyEmail || '';
-        subject = '🤝 Pagamento de Payout de Seller Concluído';
+        subject = '🤝 Seller Payout Completed';
         const inner = `
-          <p>Olá, <strong>${data.agencyName || 'Agência'}</strong>,</p>
-          <p>O pagamento do resgate solicitado por <strong>${data.sellerName || 'Seller'}</strong> no valor de <strong>USD ${data.amount || '0.00'}</strong> foi marcado como concluído.</p>
-          <p>O histórico financeiro da agência já foi atualizado com essa transação.</p>
+          <p>Hello, <strong>${data.agencyName || 'Agency'}</strong>,</p>
+          <p>The payout request of <strong>USD ${data.amount || '0.00'}</strong> requested by <strong>${data.sellerName || 'Seller'}</strong> has been marked as completed.</p>
+          <p>The agency's financial history has been updated with this transaction.</p>
         `;
         htmlContent = getHtmlLayout(subject, inner);
         break;
