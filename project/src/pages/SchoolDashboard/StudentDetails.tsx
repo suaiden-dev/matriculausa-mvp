@@ -2704,7 +2704,7 @@ const StudentDetails: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Document Requests — Status Overview (read-only) */}
+                {/* University Document Requests */}
                 <div className="mb-6">
                   {documentRequests.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
@@ -2715,71 +2715,118 @@ const StudentDetails: React.FC = () => {
                       <p className="text-sm text-slate-500 mt-1">Create your first request using the button above</p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {documentRequests.map((request) => {
-                        const upload = request.uploads?.[0];
-                        const responseStatus = !upload
-                          ? 'awaiting'
-                          : upload.status === 'approved' ? 'approved'
-                          : upload.status === 'rejected' ? 'rejected'
-                          : 'under_review';
-                        const statusConfig = {
-                          awaiting:     { label: 'Awaiting response', className: 'bg-slate-100 text-slate-500' },
-                          under_review: { label: 'Under Review',      className: 'bg-yellow-100 text-yellow-800' },
-                          approved:     { label: 'Approved',          className: 'bg-green-100 text-green-800' },
-                          rejected:     { label: 'Rejected',          className: 'bg-red-100 text-red-800' },
-                        }[responseStatus];
-                        return (
-                          <div key={request.id} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
-                            <div className="flex items-center space-x-3 min-w-0 flex-1">
-                              <div className="w-2 h-2 bg-[#05294E] rounded-full flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <span className="font-medium text-slate-900 text-sm truncate block">{request.title}</span>
+                    <div className="space-y-3">
+                      {documentRequests.map((request) => (
+                        <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3 flex-1">
+                              <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <h6 className="font-semibold text-slate-900">{request.title}</h6>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.is_global
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                    {request.is_global ? 'Global Request' : 'Individual Request'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-600">{request.description}</p>
                                 {request.due_date && (
-                                  <span className="text-xs text-slate-400">Due: {new Date(request.due_date).toLocaleDateString()}</span>
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    Due: {new Date(request.due_date).toLocaleDateString()}
+                                  </p>
+                                )}
+
+                                {/* Student Upload Status */}
+                                {request.uploads && request.uploads.length > 0 ? (
+                                  <div className="mt-3">
+                                    <div className="flex items-start space-x-3">
+                                      <span className="text-sm text-slate-600">Student response:</span>
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${request.uploads[0].status === 'approved' ? 'bg-green-100 text-green-800' :
+                                          request.uploads[0].status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                            'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                        {request.uploads[0].status === 'approved' ? 'Approved' :
+                                          request.uploads[0].status === 'rejected' ? 'Rejected' :
+                                            'Under Review'}
+                                      </span>
+                                      <button
+                                        onClick={() => handleViewUpload(request.uploads[0])}
+                                        className="text-[#05294E] hover:text-[#041f38] text-sm font-medium hover:underline"
+                                      >
+                                        View
+                                      </button>
+                                      {request.uploads[0].status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                        <>
+                                          <button
+                                            onClick={() => handleApproveDocument(request.uploads[0].id)}
+                                            className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                          >
+                                            Approve
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setPendingRejectDocumentId(request.uploads[0].id);
+                                              setShowRejectDocumentModal(true);
+                                            }}
+                                            className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                          >
+                                            Reject
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="ml-13 mt-3">
+                                    <span className="text-sm text-slate-500 italic">No response from student yet</span>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
-                                {statusConfig.label}
+
+                            <div className="flex items-center space-x-2 ml-4">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${request.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                  request.status === 'closed' ? 'bg-slate-100 text-slate-800' :
+                                    'bg-green-100 text-green-800'
+                                }`}>
+                                {request.status === 'open' ? 'Open' :
+                                  request.status === 'closed' ? 'Closed' :
+                                    request.status}
                               </span>
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${request.status === 'open' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'}`}>
-                                {request.status === 'open' ? 'Open' : 'Closed'}
-                              </span>
+
                               {request.attachment_url && (
                                 <button
                                   onClick={() => handleDownloadTemplate(request.attachment_url)}
-                                  className="text-[#05294E] hover:text-[#041f38] text-xs font-medium px-2.5 py-1 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-1 rounded-lg hover:bg-slate-100 transition-colors"
                                 >
                                   Template
                                 </button>
                               )}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Pending Review — Operational queue */}
+              {/* Student Uploads Section */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
                 <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 rounded-t-3xl flex items-center justify-between">
                   <h4 className="font-semibold text-slate-900 flex items-center">
-                    <svg className="w-5 h-5 mr-3 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg className="w-5 h-5 mr-3 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Pending Review
-                    {studentDocuments.filter(d => d.status === 'under_review').length > 0 && (
-                      <span className="ml-2 bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {studentDocuments.filter(d => d.status === 'under_review').length}
-                      </span>
-                    )}
+                    Student Responses to Document Requests
                   </h4>
                   <button
-                    onClick={fetchStudentDocuments}
+                    onClick={() => {
+                      console.log('Refresh manual dos documentos');
+                      fetchStudentDocuments();
+                    }}
                     className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors flex items-center bg-white border border-slate-200 shadow-sm"
                   >
                     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -2790,73 +2837,87 @@ const StudentDetails: React.FC = () => {
                 </div>
 
                 <div className="p-6">
-                  {studentDocuments.filter(d => d.status === 'under_review').length === 0 ? (
-                    <div className="text-center py-8 bg-green-50 rounded-3xl border border-green-100">
-                      <svg className="w-10 h-10 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-green-700 font-semibold">All documents reviewed</p>
-                      <p className="text-sm text-green-600 mt-1">No pending documents at this time</p>
+                  {studentDocuments.length === 0 ? (
+                    <div className="text-center py-6 bg-slate-50 rounded-3xl">
+                      <p className="text-slate-500">No responses from student yet</p>
+                      <p className="text-sm text-slate-400 mt-1">Documents will appear here once the student responds to your document requests</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {studentDocuments.filter(d => d.status === 'under_review').map((doc) => (
-                        <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-4 flex-1">
-                              <div className="w-2 h-2 bg-amber-400 rounded-full mt-2 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
-                                <div className="flex items-center space-x-2 mt-1">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                                    {doc.request_type || 'Individual Request'}
-                                  </span>
-                                  <span className="text-sm text-slate-500">
-                                    Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Unknown Request'}</span>
-                                  </span>
+                      {studentDocuments.map((doc) => {
+                        return (
+                          <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-4 flex-1">
+                                <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
+                                  <div className="flex items-center space-x-2 mt-1">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                      }`}>
+                                      {doc.request_type || 'Individual Request'}
+                                    </span>
+                                    <span className="text-sm text-slate-500">
+                                      Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Unknown Request'}</span>
+                                    </span>
+                                  </div>
+                                  {doc.request_description && (
+                                    <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
+                                  )}
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
+                                  </p>
                                 </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
-                                </p>
+                              </div>
+
+                              <div className="flex items-center space-x-3 ml-4">
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${(doc.status === 'approved' || doc.status === 'sent') ? 'bg-green-100 text-green-800' :
+                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {(doc.status === 'approved' || doc.status === 'sent') ? 'Approved' :
+                                    doc.status === 'rejected' ? 'Rejected' :
+                                      'Under Review'}
+                                </span>
+
+                                {/* Botões de ação para documentos Under Review */}
+                                {doc.status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => handleApproveDocument(doc.id)}
+                                      className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setPendingRejectDocumentId(doc.id);
+                                        setShowRejectDocumentModal(true);
+                                      }}
+                                      className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+
+                                <button
+                                  onClick={() => handleDownloadDocument(doc)}
+                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                >
+                                  Download
+                                </button>
+                                <button
+                                  onClick={() => handleViewDocument(doc)}
+                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                >
+                                  View
+                                </button>
                               </div>
                             </div>
-
-                            <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-                              {application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
-                                <>
-                                  <button
-                                    onClick={() => handleApproveDocument(doc.id)}
-                                    className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setPendingRejectDocumentId(doc.id);
-                                      setShowRejectDocumentModal(true);
-                                    }}
-                                    className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => handleDownloadDocument(doc)}
-                                className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                              >
-                                Download
-                              </button>
-                              <button
-                                onClick={() => handleViewDocument(doc)}
-                                className="bg-[#05294E] hover:bg-[#041f38] text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-                              >
-                                View
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
