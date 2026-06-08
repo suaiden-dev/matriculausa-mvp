@@ -200,6 +200,8 @@ Deno.serve(async (req) => {
 
     // Buscar valor da taxa da bolsa (application_fee_amount)
     let applicationFeeAmount = 350.00; // Valor padrão
+    // Valor base para comissão (sem acréscimo de dependentes)
+    let baseAmount = applicationFeeAmount;
 
     // Verificar se veio final_amount no metadata (com desconto já aplicado)
     const hasFinalAmountFromMetadata = metadata?.final_amount &&
@@ -236,6 +238,9 @@ Deno.serve(async (req) => {
 
       // Adicionar custo por dependente
       const dependents = Number(userProfile.dependents) || 0;
+
+      // Capturar base ANTES de somar dependentes (para cálculo de comissão)
+      baseAmount = applicationFeeAmount;
 
       if (dependents > 0) {
         const dependentsCost = dependents * 100; // $100 por dependente
@@ -341,6 +346,7 @@ Deno.serve(async (req) => {
         scholarship_id: application.scholarship_id,
         student_process_type: application.student_process_type || null,
         application_fee_amount: applicationFeeAmount.toString(),
+        original_amount: baseAmount.toString(), // base sem dependentes — usado pelo webhook para comissão
         timestamp: Date.now().toString(),
         ...(metadata || {}),
       },

@@ -13,11 +13,6 @@ const I20DeadlineTimer: React.FC<I20DeadlineTimerProps> = ({ deadline, hasPaid }
   // Debug log
   console.log('🔍 [I20_DEADLINE_TIMER] Props received:', { deadline, hasPaid });
 
-  // Don't render if deadline is null or already paid
-  if (!deadline || hasPaid) {
-    return null;
-  }
-
   // Calculate time remaining
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -121,6 +116,11 @@ const I20DeadlineTimer: React.FC<I20DeadlineTimerProps> = ({ deadline, hasPaid }
       return <Clock className="w-5 h-5" />;
     }
   };
+
+  // Don't render if deadline is null or already paid
+  if (!deadline || hasPaid) {
+    return null;
+  }
 
   const styles = getSectionStyle();
 

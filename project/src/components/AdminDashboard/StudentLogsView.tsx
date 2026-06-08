@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudentLogs, StudentActionLog } from '../../hooks/useStudentLogs';
 import ScholarshipInfoDisplay from './ScholarshipInfoDisplay';
+import { supabase } from '../../lib/supabase';
 
 interface StudentLogsViewProps {
   studentId: string;
   studentName: string;
+  showIpIdentity?: boolean; // Only true for Admin — shows IP identity for school_manager actions
 }
 
-const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentName }) => {
+interface IpIdentity {
+  person_name: string;
+  person_email: string;
+  person_type: string;
+  frequency: number;
+  last_seen: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
+const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentName, showIpIdentity = false }) => {
   const {
     logs,
     loading,
@@ -21,6 +32,39 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
   } = useStudentLogs(studentId);
 
   const [showFilters, setShowFilters] = useState(false);
+
+  // IP identity cache: { [ip]: IpIdentity | null }
+  const [ipIdentityMap, setIpIdentityMap] = useState<Record<string, IpIdentity | null>>({});
+
+  // Batch-fetch identities for all unique IPs from school_manager logs
+  useEffect(() => {
+    if (!showIpIdentity || logs.length === 0) return;
+
+    const schoolManagerLogs = logs.filter(l => l.performed_by_type === 'school_manager');
+    const ips = Array.from(new Set(
+      schoolManagerLogs
+        .map(l => l.metadata?.ip || l.metadata?.client_ip || l.metadata?.request_ip)
+        .filter(Boolean)
+    ));
+
+    const uncachedIps = ips.filter(ip => !(ip in ipIdentityMap));
+    if (uncachedIps.length === 0) return;
+
+    const fetchAll = async () => {
+      const results = await Promise.allSettled(
+        uncachedIps.map(ip =>
+          supabase.rpc('identify_ip', { p_ip: ip }).then(({ data }) => ({ ip, top: (data as IpIdentity[])?.[0] || null }))
+        )
+      );
+      const newEntries: Record<string, IpIdentity | null> = {};
+      results.forEach(r => {
+        if (r.status === 'fulfilled') newEntries[r.value.ip] = r.value.top;
+      });
+      setIpIdentityMap(prev => ({ ...prev, ...newEntries }));
+    };
+
+    fetchAll();
+  }, [logs, showIpIdentity]);
 
   const actionTypeOptions = [
     { value: '', label: 'All Actions' },
@@ -42,7 +86,9 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     { value: '', label: 'All Users' },
     { value: 'student', label: 'Student' },
     { value: 'admin', label: 'Admin' },
-    { value: 'university', label: 'University' }
+    { value: 'university', label: 'University' },
+    { value: 'school_manager', label: 'School Manager' },
+    { value: 'post_sales', label: 'Post Sales' },
   ];
 
   const formatDate = (dateString: string) => {
@@ -80,8 +126,12 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
         return 'bg-slate-100 text-slate-700 border-slate-200';
       case 'university':
         return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'school_manager':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'student':
         return 'bg-green-100 text-green-700 border-green-200';
+      case 'post_sales':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -297,12 +347,28 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
                   </div>
 
                   {/* Right: By, Date, IP */}
-                  <div className="flex flex-col items-end text-xs space-y-2 text-slate-600 whitespace-nowrap">
+                  <div className="flex flex-col items-end text-xs space-y-1.5 text-slate-600 whitespace-nowrap">
                     <span>By: {getPerformerDisplayName(log)}</span>
                     <span>{formatDate(log.created_at)}</span>
-                    {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
-                      <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
-                    )}
+                    {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (() => {
+                      const ip = log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip;
+                      const identity = showIpIdentity && log.performed_by_type === 'school_manager'
+                        ? ipIdentityMap[ip]
+                        : undefined;
+                      return (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span>IP: {ip}</span>
+                          {identity && (
+                            <span className="text-[11px] text-purple-600 font-medium">
+                              ↳ {identity.person_name}
+                            </span>
+                          )}
+                          {showIpIdentity && log.performed_by_type === 'school_manager' && !(ip in ipIdentityMap) && (
+                            <span className="text-[11px] text-slate-400">↳ identifying...</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
