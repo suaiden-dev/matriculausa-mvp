@@ -228,7 +228,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'student_restored',
           'Student was restored to the process',
           userProfile?.user_id || '',
-          userProfile?.role === 'school' ? 'university' : 'admin',
+          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             admin_name: userProfile?.full_name 
@@ -259,7 +259,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'student_dropped',
           `Student was marked as dropped: ${reason}`,
           userProfile?.user_id || '',
-          userProfile?.role === 'school' ? 'university' : 'admin',
+          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             reason,
@@ -288,7 +288,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'docs_sent_to_university',
           'Documents were marked as sent to the university',
           userProfile?.user_id || '',
-          userProfile?.role === 'school' ? 'university' : 'admin',
+          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
@@ -316,7 +316,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'sevis_transfer_completed',
           'SEVIS transfer was marked as completed',
           userProfile?.user_id || '',
-          userProfile?.role === 'school' ? 'university' : 'admin',
+          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
@@ -345,7 +345,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'visa_approved',
           'Visa was marked as approved',
           userProfile?.user_id || '',
-          userProfile?.role === 'school' ? 'university' : 'admin',
+          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
