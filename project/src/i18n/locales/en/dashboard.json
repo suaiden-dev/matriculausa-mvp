@@ -1543,7 +1543,7 @@
         "title": "Turn Your",
         "titleHighlight": "Referrals into Discounts",
         "subtitle": "on Your Tuition",
-        "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = $1 off your monthly payment",
+        "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = US$ 1 off your monthly payment",
         "valueCards": {
           "referFriends": {
             "title": "Share & Earn",
@@ -1633,7 +1633,7 @@
           "minValue": "1 friend",
           "maxValue": "50+ friends",
           "coinsPerFriend": "100 coins",
-          "perFriend": "per friend",
+          "perFriend": "per referral",
           "coinValue": "1 coin =",
           "usdValue": "$1 USD"
         },
@@ -1834,7 +1834,7 @@
         "redeem": "Redeem your rewards"
       },
       "stats": {
-        "coinsPerReferral": "coins per confirmed referral",
+        "coinsPerReferral": "dollars per confirmed referral",
         "activeAffiliates": "active affiliates on the platform"
       }
     },
@@ -1905,6 +1905,90 @@
           "answer": "On your dashboard, you can exchange accumulated coins for benefits within the Matrícula USA platform or withdraw the available balance."
         }
       ]
+    }
+  },
+  "affiliateDashboard": {
+    "header": {
+      "title": "Affiliate Dashboard",
+      "subtitle": "Track referrals and earnings"
+    },
+    "stats": {
+      "balance": "Available balance",
+      "balanceSub": "USD available for withdrawal",
+      "totalEarned": "Total earned",
+      "totalEarnedSub": "Accumulated to date",
+      "referrals": "Referrals",
+      "referralsSub": "Signups via your link"
+    },
+    "central": {
+      "title": "Earnings & Referrals Hub",
+      "codeLabel": "Your referral code",
+      "copyCode": "Copy code",
+      "copyLink": "Copy link",
+      "copied": "Copied!",
+      "newCode": "NEW_CODE",
+      "save": "Save",
+      "saved": "✓ Saved",
+      "editErrorLength": "The code must be between 3 and 20 characters.",
+      "editErrorPattern": "Use only letters, numbers, and _.",
+      "editErrorTaken": "This code is already in use.",
+      "editErrorInvalid": "Invalid size.",
+      "editErrorGeneral": "Error saving. Try again.",
+      "editWarning": "Old links with the current code will stop working."
+    },
+    "howItWorks": {
+      "title": "How does the Affiliate Program work?",
+      "step1": {
+        "title": "Share your link",
+        "description": "Copy your unique referral link and share it on your social networks, websites, or directly with students interested in entering American universities."
+      },
+      "step2": {
+        "title": "Track the stages",
+        "description": "When a student registers, they are linked to you. Commissions are credited to your balance gradually as the student makes fee payments in the process."
+      },
+      "step3": {
+        "title": "Withdraw your balance",
+        "description": "Once you accumulate available balance, you can request a withdrawal via Zelle or Stripe. Our team reviews the request and makes the payment directly to your registered account."
+      }
+    },
+    "referralsList": {
+      "title": "Your Referrals",
+      "noReferrals": "No referrals yet",
+      "startSharing": "Share your link and start earning.",
+      "count_one": "referral",
+      "count_other": "referrals",
+      "anonymous": "Referral"
+    },
+    "redemption": {
+      "title": "Redeem Coins",
+      "subtitle": "Convert your coins to cash. 1 coin = $1 USD.",
+      "requestButton": "Request Redemption",
+      "pendingRequest": "Request in progress",
+      "insufficientBalance": "Insufficient balance to redeem",
+      "historyButton": "History",
+      "successMessage": "Request submitted successfully! Our team will process it shortly.",
+      "newRequestTitle": "New Redemption Request",
+      "availableBalance": "Available balance: {{balance}} coins (${{balance}} USD)",
+      "amountLabel": "Amount of coins to redeem",
+      "amountRange": "1 – {{max}}",
+      "willReceive": "You will receive ${{amount}} USD",
+      "payoutMethod": "Payout method",
+      "payoutDetails": "{{method}} — payout details",
+      "errorAmount": "Enter a value between 1 and {{max}} coins.",
+      "errorDetails": "Fill in the payment details.",
+      "errorGeneral": "Error sending request. Try again.",
+      "submitButton": "Send Request",
+      "submitting": "Sending...",
+      "cancelButton": "Cancel",
+      "historyTitle": "Request History",
+      "loading": "Loading...",
+      "noHistory": "No requests yet.",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "paid": "Paid",
+        "rejected": "Rejected"
+      }
     }
   },
   "academicInfo": {

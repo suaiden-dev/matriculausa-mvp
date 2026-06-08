@@ -10,9 +10,11 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
   const [checkingAgency, setCheckingAgency] = useState(false);
+  const [checkingAffiliate, setCheckingAffiliate] = useState(false);
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
   const agencyCache = useRef<{ [userId: string]: any }>({});
+  const affiliateCache = useRef<{ [userId: string]: any }>({});
 
   const checkUniversityStatus = useCallback(async (userId: string, universityId?: string) => {
     const cacheKey = universityId || userId;
@@ -71,6 +73,34 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
   }, []);
 
+  const checkAffiliateStatus = useCallback(async (userId: string) => {
+    if (affiliateCache.current[userId]) {
+      return affiliateCache.current[userId];
+    }
+
+    try {
+      const { data: affiliateCode, error } = await supabase
+        .from('affiliate_codes')
+        .select('terms_accepted')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const result = {
+        error: error && error.code !== 'PGRST116' ? error : null,
+        affiliateCode: affiliateCode || null
+      };
+
+      affiliateCache.current[userId] = result;
+      setTimeout(() => {
+        delete affiliateCache.current[userId];
+      }, 30000);
+
+      return result;
+    } catch (error) {
+      return { error, affiliateCode: null };
+    }
+  }, []);
+
   const { isBlocked: paymentIsBlocked, pendingPayment, rejectedPayment } = usePaymentBlockedContext();
 
   // Derivado do context — memoizado para evitar re-calculo em cada render
@@ -91,6 +121,19 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     const currentPath = location.pathname;
+
+    if (user) {
+      if (currentPath === '/affiliate/termsandconditions') {
+        delete affiliateCache.current[user.id];
+      }
+      if (currentPath === '/school/termsandconditions') {
+        delete universityCache.current[user.id];
+        if (user.university_id) delete universityCache.current[user.university_id];
+      }
+      if (currentPath === '/agency/termsandconditions') {
+        delete agencyCache.current[user.id];
+      }
+    }
 
     // Redirecionamentos de Legado (Affiliate Admin -> Agency)
     // Executado antes de qualquer verificação de auth para garantir que a URL esteja correta
@@ -230,7 +273,15 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           return;
         }
         if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
-        if (user.role === 'affiliate') { navigate('/affiliate/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate') {
+          setCheckingAffiliate(true);
+          const { error, affiliateCode } = await checkAffiliateStatus(user.id);
+          if (error) { navigate('/affiliate/dashboard', { replace: true }); setCheckingAffiliate(false); return; }
+          if (!affiliateCode || !affiliateCode.terms_accepted) { navigate('/affiliate/termsandconditions', { replace: true }); setCheckingAffiliate(false); return; }
+          navigate('/affiliate/dashboard', { replace: true });
+          setCheckingAffiliate(false);
+          return;
+        }
 
         if (user.role === 'student') {
           if (hasPendingOrRejectedSelectionPayment) {
@@ -260,16 +311,16 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
 
       // PROTEÇÃO DE ROTAS POR ROLE
-      if ((user.role === 'school' || user.role === 'school_manager') && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
+      if ((user.role === 'school' || user.role === 'school_manager') && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency/'))) {
         navigate('/school/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency'))) {
+      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/agency/'))) {
         if (hasPendingOrRejectedSelectionPayment) { navigate('/student/onboarding?step=selection_fee', { replace: true }); return; }
         navigate('/student/dashboard', { replace: true }); return;
       }
 
-      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/agency') || currentPath.startsWith('/seller/'))) {
+      if ((user.role === 'admin' || user.role === 'post_sales') && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/agency/') || currentPath.startsWith('/seller/'))) {
         navigate('/admin/dashboard', { replace: true }); return;
       }
 
@@ -324,8 +375,36 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/seller/dashboard', { replace: true }); return;
       }
 
-      if (user.role === 'affiliate' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/agency/') || currentPath.startsWith('/seller/'))) {
-        navigate('/affiliate/dashboard', { replace: true }); return;
+      if (user.role === 'affiliate') {
+        const tryingToAccessOtherDashboard = (currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) ||
+          currentPath.startsWith('/school/') ||
+          currentPath.startsWith('/admin/') ||
+          currentPath.startsWith('/agency/') ||
+          currentPath.startsWith('/seller/');
+
+        const isProtectedAffiliatePath = currentPath.startsWith('/affiliate/dashboard') ||
+          currentPath.startsWith('/affiliate/termsandconditions');
+
+        if (tryingToAccessOtherDashboard || isProtectedAffiliatePath) {
+          setCheckingAffiliate(true);
+          const { error, affiliateCode } = await checkAffiliateStatus(user.id);
+          if (error) { setCheckingAffiliate(false); return; }
+
+          if (!affiliateCode || !affiliateCode.terms_accepted) {
+            if (currentPath !== '/affiliate/termsandconditions') {
+              navigate('/affiliate/termsandconditions', { replace: true });
+            }
+            setCheckingAffiliate(false);
+            return;
+          }
+
+          if (currentPath === '/affiliate/termsandconditions') {
+            navigate('/affiliate/dashboard', { replace: true });
+            setCheckingAffiliate(false);
+            return;
+          }
+          setCheckingAffiliate(false);
+        }
       }
 
       // VERIFICAÇÃO ADICIONAL PARA REDIRECIONAMENTO DA HOME LOGADA - Desativado para permitir exploração livre do site
@@ -375,9 +454,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     };
 
     checkAndRedirect();
-  }, [user?.id, user?.role, user?.onboarding_completed, user?.is_active, userProfile?.onboarding_completed, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
+  }, [user?.id, user?.role, user?.onboarding_completed, user?.is_active, userProfile?.onboarding_completed, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment, checkAffiliateStatus]);
 
-  if (checkingUniversity || checkingAgency) {
+  if (checkingUniversity || checkingAgency || checkingAffiliate) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>

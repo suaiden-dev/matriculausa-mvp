@@ -779,7 +779,7 @@ const Home: React.FC = () => {
                 <img
                   src="/banner_vertical.png"
                   alt="Students on campus"
-                  className="relative lg:absolute lg:inset-0 w-auto h-[400px] lg:w-full lg:h-full object-contain object-center scale-110"
+                  className="relative lg:absolute lg:inset-0 w-auto h-[400px] lg:w-full lg:h-full object-contain object-center scale-110 translate-x-4 lg:translate-x-0"
                 />
               </motion.div>
             </div>
@@ -914,7 +914,7 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
         {/* Mobile: horizontal scroll wrapper — keeps EXACT desktop grid layout */}
         <div className="md:hidden -mx-4 px-4 overflow-x-auto scrollbar-hide">
           <div
-            className="grid grid-cols-12 gap-4 auto-rows-[180px]"
+            className="grid grid-cols-12 gap-4 auto-rows-[275px]"
             style={{ width: '1100px' }}
           >
             {/* ROW 1 — same as desktop */}

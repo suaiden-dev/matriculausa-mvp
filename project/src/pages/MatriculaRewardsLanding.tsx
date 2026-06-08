@@ -212,7 +212,7 @@ const MatriculaRewardsLanding: React.FC = () => {
       {/* Showcase — prova social estilo "céu" */}
       <section className="relative z-10 py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative rounded-3xl bg-gradient-to-br from-[#D0151C] via-[#b01016] to-[#7a0a0f] overflow-x-clip overflow-y-visible lg:overflow-visible lg:min-h-[560px] flex flex-col lg:block">
+          <div className="relative rounded-3xl bg-gradient-to-br from-[#D0151C] via-[#b01016] to-[#7a0a0f] overflow-visible lg:min-h-[560px] flex flex-col lg:block">
 
             {/* Glows de iluminação dentro do painel */}
             <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
@@ -283,7 +283,7 @@ const MatriculaRewardsLanding: React.FC = () => {
             </div>
 
             {/* Imagem — afiliadas (transbordando pelo topo no mobile e no desktop) */}
-            <div className="relative z-[1] order-2 -mt-48 flex justify-center overflow-x-clip overflow-y-visible lg:mt-0 lg:overflow-visible lg:absolute lg:inset-x-0 lg:bottom-0 pointer-events-none">
+            <div className="relative z-[1] order-2 -mt-48 flex justify-center overflow-visible lg:absolute lg:inset-x-0 lg:bottom-0 pointer-events-none">
               <motion.img
                 src="/indicacao.png"
                 alt="Indicação MatriculaUSA"
