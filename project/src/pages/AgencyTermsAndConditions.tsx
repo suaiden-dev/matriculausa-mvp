@@ -4,6 +4,7 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { clearAgencyCache } from '../components/AuthRedirect';
 
 const AgencyTermsAndConditions: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
@@ -202,6 +203,9 @@ const AgencyTermsAndConditions: React.FC = () => {
 
         if (updateError) throw updateError;
 
+        // Invalidate cache so AuthRedirect fetches fresh state after navigation
+        clearAgencyCache(user.id);
+
         // Redirect based on onboarding status
         if (existingAgency.onboarding_completed) {
           if (existingAgency.is_active) {
@@ -227,6 +231,9 @@ const AgencyTermsAndConditions: React.FC = () => {
           });
 
         if (insertError) throw insertError;
+
+        // Invalidate cache so AuthRedirect fetches fresh state after navigation
+        clearAgencyCache(user.id);
 
         // Redirect to onboarding setup
         navigate('/agency/onboarding');

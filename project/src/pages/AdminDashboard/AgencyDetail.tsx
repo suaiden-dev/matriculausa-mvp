@@ -566,12 +566,14 @@ const AgencyDetail: React.FC = () => {
         .eq('id', agency.id);
       if (updateErr) throw updateErr;
       setAgency(prev => prev ? { ...prev, commission_rules: rules } : prev);
-      setCommissionModalOpen(false);
     } catch (e: any) {
       setRulesError(e.message || 'Failed to save commission rules');
-    } finally {
       setSavingRules(false);
+      return;
     }
+    // Reset saving before closing so React doesn't try to update an unmounted portal
+    setSavingRules(false);
+    setCommissionModalOpen(false);
   };
 
   // ── Derived data ──

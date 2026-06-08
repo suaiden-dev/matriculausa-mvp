@@ -42,6 +42,22 @@ const Sales: React.FC<SalesProps> = ({
   const hasSellers = sellers && sellers.length > 0;
   const isLoading = !students && !sellers;
 
+  // Filtrar estudantes por vendedor selecionado
+  const filteredStudents = useMemo(() => {
+    if (!students) return [];
+    
+    return students.filter(student => {
+      const matchesSearch = student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           student.seller_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesSeller = sellerFilter === 'all' || student.referred_by_seller_id === sellerFilter;
+      const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+      
+      return matchesSearch && matchesSeller && matchesStatus;
+    });
+  }, [students, searchTerm, sellerFilter, statusFilter]);
+
   // Se ainda está carregando, mostrar loading
   if (isLoading) {
     return (
@@ -60,7 +76,7 @@ const Sales: React.FC<SalesProps> = ({
             Atualizar
           </button>
         </div>
-        
+
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading data...</p>
@@ -68,22 +84,6 @@ const Sales: React.FC<SalesProps> = ({
       </div>
     );
   }
-
-  // Filtrar estudantes por vendedor selecionado
-  const filteredStudents = useMemo(() => {
-    if (!students) return [];
-    
-    return students.filter(student => {
-      const matchesSearch = student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           student.seller_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesSeller = sellerFilter === 'all' || student.referred_by_seller_id === sellerFilter;
-      const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-      
-      return matchesSearch && matchesSeller && matchesStatus;
-    });
-  }, [students, searchTerm, sellerFilter, statusFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {

@@ -736,9 +736,7 @@ const PaymentManagement: React.FC = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Student Fee Paid</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
                     </tr>
                   </thead>
@@ -748,13 +746,9 @@ const PaymentManagement: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {row.completed_at ? new Date(row.completed_at).toLocaleDateString('en-US') : '—'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.fee_type}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {sellerMap[row.affiliate_code?.toUpperCase()] || '—'} - {row.affiliate_code}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">{formatCurrency(row.payment_amount)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right text-blue-600">{formatCurrency(row.commission_amount)}</td>
                       </tr>
                     ))}

@@ -736,6 +736,63 @@ interface TimelineEntry {
   content: React.ReactNode;
 }
 
+interface TimelineItemProps {
+  item: TimelineEntry;
+  index: number;
+  totalItems: number;
+  firstDotRef: React.RefObject<HTMLDivElement>;
+  lastDotRef: React.RefObject<HTMLDivElement>;
+}
+
+function TimelineItem({ item, index, totalItems, firstDotRef, lastDotRef }: TimelineItemProps) {
+  const itemRef = useRef(null);
+  const { scrollYProgress: itemProgress } = useScroll({
+    target: itemRef,
+    offset: ["start 80%", "start 20%"]
+  });
+  const titleOpacity = useTransform(itemProgress, [0, 0.5, 1], [0.5, 1, 0.5]);
+  const scale = useTransform(itemProgress, [0, 0.5, 1], [0.9, 1, 0.9]);
+
+  return (
+    <div
+      ref={itemRef}
+      className={`flex justify-start ${index === 0 ? 'pt-10 md:pt-10' : 'pt-10 md:pt-40'} md:gap-6`}
+    >
+      <div className="sticky flex flex-col md:flex-row z-40 items-start md:items-center top-40 self-start max-w-xs lg:max-w-sm md:w-full">
+        <div
+          ref={index === 0 ? firstDotRef : index === totalItems - 1 ? lastDotRef : null}
+          className="h-10 absolute left-3 md:left-3 top-0 w-10 rounded-full bg-white flex items-center justify-center border border-slate-300 shadow-sm"
+        >
+          <div className="h-4 w-4 rounded-full bg-[#05294E]/20 border border-[#05294E]/40 p-2" />
+        </div>
+        <motion.h3
+          style={{ opacity: titleOpacity, scale }}
+          className="hidden md:block text-2xl md:pl-14 md:text-4xl font-black tracking-tight text-[#05294E]"
+        >
+          {item.title}
+        </motion.h3>
+      </div>
+
+      <div className="relative pl-20 pr-4 md:pl-0 w-full">
+        <motion.h3
+          style={{ opacity: titleOpacity }}
+          className="md:hidden block text-2xl mb-4 text-left font-black tracking-tight text-[#05294E] h-10 flex items-center"
+        >
+          {item.title}
+        </motion.h3>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          viewport={{ once: true }}
+        >
+          {item.content}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 const Timeline = ({ data }: { data: TimelineEntry[] }) => {
   const ref = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -778,55 +835,16 @@ const Timeline = ({ data }: { data: TimelineEntry[] }) => {
       ref={containerRef}
     >
       <div ref={ref} className="relative max-w-7xl mx-auto pb-20">
-        {data.map((item, index) => {
-          const itemRef = useRef(null);
-          const { scrollYProgress: itemProgress } = useScroll({
-            target: itemRef,
-            offset: ["start 80%", "start 20%"]
-          });
-          const titleOpacity = useTransform(itemProgress, [0, 0.5, 1], [0.5, 1, 0.5]);
-          const scale = useTransform(itemProgress, [0, 0.5, 1], [0.9, 1, 0.9]);
-
-          return (
-            <div
-              key={index}
-              ref={itemRef}
-              className={`flex justify-start ${index === 0 ? 'pt-10 md:pt-10' : 'pt-10 md:pt-40'} md:gap-6`}
-            >
-              <div className="sticky flex flex-col md:flex-row z-40 items-start md:items-center top-40 self-start max-w-xs lg:max-w-sm md:w-full">
-                <div 
-                  ref={index === 0 ? firstDotRef : index === data.length - 1 ? lastDotRef : null}
-                  className="h-10 absolute left-3 md:left-3 top-0 w-10 rounded-full bg-white flex items-center justify-center border border-slate-300 shadow-sm"
-                >
-                  <div className="h-4 w-4 rounded-full bg-[#05294E]/20 border border-[#05294E]/40 p-2" />
-                </div>
-                <motion.h3 
-                  style={{ opacity: titleOpacity, scale }}
-                  className="hidden md:block text-2xl md:pl-14 md:text-4xl font-black tracking-tight text-[#05294E]"
-                >
-                  {item.title}
-                </motion.h3>
-              </div>
-
-              <div className="relative pl-20 pr-4 md:pl-0 w-full">
-                <motion.h3 
-                  style={{ opacity: titleOpacity }}
-                  className="md:hidden block text-2xl mb-4 text-left font-black tracking-tight text-[#05294E] h-10 flex items-center"
-                >
-                  {item.title}
-                </motion.h3>
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  viewport={{ once: true }}
-                >
-                  {item.content}
-                </motion.div>
-              </div>
-            </div>
-          );
-        })}
+        {data.map((item, index) => (
+          <TimelineItem
+            key={index}
+            item={item}
+            index={index}
+            totalItems={data.length}
+            firstDotRef={firstDotRef}
+            lastDotRef={lastDotRef}
+          />
+        ))}
         <div
           style={{
             height: lineBounds.height + "px",

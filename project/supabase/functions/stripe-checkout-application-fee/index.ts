@@ -254,6 +254,8 @@ Deno.serve(async (req: Request) => {
     let applicationFeeAmount = 350.00; // Valor padrão como fallback
     let universityId = null;
     let stripeConnectAccountId = null;
+    // Valor base da taxa para cálculo de comissão (sem acréscimo de dependentes)
+    let baseAmount = applicationFeeAmount;
 
     // ✅ CORREÇÃO: Se há valor com desconto no metadata, usar diretamente (já inclui dependentes e desconto)
     if (finalAmountFromMetadata) {
@@ -428,6 +430,9 @@ Deno.serve(async (req: Request) => {
         },
       );
 
+      // Capturar valor base ANTES de somar dependentes (usado para cálculo de comissão)
+      baseAmount = applicationFeeAmount;
+
       if (dependents > 0) {
         const dependentsCost = dependents * 100; // $100 por dependente (para ambos os sistemas)
         applicationFeeAmount += dependentsCost;
@@ -452,8 +457,7 @@ Deno.serve(async (req: Request) => {
       applicationFeeAmount = minAmount;
     }
 
-    // Valor base (sem markup) - usado para comissões
-    const baseAmount = applicationFeeAmount;
+    // baseAmount já foi atribuído antes da adição de dependentes (ver acima)
 
     console.log(
       "[stripe-checkout-application-fee] Valores finais calculados:",

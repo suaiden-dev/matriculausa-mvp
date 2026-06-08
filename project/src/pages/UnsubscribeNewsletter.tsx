@@ -16,29 +16,6 @@ const UnsubscribeNewsletter: React.FC = () => {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Aguardar traduções carregarem
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <Loader2 className="w-12 h-12 text-[#05294E] mx-auto mb-4 animate-spin" />
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    if (!token && !user_id) {
-      setStatus('invalid');
-      setMessage(t('footer.unsubscribe.errors.tokenMissing'));
-      return;
-    }
-
-    // Verificar status atual
-    checkUnsubscribeStatus();
-  }, [token, user_id, t]);
-
   const checkUnsubscribeStatus = async () => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -97,6 +74,30 @@ const UnsubscribeNewsletter: React.FC = () => {
       setMessage(error.message || t('footer.unsubscribe.errors.checkStatusGeneric'));
     }
   };
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!token && !user_id) {
+      setStatus('invalid');
+      setMessage(t('footer.unsubscribe.errors.tokenMissing'));
+      return;
+    }
+
+    // Verificar status atual
+    checkUnsubscribeStatus();
+  }, [token, user_id, t, ready]);
+
+  // Aguardar traduções carregarem
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <Loader2 className="w-12 h-12 text-[#05294E] mx-auto mb-4 animate-spin" />
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleUnsubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
