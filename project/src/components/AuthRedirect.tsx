@@ -4,6 +4,18 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { usePaymentBlockedContext } from '../contexts/PaymentBlockedContext';
 
+// Module-level cache so external pages (Terms, Onboarding) can invalidate it
+// before navigating, preventing the 30s stale-cache redirect loop.
+const _agencyCacheStore: { [userId: string]: any } = {};
+
+export function clearAgencyCache(userId?: string) {
+  if (userId) {
+    delete _agencyCacheStore[userId];
+  } else {
+    Object.keys(_agencyCacheStore).forEach(k => delete _agencyCacheStore[k]);
+  }
+}
+
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, userProfile, loading } = useAuth();
   const navigate = useNavigate();
@@ -12,7 +24,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [checkingAgency, setCheckingAgency] = useState(false);
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
-  const agencyCache = useRef<{ [userId: string]: any }>({});
+  const agencyCache = useRef<{ [userId: string]: any }>(_agencyCacheStore);
 
   const checkUniversityStatus = useCallback(async (userId: string, universityId?: string) => {
     const cacheKey = universityId || userId;
