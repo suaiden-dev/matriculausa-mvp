@@ -4,6 +4,7 @@ import { Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useEnvironment } from '../../hooks/useEnvironment';
 import AdminDashboardLayout from './AdminDashboardLayout';
 import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
 import { ConfirmationProvider } from '../../contexts/AdminConfirmationContext';
@@ -92,6 +93,7 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const { isDevelopment } = useEnvironment();
   const navigate = useNavigate();
 
   // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins (exceto post_sales)
@@ -410,7 +412,12 @@ const AdminDashboard: React.FC = () => {
       };
 
       setStats(newStats);
-      setPendingAgencyRequests(pendingAgencyReqsRes.data || []);
+      const rawPendingAgency = pendingAgencyReqsRes.data || [];
+      setPendingAgencyRequests(
+        isDevelopment
+          ? rawPendingAgency
+          : rawPendingAgency.filter((r: any) => !r.email?.toLowerCase().includes('@uorak.com'))
+      );
       setHasLoadedData(true);
     } catch (error: any) {
       console.error('Error loading admin data:', error);
