@@ -11,39 +11,101 @@ import LanguageSelector from '../../components/LanguageSelector';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
 
-// Lazy loading de cada step — cada um vira um chunk separado no bundle
+// Retry automático para lazy imports — evita tela azul quando chunk falha após deploy
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+  retries = 3,
+  delay = 400
+): React.LazyExoticComponent<T> {
+  return React.lazy(() =>
+    factory().catch(async (err) => {
+      if (retries <= 0) throw err;
+      await new Promise(res => setTimeout(res, delay));
+      return lazyWithRetry(factory, retries - 1, delay * 2).__esModule
+        ? lazyWithRetry(factory, retries - 1, delay * 2) as any
+        : factory();
+    })
+  );
+}
+
+function retryImport<T>(
+  factory: () => Promise<T>,
+  retries = 3,
+  delay = 400
+): Promise<T> {
+  return factory().catch(async (err) => {
+    if (retries <= 0) throw err;
+    await new Promise(res => setTimeout(res, delay));
+    return retryImport(factory, retries - 1, delay * 2);
+  });
+}
+
+// ErrorBoundary local para steps — captura erros de chunk sem derrubar toda a app
+class StepErrorBoundary extends React.Component<
+  { children: React.ReactNode; onRetry: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[400px] flex flex-col items-center justify-center gap-4 text-center px-4">
+          <p className="text-slate-600 font-medium">Erro ao carregar esta etapa.</p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false });
+              this.props.onRetry();
+            }}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Lazy loading de cada step com retry automático
 const SelectionFeeStep = React.lazy(() =>
-  import('./components/SelectionFeeStep').then(m => ({ default: m.SelectionFeeStep }))
+  retryImport(() => import('./components/SelectionFeeStep')).then(m => ({ default: m.SelectionFeeStep }))
 );
 const IdentityVerificationStep = React.lazy(() =>
-  import('./components/IdentityVerificationStep').then(m => ({ default: m.IdentityVerificationStep }))
+  retryImport(() => import('./components/IdentityVerificationStep')).then(m => ({ default: m.IdentityVerificationStep }))
 );
 const SelectionSurveyStep = React.lazy(() =>
-  import('./components/SelectionSurveyStep').then(m => ({ default: m.SelectionSurveyStep }))
+  retryImport(() => import('./components/SelectionSurveyStep')).then(m => ({ default: m.SelectionSurveyStep }))
 );
 const ScholarshipSelectionStep = React.lazy(() =>
-  import('./components/ScholarshipSelectionStep').then(m => ({ default: m.ScholarshipSelectionStep }))
+  retryImport(() => import('./components/ScholarshipSelectionStep')).then(m => ({ default: m.ScholarshipSelectionStep }))
 );
 const ProcessTypeStep = React.lazy(() =>
-  import('./components/ProcessTypeStep').then(m => ({ default: m.ProcessTypeStep }))
+  retryImport(() => import('./components/ProcessTypeStep')).then(m => ({ default: m.ProcessTypeStep }))
 );
 const DocumentsUploadStep = React.lazy(() =>
-  import('./components/DocumentsUploadStep').then(m => ({ default: m.DocumentsUploadStep }))
+  retryImport(() => import('./components/DocumentsUploadStep')).then(m => ({ default: m.DocumentsUploadStep }))
 );
 const PaymentStep = React.lazy(() =>
-  import('./components/PaymentStep').then(m => ({ default: m.PaymentStep }))
+  retryImport(() => import('./components/PaymentStep')).then(m => ({ default: m.PaymentStep }))
 );
 const ScholarshipFeeStep = React.lazy(() =>
-  import('./components/ScholarshipFeeStep').then(m => ({ default: m.ScholarshipFeeStep }))
+  retryImport(() => import('./components/ScholarshipFeeStep')).then(m => ({ default: m.ScholarshipFeeStep }))
 );
 const PlacementFeeStep = React.lazy(() =>
-  import('./components/PlacementFeeStep').then(m => ({ default: m.PlacementFeeStep }))
+  retryImport(() => import('./components/PlacementFeeStep')).then(m => ({ default: m.PlacementFeeStep }))
 );
 const ReinstatementFeeStep = React.lazy(() =>
-  import('./components/ReinstatementFeeStep').then(m => ({ default: m.ReinstatementFeeStep }))
+  retryImport(() => import('./components/ReinstatementFeeStep')).then(m => ({ default: m.ReinstatementFeeStep }))
 );
 const UniversityDocumentsStep = React.lazy(() =>
-  import('./components/UniversityDocumentsStep').then(m => ({ default: m.UniversityDocumentsStep }))
+  retryImport(() => import('./components/UniversityDocumentsStep')).then(m => ({ default: m.UniversityDocumentsStep }))
 );
 
 
@@ -627,9 +689,11 @@ const StudentOnboarding: React.FC = () => {
     })();
 
     return (
-      <Suspense fallback={StepFallback}>
-        {stepContent}
-      </Suspense>
+      <StepErrorBoundary onRetry={() => window.location.reload()}>
+        <Suspense fallback={StepFallback}>
+          {stepContent}
+        </Suspense>
+      </StepErrorBoundary>
     );
   };
 
