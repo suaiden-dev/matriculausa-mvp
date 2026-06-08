@@ -12,7 +12,7 @@ export const useTransferForm = (
   isPlatformAdmin: boolean,
   userId?: string,
   adminEmail?: string, // Email do admin para incluir nas notificações
-  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>
+  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university' | 'school_manager' | 'post_sales', metadata?: any) => Promise<any>
 ) => {
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);

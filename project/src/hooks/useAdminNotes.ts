@@ -10,7 +10,7 @@ export const useAdminNotes = (
   student: StudentRecord | null, 
   userId?: string,
   setStudent?: (student: any) => void,
-  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>,
+  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university' | 'school_manager' | 'post_sales', metadata?: any) => Promise<any>,
   studentId?: string
 ) => {
   const [adminNotes, setAdminNotes] = useState<any[]>([]);
