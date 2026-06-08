@@ -470,7 +470,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const getDocumentInfo = (upload: any) => {
     // Extrair nome do arquivo do file_url
     let filename = upload.filename || 'Document';
-    let fileUrl = upload.file_url || upload.url;
+    const fileUrl = upload.file_url || upload.url;
     
     if (fileUrl && !filename) {
       const urlParts = fileUrl.split('/');

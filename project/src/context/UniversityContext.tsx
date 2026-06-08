@@ -74,7 +74,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
 
         // Load application counts for all scholarships in a single query (otimizado)
         const scholarshipIds = filteredScholarships.map(s => s.id);
-        let applicationCounts: Record<string, number> = {};
+        const applicationCounts: Record<string, number> = {};
         
         if (scholarshipIds.length > 0) {
           const { data: countsData, error: countsError } = await supabase

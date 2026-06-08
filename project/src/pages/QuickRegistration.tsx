@@ -503,7 +503,7 @@ const QuickRegistration: React.FC = () => {
       console.log('[AgencyBranding] sellers result:', sellerData, sellerError);
 
       let agencyUserId: string | null = null;
-      let agencyId: string | null = sellerData?.affiliate_admin_id || null;
+      const agencyId: string | null = sellerData?.affiliate_admin_id || null;
 
       if (!agencyId) {
         // Try affiliate_codes table (agency code → user_id)

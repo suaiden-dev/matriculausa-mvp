@@ -858,13 +858,13 @@ const StudentDetails: React.FC = () => {
 
   // Funções para a aba Documents
   const handleViewUpload = (upload: any) => {
-    // Implementar visualização do upload
-    console.log('View upload:', upload);
+    if (!upload?.file_url) return;
+    setPreviewUrl(upload.file_url);
   };
 
   const handleDownloadTemplate = (url: string) => {
-    // Implementar download do template
-    console.log('Download template:', url);
+    if (!url) return;
+    window.open(url, '_blank');
   };
 
   const handleApproveDocument = async (documentId: string) => {
@@ -2757,6 +2757,25 @@ const StudentDetails: React.FC = () => {
                                       >
                                         View
                                       </button>
+                                      {request.uploads[0].status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                        <>
+                                          <button
+                                            onClick={() => handleApproveDocument(request.uploads[0].id)}
+                                            className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                          >
+                                            Approve
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setPendingRejectDocumentId(request.uploads[0].id);
+                                              setShowRejectDocumentModal(true);
+                                            }}
+                                            className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                          >
+                                            Reject
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                 ) : (

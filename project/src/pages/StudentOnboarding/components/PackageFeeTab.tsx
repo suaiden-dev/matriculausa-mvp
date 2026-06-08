@@ -702,7 +702,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                                 value={inlineCpf}
                                 onChange={(e) => {
                                   const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                                  let masked = val.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                                  const masked = val.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
                                   setInlineCpf(masked);
                                   setCpfError(null);
                                 }}

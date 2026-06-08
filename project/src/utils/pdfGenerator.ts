@@ -120,7 +120,7 @@ export const generateTermAcceptancePDF = async (data: StudentTermAcceptanceData)
           const elements: Array<{text: string, type: 'h1' | 'h2' | 'h3' | 'p' | 'strong'}> = [];
           
           // Replace HTML entities first
-          let processedHtml = html
+          const processedHtml = html
             .replace(/&nbsp;/g, ' ')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -238,7 +238,7 @@ export const generateTermAcceptancePDF = async (data: StudentTermAcceptanceData)
         // Fallback to simple text if formatting fails
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
-        let plainTextContent = data.term_content
+        const plainTextContent = data.term_content
           .replace(/<[^>]*>/g, '')
           .replace(/&nbsp;/g, ' ')
           .replace(/&amp;/g, '&')
@@ -549,7 +549,7 @@ export const generateTermAcceptancePDFBlob = (data: StudentTermAcceptanceData): 
           const elements: Array<{text: string, type: 'h1' | 'h2' | 'h3' | 'p' | 'strong'}> = [];
           
           // Replace HTML entities first
-          let processedHtml = html
+          const processedHtml = html
             .replace(/&nbsp;/g, ' ')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -667,7 +667,7 @@ export const generateTermAcceptancePDFBlob = (data: StudentTermAcceptanceData): 
         // Fallback to simple text if formatting fails
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
-        let plainTextContent = data.term_content
+        const plainTextContent = data.term_content
           .replace(/<[^>]*>/g, '')
           .replace(/&nbsp;/g, ' ')
           .replace(/&amp;/g, '&')

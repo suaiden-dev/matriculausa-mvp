@@ -48,7 +48,7 @@ export const validateWhatsAppConnection = async (
 
     try {
       const json = JSON.parse(responseText);
-      let arrayToProcess = Array.isArray(json) ? json : json.data || [json];
+      const arrayToProcess = Array.isArray(json) ? json : json.data || [json];
       
       if (Array.isArray(arrayToProcess)) {
         inboxPayloads = arrayToProcess.map((item: any) => ({

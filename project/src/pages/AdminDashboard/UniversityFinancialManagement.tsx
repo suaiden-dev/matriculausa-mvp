@@ -74,7 +74,7 @@ const UniversityFinancialManagement: React.FC = () => {
 
   // Filtrar e ordenar universidades
   const filteredAndSortedUniversities = useMemo(() => {
-    let filtered = universities.filter(university => {
+    const filtered = universities.filter(university => {
       // Filtro de busca
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();

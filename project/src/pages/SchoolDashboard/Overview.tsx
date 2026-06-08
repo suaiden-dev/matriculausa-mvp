@@ -289,7 +289,7 @@ const Overview: React.FC = () => {
 
         // Buscar dependentes dos estudantes
         const studentIds = Array.from(new Set((paidApplications || []).map((a: any) => a.student_id).filter(Boolean)));
-        let studentsMap: Record<string, any> = {};
+        const studentsMap: Record<string, any> = {};
         if (studentIds.length > 0) {
           const { data: students } = await supabase
             .from('user_profiles')
