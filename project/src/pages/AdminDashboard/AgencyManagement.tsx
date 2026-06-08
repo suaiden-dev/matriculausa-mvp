@@ -339,12 +339,6 @@ const AffiliateManagement: React.FC = () => {
     return allSellers.filter((s: any) => !s.email?.toLowerCase().includes('@uorak.com'));
   }, [allSellers, isDevelopment]);
 
-  // Filter @uorak.com agency requests in production
-  const filteredAgencyRequests = useMemo(() => {
-    if (isDevelopment) return agencyRequests;
-    return agencyRequests.filter((r: AgencyRequest) => !r.email?.toLowerCase().includes('@uorak.com'));
-  }, [agencyRequests, isDevelopment]);
-
   // ── Filters ──
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -364,6 +358,12 @@ const AffiliateManagement: React.FC = () => {
   const [loadingAgencyRequests, setLoadingAgencyRequests] = useState(false);
   const [agencyRequestsError, setAgencyRequestsError] = useState<string | null>(null);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
+
+  // Filter @uorak.com agency requests in production
+  const filteredAgencyRequests = useMemo(() => {
+    if (isDevelopment) return agencyRequests;
+    return agencyRequests.filter((r: AgencyRequest) => !r.email?.toLowerCase().includes('@uorak.com'));
+  }, [agencyRequests, isDevelopment]);
 
   // Approval modal
   const [approvalModalRequest, setApprovalModalRequest] = useState<AgencyRequest | null>(null);
@@ -534,7 +534,7 @@ const AffiliateManagement: React.FC = () => {
 
   // ── Filtered + sorted list ──
   const filteredAndSortedAffiliates = useMemo(() => {
-    let list = filteredAffiliates.filter((aff: any) => {
+    const list = filteredAffiliates.filter((aff: any) => {
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const name = (aff.company_name?.trim() || aff.full_name || '').toLowerCase();

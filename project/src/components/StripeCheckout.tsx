@@ -93,6 +93,23 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
     return final;
   };
 
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    console.log('🔍 [StripeCheckout] useEffect - Estados atualizados:', {
+      showPreCheckoutModal,
+      showPaymentMethodSelector,
+      selectedPaymentMethod,
+      loading
+    });
+  }, [showPreCheckoutModal, showPaymentMethodSelector, selectedPaymentMethod, loading]);
+
+  useEffect(() => {
+    if (showPaymentMethodSelector) {
+      console.log('🔍 [StripeCheckout] 🎯 PaymentMethodSelector deve estar visível agora!');
+    }
+  }, [showPaymentMethodSelector]);
+
   if (!product) {
     console.error(`Product '${productId}' não encontrado em stripe-config.ts. Verifique se o nome está correto e padronizado.`);
     return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
@@ -181,8 +198,6 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
   };
 
   // Removido fluxo legado de aplicação de código aqui; agora o código é tratado no PreCheckoutModal
-
-  const [currentExchangeRate, setCurrentExchangeRate] = useState<number | undefined>(undefined);
 
   const handlePaymentMethodSelect = async (method: string, exchangeRate?: number, payerInfoParam?: PayerInfo | null) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method, 'exchangeRate:', exchangeRate);
@@ -286,21 +301,6 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
     }
     // Para Zelle, o usuário será redirecionado para a página de checkout
   };
-
-  useEffect(() => {
-    console.log('🔍 [StripeCheckout] useEffect - Estados atualizados:', {
-      showPreCheckoutModal,
-      showPaymentMethodSelector,
-      selectedPaymentMethod,
-      loading
-    });
-  }, [showPreCheckoutModal, showPaymentMethodSelector, selectedPaymentMethod, loading]);
-
-  useEffect(() => {
-    if (showPaymentMethodSelector) {
-      console.log('🔍 [StripeCheckout] 🎯 PaymentMethodSelector deve estar visível agora!');
-    }
-  }, [showPaymentMethodSelector]);
 
   const handleCheckout = async (paymentMethod?: string, exchangeRateParam?: number) => {
     setLoading(true);
