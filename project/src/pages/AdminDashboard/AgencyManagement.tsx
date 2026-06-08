@@ -458,14 +458,17 @@ const AffiliateManagement: React.FC = () => {
       });
       if (inviteError) throw inviteError;
       if (inviteData?.error) throw new Error(inviteData.error);
-      setApprovalModalRequest(null);
       await loadAgencyRequests();
     } catch (e: any) {
       setApprovalError(e.message || 'Failed to approve. Please try again.');
-    } finally {
       setApprovingAgency(false);
       setProcessingRequest(null);
+      return;
     }
+    // Reset saving before closing so React doesn't try to update an unmounted portal
+    setApprovingAgency(false);
+    setProcessingRequest(null);
+    setApprovalModalRequest(null);
   };
 
   // ── Reject request ──
@@ -501,13 +504,15 @@ const AffiliateManagement: React.FC = () => {
         .update({ commission_rules: rules })
         .eq('id', commissionModalAffiliate.id);
       if (updateErr) throw updateErr;
-      setCommissionModalAffiliate(null);
       refetch();
     } catch (e: any) {
       setQuickRulesError(e.message || 'Failed to save rules');
-    } finally {
       setSavingQuickRules(false);
+      return;
     }
+    // Reset saving before closing so React doesn't try to update an unmounted portal
+    setSavingQuickRules(false);
+    setCommissionModalAffiliate(null);
   };
 
   const getQuickCommissionRules = (affiliate: any): Record<string, CommissionRule> => {
