@@ -493,13 +493,15 @@ const Scholarships: React.FC = () => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, maxPrice]);
 
-  // Scroll para a seção de bolsas — chamado ANTES de mudar a página para evitar layout shift
+  // Scroll para a seção de bolsas — executado após a atualização do DOM para sincronizar com a exibição dos destaques
   const scrollToScholarships = (nextPage: number) => {
-    // Na página 0 voltando aos destaques, ou em qualquer outra página vai para a listagem
-    const targetRef = (nextPage === 0 && featuredSectionRef.current) ? featuredSectionRef : scholarshipsSectionRef;
-    if (targetRef.current) {
-      targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    setTimeout(() => {
+      // Na página 0 voltando aos destaques, ou em qualquer outra página vai para a listagem
+      const targetRef = (nextPage === 0 && featuredSectionRef.current) ? featuredSectionRef : scholarshipsSectionRef;
+      if (targetRef.current) {
+        targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
@@ -815,7 +817,8 @@ const Scholarships: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-12 relative z-20">
         {/* Featured Scholarships Section */}
-        {scholarshipsLoading ? (
+        {page === 0 && (
+          scholarshipsLoading ? (
           // Skeleton para a seção de destaques durante o carregamento
           <div className="mb-12 scroll-mt-24" ref={featuredSectionRef}>
             <div className="text-center mb-8">
@@ -1101,6 +1104,7 @@ const Scholarships: React.FC = () => {
               })}
             </div>
           </div>
+          )
         )}
 
         {/* All Scholarships Section */}
