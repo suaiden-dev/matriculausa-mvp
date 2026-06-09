@@ -440,5 +440,11 @@
     "completed": "Completado",
     "waiting_acceptance": "Esperando Carta de Aceptación",
     "loading": "Cargando..."
+  },
+  "bio": {
+    "description": "Tu futuro académico en los Estados Unidos comienza aquí. Conéctate con nuestros canales oficiales",
+    "site": "Sitio Oficial",
+    "quiz": "Descubre si eres elegible para becas de estudio en EE.UU.",
+    "copyright": "© {{year}} Matrícula USA. Todos los derechos reservados."
   }
 }

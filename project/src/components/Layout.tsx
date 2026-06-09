@@ -16,9 +16,11 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   
   const hideHeader = location.pathname.startsWith('/school/') ||
                      location.pathname.startsWith('/admin') ||
+                     location.pathname.startsWith('/affiliate/dashboard') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
                      (location.pathname.startsWith('/agency') && location.pathname !== '/agency') ||
                      location.pathname.startsWith('/seller') ||
+                     location.pathname === '/affiliate/termsandconditions' ||
                      location.pathname === '/smart-assistant' ||
                      location.pathname.startsWith('/pre-qualification') ||
                      location.pathname === '/webnar' ||
@@ -26,6 +28,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/vsl-cos' ||
                      location.pathname === '/selection-process' ||
                      location.pathname === '/agency/onboarding' ||
+                     location.pathname === '/bio' ||
                      ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname);
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
 
@@ -45,9 +48,13 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/vsl-transfer' ||
                        location.pathname === '/vsl-cos' ||
                        location.pathname === '/selection-process' ||
+                       location.pathname === '/bio' ||
                        location.pathname.startsWith('/school') || // 🎯 Esconder no dashboard da universidade
                        location.pathname.startsWith('/agency') || // 🎯 Esconder no dashboard da agência B2B
                        location.pathname.startsWith('/seller') || // 🎯 Esconder no dashboard do seller
+                       location.pathname.startsWith('/affiliate/dashboard') || // 🎯 Esconder no dashboard do afiliado
+                       location.pathname.startsWith('/student/dashboard') || // 🎯 Esconder no dashboard do aluno e subrotas
+                       location.pathname === '/affiliate/termsandconditions' || // 🎯 Esconder na página de termos do afiliado
                        ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname) ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 

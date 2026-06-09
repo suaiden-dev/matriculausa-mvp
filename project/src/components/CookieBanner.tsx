@@ -25,6 +25,7 @@ const CookieBanner: React.FC = () => {
   });
 
   const isPreQualification = location.pathname === '/pre-qualification';
+  const isBio = location.pathname === '/bio';
 
   useEffect(() => {
     // Abrir o banner ao receber o evento do rodapé
@@ -82,7 +83,7 @@ const CookieBanner: React.FC = () => {
     saveAndApply(allDenied);
   };
 
-  if (!isVisible || isPreQualification) return null;
+  if (!isVisible || isPreQualification || isBio) return null;
 
   return (
     <AnimatePresence>

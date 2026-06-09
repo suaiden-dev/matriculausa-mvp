@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Coins, Send, Clock, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { Card } from '../../components/ui/Card';
 
 interface RedemptionRequest {
   id: string;
@@ -15,8 +15,8 @@ interface RedemptionRequest {
 }
 
 const PAYOUT_METHODS = [
-  { id: 'zelle', label: 'Zelle', field: 'zelle_phone_or_email', placeholder: 'Telefone ou e-mail Zelle' },
-  { id: 'stripe', label: 'Stripe', field: 'stripe_email', placeholder: 'E-mail da conta Stripe' },
+  { id: 'zelle', label: 'Zelle', field: 'zelle_phone_or_email' },
+  { id: 'stripe', label: 'Stripe', field: 'stripe_email' },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -31,6 +31,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
   onRequestSubmitted,
 }) => {
   const { user } = useAuth();
+  const { t } = useTranslation(['dashboard']);
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [requests, setRequests] = useState<RedemptionRequest[]>([]);
@@ -70,11 +71,11 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
     setError(null);
     if (!user?.id) return;
     if (amountNum <= 0 || amountNum > maxRedeemable) {
-      setError(`Insira um valor entre 1 e ${maxRedeemable} coins.`);
+      setError(t('dashboard:affiliateDashboard.redemption.errorAmount', { max: maxRedeemable }));
       return;
     }
     if (!payoutDetail.trim()) {
-      setError('Preencha os detalhes do pagamento.');
+      setError(t('dashboard:affiliateDashboard.redemption.errorDetails'));
       return;
     }
     setSubmitting(true);
@@ -87,7 +88,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
     });
     setSubmitting(false);
     if (insertError) {
-      setError('Erro ao enviar solicitação. Tente novamente.');
+      setError(t('dashboard:affiliateDashboard.redemption.errorGeneral'));
       return;
     }
     setSuccess(true);
@@ -100,7 +101,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
   };
 
   return (
-    <Card className="p-6 md:p-8 space-y-4">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -108,38 +109,38 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
             <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
               <Coins className="h-4 w-4" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Resgatar Coins</h3>
+            <h3 className="text-xl font-bold text-slate-900">{t('dashboard:affiliateDashboard.redemption.title')}</h3>
           </div>
           <p className="text-slate-500 text-sm">
-            Converta seus coins em dinheiro. 1 coin = $1 USD.
+            {t('dashboard:affiliateDashboard.redemption.subtitle')}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-3 w-full sm:w-auto">
           {!showForm && !hasPendingRequest && maxRedeemable > 0 && (
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 transition-all shadow-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 transition-all shadow-sm w-full sm:w-auto max-w-[320px] sm:max-w-none"
             >
               <Coins className="h-4 w-4" />
-              Solicitar Resgate
+              {t('dashboard:affiliateDashboard.redemption.requestButton')}
             </button>
           )}
           {hasPendingRequest && (
-            <span className="inline-flex items-center gap-2 rounded-xl bg-yellow-50 text-yellow-700 font-semibold px-5 py-3 border border-yellow-200 text-sm">
+            <span className="inline-flex items-center justify-center gap-2 rounded-xl bg-yellow-50 text-yellow-700 font-semibold px-5 py-3 border border-yellow-200 text-sm w-full sm:w-auto max-w-[320px] sm:max-w-none">
               <Clock className="h-4 w-4" />
-              Solicitação em andamento
+              {t('dashboard:affiliateDashboard.redemption.pendingRequest')}
             </span>
           )}
           {maxRedeemable === 0 && !hasPendingRequest && (
-            <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 text-slate-500 font-semibold px-5 py-3 border border-slate-200 text-sm">
-              Saldo insuficiente para resgatar
+            <span className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 text-slate-500 font-semibold px-5 py-3 border border-slate-200 text-sm w-full sm:w-auto max-w-[320px] sm:max-w-none">
+              {t('dashboard:affiliateDashboard.redemption.insufficientBalance')}
             </span>
           )}
           <button
             onClick={() => setShowHistory(h => !h)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3 transition-all text-sm font-semibold border border-slate-200"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3 transition-all text-sm font-semibold border border-slate-200 w-full sm:w-auto max-w-[320px] sm:max-w-none"
           >
-            Histórico
+            {t('dashboard:affiliateDashboard.redemption.historyButton')}
             {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
@@ -149,7 +150,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
       {success && (
         <div className="rounded-xl bg-green-50 border border-green-200 p-4 flex items-center gap-3">
           <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-          <p className="text-green-800 font-medium text-sm">Solicitação enviada com sucesso! Nossa equipe irá processar em breve.</p>
+          <p className="text-green-800 font-medium text-sm">{t('dashboard:affiliateDashboard.redemption.successMessage')}</p>
         </div>
       )}
 
@@ -157,28 +158,40 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
       {showForm && (
         <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
           <div>
-            <h4 className="font-bold text-slate-900 text-base">Nova Solicitação de Resgate</h4>
-            <p className="text-slate-500 text-sm mt-0.5">Saldo disponível: <strong className="text-slate-700">{maxRedeemable} coins (${maxRedeemable} USD)</strong></p>
+            <h4 className="font-bold text-slate-900 text-base">{t('dashboard:affiliateDashboard.redemption.newRequestTitle')}</h4>
+            <p className="text-slate-500 text-sm mt-0.5">{t('dashboard:affiliateDashboard.redemption.availableBalance', { balance: maxRedeemable })}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Quantidade de coins a resgatar</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t('dashboard:affiliateDashboard.redemption.amountLabel')}</label>
             <input
               type="number"
               min={1}
               max={maxRedeemable}
               value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder={`1 – ${maxRedeemable}`}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === '') {
+                  setAmount('');
+                  return;
+                }
+                const parsed = Number(val);
+                if (parsed > maxRedeemable) {
+                  setAmount(maxRedeemable.toString());
+                } else {
+                  setAmount(val);
+                }
+              }}
+              placeholder={t('dashboard:affiliateDashboard.redemption.amountRange', { max: maxRedeemable })}
               className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             {amountNum > 0 && (
-              <p className="text-blue-600 text-xs mt-1 font-medium">Você receberá ${amountNum.toFixed(2)} USD</p>
+              <p className="text-blue-600 text-xs mt-1 font-medium">{t('dashboard:affiliateDashboard.redemption.willReceive', { amount: amountNum.toFixed(2) })}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Método de pagamento</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t('dashboard:affiliateDashboard.redemption.payoutMethod')}</label>
             <div className="flex gap-2">
               {PAYOUT_METHODS.map(m => (
                 <button
@@ -198,12 +211,16 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">{selectedMethod.label} — dados para recebimento</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">{t('dashboard:affiliateDashboard.redemption.payoutDetails', { method: selectedMethod.label })}</label>
             <input
               type="text"
               value={payoutDetail}
               onChange={e => setPayoutDetail(e.target.value)}
-              placeholder={selectedMethod.placeholder}
+              placeholder={
+                selectedMethod.id === 'zelle'
+                  ? t('dashboard:affiliateDashboard.redemption.payoutDetailsPlaceholderZelle', 'Telefone ou e-mail Zelle')
+                  : t('dashboard:affiliateDashboard.redemption.payoutDetailsPlaceholderStripe', 'E-mail da conta Stripe')
+              }
               className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -219,14 +236,14 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-sm disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
-              {submitting ? 'Enviando...' : 'Enviar Solicitação'}
+              {submitting ? t('dashboard:affiliateDashboard.redemption.submitting') : t('dashboard:affiliateDashboard.redemption.submitButton')}
             </button>
             <button
               type="button"
               onClick={() => { setShowForm(false); setError(null); }}
               className="px-6 py-3 rounded-xl bg-white hover:bg-slate-100 transition-all font-semibold border border-slate-300 text-slate-700"
             >
-              Cancelar
+              {t('dashboard:affiliateDashboard.redemption.cancelButton')}
             </button>
           </div>
         </form>
@@ -234,12 +251,12 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
 
       {/* History */}
       {showHistory && (
-        <div className="rounded-2xl border border-slate-200 p-5 space-y-3">
-          <h4 className="font-bold text-slate-900 text-base">Histórico de Solicitações</h4>
+        <div className="rounded-2xl p-[5px] space-y-3">
+          <h4 className="font-bold text-slate-900 text-base">{t('dashboard:affiliateDashboard.redemption.historyTitle')}</h4>
           {loadingRequests ? (
-            <p className="text-slate-500 text-sm">Carregando...</p>
+            <p className="text-slate-500 text-sm">{t('dashboard:affiliateDashboard.redemption.loading')}</p>
           ) : requests.length === 0 ? (
-            <p className="text-slate-500 text-sm">Nenhuma solicitação ainda.</p>
+            <p className="text-slate-500 text-sm">{t('dashboard:affiliateDashboard.redemption.noHistory')}</p>
           ) : (
             <div className="space-y-2">
               {requests.map(req => {
@@ -257,7 +274,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
                       {cfg.icon}
-                      {cfg.label}
+                      {t(`dashboard:affiliateDashboard.redemption.status.${req.status}`, cfg.label)}
                     </span>
                   </div>
                 );
@@ -266,7 +283,7 @@ const AffiliateRedemptionSection: React.FC<{ coinBalance: number; onRequestSubmi
           )}
         </div>
       )}
-    </Card>
+    </div>
   );
 };
 

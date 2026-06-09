@@ -269,15 +269,15 @@ export class TuitionRewardsService {
   // Buscar conta de recompensas da universidade (resiliente a falhas de rede)
   static async getUniversityRewardsAccount(universityId: string): Promise<UniversityRewardsAccount | null> {
     try {
-      const { data, error } = await this.withRetry(() =>
-        supabase
+      const { data, error } = await this.withRetry(async () =>
+        await supabase
           .from('university_rewards_account')
           .select('*')
           .eq('university_id', universityId)
-          .single()
+          .maybeSingle()
       );
 
-      if (error && (error as any).code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching university rewards account:', error);
         // Fallback: retornar null para não quebrar a página em falhas transitórias
         return null;

@@ -251,7 +251,7 @@ const Universities: React.FC = () => {
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  className="w-full px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
                   title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
                 >
                   <option value="all">{t('universitiesPage.search.allTypes')}</option>
@@ -265,7 +265,7 @@ const Universities: React.FC = () => {
                   onChange={(e) => {
                     setSelectedLocation(e.target.value);
                   }}
-                  className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+                  className="w-full px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
                   title="Filtrar por estado da universidade"
                 >
                   <option value="all">{t('universitiesPage.search.allStates')}</option>

@@ -77,6 +77,8 @@ const AgencyOnboarding = React.lazy(() => import('./pages/AgencyOnboarding'));
 const AgencyPendingApproval = React.lazy(() => import('./pages/AgencyPendingApproval'));
 const SellerAcceptInvite = React.lazy(() => import('./pages/SellerAcceptInvite'));
 const AgencyTermsAndConditions = React.lazy(() => import('./pages/AgencyTermsAndConditions'));
+const AffiliateTermsAndConditions = React.lazy(() => import('./pages/AffiliateTermsAndConditions'));
+const BioPage = React.lazy(() => import('./pages/Bio'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -176,6 +178,7 @@ const AppContent = () => {
           <Route path="/agency/onboarding" element={<AgencyOnboarding />} />
           <Route path="/agency/pending-approval" element={<AgencyPendingApproval />} />
           <Route path="/agency/termsandconditions" element={<AgencyTermsAndConditions />} />
+          <Route path="/affiliate/termsandconditions" element={<AffiliateTermsAndConditions />} />
           {/* Agency Dashboard */}
           <Route path="/agency/dashboard/*" element={<AgencyDashboard />} />
           {/* Redirects for old /affiliate-admin/* URLs (backward compat) */}
@@ -221,6 +224,9 @@ const AppContent = () => {
 
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+
+          {/* Bio Links Tree Route */}
+          <Route path="/bio" element={<BioPage />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />
