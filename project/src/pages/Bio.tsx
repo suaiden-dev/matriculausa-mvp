@@ -12,21 +12,18 @@ const BioPage: React.FC = () => {
       title: t('bio.site'),
       url: '/',
       icon: Globe,
-      color: 'hover:border-blue-500 hover:text-blue-600',
       external: false,
     },
     {
       title: 'WhatsApp',
       url: 'https://wa.me/12136762544',
       icon: WhatsAppIcon,
-      color: 'hover:border-emerald-500 hover:text-emerald-600',
       external: true,
     },
     {
       title: t('bio.quiz'),
       url: '/pre-qualification',
       icon: ClipboardCheck,
-      color: 'hover:border-red-500 hover:text-red-600',
       external: false,
     },
   ];
@@ -46,7 +43,7 @@ const BioPage: React.FC = () => {
       <div className="max-w-md md:max-w-xl w-full mx-auto flex-grow flex flex-col justify-center items-center z-10 gap-8">
         {/* Header da Página */}
         <div className="text-center mb-6">
-          <div className="flex items-center justify-center w-40 h-40 bg-white rounded-full shadow-md border border-slate-100 mb-8 transition-transform duration-500 hover:scale-105 p-4 mx-auto overflow-hidden">
+          <div className="flex items-center justify-center w-40 h-40 bg-white rounded-full shadow-md border border-slate-100 mb-8 p-4 mx-auto overflow-hidden">
             <img
               src="/logo.png.png"
               alt="Matrícula USA Logo"
@@ -70,12 +67,12 @@ const BioPage: React.FC = () => {
                 href={link.url}
                 target={isExternal ? '_blank' : '_self'}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
-                className={`relative flex items-center justify-center py-5 px-16 bg-white rounded-full border border-slate-200/80 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group w-full ${link.color}`}
+                className="relative flex items-center justify-center py-5 px-16 bg-white rounded-full border border-slate-200/80 shadow-sm w-full"
               >
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 bg-slate-50 rounded-full group-hover:bg-current/5 transition-colors flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-slate-600 group-hover:text-inherit transition-colors" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 bg-slate-50 rounded-full flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-slate-600" />
                 </div>
-                <span className="font-bold text-slate-800 text-base group-hover:text-inherit transition-colors text-center">
+                <span className="font-bold text-slate-800 text-base text-center">
                   {link.title}
                 </span>
               </a>
