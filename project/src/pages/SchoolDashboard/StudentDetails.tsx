@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
@@ -163,6 +164,8 @@ const StudentDetails: React.FC = () => {
   const [showRejectDocumentModal, setShowRejectDocumentModal] = useState(false);
   const [pendingRejectDocumentId, setPendingRejectDocumentId] = useState<string | null>(null);
   const [rejectDocumentReason, setRejectDocumentReason] = useState('');
+  const [approvingDocumentId, setApprovingDocumentId] = useState<Record<string, boolean>>({});
+  const [rejectingDocumentId, setRejectingDocumentId] = useState<Record<string, boolean>>({});
 
   // Estados para Acceptance Letter
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
@@ -672,11 +675,11 @@ const StudentDetails: React.FC = () => {
           file_url: doc.file_url,
           status: doc.status || 'under_review',
           uploaded_at: doc.uploaded_at || doc.created_at,
-          request_title: doc.request_title || doc.title || 'Document Request',
-          request_description: doc.request_description || doc.description || '',
+          request_title: doc.request_title || doc.document_requests?.title || doc.title || 'Document Request',
+          request_description: doc.request_description || doc.document_requests?.description || doc.description || '',
           request_created_at: doc.request_created_at || doc.created_at,
-          is_global: doc.is_global || false,
-          request_type: doc.request_type || 'document',
+          is_global: doc.is_global ?? doc.document_requests?.is_global ?? false,
+          request_type: doc.request_type || (doc.document_requests?.is_global ? 'Global Request' : 'Individual Request') || 'document',
           is_acceptance_letter: doc.is_acceptance_letter || false
         };
       });
@@ -868,151 +871,94 @@ const StudentDetails: React.FC = () => {
   };
 
   const handleApproveDocument = async (documentId: string) => {
+    setApprovingDocumentId(prev => ({ ...prev, [documentId]: true }));
     try {
-      // Primeiro, buscar informações do upload para notificação
+      // Buscar informações do upload para notificação e log
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests!inner(
-            id,
-            title,
-            description
-          )
-        `)
+        .select(`*, document_requests!inner(id, title, description)`)
         .eq('id', documentId)
         .single();
 
-      if (fetchError) {
-        throw new Error('Failed to fetch upload data: ' + fetchError.message);
-      }
+      if (fetchError) throw new Error('Failed to fetch upload data: ' + fetchError.message);
 
-      // Atualizar o status para aprovado
       const { error } = await supabase
         .from('document_request_uploads')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
         .eq('id', documentId);
 
-      if (error) {
-        throw new Error('Failed to approve document: ' + error.message);
-      }
+      if (error) throw new Error('Failed to approve document: ' + error.message);
 
-      // Enviar notificação ao aluno
+      // Optimistic update — sem re-fetch
+      setStudentDocuments(prev => prev.map(doc =>
+        doc.id === documentId ? { ...doc, status: 'approved' } : doc
+      ));
+      setDocumentRequests(prev => prev.map(req => ({
+        ...req,
+        uploads: (req.uploads || []).map((u: any) =>
+          u.id === documentId ? { ...u, status: 'approved' } : u
+        )
+      })));
+
+      toast.success('Document approved');
+
+      // Notificações (fire-and-forget)
       try {
         const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('user_id', application?.user_profiles.user_id)
-          .single();
-
+          .from('user_profiles').select('email').eq('user_id', application?.user_profiles.user_id).single();
         if (userData?.email) {
-          const webhookPayload = {
-            tipo_notf: "Documento aprovado",
-            email_aluno: userData.email,
-            nome_aluno: application?.user_profiles.full_name,
-            email_universidade: user?.email,
-            o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
-          };
-
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
-
-          try {
-            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(webhookPayload),
-            });
-
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
-
-            if (!webhookResponse.ok) {
-              const webhookErrorText = await webhookResponse.text();
-              console.error('Webhook error:', webhookErrorText);
-            } else {
-              console.log('Webhook enviado com sucesso');
-            }
-          } catch (webhookError) {
-            console.error('Erro ao enviar webhook:', webhookError);
-          }
-
-          // Notificação in-app no sino do aluno
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
-            if (accessToken) {
-              await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                  user_id: application?.user_profiles.user_id,
-                  title: 'Document approved',
-                  message: `Your document ${uploadData.file_url?.split('/').pop()} was approved for request ${uploadData.document_requests?.title}.`,
-                  type: 'document_approved',
-                  link: '/student/dashboard',
-                }),
-              });
-            }
-          } catch (e) {
-            console.error('Error sending in-app student notification:', e);
-          }
+          fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: "Documento aprovado",
+              email_aluno: userData.email,
+              nome_aluno: application?.user_profiles.full_name,
+              email_universidade: user?.email,
+              o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
+            }),
+          }).catch(console.error);
         }
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.access_token) {
+            fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                user_id: application?.user_profiles.user_id,
+                title: 'Document approved',
+                message: `Your document for request "${uploadData.document_requests?.title}" has been approved.`,
+                type: 'document_approved',
+                link: '/student/dashboard',
+              }),
+            }).catch(console.error);
+          }
+        });
       } catch (notificationError) {
         console.error('Error sending approval notification:', notificationError);
       }
 
-      // Atualizar o estado local dos documentos do aluno
-      setStudentDocuments(prev => prev.map(doc =>
-        doc.id === documentId ? { ...doc, status: 'approved' } : doc
-      ));
-
-      // Recarregar os dados para mostrar o novo status
-      fetchStudentDocuments();
-
-      // Log: aprovação de document request pela universidade
-      try {
-        const studentProfileId = application?.user_profiles?.id;
-        const performedBy = user?.id;
-        if (studentProfileId && performedBy) {
-          // Enriquecer metadados com IP público (melhor esforço)
-          let clientIp: string | undefined = undefined;
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-            clearTimeout(timeout);
-            if (res.ok) {
-              const j = await res.json();
-              clientIp = j?.ip;
-            }
-          } catch (_) { /* ignore */ }
-
-          await supabase.rpc('log_student_action', {
+      // Log (fire-and-forget)
+      const studentProfileId = application?.user_profiles?.id;
+      const performedBy = user?.id;
+      if (studentProfileId && performedBy) {
+        fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(2000) })
+          .then(r => r.json()).catch(() => ({}))
+          .then(j => supabase.rpc('log_student_action', {
             p_student_id: studentProfileId,
             p_action_type: 'document_approval',
             p_action_description: `University approved document request upload: ${uploadData.file_url?.split('/').pop() || 'file'} (${uploadData.document_requests?.title || 'Request'})`,
             p_performed_by: performedBy,
             p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
-            p_metadata: {
-              upload_id: documentId,
-              request_id: uploadData.document_requests?.id || null,
-              request_title: uploadData.document_requests?.title || null,
-              ip: clientIp
-            }
-          });
-        }
-      } catch (logErr) {
-        console.error('Failed to log university document approval:', logErr);
+            p_metadata: { upload_id: documentId, request_id: uploadData.document_requests?.id || null, request_title: uploadData.document_requests?.title || null, ip: j?.ip }
+          })).catch(console.error);
       }
 
     } catch (err: any) {
       console.error("Error approving document:", err);
-      alert(`Failed to approve document: ${err.message}`);
+      toast.error('Failed to approve document: ' + err.message);
+    } finally {
+      setApprovingDocumentId(prev => ({ ...prev, [documentId]: false }));
     }
   };
 
@@ -1041,7 +987,7 @@ const StudentDetails: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Erro no download:', err);
-      alert(`Failed to download document: ${err.message}`);
+      toast.error(`Failed to download document: ${err.message}`);
     }
   };
 
@@ -1184,7 +1130,7 @@ const StudentDetails: React.FC = () => {
 
     } catch (error: any) {
       console.error(`Error approving document ${type}:`, error);
-      alert(`Failed to approve document: ${error.message}`);
+      toast.error(`Failed to approve document: ${error.message}`);
     } finally {
       setUpdating(null);
     }
@@ -1338,10 +1284,10 @@ const StudentDetails: React.FC = () => {
         console.error('Error sending approval webhook:', webhookErr);
       }
 
-      alert('Application approved successfully!');
+      toast.success('Application approved successfully!');
     } catch (err: any) {
       console.error('Error approving application:', err);
-      alert(`Failed to approve application: ${err.message}`);
+      toast.error(`Failed to approve application: ${err.message}`);
     } finally {
       setApprovingApplication(false);
     }
@@ -1375,130 +1321,93 @@ const StudentDetails: React.FC = () => {
   };
 
   const handleRejectDocument = async (documentId: string, reason: string) => {
+    setRejectingDocumentId(prev => ({ ...prev, [documentId]: true }));
     try {
-      // Primeiro, buscar informações do upload para notificação
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests!inner(
-            id,
-            title,
-            description
-          )
-        `)
+        .select(`*, document_requests!inner(id, title, description)`)
         .eq('id', documentId)
         .single();
 
-      if (fetchError) {
-        console.error('Erro ao buscar dados do upload:', fetchError);
-        throw new Error('Failed to fetch upload data: ' + fetchError.message);
-      }
+      if (fetchError) throw new Error('Failed to fetch upload data: ' + fetchError.message);
 
-      // Atualizar o status para rejeitado
       const { error } = await supabase
         .from('document_request_uploads')
-        .update({
-          status: 'rejected',
-          review_notes: reason || null
-        })
+        .update({ status: 'rejected', rejection_reason: reason || null, reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
         .eq('id', documentId);
 
-      if (error) {
-        console.error('Erro ao atualizar status:', error);
-        throw new Error('Failed to reject document: ' + error.message);
+      if (error) throw new Error('Failed to reject document: ' + error.message);
+
+      // Optimistic update — sem re-fetch
+      setStudentDocuments(prev => prev.map(doc =>
+        doc.id === documentId ? { ...doc, status: 'rejected', rejection_reason: reason } : doc
+      ));
+      setDocumentRequests(prev => prev.map(req => ({
+        ...req,
+        uploads: (req.uploads || []).map((u: any) =>
+          u.id === documentId ? { ...u, status: 'rejected', rejection_reason: reason } : u
+        )
+      })));
+
+      toast.success('Document rejected');
+
+      // Log (fire-and-forget)
+      const studentProfileId = application?.user_profiles?.id;
+      const performedBy = user?.id;
+      if (studentProfileId && performedBy) {
+        fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(2000) })
+          .then(r => r.json()).catch(() => ({}))
+          .then(j => supabase.rpc('log_student_action', {
+            p_student_id: studentProfileId,
+            p_action_type: 'document_rejection',
+            p_action_description: `University rejected document request upload: ${uploadData.file_url?.split('/').pop() || 'file'} (${uploadData.document_requests?.title || 'Request'})`,
+            p_performed_by: performedBy,
+            p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
+            p_metadata: { upload_id: documentId, request_id: uploadData.document_requests?.id || null, request_title: uploadData.document_requests?.title || null, rejection_reason: reason, ip: j?.ip }
+          })).catch(console.error);
       }
 
-      // Atualizar o estado local dos documentos do aluno
-      setStudentDocuments(prev => prev.map(doc =>
-        doc.id === documentId ? { ...doc, status: 'rejected' } : doc
-      ));
-
-      // Enviar notificação ao aluno
+      // Notificações (fire-and-forget)
       try {
         const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('user_id', application?.user_profiles.user_id)
-          .single();
-
+          .from('user_profiles').select('email').eq('user_id', application?.user_profiles.user_id).single();
         if (userData?.email) {
-          const webhookPayload = {
-            tipo_notf: "Changes Requested",
-            email_aluno: userData.email,
-            nome_aluno: application?.user_profiles.full_name,
-            email_universidade: user?.email,
-            o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-          };
-
-          try {
-            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(webhookPayload),
-            });
-
-            if (!webhookResponse.ok) {
-              const webhookErrorText = await webhookResponse.text();
-              console.error('Webhook error:', webhookErrorText);
-            }
-          } catch (webhookError) {
-            console.error('Erro ao enviar webhook:', webhookError);
-          }
-
-          // Notificação in-app no sino do aluno — deve ser enviada SEMPRE, independente do e-mail
+          fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: "Changes Requested",
+              email_aluno: userData.email,
+              nome_aluno: application?.user_profiles.full_name,
+              email_universidade: user?.email,
+              o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+            }),
+          }).catch(console.error);
         }
-
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const accessToken = session?.access_token;
-
-          if (accessToken) {
-            const notificationPayload = {
-              user_id: application?.user_profiles.user_id,
-              title: 'Document rejected',
-              message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
-              type: 'document_rejected',
-              link: '/student/dashboard/applications',
-            };
-
-            const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.access_token) {
+            fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify(notificationPayload),
-            });
-
-            let responseData;
-            try {
-              responseData = await response.json();
-            } catch (parseError) {
-              console.error('Erro ao fazer parse da resposta:', parseError);
-              const responseText = await response.text();
-              console.error('Resposta da Edge Function (texto):', responseText);
-            }
-
-            if (!response.ok) {
-              console.error('Erro na Edge Function:', responseData);
-            } else {
-              console.log('✅ Notificação de rejeição enviada com sucesso:', responseData);
-            }
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                user_id: application?.user_profiles.user_id,
+                title: 'Document rejected',
+                message: `Your document for request "${uploadData.document_requests?.title}" was rejected. Reason: ${reason}`,
+                type: 'document_rejected',
+                link: '/student/dashboard/applications',
+              }),
+            }).catch(console.error);
           }
-        } catch (e) {
-          console.error('Error sending in-app student notification:', e);
-        }
+        });
       } catch (notificationError) {
         console.error('Error sending rejection notification:', notificationError);
       }
 
-      // Recarregar documentos do estudante
-      fetchStudentDocuments();
-
     } catch (err: any) {
       console.error("Error rejecting document:", err);
-      alert(`Failed to reject document: ${err.message}`);
+      toast.error('Failed to reject document: ' + err.message);
+    } finally {
+      setRejectingDocumentId(prev => ({ ...prev, [documentId]: false }));
     }
   };
 
@@ -1556,10 +1465,10 @@ const StudentDetails: React.FC = () => {
       // Recarregar dados
       await fetchTransferForm();
 
-      alert('Transfer form template uploaded successfully!');
+      toast.success('Transfer form template uploaded successfully!');
     } catch (error: any) {
       console.error('Error uploading transfer form:', error);
-      alert(`Failed to upload transfer form: ${error.message}`);
+      toast.error(`Failed to upload transfer form: ${error.message}`);
     } finally {
       setUploadingTransferForm(false);
     }
@@ -1603,10 +1512,10 @@ const StudentDetails: React.FC = () => {
       // Recarregar uploads
       await fetchTransferFormUploads();
 
-      alert('Transfer form approved successfully!');
+      toast.success('Transfer form approved successfully!');
     } catch (error: any) {
       console.error('Error approving transfer form:', error);
-      alert(`Failed to approve transfer form: ${error.message}`);
+      toast.error(`Failed to approve transfer form: ${error.message}`);
     }
   };
 
@@ -1649,10 +1558,10 @@ const StudentDetails: React.FC = () => {
       // Recarregar uploads
       await fetchTransferFormUploads();
 
-      alert('Transfer form rejected successfully!');
+      toast.success('Transfer form rejected successfully!');
     } catch (error: any) {
       console.error('Error rejecting transfer form:', error);
-      alert(`Failed to reject transfer form: ${error.message}`);
+      toast.error(`Failed to reject transfer form: ${error.message}`);
     }
   };
 
@@ -1672,7 +1581,7 @@ const StudentDetails: React.FC = () => {
             // Validar o arquivo
             const maxSize = 10 * 1024 * 1024; // 10MB
             if (file.size > maxSize) {
-              alert('File size must be less than 10MB');
+              toast.error('File size must be less than 10MB');
               return;
             }
 
@@ -1680,7 +1589,7 @@ const StudentDetails: React.FC = () => {
             const allowedTypes = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
             const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
             if (!allowedTypes.includes(fileExtension)) {
-              alert('Please select a valid file type: PDF, DOC, DOCX, JPG, JPEG, or PNG');
+              toast.error('Please select a valid file type: PDF, DOC, DOCX, JPG, JPEG, or PNG');
               return;
             }
 
@@ -1692,7 +1601,7 @@ const StudentDetails: React.FC = () => {
           }
         } catch (error) {
           console.error('Error processing file selection:', error);
-          alert('Error processing file. Please try again.');
+          toast.error('Error processing file. Please try again.');
         } finally {
           setIsFileSelecting(false);
         }
@@ -1700,7 +1609,7 @@ const StudentDetails: React.FC = () => {
 
     } catch (error) {
       console.error('Error selecting file:', error);
-      alert('Error selecting file. Please try again.');
+      toast.error('Error selecting file. Please try again.');
       setIsFileSelecting(false);
     }
   };
@@ -1718,7 +1627,7 @@ const StudentDetails: React.FC = () => {
   // Função para processar a carta de aceite
   const handleProcessAcceptanceLetter = async () => {
     if (!application || !acceptanceLetterFile) {
-      alert('Please select a file first.');
+      toast.error('Please select a file first.');
       return;
     }
 
@@ -1970,7 +1879,7 @@ const StudentDetails: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error processing acceptance letter:', error);
-      alert(`Failed to process acceptance letter: ${error.message}`);
+      toast.error(`Failed to process acceptance letter: ${error.message}`);
     } finally {
       setUploadingAcceptanceLetter(false);
     }
@@ -2129,7 +2038,7 @@ const StudentDetails: React.FC = () => {
 
     } catch (err: any) {
       console.error("Error creating document request:", err);
-      alert(`Failed to create document request: ${err.message}`);
+      toast.error(`Failed to create document request: ${err.message}`);
     } finally {
       setCreatingDocumentRequest(false);
     }
@@ -2761,16 +2670,18 @@ const StudentDetails: React.FC = () => {
                                         <>
                                           <button
                                             onClick={() => handleApproveDocument(request.uploads[0].id)}
-                                            className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                            disabled={approvingDocumentId[request.uploads[0].id]}
+                                            className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
                                           >
-                                            Approve
+                                            {approvingDocumentId[request.uploads[0].id] ? 'Approving...' : 'Approve'}
                                           </button>
                                           <button
                                             onClick={() => {
                                               setPendingRejectDocumentId(request.uploads[0].id);
                                               setShowRejectDocumentModal(true);
                                             }}
-                                            className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                            disabled={rejectingDocumentId[request.uploads[0].id]}
+                                            className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
                                           >
                                             Reject
                                           </button>
@@ -2813,20 +2724,17 @@ const StudentDetails: React.FC = () => {
                 </div>
               </div>
 
-              {/* Student Uploads Section */}
+              {/* Upload History — read-only, all uploads grouped by request */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
                 <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 rounded-t-3xl flex items-center justify-between">
                   <h4 className="font-semibold text-slate-900 flex items-center">
                     <svg className="w-5 h-5 mr-3 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Student Responses to Document Requests
+                    Upload History
                   </h4>
                   <button
-                    onClick={() => {
-                      console.log('Refresh manual dos documentos');
-                      fetchStudentDocuments();
-                    }}
+                    onClick={fetchStudentDocuments}
                     className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors flex items-center bg-white border border-slate-200 shadow-sm"
                   >
                     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -2839,85 +2747,60 @@ const StudentDetails: React.FC = () => {
                 <div className="p-6">
                   {studentDocuments.length === 0 ? (
                     <div className="text-center py-6 bg-slate-50 rounded-3xl">
-                      <p className="text-slate-500">No responses from student yet</p>
-                      <p className="text-sm text-slate-400 mt-1">Documents will appear here once the student responds to your document requests</p>
+                      <p className="text-slate-500">No uploads yet</p>
+                      <p className="text-sm text-slate-400 mt-1">Documents sent by the student will appear here</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {studentDocuments.map((doc) => {
-                        return (
-                          <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start space-x-4 flex-1">
-                                <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
-                                  <div className="flex items-center space-x-2 mt-1">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                      }`}>
-                                      {doc.request_type || 'Individual Request'}
-                                    </span>
-                                    <span className="text-sm text-slate-500">
-                                      Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Unknown Request'}</span>
-                                    </span>
-                                  </div>
-                                  {doc.request_description && (
-                                    <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
-                                  )}
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
-                                  </p>
+                      {studentDocuments.map((doc) => (
+                        <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-4 flex-1">
+                              <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                                    {doc.is_global ? 'Global Request' : 'Individual Request'}
+                                  </span>
+                                  <span className="text-sm text-slate-500">
+                                    Response to: <span className="font-medium text-slate-700">{doc.request_title}</span>
+                                  </span>
                                 </div>
-                              </div>
-
-                              <div className="flex items-center space-x-3 ml-4">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${(doc.status === 'approved' || doc.status === 'sent') ? 'bg-green-100 text-green-800' :
-                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                      'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                  {(doc.status === 'approved' || doc.status === 'sent') ? 'Approved' :
-                                    doc.status === 'rejected' ? 'Rejected' :
-                                      'Under Review'}
-                                </span>
-
-                                {/* Botões de ação para documentos Under Review */}
-                                {doc.status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => handleApproveDocument(doc.id)}
-                                      className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setPendingRejectDocumentId(doc.id);
-                                        setShowRejectDocumentModal(true);
-                                      }}
-                                      className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                    >
-                                      Reject
-                                    </button>
-                                  </div>
+                                {doc.request_description && (
+                                  <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
                                 )}
-
-                                <button
-                                  onClick={() => handleDownloadDocument(doc)}
-                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                >
-                                  Download
-                                </button>
-                                <button
-                                  onClick={() => handleViewDocument(doc)}
-                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                >
-                                  View
-                                </button>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
+                                </p>
                               </div>
                             </div>
+
+                            <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${(doc.status === 'approved' || doc.status === 'sent') ? 'bg-green-100 text-green-800' :
+                                  doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                {(doc.status === 'approved' || doc.status === 'sent') ? 'Approved' :
+                                  doc.status === 'rejected' ? 'Rejected' :
+                                    'Under Review'}
+                              </span>
+                              <button
+                                onClick={() => handleDownloadDocument(doc)}
+                                className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                              >
+                                Download
+                              </button>
+                              <button
+                                onClick={() => handleViewDocument(doc)}
+                                className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                              >
+                                View
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -3472,10 +3355,10 @@ const StudentDetails: React.FC = () => {
                     setPendingRejectDocumentId(null);
                   }
                 }}
-                disabled={!rejectDocumentReason.trim()}
+                disabled={!rejectDocumentReason.trim() || (!!pendingRejectDocumentId && !!rejectingDocumentId[pendingRejectDocumentId])}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
               >
-                Reject Document
+                {pendingRejectDocumentId && rejectingDocumentId[pendingRejectDocumentId] ? 'Rejecting...' : 'Reject Document'}
               </button>
             </div>
           </div>
