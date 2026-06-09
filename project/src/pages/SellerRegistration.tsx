@@ -38,8 +38,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     registration_code: ''
   });
 
-  if (!authLoading && user) return null;
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -63,6 +61,8 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       validateRegistrationCode(codeToValidate);
     }
   }, [location.search]);
+
+  if (!authLoading && user) return null;
 
   // Valida o código de registro do vendedor
   const validateRegistrationCode = async (code: string) => {

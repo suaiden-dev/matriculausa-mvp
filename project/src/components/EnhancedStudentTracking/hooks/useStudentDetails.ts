@@ -194,7 +194,7 @@ export const useStudentDetails = () => {
           .eq('status', 'succeeded');
 
         // Extrair documentos da aplicação principal
-        let documentsData: any = applicationData?.documents;
+        const documentsData: any = applicationData?.documents;
 
         // ✅ CORREÇÃO: Calcular taxas com overrides e system_type no fallback
         const dependents = profileData.dependents || 0;
@@ -509,13 +509,13 @@ export const useStudentDetails = () => {
               
               
               // Teste 1: Buscar apenas document_request_uploads
-              let { data: simpleUploads } = await supabase
+              const { data: simpleUploads } = await supabase
                 .from('document_request_uploads')
                 .select('*')
                 .in('uploaded_by', searchIds);
               
               // Teste 2: Buscar com join para document_requests
-              let { data: uploadsByUser, error: error1 } = await supabase
+              const { data: uploadsByUser, error: error1 } = await supabase
                 .from('document_request_uploads')
                 .select(`
                   *,
@@ -572,7 +572,7 @@ export const useStudentDetails = () => {
             }
 
             // Combinar uploads com a carta de aceite
-            let allDocuments = [...uploads];
+            const allDocuments = [...uploads];
             if (acceptanceLetterDoc) {
               allDocuments.unshift(acceptanceLetterDoc);
             }

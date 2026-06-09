@@ -71,6 +71,8 @@ const ApplicationChatPage: React.FC = () => {
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
+  // Estado para controlar a tab selecionada no ExpandableTabs
+  const [selectedTabIndex, setSelectedTabIndex] = React.useState<number | null>(0); // Iniciar com welcome (índice 0)
 
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -578,6 +580,16 @@ const ApplicationChatPage: React.FC = () => {
     }
   }, [userProfile, applicationDetails, isApplicationApproved, navigate]);
 
+  // Sincronizar selectedTabIndex quando activeTab mudar externamente
+  React.useEffect(() => {
+    const newIndex = tabIds.indexOf(activeTab);
+    const currentIndex = newIndex !== -1 ? newIndex : null;
+    if (currentIndex !== null && currentIndex !== selectedTabIndex) {
+      setSelectedTabIndex(currentIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
     return <div className="text-center text-gray-500 py-10">{t('studentDashboard.applicationChatPage.hardcodedTexts.authenticating')}</div>;
@@ -682,18 +694,6 @@ const ApplicationChatPage: React.FC = () => {
     const tabId = getTabIdFromIndex(index);
     setActiveTab(tabId);
   };
-
-  // Estado para controlar a tab selecionada no ExpandableTabs
-  const [selectedTabIndex, setSelectedTabIndex] = React.useState<number | null>(0); // Iniciar com welcome (índice 0)
-
-  // Sincronizar selectedTabIndex quando activeTab mudar externamente
-  React.useEffect(() => {
-    const newIndex = getActiveTabIndex();
-    if (newIndex !== null && newIndex !== selectedTabIndex) {
-      setSelectedTabIndex(newIndex);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, applicationDetails?.is_scholarship_fee_paid, applicationDetails?.is_placement_fee_paid]);
 
   // Helper for Application Fee with dependents
   const getApplicationFeeWithDependents = (base: number): number => {

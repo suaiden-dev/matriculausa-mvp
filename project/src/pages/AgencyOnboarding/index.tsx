@@ -31,6 +31,7 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { clearAgencyCache } from '../../components/AuthRedirect';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 type FormErrors = Partial<Record<keyof FormData | 'logo', string>>;
@@ -318,6 +319,7 @@ const AffiliateAdminOnboarding: React.FC = () => {
 
       localStorage.removeItem('affiliate-onboarding-form');
       await refetchUserProfile();
+      clearAgencyCache(user?.id);
       navigate('/agency/pending-approval');
     } catch (e: any) {
       setErrors({ company_name: e.message || 'Error saving. Please try again.' });

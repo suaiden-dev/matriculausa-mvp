@@ -359,6 +359,12 @@ const AffiliateManagement: React.FC = () => {
   const [agencyRequestsError, setAgencyRequestsError] = useState<string | null>(null);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
 
+  // Filter @uorak.com agency requests in production
+  const filteredAgencyRequests = useMemo(() => {
+    if (isDevelopment) return agencyRequests;
+    return agencyRequests.filter((r: AgencyRequest) => !r.email?.toLowerCase().includes('@uorak.com'));
+  }, [agencyRequests, isDevelopment]);
+
   // Approval modal
   const [approvalModalRequest, setApprovalModalRequest] = useState<AgencyRequest | null>(null);
   const [approvalRules, setApprovalRules] = useState<Record<string, CommissionRule>>({ ...DEFAULT_COMMISSION_RULES });
@@ -452,14 +458,17 @@ const AffiliateManagement: React.FC = () => {
       });
       if (inviteError) throw inviteError;
       if (inviteData?.error) throw new Error(inviteData.error);
-      setApprovalModalRequest(null);
       await loadAgencyRequests();
     } catch (e: any) {
       setApprovalError(e.message || 'Failed to approve. Please try again.');
-    } finally {
       setApprovingAgency(false);
       setProcessingRequest(null);
+      return;
     }
+    // Reset saving before closing so React doesn't try to update an unmounted portal
+    setApprovingAgency(false);
+    setProcessingRequest(null);
+    setApprovalModalRequest(null);
   };
 
   // ── Reject request ──
@@ -495,13 +504,15 @@ const AffiliateManagement: React.FC = () => {
         .update({ commission_rules: rules })
         .eq('id', commissionModalAffiliate.id);
       if (updateErr) throw updateErr;
-      setCommissionModalAffiliate(null);
       refetch();
     } catch (e: any) {
       setQuickRulesError(e.message || 'Failed to save rules');
-    } finally {
       setSavingQuickRules(false);
+      return;
     }
+    // Reset saving before closing so React doesn't try to update an unmounted portal
+    setSavingQuickRules(false);
+    setCommissionModalAffiliate(null);
   };
 
   const getQuickCommissionRules = (affiliate: any): Record<string, CommissionRule> => {
@@ -523,7 +534,7 @@ const AffiliateManagement: React.FC = () => {
 
   // ── Filtered + sorted list ──
   const filteredAndSortedAffiliates = useMemo(() => {
-    let list = filteredAffiliates.filter((aff: any) => {
+    const list = filteredAffiliates.filter((aff: any) => {
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const name = (aff.company_name?.trim() || aff.full_name || '').toLowerCase();
@@ -628,7 +639,7 @@ const AffiliateManagement: React.FC = () => {
     );
   }
 
-  const pendingRequests = agencyRequests.filter(r => r.status === 'pending');
+  const pendingRequests = filteredAgencyRequests.filter(r => r.status === 'pending');
 
   return (
     <div className="space-y-6">
@@ -689,28 +700,28 @@ const AffiliateManagement: React.FC = () => {
       </div>
 
       {/* ── Partnership Requests ── */}
-      {(loadingAgencyRequests || agencyRequests.length > 0) && (
+      {(loadingAgencyRequests || filteredAgencyRequests.length > 0) && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 flex-wrap">
               <Building2 className="w-4 h-4 text-slate-500" />
               <h2 className="text-base font-semibold text-slate-900">Partnership Requests</h2>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                {agencyRequests.length} total
+                {filteredAgencyRequests.length} total
               </span>
-              {agencyRequests.filter(r => r.status === 'pending').length > 0 && (
+              {filteredAgencyRequests.filter(r => r.status === 'pending').length > 0 && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                  {agencyRequests.filter(r => r.status === 'pending').length} pending
+                  {filteredAgencyRequests.filter(r => r.status === 'pending').length} pending
                 </span>
               )}
-              {agencyRequests.filter(r => r.status === 'approved').length > 0 && (
+              {filteredAgencyRequests.filter(r => r.status === 'approved').length > 0 && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                  {agencyRequests.filter(r => r.status === 'approved').length} approved
+                  {filteredAgencyRequests.filter(r => r.status === 'approved').length} approved
                 </span>
               )}
-              {agencyRequests.filter(r => r.status === 'rejected').length > 0 && (
+              {filteredAgencyRequests.filter(r => r.status === 'rejected').length > 0 && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                  {agencyRequests.filter(r => r.status === 'rejected').length} rejected
+                  {filteredAgencyRequests.filter(r => r.status === 'rejected').length} rejected
                 </span>
               )}
             </div>
@@ -747,7 +758,7 @@ const AffiliateManagement: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
-                  {agencyRequests.map(req => (
+                  {filteredAgencyRequests.map(req => (
                     <tr key={req.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-slate-900">{req.company_name}</div>

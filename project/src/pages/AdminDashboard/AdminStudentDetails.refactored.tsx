@@ -295,7 +295,7 @@ const AdminStudentDetails: React.FC = () => {
       } else if (paymentFlags?.has_paid_selection) {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
         const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
-        let expectedSelectionProcess = hasMatrDiscount ? 350 : (sysType === 'simplified' ? 350 : 400);
+        const expectedSelectionProcess = hasMatrDiscount ? 350 : (sysType === 'simplified' ? 350 : 400);
 
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
@@ -342,7 +342,7 @@ const AdminStudentDetails: React.FC = () => {
         const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
         const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
 
-        let expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
+        const expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
         normalized.application = paymentFlags?.source === 'migma' ? expectedApplicationFee : expectedApplicationFee + (dependents * 100);
       }
 
@@ -1701,7 +1701,7 @@ const AdminStudentDetails: React.FC = () => {
       try {
         let feeTypeForZelle: string = feeType;
         
-        let targetApplicationForAmount = applicationId;
+        const targetApplicationForAmount = applicationId;
         
         if (feeType === 'selection_process') {
           feeTypeForZelle = 'selection_process_fee';
@@ -1737,7 +1737,7 @@ const AdminStudentDetails: React.FC = () => {
           .from('zelle_comprovantes')
           .getPublicUrl(fileName);
           
-        let proofUrl = publicUrl;
+        const proofUrl = publicUrl;
 
         // Dispara a Edge Function para criar o gateway com a IA do n8n (mesmo fluxo do aluno)
         const { error: functionError } = await supabase.functions.invoke('create-zelle-payment', {
@@ -1836,16 +1836,23 @@ const AdminStudentDetails: React.FC = () => {
       };
       const billingFeeType = feeTypeMapping[feeType];
       if (billingFeeType) {
-        await supabase.rpc('register_payment_billing', {
+        // Deterministic session ID prevents double-commission if admin marks the same fee twice.
+        // For placement installments, include installments_paid so each installment gets its own key.
+        const installmentIndex = feeType === 'placement' ? (installmentPlans['placement_fee']?.installments_paid ?? 0) : 0;
+        const manualSessionId = `manual_${student.user_id}_${billingFeeType}_${installmentIndex}`;
+
+        const { error: billingError } = await supabase.rpc('register_payment_billing', {
           user_id_param: student.user_id,
           fee_type_param: billingFeeType,
           amount_param: finalPaymentAmount,
-          payment_session_id_param: null,
+          payment_session_id_param: manualSessionId,
           payment_method_param: paymentMethodValue,
         });
+        if (billingError) throw billingError;
       }
     } catch (billingErr: any) {
       console.error('[PaymentStatusCard] ❌ register_payment_billing failed:', billingErr.message);
+      toast.error(`Pagamento registrado, mas comissão não foi contabilizada. Erro: ${billingErr.message}`);
     }
 
     // Calculate remaining placement fee balance to pass to markFeeAsPaid
@@ -4027,7 +4034,7 @@ const AdminStudentDetails: React.FC = () => {
                     const { error: updateError } = await supabase
                       .from('scholarship_applications')
                       .update({ student_process_type: dbType })
-                      .eq('user_id', student.user_id);
+                      .eq('student_id', student.student_id);
 
                     if (updateError) {
                       console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
@@ -4485,6 +4492,7 @@ const AdminStudentDetails: React.FC = () => {
           <StudentLogsView
             studentId={student?.student_id || ''}
             studentName={student?.student_name || ''}
+            showIpIdentity={true}
           />
         </Suspense>
       )}

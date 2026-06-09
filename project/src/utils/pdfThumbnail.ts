@@ -1,9 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
-// Configurar o worker do PDF.js usando um CDN estável. 
-// Usar uma versão fixa para evitar problemas de otimização do Vite (504 Outdated Dep)
-const PDFJS_VERSION = '4.0.379';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.mjs`;
+// Use bundled worker via Vite's ?url import — avoids CDN dependency and works correctly in production builds
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 /**
  * Gera uma miniatura (thumbnail) de baixa resolução a partir da primeira página de um PDF.

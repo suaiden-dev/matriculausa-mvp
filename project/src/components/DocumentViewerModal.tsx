@@ -183,6 +183,9 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       }
 
       // Tentar gerar URL assinada e validar com HEAD request
+      let fallbackSignedUrl: string | null = null;
+      let fallbackBucket: string | null = null;
+
       for (const bucket of candidateBuckets) {
         try {
           // Lógica especial para 'public' bucket (não precisa de assinatura)
@@ -221,6 +224,12 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
           }
 
           if (signedData?.signedUrl) {
+            // Guardar primeira signed URL gerada com sucesso como fallback
+            if (!fallbackSignedUrl) {
+              fallbackSignedUrl = signedData.signedUrl;
+              fallbackBucket = bucket;
+            }
+
             // Verificar se a URL assinada é acessível (HEAD request)
             try {
               // Adicionar timestamp para evitar cache
@@ -237,14 +246,23 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 console.warn(`⚠️ [MODAL] URL assinada gerada mas retornou ${response.status} para bucket '${bucket}'`);
               }
             } catch (networkError) {
-              console.warn(`⚠️ [MODAL] Erro de rede ao validar URL no bucket '${bucket}'`, networkError);
-              // Em caso de erro de rede (CORS etc), ainda pode ser válido tentar usar a URL se for o único sucesso
-              // Mas aqui vamos continuar tentando outros buckets
+              console.warn(`⚠️ [MODAL] Erro de rede ao validar URL no bucket '${bucket}' — usando como fallback`, networkError);
+              // HEAD falhou por CORS/rede, mas o signed URL foi gerado com sucesso.
+              // O arquivo existe — continua tentando outros buckets mas mantém fallback.
             }
           }
         } catch (err) {
           console.warn(`⚠️ [MODAL] Exceção ao tentar bucket '${bucket}'`, err);
         }
+      }
+
+      // Se algum bucket gerou signed URL mas HEAD falhou (CORS), usar como fallback
+      if (fallbackSignedUrl) {
+        console.log(`⚠️ [MODAL] HEAD falhou em todos os buckets. Usando signed URL do bucket '${fallbackBucket}' diretamente.`);
+        setActualUrl(fallbackSignedUrl);
+        setDocumentType(detectDocumentType(path, fileName));
+        setLoading(false);
+        return;
       }
 
       // Se chegou aqui, nenhum bucket funcionou

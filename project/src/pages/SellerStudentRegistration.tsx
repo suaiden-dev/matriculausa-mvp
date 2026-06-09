@@ -55,6 +55,19 @@ const SellerStudentRegistration: React.FC = () => {
   const allowedRoles = new Set(['admin', 'affiliate_admin', 'seller']);
   const isAllowed = !!user && allowedRoles.has(String(userProfile?.role || '').toLowerCase());
 
+  // Validar código do vendedor ao carregar a página
+  useEffect(() => {
+    if (sellerCode) {
+      validateSellerReferralCode(sellerCode);
+
+      // Garantir que o código seja atualizado no formData
+      setFormData(prev => ({
+        ...prev,
+        sellerReferralCode: sellerCode
+      }));
+    }
+  }, [sellerCode]);
+
   // Esconder página para sistema simplified
   if (systemType === 'simplified') {
     return (
@@ -65,7 +78,7 @@ const SellerStudentRegistration: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Registration Not Available</h1>
           <p className="text-gray-600 mb-6">
-            This registration page is not available for simplified system. 
+            This registration page is not available for simplified system.
             Please use the referral link provided by your seller.
           </p>
           <Link
@@ -78,19 +91,6 @@ const SellerStudentRegistration: React.FC = () => {
       </div>
     );
   }
-
-  // Validar código do vendedor ao carregar a página
-  useEffect(() => {
-    if (sellerCode) {
-      validateSellerReferralCode(sellerCode);
-      
-      // Garantir que o código seja atualizado no formData
-      setFormData(prev => ({
-        ...prev,
-        sellerReferralCode: sellerCode
-      }));
-    }
-  }, [sellerCode]);
 
   const validateSellerReferralCode = async (code: string) => {
     if (!code.trim()) {
