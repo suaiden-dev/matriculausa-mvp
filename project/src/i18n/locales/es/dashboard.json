@@ -1300,7 +1300,7 @@
       "title": "Convierte tus",
       "titleHighlight": "Referidos en Descuentos",
       "subtitle": "en tu Matrícula",
-      "description": "Gana <strong>Matricula Coins</strong> por cada amigo que refieras y úsalos para <strong>reducir tu matrícula</strong> - 1 coin = $1 de descuento en tu pago mensual",
+      "description": "Gana <strong>Matricula Coins</strong> por cada amigo que refieras y úsalos para <strong>reducir tu matrícula</strong> - 1 coin = US$ 1 de descuento en tu pago mensual",
       "valueCards": {
         "referFriends": {
           "title": "Comparte y Gana",
@@ -1390,7 +1390,7 @@
         "minValue": "1 amigo",
         "maxValue": "50+ amigos",
         "coinsPerFriend": "100 coins",
-        "perFriend": "por amigo",
+        "perFriend": "por referido",
         "coinValue": "1 coin =",
         "usdValue": "$1 USD"
       },
@@ -1591,7 +1591,7 @@
         "redeem": "Canjea tus recompensas"
       },
       "stats": {
-        "coinsPerReferral": "coins por referido confirmado",
+        "coinsPerReferral": "dólares por referido confirmado",
         "activeAffiliates": "afiliados activos en la plataforma"
       }
     },
@@ -1662,6 +1662,90 @@
           "answer": "En tu panel, puedes cambiar los coins acumulados por beneficios dentro de la plataforma Matrícula USA o retirar el saldo disponible."
         }
       ]
+    }
+  },
+  "affiliateDashboard": {
+    "header": {
+      "title": "Panel de Afiliados",
+      "subtitle": "Realice un seguimiento de las recomendaciones y ganancias"
+    },
+    "stats": {
+      "balance": "Saldo disponible",
+      "balanceSub": "USD disponible para retiro",
+      "totalEarned": "Total ganado",
+      "totalEarnedSub": "Acumulado hasta hoy",
+      "referrals": "Recomendaciones",
+      "referralsSub": "Registros a través de su enlace"
+    },
+    "central": {
+      "title": "Centro de Ganancias y Recomendaciones",
+      "codeLabel": "Su código de recomendación",
+      "copyCode": "Copiar código",
+      "copyLink": "Copiar enlace",
+      "copied": "¡Copiado!",
+      "newCode": "NUEVO_CODIGO",
+      "save": "Guardar",
+      "saved": "✓ Guardado",
+      "editErrorLength": "El código debe tener entre 3 y 20 caracteres.",
+      "editErrorPattern": "Use solo letras, números y _.",
+      "editErrorTaken": "Este código ya está en uso.",
+      "editErrorInvalid": "Tamaño inválido.",
+      "editErrorGeneral": "Error al guardar. Inténtelo de nuevo.",
+      "editWarning": "Los enlaces antiguos con el código actual dejarán de funcionar."
+    },
+    "howItWorks": {
+      "title": "¿Cómo funciona el Programa de Afiliados?",
+      "step1": {
+        "title": "Difunda su enlace",
+        "description": "Copie su enlace de recomendación exclusivo y compártalo en sus redes sociales, sitios web o directamente con estudiantes interesados en ingresar a universidades estadounidenses."
+      },
+      "step2": {
+        "title": "Siga las etapas",
+        "description": "Cuando un estudiante se registra, queda vinculado a usted. Las comisiones se acreditan a su saldo gradualmente a medida que el estudiante realiza los pagos de las tasas del proceso."
+      },
+      "step3": {
+        "title": "Retire su saldo",
+        "description": "Una vez que acumule saldo disponible, puede solicitar el retiro a través de Zelle o Stripe. Nuestro equipo revisa la solicitud y realiza el pago directamente a su cuenta registrada."
+      }
+    },
+    "referralsList": {
+      "title": "Sus Recomendaciones",
+      "noReferrals": "Ninguna recomendación aún",
+      "startSharing": "Comparta su enlace y comience a ganar.",
+      "count_one": "recomendación",
+      "count_other": "recomendaciones",
+      "anonymous": "Recomendación"
+    },
+    "redemption": {
+      "title": "Canjear Coins",
+      "subtitle": "Convierta sus coins en dinero. 1 coin = $1 USD.",
+      "requestButton": "Solicitar Canje",
+      "pendingRequest": "Solicitud en curso",
+      "insufficientBalance": "Saldo insuficiente para canjear",
+      "historyButton": "Historial",
+      "successMessage": "¡Solicitud enviada con éxito! Nuestro equipo la procesará en breve.",
+      "newRequestTitle": "Nueva Solicitud de Canje",
+      "availableBalance": "Saldo disponible: {{balance}} coins (${{balance}} USD)",
+      "amountLabel": "Cantidad de coins a canjear",
+      "amountRange": "1 – {{max}}",
+      "willReceive": "Recibirá ${{amount}} USD",
+      "payoutMethod": "Método de pago",
+      "payoutDetails": "{{method}} — datos de cobro",
+      "errorAmount": "Ingrese un valor entre 1 y {{max}} coins.",
+      "errorDetails": "Complete los detalles del pago.",
+      "errorGeneral": "Error al enviar la solicitud. Inténtelo de nuevo.",
+      "submitButton": "Enviar Solicitud",
+      "submitting": "Enviando...",
+      "cancelButton": "Cancelar",
+      "historyTitle": "Historial de Solicitudes",
+      "loading": "Cargando...",
+      "noHistory": "Ninguna solicitud aún.",
+      "status": {
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "paid": "Pagado",
+        "rejected": "Rechazado"
+      }
     }
   },
   "academicInfo": {

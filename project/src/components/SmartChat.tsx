@@ -43,7 +43,7 @@ const SmartChat: React.FC<SmartChatProps> = () => {
   }, []);
 
   useEffect(() => {
-    if (isChatOpen && !isMobile) {
+    if (isChatOpen) {
       // Gerar ID único para o chat
       setChatId('chat_' + Date.now() + '_' + Math.floor(Math.random() * 100000));
 
@@ -61,7 +61,7 @@ const SmartChat: React.FC<SmartChatProps> = () => {
         }
       }, 100);
     }
-  }, [isChatOpen, isMobile]);
+  }, [isChatOpen]);
 
   useEffect(() => {
     if (chatRef.current) {
@@ -118,14 +118,7 @@ const SmartChat: React.FC<SmartChatProps> = () => {
   };
 
   const toggleChat = () => {
-    if (isMobile) {
-      // No mobile, abrir em nova aba
-      const smartAssistantUrl = '/smart-assistant';
-      window.open(smartAssistantUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      // No desktop, alternar modal
-      setIsChatOpen(!isChatOpen);
-    }
+    setIsChatOpen(!isChatOpen);
   };
 
   const closeChat = () => {
@@ -163,11 +156,11 @@ const SmartChat: React.FC<SmartChatProps> = () => {
       {/* Smart Assistant Chat Bubble - Com animação de dropdown */}
       <div
         id="smart-assistant-toggle"
-        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center z-[10001] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative ${isMobile ? 'active:scale-95' : 'hover:scale-105'
+        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center z-[10001] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative outline-none select-none ${isMobile ? 'active:scale-95' : 'hover:scale-105'
           }`}
         style={{
           position: 'fixed',
-          bottom: '20px',
+          bottom: '40px',
           right: '20px',
           width: '64px',
           height: '64px',
@@ -186,11 +179,12 @@ const SmartChat: React.FC<SmartChatProps> = () => {
         {/* Ícone Smart Assistant - área clicável reduzida */}
         <div
           onClick={toggleChat}
-          className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
+          className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer md:hover:bg-white/10 transition-colors outline-none select-none"
           style={{
             minWidth: '48px',
             minHeight: '48px',
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            WebkitTapHighlightColor: 'transparent'
           }}
           title={isMobile ? t('common:smartChat.mobileNote') : t('common:smartChat.welcomeMessage')}
         >
@@ -214,9 +208,11 @@ const SmartChat: React.FC<SmartChatProps> = () => {
         style={{
           position: 'fixed',
           bottom: isChatOpen
-            ? '100px'
+            ? (isMobile ? '40px' : '120px')
+            : '40px',
+          right: isChatOpen
+            ? (isMobile ? '100px' : '20px')
             : '20px',
-          right: '20px',
           width: '64px',
           height: '64px',
           zIndex: 999,
@@ -241,13 +237,13 @@ const SmartChat: React.FC<SmartChatProps> = () => {
         </div>
       </div>
 
-      {/* Modal do Smart Assistant - APENAS para Desktop */}
-      {isChatOpen && !isMobile && (
-        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pr-24 pointer-events-none pb-5`}>
+      {/* Modal do Smart Assistant */}
+      {isChatOpen && (
+        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pb-[116px] md:pb-5 pr-4 md:pr-24 pointer-events-none`}>
           {/* Modal do Chat */}
           <div
             id="smart-assistant-modal"
-            className="relative w-full max-w-md h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-chat-expand pointer-events-auto">
+            className="relative w-full max-w-md h-[500px] md:h-[600px] max-h-[calc(100vh-140px)] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-chat-expand pointer-events-auto">
             {/* Header do Modal */}
             <div className="bg-white border-b border-gray-100 p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">

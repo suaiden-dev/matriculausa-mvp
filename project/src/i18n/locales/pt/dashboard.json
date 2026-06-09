@@ -1477,7 +1477,7 @@
       "title": "Transforme Suas",
       "titleHighlight": "Indicações em Descontos",
       "subtitle": "na Sua Mensalidade",
-      "description": "Ganhe <strong>Matricula Coins</strong> a cada amigo que indicar e use para <strong>reduzir sua mensalidade</strong> - 1 coin = R$ 1 de desconto no pagamento mensal",
+      "description": "Ganhe <strong>Matricula Coins</strong> a cada amigo que indicar e use para <strong>reduzir sua mensalidade</strong> - 1 coin = US$ 1 de desconto no pagamento mensal",
       "valueCards": {
         "referFriends": {
           "title": "Compartilhe & Ganhe",
@@ -1567,7 +1567,7 @@
         "minValue": "1 amigo",
         "maxValue": "50+ amigos",
         "coinsPerFriend": "100 coins",
-        "perFriend": "por amigo",
+        "perFriend": "por indicação",
         "coinValue": "1 coin =",
         "usdValue": "$1 USD"
       },
@@ -1768,7 +1768,7 @@
         "redeem": "Resgate suas recompensas"
       },
       "stats": {
-        "coinsPerReferral": "coins por indicação confirmada",
+        "coinsPerReferral": "dólares por indicação confirmada",
         "activeAffiliates": "afiliados ativos na plataforma"
       }
     },
@@ -1839,6 +1839,90 @@
           "answer": "No seu painel, você pode trocar os coins acumulados por benefícios dentro da plataforma Matrícula USA ou sacar o saldo disponível."
         }
       ]
+    }
+  },
+  "affiliateDashboard": {
+    "header": {
+      "title": "Painel do Afiliado",
+      "subtitle": "Acompanhe indicações e ganhos"
+    },
+    "stats": {
+      "balance": "Saldo disponível",
+      "balanceSub": "USD disponível para resgate",
+      "totalEarned": "Total ganho",
+      "totalEarnedSub": "Acumulado até hoje",
+      "referrals": "Indicações",
+      "referralsSub": "Cadastros via seu link"
+    },
+    "central": {
+      "title": "Central de Ganhos & Indicações",
+      "codeLabel": "Seu código de indicação",
+      "copyCode": "Copiar código",
+      "copyLink": "Copiar link",
+      "copied": "Copiado!",
+      "newCode": "NOVO_CODIGO",
+      "save": "Salvar",
+      "saved": "✓ Salvo",
+      "editErrorLength": "O código deve ter entre 3 e 20 caracteres.",
+      "editErrorPattern": "Use apenas letras, números e _.",
+      "editErrorTaken": "Esse código já está em uso.",
+      "editErrorInvalid": "Tamanho inválido.",
+      "editErrorGeneral": "Erro ao salvar. Tente novamente.",
+      "editWarning": "Links antigos com o código atual deixarão de funcionar."
+    },
+    "howItWorks": {
+      "title": "Como funciona o Programa de Afiliados?",
+      "step1": {
+        "title": "Divulgue seu link",
+        "description": "Copie o seu link de indicação exclusivo e compartilhe em suas redes sociais, sites ou diretamente com estudantes interessados em ingressar em universidades americanas."
+      },
+      "step2": {
+        "title": "Acompanhe as etapas",
+        "description": "Quando um estudante se cadastra, ele é vinculado a você. As comissões são creditadas no seu saldo gradativamente à medida que o estudante realiza pagamentos das taxas no processo."
+      },
+      "step3": {
+        "title": "Resgate seu saldo",
+        "description": "Assim que acumular saldo disponível, você pode solicitar o resgate via Zelle ou Stripe. A nossa equipe analisa a solicitação e realiza o pagamento diretamente na sua conta cadastrada."
+      }
+    },
+    "referralsList": {
+      "title": "Suas Indicações",
+      "noReferrals": "Nenhuma indicação ainda",
+      "startSharing": "Compartilhe seu link e comece a ganhar.",
+      "count_one": "indicação",
+      "count_other": "indicações",
+      "anonymous": "Indicação"
+    },
+    "redemption": {
+      "title": "Resgatar Coins",
+      "subtitle": "Converta seus coins em dinheiro. 1 coin = $1 USD.",
+      "requestButton": "Solicitar Resgate",
+      "pendingRequest": "Solicitação em andamento",
+      "insufficientBalance": "Saldo insuficiente para resgatar",
+      "historyButton": "Histórico",
+      "successMessage": "Solicitação enviada com sucesso! Nossa equipe irá processar em breve.",
+      "newRequestTitle": "Nova Solicitação de Resgate",
+      "availableBalance": "Saldo disponível: {{balance}} coins (${{balance}} USD)",
+      "amountLabel": "Quantidade de coins a resgatar",
+      "amountRange": "1 – {{max}}",
+      "willReceive": "Você receberá ${{amount}} USD",
+      "payoutMethod": "Método de pagamento",
+      "payoutDetails": "{{method}} — dados para recebimento",
+      "errorAmount": "Insira um valor entre 1 e {{max}} coins.",
+      "errorDetails": "Preencha os detalhes do pagamento.",
+      "errorGeneral": "Erro ao enviar solicitação. Tente novamente.",
+      "submitButton": "Enviar Solicitação",
+      "submitting": "Enviando...",
+      "cancelButton": "Cancelar",
+      "historyTitle": "Histórico de Solicitações",
+      "loading": "Carregando...",
+      "noHistory": "Nenhuma solicitação ainda.",
+      "status": {
+        "pending": "Pendente",
+        "approved": "Aprovado",
+        "paid": "Pago",
+        "rejected": "Rejeitado"
+      }
     }
   },
   "academicInfo": {
