@@ -1047,7 +1047,7 @@ export async function approveZelleFlow(params: {
         }
 
         for (const admin of adminUsers) {
-          let adminEmail = admin.email;
+          const adminEmail = admin.email;
           if (isDevelopment && devBlockedEmails.includes(adminEmail)) {
             console.log(
               `📧 [zelleOrchestrator] Notificação bloqueada para admin ${adminEmail} em desenvolvimento`,

@@ -685,7 +685,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                           } else {
                             setNewRequest(r => {
                               const withoutAll = r.applicable_student_types.filter(v => v !== 'all');
-                              let updated = withoutAll.includes(opt.value)
+                              const updated = withoutAll.includes(opt.value)
                                 ? withoutAll.filter(v => v !== opt.value)
                                 : [...withoutAll, opt.value];
                               return { ...r, applicable_student_types: updated };

@@ -162,7 +162,7 @@ export const useAffiliateData = () => {
 
               // Fetch real payment amounts for these students
               const studentUserIds = filtered.map((p: any) => p.user_id).filter(Boolean);
-              let realPaymentsMap: Record<string, number> = {};
+              const realPaymentsMap: Record<string, number> = {};
               if (studentUserIds.length > 0) {
                 const { data: feePayments } = await supabase
                   .from('individual_fee_payments')

@@ -91,7 +91,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
 
   // Function to get the next business day
   const getNextBusinessDay = (startDate: Date): Date => {
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     while (!isWeekday(currentDate)) {
       currentDate.setDate(currentDate.getDate() + 1);
     }

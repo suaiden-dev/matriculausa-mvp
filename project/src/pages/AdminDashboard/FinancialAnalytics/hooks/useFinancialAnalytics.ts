@@ -448,7 +448,7 @@ export function useFinancialAnalytics() {
       previousFiltersRef.current = currentFilters;
       applyFilters();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user, timeFilter, customDateFrom, customDateTo, showCustomDate, filterFeeType, filterPaymentMethod, filterValueMin, filterValueMax, filterAffiliate, loadData, applyFilters]);
 
   const handleRefresh = useCallback(async () => {

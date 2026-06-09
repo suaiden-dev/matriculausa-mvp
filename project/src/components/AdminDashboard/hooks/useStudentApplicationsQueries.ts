@@ -230,7 +230,7 @@ export function useStudentsQuery() {
 
       // Batch fetch fee overrides for all students
       const userIds = data?.map((s: any) => s.user_id).filter(Boolean) || [];
-      let feeOverridesMap: Record<string, any> = {};
+      const feeOverridesMap: Record<string, any> = {};
       if (userIds.length > 0) {
         const { data: overridesData } = await supabase
           .from("user_fee_overrides")
@@ -336,7 +336,7 @@ export function useStudentsQuery() {
           ? ["passport", "diploma", "funds_proof"]
           : ["passport"];
 
-        let basicDocsRequired = requiredBasicTypes.length;
+        const basicDocsRequired = requiredBasicTypes.length;
         let basicDocsUploaded = 0;
         let basicDocsApproved = 0;
         let basicDocsRejected = 0;

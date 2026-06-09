@@ -98,7 +98,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       const userIds = universitiesData.map(u => u.user_id).filter(Boolean);
 
       // 2.1. Buscar todos os user_profiles de uma vez
-      let usersMap: Record<string, any> = {};
+      const usersMap: Record<string, any> = {};
       if (userIds.length > 0) {
         const { data: usersData, error: usersError } = await supabase
           .from('user_profiles')

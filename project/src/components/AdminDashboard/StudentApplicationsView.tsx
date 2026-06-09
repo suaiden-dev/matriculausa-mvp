@@ -278,7 +278,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     };
 
     loadPendingZelle();
-  }, [students]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [students]);  
 
   // Carregar estudantes que usaram cupom BLACK
   useEffect(() => {

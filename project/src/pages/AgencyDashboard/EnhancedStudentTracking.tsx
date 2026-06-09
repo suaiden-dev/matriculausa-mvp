@@ -741,7 +741,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           .eq('status', 'succeeded');
 
         // Extrair documentos da aplicação principal
-        let documentsData: any = applicationData?.documents;
+        const documentsData: any = applicationData?.documents;
         // if (applicationsData && applicationsData.length > 0) {
         //   applicationsData.forEach((application: any) => {
         //     if (application.documents && Array.isArray(application.documents)) {

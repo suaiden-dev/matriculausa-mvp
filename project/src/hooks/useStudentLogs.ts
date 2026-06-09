@@ -90,7 +90,7 @@ export const useStudentLogs = (studentId: string) => {
     actionType: string,
     actionDescription: string,
     performedBy: string,
-    performedByType: 'student' | 'admin' | 'university' | 'post_sales',
+    performedByType: 'student' | 'admin' | 'university' | 'post_sales' | 'school_manager',
     metadata?: any
   ) => {
     try {
