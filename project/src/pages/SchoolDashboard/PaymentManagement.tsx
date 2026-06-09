@@ -358,7 +358,7 @@ const PaymentManagement: React.FC = () => {
         
       // Buscar dependentes/system_type/has_paid_reinstatement_package dos estudantes dessas aplicações
       const studentIds = Array.from(new Set((paidApplications || []).map((a: any) => a.student_id).filter(Boolean)));
-      let studentsMap: Record<string, any> = {};
+      const studentsMap: Record<string, any> = {};
       if (studentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')
@@ -499,8 +499,8 @@ const PaymentManagement: React.FC = () => {
 
       // Montar mapa de estudantes para dependentes/system_type e user_id
       const appStudentIds = Array.from(new Set((applications || []).map((a: any) => a.student_id).filter(Boolean)));
-      let analyticsStudentsMap: Record<string, any> = {};
-      let studentIdToUserIdMap: Record<string, string> = {}; // Mapa de profile_id -> user_id
+      const analyticsStudentsMap: Record<string, any> = {};
+      const studentIdToUserIdMap: Record<string, string> = {}; // Mapa de profile_id -> user_id
       if (appStudentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')

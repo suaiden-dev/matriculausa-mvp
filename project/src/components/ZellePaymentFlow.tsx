@@ -58,7 +58,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
     
     // Calcular valor base para referência
     const baseAmount = getAmount();
-    let finalAmountValue = finalAmount; // ✅ Usar o valor já calculado pelo PreCheckoutModal
+    const finalAmountValue = finalAmount; // ✅ Usar o valor já calculado pelo PreCheckoutModal
     let discountAppliedValue = false;
     
     console.log('🔍 [ZellePaymentFlow] Valores iniciais:', {

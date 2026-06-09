@@ -152,7 +152,7 @@ export async function sendTermAcceptanceNotificationAfterPayment(userId: string,
           const elements: Array<{text: string, type: 'h1' | 'h2' | 'h3' | 'p' | 'strong'}> = [];
           
           // Replace HTML entities first
-          let processedHtml = html
+          const processedHtml = html
             .replace(/&nbsp;/g, ' ')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -264,7 +264,7 @@ export async function sendTermAcceptanceNotificationAfterPayment(userId: string,
         // Fallback to simple text if formatting fails
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
-        let plainTextContent = termData.content
+        const plainTextContent = termData.content
           .replace(/<[^>]*>/g, '')
           .replace(/&nbsp;/g, ' ')
           .replace(/&amp;/g, '&')

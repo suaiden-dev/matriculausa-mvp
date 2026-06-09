@@ -245,19 +245,22 @@ const SelectionProcess: React.FC = () => {
           .select('id')
           .eq('user_id', selectedStudent.user_profiles.user_id)
           .single();
-        
+
         if (profile) {
+          let clientIp: string | undefined;
+          try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000); const r = await fetch('https://api.ipify.org?format=json', { signal: c.signal }); clearTimeout(t); if (r.ok) clientIp = (await r.json())?.ip; } catch (_) {}
           await supabase.rpc('log_student_action', {
             p_student_id: profile.id,
             p_action_type: 'document_approval',
             p_action_description: `Document ${type} approved by university`,
             p_performed_by: user?.id || '',
-            p_performed_by_type: 'university',
+            p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: {
               document_type: type,
               application_id: selectedStudent.id,
               university_name: university?.name || 'University',
-              approved_by: user?.email || 'University Staff'
+              approved_by: user?.email || 'University Staff',
+              ip: clientIp
             }
           });
         }
@@ -369,21 +372,24 @@ const SelectionProcess: React.FC = () => {
           .select('id')
           .eq('user_id', selectedStudent.user_profiles.user_id)
           .single();
-        
+
         if (profile) {
+          let clientIp: string | undefined;
+          try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000); const r = await fetch('https://api.ipify.org?format=json', { signal: c.signal }); clearTimeout(t); if (r.ok) clientIp = (await r.json())?.ip; } catch (_) {}
           await supabase.rpc('log_student_action', {
             p_student_id: profile.id,
             p_action_type: 'document_rejection',
             p_action_description: `Document ${type} rejected by university - changes requested`,
             p_performed_by: user?.id || '',
-            p_performed_by_type: 'university',
+            p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: {
               document_type: type,
               application_id: selectedStudent.id,
               university_name: university?.name || 'University',
               rejected_by: user?.email || 'University Staff',
               rejection_reason: reason || 'Changes requested',
-              changes_requested_at: new Date().toISOString()
+              changes_requested_at: new Date().toISOString(),
+              ip: clientIp
             }
           });
         }
@@ -504,14 +510,16 @@ const SelectionProcess: React.FC = () => {
           .select('id')
           .eq('user_id', selectedStudent.user_profiles.user_id)
           .single();
-        
+
         if (profile) {
+          let clientIp: string | undefined;
+          try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000); const r = await fetch('https://api.ipify.org?format=json', { signal: c.signal }); clearTimeout(t); if (r.ok) clientIp = (await r.json())?.ip; } catch (_) {}
           await supabase.rpc('log_student_action', {
             p_student_id: profile.id,
             p_action_type: 'application_approval',
             p_action_description: `Scholarship application approved by university`,
             p_performed_by: user?.id || '',
-            p_performed_by_type: 'university',
+            p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: {
               application_id: selectedStudent.id,
               scholarship_id: selectedStudent.scholarship_id,
@@ -519,7 +527,8 @@ const SelectionProcess: React.FC = () => {
               university_name: university?.name || 'University',
               approved_by: user?.email || 'University Staff',
               approval_date: new Date().toISOString(),
-              student_name: selectedStudent.user_profiles.full_name
+              student_name: selectedStudent.user_profiles.full_name,
+              ip: clientIp
             }
           });
         }
@@ -658,14 +667,16 @@ const SelectionProcess: React.FC = () => {
           .select('id')
           .eq('user_id', selectedStudent.user_profiles.user_id)
           .single();
-        
+
         if (profile) {
+          let clientIp: string | undefined;
+          try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 2000); const r = await fetch('https://api.ipify.org?format=json', { signal: c.signal }); clearTimeout(t); if (r.ok) clientIp = (await r.json())?.ip; } catch (_) {}
           await supabase.rpc('log_student_action', {
             p_student_id: profile.id,
             p_action_type: 'application_rejection',
             p_action_description: `Scholarship application rejected by university`,
             p_performed_by: user?.id || '',
-            p_performed_by_type: 'university',
+            p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: {
               application_id: selectedStudent.id,
               scholarship_id: selectedStudent.scholarship_id,
@@ -674,7 +685,8 @@ const SelectionProcess: React.FC = () => {
               rejected_by: user?.email || 'University Staff',
               rejection_reason: rejectStudentReason || 'Application rejected',
               rejection_date: new Date().toISOString(),
-              student_name: selectedStudent.user_profiles.full_name
+              student_name: selectedStudent.user_profiles.full_name,
+              ip: clientIp
             }
           });
         }

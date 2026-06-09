@@ -398,5 +398,11 @@
     "completed": "Concluído",
     "waiting_acceptance": "Aguardando Carta de Aceite",
     "loading": "Carregando..."
+  },
+  "bio": {
+    "description": "Seu futuro acadêmico nos Estados Unidos começa aqui. Conecte-se com nossos canais oficiais",
+    "site": "Site Oficial",
+    "quiz": "Saiba se você é elegível a bolsas de estudo nos EUA",
+    "copyright": "© {{year}} Matrícula USA. Todos os direitos reservados."
   }
 }

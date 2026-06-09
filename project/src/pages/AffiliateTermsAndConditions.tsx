@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, FileText, Shield, Users, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, FileText, Shield, Users } from 'lucide-react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
-const TermsAndConditions: React.FC = () => {
+const AffiliateTermsAndConditions: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,7 +22,7 @@ const TermsAndConditions: React.FC = () => {
       const { data, error } = await supabase
         .from('application_terms')
         .select('content')
-        .eq('term_type', 'university_terms')
+        .eq('term_type', 'affiliate_terms')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -36,52 +36,32 @@ const TermsAndConditions: React.FC = () => {
               <svg class="h-5 w-5 mr-2 text-[#05294E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
               </svg>
-              University Partnership Agreement
+              Matrícula USA Affiliate Program Agreement
             </h2>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">1. Platform Partnership</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">1. Affiliate Program Participation</h3>
             <p class="text-gray-600 mb-4">
-              By joining Matrícula USA, your institution agrees to participate in our international student recruitment platform. We provide the technology infrastructure to connect qualified international students with your academic programs.
+              By participating in the Matrícula USA affiliate program, you agree to promote our platform and services to potential students ethically and professionally.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">2. Scholarship Management</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">2. Referral Codes and Links</h3>
             <p class="text-gray-600 mb-4">
-              Institutions may create and manage scholarship opportunities through our platform. All scholarship information must be accurate and up to date. Institutions are responsible for honoring all scholarship commitments published on the platform.
+              You will be provided with a unique referral link and code. You are responsible for the distribution of your referral code. Under no circumstances should you engage in spamming or misleading advertising.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">3. Student Data Protection</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">3. Rewards and Commissions</h3>
             <p class="text-gray-600 mb-4">
-              Student information shared through the Matrícula USA platform is confidential. Institutions must comply with applicable privacy laws and use student data solely for admissions and scholarship evaluation purposes.
+              Affiliates earn Matrícula Coins and/or cash rewards for every successful student enrollment who registers using their referral code. Rewards are subject to verification and approval.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">4. Quality Standards</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">4. Intellectual Property</h3>
             <p class="text-gray-600 mb-4">
-              Partner institutions must maintain valid accreditation and meet the quality standards required by Matrícula USA. We reserve the right to review and approve institutional profiles before they become publicly visible.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">5. Platform Fees</h3>
-            <p class="text-gray-600 mb-4">
-              Institutions may be subject to platform fees based on successful student placements. The fee structure will be communicated separately and confirmed in writing.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">6. Intellectual Property</h3>
-            <p class="text-gray-600 mb-4">
-              Institutions retain ownership of their institutional information and logos. Matrícula USA retains ownership of the platform technology, including the student matching algorithms.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">7. Termination</h3>
-            <p class="text-gray-600 mb-4">
-              Either party may terminate this agreement with 30 (thirty) days written notice. Upon termination, the institution will be removed from the platform, but must honor all existing commitments to students who have already enrolled.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">8. Price Exclusivity</h3>
-            <p class="text-gray-600 mb-4">
-              The partner institution agrees to offer exclusive pricing conditions to the Matrícula USA platform. It is not permitted to advertise or sell scholarships at lower prices outside the platform. Any similar scholarship programs offered elsewhere must be priced at least 20% higher than the scholarship published on Matrícula USA.
+              You are granted a limited, non-exclusive, non-transferable license to use the Matrícula USA logo and promotional assets solely for marketing purposes under this program.
             </p>
             
             <h3 class="text-lg font-semibold text-gray-800 mb-3">Agreement Acceptance</h3>
             <p class="text-gray-600 mb-4">
-              By confirming your participation on the Matrícula USA platform, your institution acknowledges that it has read, understood, and agrees to all the terms above.
+              By confirming your participation as an affiliate, you acknowledge that you have read, understood, and agree to all the terms above.
             </p>
           </div>
         `);
@@ -98,52 +78,32 @@ const TermsAndConditions: React.FC = () => {
               <svg class="h-5 w-5 mr-2 text-[#05294E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
               </svg>
-              University Partnership Agreement
+              Matrícula USA Affiliate Program Agreement
             </h2>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">1. Platform Partnership</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">1. Affiliate Program Participation</h3>
             <p class="text-gray-600 mb-4">
-              By joining Matrícula USA, your institution agrees to participate in our international student recruitment platform. We provide the technology infrastructure to connect qualified international students with your academic programs.
+              By participating in the Matrícula USA affiliate program, you agree to promote our platform and services to potential students ethically and professionally.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">2. Scholarship Management</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">2. Referral Codes and Links</h3>
             <p class="text-gray-600 mb-4">
-              Institutions may create and manage scholarship opportunities through our platform. All scholarship information must be accurate and up to date. Institutions are responsible for honoring all scholarship commitments published on the platform.
+              You will be provided with a unique referral link and code. You are responsible for the distribution of your referral code. Under no circumstances should you engage in spamming or misleading advertising.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">3. Student Data Protection</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">3. Rewards and Commissions</h3>
             <p class="text-gray-600 mb-4">
-              Student information shared through the Matrícula USA platform is confidential. Institutions must comply with applicable privacy laws and use student data solely for admissions and scholarship evaluation purposes.
+              Affiliates earn Matrícula Coins and/or cash rewards for every successful student enrollment who registers using their referral code. Rewards are subject to verification and approval.
             </p>
             
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">4. Quality Standards</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">4. Intellectual Property</h3>
             <p class="text-gray-600 mb-4">
-              Partner institutions must maintain valid accreditation and meet the quality standards required by Matrícula USA. We reserve the right to review and approve institutional profiles before they become publicly visible.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">5. Platform Fees</h3>
-            <p class="text-gray-600 mb-4">
-              Institutions may be subject to platform fees based on successful student placements. The fee structure will be communicated separately and confirmed in writing.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">6. Intellectual Property</h3>
-            <p class="text-gray-600 mb-4">
-              Institutions retain ownership of their institutional information and logos. Matrícula USA retains ownership of the platform technology, including the student matching algorithms.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">7. Termination</h3>
-            <p class="text-gray-600 mb-4">
-              Either party may terminate this agreement with 30 (thirty) days written notice. Upon termination, the institution will be removed from the platform, but must honor all existing commitments to students who have already enrolled.
-            </p>
-            
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">8. Price Exclusivity</h3>
-            <p class="text-gray-600 mb-4">
-              The partner institution agrees to offer exclusive pricing conditions to the Matrícula USA platform. It is not permitted to advertise or sell scholarships at lower prices outside the platform. Any similar scholarship programs offered elsewhere must be priced at least 20% higher than the scholarship published on Matrícula USA.
+              You are granted a limited, non-exclusive, non-transferable license to use the Matrícula USA logo and promotional assets solely for marketing purposes under this program.
             </p>
             
             <h3 class="text-lg font-semibold text-gray-800 mb-3">Agreement Acceptance</h3>
             <p class="text-gray-600 mb-4">
-              By confirming your participation on the Matrícula USA platform, your institution acknowledges that it has read, understood, and agrees to all the terms above.
+              By confirming your participation as an affiliate, you acknowledge that you have read, understood, and agree to all the terms above.
             </p>
           </div>
         `);
@@ -162,7 +122,7 @@ const TermsAndConditions: React.FC = () => {
       return;
     }
 
-    if (user && user.role !== 'school') {
+    if (user && user.role !== 'affiliate') {
       navigate('/');
       return;
     }
@@ -178,24 +138,20 @@ const TermsAndConditions: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data: university, error } = await supabase
-        .from('universities')
-        .select('terms_accepted, profile_completed')
+      const { data: affiliateCode, error } = await supabase
+        .from('affiliate_codes')
+        .select('terms_accepted')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error checking terms:', error);
         return;
       }
 
-      if (university && university.terms_accepted) {
-        // User already accepted terms, redirect to appropriate page
-        if (university.profile_completed) {
-          navigate('/school/dashboard');
-        } else {
-          navigate('/school/setup-profile');
-        }
+      if (affiliateCode && affiliateCode.terms_accepted) {
+        // User already accepted terms, redirect to dashboard
+        navigate('/affiliate/dashboard');
       }
     } catch (error) {
       console.error('Error checking terms acceptance:', error);
@@ -209,13 +165,13 @@ const TermsAndConditions: React.FC = () => {
     setError('');
 
     try {
-      // Record acceptance of university terms
-      const universityTerms = await getLatestActiveTerm('university_terms');
-      if (universityTerms) {
-        await recordTermAcceptance(universityTerms.id, 'university_terms');
+      // Record acceptance of affiliate terms
+      const affiliateTerms = await getLatestActiveTerm('affiliate_terms');
+      if (affiliateTerms) {
+        await recordTermAcceptance(affiliateTerms.id, 'affiliate_terms');
       }
-      
-      // Record acceptance of terms of service and privacy policy
+
+      // Record acceptance of terms of service and privacy policy for completeness
       const termsOfService = await getLatestActiveTerm('terms_of_service');
       const privacyPolicy = await getLatestActiveTerm('privacy_policy');
       
@@ -227,21 +183,21 @@ const TermsAndConditions: React.FC = () => {
         await recordTermAcceptance(privacyPolicy.id, 'privacy_policy');
       }
 
-      // Check if university record exists
-      const { data: existingUniversity, error: checkError } = await supabase
-        .from('universities')
-        .select('id, terms_accepted, profile_completed')
+      // Check if affiliate record exists
+      const { data: existingCode, error: checkError } = await supabase
+        .from('affiliate_codes')
+        .select('id, terms_accepted')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw checkError;
       }
 
-      if (existingUniversity) {
+      if (existingCode) {
         // Update existing record to accept terms
         const { error: updateError } = await supabase
-          .from('universities')
+          .from('affiliate_codes')
           .update({ 
             terms_accepted: true,
             updated_at: new Date().toISOString()
@@ -249,32 +205,28 @@ const TermsAndConditions: React.FC = () => {
           .eq('user_id', user.id);
 
         if (updateError) throw updateError;
-
-        // Redirect based on profile completion status
-        if (existingUniversity.profile_completed) {
-          navigate('/school/dashboard');
-        } else {
-          navigate('/school/setup-profile');
-        }
       } else {
-        // Create new university record if it doesn't exist
-        const { error: insertError } = await supabase
-          .from('universities')
-          .insert({
-            name: user.name || 'New University', // Temporary name
-            user_id: user.id,
+        // Create new affiliate code record if it doesn't exist
+        // Call RPC function to generate unique code for the user
+        const { error: rpcError } = await supabase
+          .rpc('create_affiliate_code_for_user', { user_id_param: user.id });
+
+        if (rpcError) throw rpcError;
+
+        // Update terms_accepted on the newly created record
+        const { error: updateError } = await supabase
+          .from('affiliate_codes')
+          .update({ 
             terms_accepted: true,
-            profile_completed: false,
-            is_approved: false,
-            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          });
+          })
+          .eq('user_id', user.id);
 
-        if (insertError) throw insertError;
-
-        // Redirect to profile setup
-        navigate('/school/setup-profile');
+        if (updateError) throw updateError;
       }
+
+      // Redirect to affiliate dashboard
+      navigate('/affiliate/dashboard');
     } catch (error: any) {
       console.error('Error accepting terms:', error);
       setError(`Error accepting terms: ${error.message}. Please try again.`);
@@ -306,14 +258,14 @@ const TermsAndConditions: React.FC = () => {
         <div className="text-center mb-6">
           <div className="inline-flex items-center bg-[#05294E] rounded-full px-6 py-2 mb-4">
             <FileText className="h-5 w-5 mr-2 text-white" />
-            <span className="text-sm font-medium text-white">Partnership Agreement</span>
+            <span className="text-sm font-medium text-white">Affiliate Agreement</span>
           </div>
           
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
             Terms and Conditions
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Please review and accept our terms to become a partner university on Matrícula USA platform.
+            Please review and accept our terms to become a partner affiliate on Matrícula USA platform.
           </p>
         </div>
 
@@ -329,7 +281,7 @@ const TermsAndConditions: React.FC = () => {
 
         {/* Terms Content */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-8 max-h-96 overflow-y-auto">
+          <div className="p-8 max-h-[400px] md:max-h-[480px] overflow-y-auto">
             {loadingTerms ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
@@ -356,7 +308,7 @@ const TermsAndConditions: React.FC = () => {
                 />
               </div>
               <label htmlFor="terms-acceptance" className="text-sm text-gray-700 leading-relaxed">
-                I have read and agree to the Terms and Conditions. I confirm that I am authorized to bind my institution to this agreement and that all information provided will be accurate and up-to-date.
+                I have read and agree to the Affiliate Terms and Conditions. I confirm that I agree to abide by the program rules and that all information provided will be accurate.
               </label>
             </div>
 
@@ -364,15 +316,15 @@ const TermsAndConditions: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="flex items-center text-sm text-gray-600">
                 <Users className="h-4 w-4 mr-2 text-green-600" />
-                Access to qualified international students
+                Earn rewards for referrals
               </div>
               <div className="flex items-center text-sm text-gray-600">
                 <Shield className="h-4 w-4 mr-2 text-blue-600" />
-                Secure platform and data protection
+                Secure platform and tracking
               </div>
               <div className="flex items-center text-sm text-gray-600">
                 <CheckCircle className="h-4 w-4 mr-2 text-[#05294E]" />
-                AI-powered student matching
+                Real-time dashboard analytics
               </div>
             </div>
 
@@ -400,7 +352,7 @@ const TermsAndConditions: React.FC = () => {
               </button>
               
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/')}
                 disabled={loading}
                 className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
@@ -411,7 +363,7 @@ const TermsAndConditions: React.FC = () => {
             {!accepted && (
               <div className="mt-4 flex items-center text-xs text-amber-600">
                 <AlertCircle className="h-4 w-4 mr-1" />
-                Please read and accept the terms to continue with your university registration.
+                Please read and accept the terms to continue.
               </div>
             )}
           </div>
@@ -421,4 +373,4 @@ const TermsAndConditions: React.FC = () => {
   );
 };
 
-export default TermsAndConditions;
+export default AffiliateTermsAndConditions;

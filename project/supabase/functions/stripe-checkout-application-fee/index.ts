@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import Stripe from "npm:stripe";
+import { createClient } from "npm:@supabase/supabase-js";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,

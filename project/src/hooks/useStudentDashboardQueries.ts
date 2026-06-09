@@ -591,6 +591,7 @@ export function useAffiliateReferralsQuery(userId?: string) {
         .from('affiliate_referrals')
         .select(`
           *,
+          commission_amount,
           referred_student_status,
           selection_process_paid_at,
           application_fee_paid_at,
@@ -679,7 +680,7 @@ export function useMatriculacoinTransactionsQuery(userId?: string) {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(20);
 
       if (error) {
         console.error('Erro ao buscar transações:', error);

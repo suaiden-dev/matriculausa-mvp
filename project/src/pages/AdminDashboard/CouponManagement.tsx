@@ -270,7 +270,7 @@ const CouponManagement: React.FC = () => {
       // Buscar informações dos usuários em lote
       const userIds = [...new Set((usageData || []).map((item: any) => item.user_id))];
       
-      let userProfilesMap: Record<string, { email: string; full_name: string }> = {};
+      const userProfilesMap: Record<string, { email: string; full_name: string }> = {};
       
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
@@ -294,7 +294,7 @@ const CouponManagement: React.FC = () => {
         .map((item: any) => item.individual_fee_payment_id)
         .filter((id: string | null) => id !== null && id !== undefined))];
       
-      let individualFeePaymentsByIdMap: Record<string, { gross_amount_usd: number | null; amount: number }> = {};
+      const individualFeePaymentsByIdMap: Record<string, { gross_amount_usd: number | null; amount: number }> = {};
       
       if (individualFeePaymentIds.length > 0) {
         const { data: feePayments, error: feePaymentsError } = await supabase

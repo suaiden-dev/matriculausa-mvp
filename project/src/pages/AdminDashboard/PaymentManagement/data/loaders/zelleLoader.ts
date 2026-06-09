@@ -27,7 +27,7 @@ export async function loadZellePaymentsLoader(
     : await query;
   if (zelleError) throw zelleError;
 
-  let records: PaymentRecord[] = [];
+  const records: PaymentRecord[] = [];
 
   // Processar registros e aplicar filtro
   if (zellePaymentsData.length > 0) {
