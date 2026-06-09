@@ -78,6 +78,7 @@ const AgencyPendingApproval = React.lazy(() => import('./pages/AgencyPendingAppr
 const SellerAcceptInvite = React.lazy(() => import('./pages/SellerAcceptInvite'));
 const AgencyTermsAndConditions = React.lazy(() => import('./pages/AgencyTermsAndConditions'));
 const AffiliateTermsAndConditions = React.lazy(() => import('./pages/AffiliateTermsAndConditions'));
+const BioPage = React.lazy(() => import('./pages/Bio'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -223,6 +224,9 @@ const AppContent = () => {
 
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+
+          {/* Bio Links Tree Route */}
+          <Route path="/bio" element={<BioPage />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />

@@ -397,5 +397,11 @@
     "completed": "Completed",
     "waiting_acceptance": "Waiting for Acceptance Letter",
     "loading": "Loading..."
+  },
+  "bio": {
+    "description": "Your academic future in the United States starts here. Connect with our official channels",
+    "site": "Official Website",
+    "quiz": "Find out if you are eligible for US scholarships",
+    "copyright": "© {{year}} Matrícula USA. All rights reserved."
   }
 }
