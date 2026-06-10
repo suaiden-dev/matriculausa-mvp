@@ -63,6 +63,7 @@ export interface StudentRecord {
   has_sent_docs_to_university?: boolean;
   sevis_transfer_completed?: boolean;
   visa_approved?: boolean;
+  scholarship_level?: string | null;
   // Doc aggregation (populated by useStudentDocsQuery)
   docs_total_required?: number;
   docs_total_uploaded?: number;
@@ -155,6 +156,7 @@ export function useStudentsQuery() {
                   title,
                   field_of_study,
                   university_id,
+                  level,
                   placement_fee_amount,
                   application_fee_amount,
                   scholarship_fee_amount,
@@ -190,14 +192,16 @@ export function useStudentsQuery() {
       const affiliateProfiles = affiliateProfilesResult.data || [];
 
       // Mapear administradores de agência para nome exibível e e-mail
-      const adminNamesMap = new Map(
-        affiliateProfiles.map((p: any) => [p.user_id, p.full_name]) || [],
+      const adminNamesMap = new Map<string, string>(
+        affiliateProfiles.map((p: any) => [p.user_id, p.full_name] as [string, string])
       );
-      const adminCompanyMap = new Map(
-        affiliateProfiles.map((p: any) => [p.user_id, p.company_name]).filter(([, v]) => v) || [],
+      const adminCompanyMap = new Map<string, string>(
+        affiliateProfiles
+          .filter((p: any) => p.company_name)
+          .map((p: any) => [p.user_id, p.company_name] as [string, string])
       );
-      const adminEmailsMap = new Map(
-        affiliateProfiles.map((p: any) => [p.user_id, p.email]) || [],
+      const adminEmailsMap = new Map<string, string>(
+        affiliateProfiles.map((p: any) => [p.user_id, p.email] as [string, string])
       );
       const agencyMap = new Map<string, string>();
       const agencyEmailMap = new Map<string, string>();
@@ -469,6 +473,7 @@ export function useStudentsQuery() {
           has_submitted_form: student.selection_survey_passed === true,
           documents_uploaded: student.documents_uploaded || false,
           selected_scholarship_id: student.selected_scholarship_id || null,
+          scholarship_level: lockedApplication?.scholarships?.level || null,
           basic_docs_total_required: basicDocsRequired,
           basic_docs_total_uploaded: basicDocsUploaded,
           basic_docs_total_approved: basicDocsApproved,
@@ -867,7 +872,7 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         supabase
           .from("document_requests")
           .select(
-            "id, title, university_id, applicable_student_types, scholarship_application_id",
+            "id, title, university_id, applicable_student_types, scholarship_application_id, applicable_scholarship_levels",
           )
           .eq("is_global", true)
           .eq("status", "open"),
@@ -875,7 +880,7 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           ? supabase
             .from("document_requests")
             .select(
-              "id, title, university_id, applicable_student_types, scholarship_application_id",
+              "id, title, university_id, applicable_student_types, scholarship_application_id, applicable_scholarship_levels",
             )
             .in("scholarship_application_id", appIds)
             .eq("status", "open")
@@ -925,6 +930,7 @@ export function useStudentDocsStats(students: StudentRecord[]) {
         if (!student.user_id) continue;
 
         const processType = student.student_process_type;
+        const scholarshipLevel = student.scholarship_level;
         const rawRequiredDocs = Array.from(allDocsMap.values()).filter((dr) => {
           // App-specific doc linked to this student's application
           if (dr.scholarship_application_id) {
@@ -934,6 +940,15 @@ export function useStudentDocsStats(students: StudentRecord[]) {
           if (dr.university_id && dr.university_id !== student.university_id) {
             return false;
           }
+
+          // Filter by scholarship level if applicable
+          const levels: string[] = dr.applicable_scholarship_levels || [];
+          if (levels.length > 0) {
+            if (scholarshipLevel && !levels.includes(scholarshipLevel)) {
+              return false;
+            }
+          }
+
           const types: string[] = dr.applicable_student_types || [];
           return types.includes("all") ||
             (processType ? types.includes(processType) : false);

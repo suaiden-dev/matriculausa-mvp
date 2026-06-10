@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import Stripe from "npm:stripe@17.7.0";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,
@@ -30,6 +30,41 @@ function corsResponse(body: string | object | null, status = 200) {
     status,
     headers,
   });
+}
+
+function computeInstallmentAmounts(total: number, n: number): number[] {
+  const base = Math.floor((total / n) * 100) / 100;
+  const amounts = Array(n).fill(base);
+  amounts[n - 1] = Math.round((total - base * (n - 1)) * 100) / 100;
+  return amounts;
+}
+
+async function resolveCheckoutAmount(userId: string, feeType: string, requestedAmount: number) {
+  if (feeType !== "ds160_package" && feeType !== "i539_cos_package") {
+    return { finalAmount: requestedAmount, plan: null, installmentNumber: null, totalInstallments: null };
+  }
+
+  const { data: plan, error } = await supabase
+    .from("fee_installment_plans")
+    .select("id, total_amount, total_installments, installments_paid, amount_paid, status")
+    .eq("user_id", userId)
+    .eq("fee_type", feeType)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[stripe-checkout-package-fee] Could not fetch active installment plan:", error.message);
+  }
+
+  if (!plan || Number(plan.installments_paid) >= Number(plan.total_installments)) {
+    return { finalAmount: requestedAmount, plan: null, installmentNumber: null, totalInstallments: null };
+  }
+
+  const installmentNumber = Number(plan.installments_paid) + 1;
+  const totalInstallments = Number(plan.total_installments);
+  const finalAmount = computeInstallmentAmounts(Number(plan.total_amount), totalInstallments)[installmentNumber - 1];
+
+  return { finalAmount, plan, installmentNumber, totalInstallments };
 }
 
 Deno.serve(async (req: Request) => {
@@ -156,13 +191,24 @@ Deno.serve(async (req: Request) => {
     // Priorizar metadata.final_amount (valor com desconto de cupom calculado no frontend)
     // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
     const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
-    let finalAmount = hasFinalAmountFromMetadata
+    const requestedAmount = hasFinalAmountFromMetadata
       ? parseFloat(metadata.final_amount)
       : originalAmount;
+    const {
+      finalAmount: resolvedFinalAmount,
+      plan: activeInstallmentPlan,
+      installmentNumber,
+      totalInstallments,
+    } = await resolveCheckoutAmount(user.id, fee_type, requestedAmount);
+    let finalAmount = resolvedFinalAmount;
 
     console.log("[stripe-checkout-package-fee] 💰 Valor base para cálculo:", {
       fromMetadata: hasFinalAmountFromMetadata,
+      requestedAmount,
       finalAmount,
+      activeInstallmentPlanId: activeInstallmentPlan?.id,
+      installmentNumber,
+      totalInstallments,
       originalAmount,
     });
 
@@ -182,10 +228,17 @@ Deno.serve(async (req: Request) => {
     }
 
     // Adicionar valores base e gross ao metadata
+    sessionMetadata.final_amount = finalAmount.toString();
     sessionMetadata.base_amount = finalAmount.toString();
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
     sessionMetadata.fee_amount = ((grossAmountInCents / 100) - finalAmount).toString();
     sessionMetadata.markup_enabled = "true";
+    if (activeInstallmentPlan) {
+      sessionMetadata.is_installment = "true";
+      sessionMetadata.installment_plan_id = activeInstallmentPlan.id;
+      sessionMetadata.installment_number = String(installmentNumber);
+      sessionMetadata.total_installments = String(totalInstallments);
+    }
 
     sessionConfig.line_items = [
       {

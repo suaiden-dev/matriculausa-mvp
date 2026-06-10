@@ -3,6 +3,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan } from '../utils/installmentHelper.ts';
 
 // @ts-ignore
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
@@ -79,6 +80,20 @@ Deno.serve(async (req: Request) => {
         return corsResponse({ error: 'fee_type inválido no metadata da sessão.' }, 400);
       }
 
+      const { data: existingLog } = await supabase.from('student_action_logs')
+        .select('id')
+        .in('action_type', ['checkout_session_processed', 'fee_payment'])
+        .eq('metadata->>session_id', sessionId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingLog) {
+        return corsResponse({
+          status: 'complete',
+          message: 'Session already processed.',
+        }, 200);
+      }
+
       // Detalhes do pagamento
       let paymentIntentId = '';
       if (typeof session.payment_intent === 'string') {
@@ -90,26 +105,9 @@ Deno.serve(async (req: Request) => {
       const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
       const paymentMethod = isPix ? 'pix' : 'stripe';
       const amountValue = session.amount_total ? session.amount_total / 100 : 0;
+      const paymentDate = new Date().toISOString();
       
       console.log(`[Package Fee Verified] ${fee_type} paid by ${userId}. Method: ${paymentMethod}, Amount: ${amountValue}`);
-
-      // 1. Atualizar user_profiles
-      const updateData: any = {};
-      if (fee_type === 'ds160_package') {
-        updateData.has_paid_ds160_package = true;
-        updateData.ds160_package_payment_method = paymentMethod;
-      } else if (fee_type === 'i539_cos_package') {
-        updateData.has_paid_i539_cos_package = true;
-        updateData.i539_cos_package_payment_method = paymentMethod;
-      } else if (fee_type === 'reinstatement_package') {
-        updateData.has_paid_reinstatement_package = true;
-        updateData.reinstatement_package_payment_method = paymentMethod;
-      }
-
-      const { error: profileError } = await supabase.from('user_profiles').update(updateData).eq('user_id', userId);
-      if (profileError) {
-        console.warn(`[Package Fee Verified] Warning: Failed to update user_profiles (might lack columns): ${profileError.message}`);
-      }
 
       // 2. Registrar pagamento na individual_fee_payments
       // Buscar o valor líquido real (USD) do Stripe Balance API para garantir precisão universal
@@ -156,12 +154,49 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      let installmentNumber = 1;
+      let plan = null;
+      let isFullyPaid = true;
+
+      if (fee_type === 'ds160_package' || fee_type === 'i539_cos_package') {
+        const resolved = await resolveInstallmentNumber(
+          supabase,
+          userId,
+          fee_type,
+          session.metadata?.installment_number,
+        );
+        installmentNumber = resolved.installmentNumber;
+        plan = resolved.plan;
+
+        if (plan) {
+          const result = await recordInstallmentPayment(supabase, plan, paymentAmountUSD, paymentDate);
+          isFullyPaid = result.isFullyPaid;
+        }
+      }
+
+      const updateData: any = {};
+      if (fee_type === 'ds160_package') {
+        updateData.has_paid_ds160_package = isFullyPaid;
+        updateData.ds160_package_payment_method = paymentMethod;
+      } else if (fee_type === 'i539_cos_package') {
+        updateData.has_paid_i539_cos_package = isFullyPaid;
+        updateData.i539_cos_package_payment_method = paymentMethod;
+      } else if (fee_type === 'reinstatement_package') {
+        updateData.has_paid_reinstatement_package = true;
+        updateData.reinstatement_package_payment_method = paymentMethod;
+      }
+
+      const { error: profileError } = await supabase.from('user_profiles').update(updateData).eq('user_id', userId);
+      if (profileError) {
+        console.warn(`[Package Fee Verified] Warning: Failed to update user_profiles (might lack columns): ${profileError.message}`);
+      }
+
       try {
-        await supabase.rpc('insert_individual_fee_payment', {
+        const { data: indivPayment } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: fee_type,
           p_amount: paymentAmountUSD,
-          p_payment_date: new Date().toISOString(),
+          p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,
           p_stripe_charge_id: null,
@@ -169,6 +204,13 @@ Deno.serve(async (req: Request) => {
           p_gross_amount_usd: grossAmountUsd || (session.metadata?.gross_amount ? parseFloat(session.metadata.gross_amount) : null),
           p_fee_amount_usd: feeAmountUsd || (session.metadata?.fee_amount ? parseFloat(session.metadata.fee_amount) : null)
         });
+
+        if (plan && indivPayment) {
+          const paymentId = indivPayment && typeof indivPayment === 'object'
+            ? (indivPayment.id || indivPayment)
+            : indivPayment;
+          await linkPaymentToPlan(supabase, paymentId, plan.id);
+        }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record payment:', recordError);
       }
@@ -199,7 +241,9 @@ Deno.serve(async (req: Request) => {
           await supabase.rpc('log_student_action', {
             p_student_id: userProfile.id,
             p_action_type: 'fee_payment',
-            p_action_description: `${fee_type} payment verified via Stripe`,
+            p_action_description: plan
+              ? `${fee_type} installment ${installmentNumber} of ${plan.total_installments} verified via Stripe`
+              : `${fee_type} payment verified via Stripe`,
             p_performed_by: userId,
             p_performed_by_type: 'student',
             p_metadata: {
@@ -207,7 +251,11 @@ Deno.serve(async (req: Request) => {
               payment_method: paymentMethod,
               amount: amountValue,
               session_id: sessionId,
-              payment_intent_id: paymentIntentId
+              payment_intent_id: paymentIntentId,
+              installment_plan_id: plan?.id,
+              installment_number: plan ? installmentNumber : undefined,
+              total_installments: plan?.total_installments,
+              is_fully_paid: isFullyPaid
             }
           });
         }

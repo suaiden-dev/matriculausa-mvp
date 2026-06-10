@@ -29,6 +29,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   const markVisaMutation = useMarkVisaApprovedMutation();
   const skipTransferFormMutation = useSkipTransferFormMutation();
   const { userProfile } = useAuth();
+  const userRole = userProfile?.role as any;
   const { logAction } = useStudentLogs(student.student_id);
 
   // Lógica de Débito Proativa (Cenário 2 - Avanço indevido de taxas)
@@ -228,7 +229,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'student_restored',
           'Student was restored to the process',
           userProfile?.user_id || '',
-          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
+          userRole === 'school_manager' ? 'school_manager' : userRole === 'school' || userRole === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             admin_name: userProfile?.full_name 
@@ -259,7 +260,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'student_dropped',
           `Student was marked as dropped: ${reason}`,
           userProfile?.user_id || '',
-          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
+          userRole === 'school_manager' ? 'school_manager' : userRole === 'school' || userRole === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             reason,
@@ -288,7 +289,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'docs_sent_to_university',
           'Documents were marked as sent to the university',
           userProfile?.user_id || '',
-          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
+          userRole === 'school_manager' ? 'school_manager' : userRole === 'school' || userRole === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
@@ -316,7 +317,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'sevis_transfer_completed',
           'SEVIS transfer was marked as completed',
           userProfile?.user_id || '',
-          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
+          userRole === 'school_manager' ? 'school_manager' : userRole === 'school' || userRole === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
@@ -345,7 +346,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           'visa_approved',
           'Visa was marked as approved',
           userProfile?.user_id || '',
-          userProfile?.role === 'school_manager' ? 'school_manager' : userProfile?.role === 'school' || userProfile?.role === 'university' ? 'university' : 'admin',
+          userRole === 'school_manager' ? 'school_manager' : userRole === 'school' || userRole === 'university' ? 'university' : 'admin',
           { 
             source: 'kanban_card',
             application_id: student.application_id,
@@ -482,20 +483,23 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <UserX className="w-3.5 h-3.5" />
           </button>
         ) : (
-          <button
-            onClick={handleToggleDrop}
-            title={student.is_dropped ? 'Restore student' : 'Mark as dropped'}
-            className={`flex-shrink-0 p-1 rounded transition-colors ${
-              student.is_dropped
-                ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
-                : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
-            }`}
-          >
-            {student.is_dropped
-              ? <RotateCcw className="w-3.5 h-3.5" />
-              : <UserX className="w-3.5 h-3.5" />
-            }
-          </button>
+          // Oculta o botão se for um usuário de universidade/escola e o aluno estiver dropado (remover opção de restore)
+          !(student.is_dropped && (userRole === 'school' || userRole === 'school_manager' || userRole === 'university')) && (
+            <button
+              onClick={handleToggleDrop}
+              title={student.is_dropped ? 'Restore student' : 'Mark as dropped'}
+              className={`flex-shrink-0 p-1 rounded transition-colors ${
+                student.is_dropped
+                  ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50'
+                  : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+              }`}
+            >
+              {student.is_dropped
+                ? <RotateCcw className="w-3.5 h-3.5" />
+                : <UserX className="w-3.5 h-3.5" />
+              }
+            </button>
+          )
         )}
       </div>
 

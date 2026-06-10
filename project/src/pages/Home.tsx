@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Star, ChevronRight, Clock, Gift, Building, Lock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
-import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
 import { useUniversityLogos } from '../hooks/useUniversityLogos';
 import SEOHead from '../components/SEO/SEOHead';
@@ -17,7 +16,6 @@ const Home: React.FC = () => {
   const { t } = useTranslationWithFees(['home', 'dashboard', 'common', 'school']);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isBlocked, pendingPayment } = usePaymentBlocked();
   const { universities: partnerUniversities, loading: partnersLoading } = useUniversityLogos();
   const { isAuthenticated, user, userProfile } = useAuth();
   const { width = 0 } = useWindowSize();
@@ -109,8 +107,7 @@ const Home: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [width]);
 
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
+
 
   // Lógica de Autoplay para o carrossel estático
   useEffect(() => {
@@ -196,26 +193,12 @@ const Home: React.FC = () => {
                   ) : (
                     <>
                       {user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee ? (
-                        hasPendingSelectionProcessPayment ? (
-                          <div className="group bg-amber-500/20 backdrop-blur-md border-2 border-amber-500/40 rounded-xl p-4.5 flex flex-col items-center sm:items-start">
-                            <div className="flex items-center mb-1.5">
-                              <Clock className="h-5 w-5 text-amber-400 mr-2 animate-spin" />
-                              <span className="text-lg font-bold text-white">
-                                {t('nav.processingZellePayment')}
-                              </span>
-                            </div>
-                            <p className="text-xs text-amber-100">
-                              {t('nav.zellePaymentPending')}
-                            </p>
-                          </div>
-                        ) : (
-                          <Link
-                            to="/student/onboarding?step=selection_fee"
-                            className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
-                          >
-                            {t('nav.startSelectionProcess')}
-                          </Link>
-                        )
+                        <Link
+                          to="/student/onboarding?step=selection_fee"
+                          className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl text-lg font-bold transition-all duration-300 shadow-2xl flex items-center justify-center border-0"
+                        >
+                          {t('nav.startSelectionProcess')}
+                        </Link>
                       ) : (
                         <Link
                           to={getDashboardPath()}

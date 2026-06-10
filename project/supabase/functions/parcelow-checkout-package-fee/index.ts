@@ -29,6 +29,41 @@ function corsResponse(body: any, status = 200) {
   });
 }
 
+function computeInstallmentAmounts(total: number, n: number): number[] {
+  const base = Math.floor((total / n) * 100) / 100;
+  const amounts = Array(n).fill(base);
+  amounts[n - 1] = Math.round((total - base * (n - 1)) * 100) / 100;
+  return amounts;
+}
+
+async function resolveCheckoutAmount(userId: string, feeType: string, requestedAmount: number) {
+  if (feeType !== "ds160_package" && feeType !== "i539_cos_package") {
+    return { finalAmount: requestedAmount, plan: null, installmentNumber: null, totalInstallments: null };
+  }
+
+  const { data: plan, error } = await supabase
+    .from("fee_installment_plans")
+    .select("id, total_amount, total_installments, installments_paid, amount_paid, status")
+    .eq("user_id", userId)
+    .eq("fee_type", feeType)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[parcelow-checkout-package-fee] Could not fetch active installment plan:", error.message);
+  }
+
+  if (!plan || Number(plan.installments_paid) >= Number(plan.total_installments)) {
+    return { finalAmount: requestedAmount, plan: null, installmentNumber: null, totalInstallments: null };
+  }
+
+  const installmentNumber = Number(plan.installments_paid) + 1;
+  const totalInstallments = Number(plan.total_installments);
+  const finalAmount = computeInstallmentAmounts(Number(plan.total_amount), totalInstallments)[installmentNumber - 1];
+
+  return { finalAmount, plan, installmentNumber, totalInstallments };
+}
+
 Deno.serve(async (req: Request) => {
   try {
     console.log("[parcelow-checkout-package-fee] 🚀 Iniciando função");
@@ -78,13 +113,23 @@ Deno.serve(async (req: Request) => {
     // Priorizar metadata.final_amount (valor com desconto de cupom calculado no frontend)
     // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
     const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
-    const finalAmount = hasFinalAmountFromMetadata
+    const requestedAmount = hasFinalAmountFromMetadata
       ? parseFloat(metadata.final_amount)
       : (amount || 1800);
+    const {
+      finalAmount,
+      plan: activeInstallmentPlan,
+      installmentNumber,
+      totalInstallments,
+    } = await resolveCheckoutAmount(user.id, fee_type, requestedAmount);
 
     console.log("[parcelow-checkout-package-fee] 💰 Valor final:", {
       fromMetadata: hasFinalAmountFromMetadata,
+      requestedAmount,
       finalAmount,
+      activeInstallmentPlanId: activeInstallmentPlan?.id,
+      installmentNumber,
+      totalInstallments,
       originalAmount: amount,
     });
 
@@ -195,6 +240,13 @@ Deno.serve(async (req: Request) => {
         fee_type: fee_type,
         timestamp: Date.now().toString(),
         ...(metadata || {}),
+        final_amount: finalAmount.toString(),
+        ...(activeInstallmentPlan && {
+          is_installment: "true",
+          installment_plan_id: activeInstallmentPlan.id,
+          installment_number: String(installmentNumber),
+          total_installments: String(totalInstallments),
+        }),
       },
     };
 

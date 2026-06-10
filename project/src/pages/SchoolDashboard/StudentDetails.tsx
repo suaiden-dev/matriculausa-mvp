@@ -2420,7 +2420,7 @@ const StudentDetails: React.FC = () => {
                                 {/* Botões posicionados abaixo das informações */}
                                 <div className="flex items-center space-x-2 mt-3">
                                   {/* Botões de ação para documentos Under Review */}
-                                  {d?.file_url && status !== 'approved' && status !== 'rejected' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                  {d?.file_url && status !== 'approved' && status !== 'rejected' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && application.status !== 'rejected' && (
                                     <div className="flex items-center space-x-2 mr-3">
                                       <button
                                         onClick={() => d && approveDoc(d.type)}
@@ -2474,7 +2474,7 @@ const StudentDetails: React.FC = () => {
                   </div>
 
                   {/* Application Decision Section - Integrated into bottom right */}
-                  {(application.status !== 'enrolled' && application.status !== 'approved' && application.acceptance_letter_status !== 'approved') && (
+                  {(application.status !== 'enrolled' && application.status !== 'approved' && application.acceptance_letter_status !== 'approved' && application.status !== 'rejected') && (
                     <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-4">
                       <button
                         onClick={() => setShowRejectStudentModal(true)}
@@ -2666,7 +2666,7 @@ const StudentDetails: React.FC = () => {
                                       >
                                         View
                                       </button>
-                                      {request.uploads[0].status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                      {request.uploads[0].status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && application.status !== 'rejected' && (
                                         <>
                                           <button
                                             onClick={() => handleApproveDocument(request.uploads[0].id)}

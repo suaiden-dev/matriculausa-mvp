@@ -346,7 +346,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         onNext();
     }, [onNext]);
 
-    const handleSkip = useCallback(async () => {
+    const handleSkip = useCallback(async (surveyProcessType: 'initial' | 'cos' = 'initial') => {
         if (!isLocalhost) return;
 
         setIsSaving(true);
@@ -361,8 +361,13 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             if (!newAnswers[2] && (userProfile?.email || user?.email)) newAnswers[2] = userProfile?.email || user?.email || '';
             if (!newAnswers[3] && userProfile?.phone) newAnswers[3] = userProfile.phone;
             
-            // Garantir tipo de processo como 'initial' (Q5)
-            if (!newAnswers[5]) newAnswers[5] = 'initial';
+            // Garantir tipo de processo (Q5). "cos" vira "change_of_status" no submit.
+            newAnswers[5] = surveyProcessType;
+            if (surveyProcessType === 'cos') {
+                newAnswers[5.2] = newAnswers[5.2] || 'F-1';
+                newAnswers[5.3] = newAnswers[5.3] || 'Auto-filled for localhost package fee testing';
+                newAnswers[5.4] = newAnswers[5.4] || new Date().toISOString().slice(0, 10);
+            }
 
             // 2. Preencher questões 'scored' com ~90% de acerto
             const scoredQuestions = questions.filter(q => q.scored && q.options);
@@ -421,15 +426,26 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                     </p>
                 </div>
                 {isLocalhost && (
-                    <Button
-                        variant="ghost"
-                        onClick={handleSkip}
-                        disabled={isSaving}
-                        className="w-full sm:w-auto h-12 px-6 rounded-xl text-slate-500 font-bold bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-all border border-slate-200 hover:border-slate-300 shadow-sm"
-                    >
-                        <FastForward className="w-4 h-4 mr-2" />
-                        Pular (Dev)
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Button
+                            variant="ghost"
+                            onClick={() => handleSkip('initial')}
+                            disabled={isSaving}
+                            className="w-full sm:w-auto h-12 px-6 rounded-xl text-slate-500 font-bold bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-all border border-slate-200 hover:border-slate-300 shadow-sm"
+                        >
+                            <FastForward className="w-4 h-4 mr-2" />
+                            Pular Initial (Dev)
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => handleSkip('cos')}
+                            disabled={isSaving}
+                            className="w-full sm:w-auto h-12 px-6 rounded-xl text-slate-500 font-bold bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-all border border-slate-200 hover:border-slate-300 shadow-sm"
+                        >
+                            <FastForward className="w-4 h-4 mr-2" />
+                            Pular COS (Dev)
+                        </Button>
+                    </div>
                 )}
             </div>
 

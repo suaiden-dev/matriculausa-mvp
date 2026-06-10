@@ -57,11 +57,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   const [codeApplied, setCodeApplied] = useState(false);
 
-  // Parcelow CPF inline
-  const [showInlineCpf, setShowInlineCpf] = useState(false);
-  const [inlineCpf, setInlineCpf] = useState('');
-  const [savingCpf, setSavingCpf] = useState(false);
-  const [cpfError, setCpfError] = useState<string | null>(null);
+  // Parcelow payer information
   const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
 
   // Promotional coupon
@@ -517,38 +513,11 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     localStorage.removeItem('__promotional_coupon_selection_process');
   };
 
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    return digits.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  };
-
-  const saveCpfAndCheckout = async () => {
-    const cleaned = inlineCpf.replace(/\D/g, '');
-    if (cleaned.length !== 11) { setCpfError('CPF inválido. Digite os 11 dígitos.'); return; }
-    if (!user?.id) return;
-    setSavingCpf(true);
-    setCpfError(null);
-    try {
-      const { error } = await supabase.from('user_profiles').update({ cpf_document: cleaned }).eq('user_id', user.id);
-      if (error) throw error;
-      await refetchUserProfile();
-      setShowInlineCpf(false);
-      setInlineCpf('');
-      handleCheckout('parcelow');
-    } catch (err: any) {
-      setCpfError('Erro ao salvar CPF. Tente novamente.');
-    } finally {
-      setSavingCpf(false);
-    }
-  };
-
   const handleCheckout = async (paymentMethod: PaymentMethod) => {
-    if (paymentMethod === 'parcelow' && !userProfile?.cpf_document) {
-      setShowInlineCpf(true);
+    const hasParcelowCpf = !!userProfile?.cpf_document || !!payerInfo?.cpf?.replace(/\D/g, '');
+    if (paymentMethod === 'parcelow' && !hasParcelowCpf) {
       setSelectedMethod('parcelow');
       return;
-    } else {
-      setShowInlineCpf(false);
     }
 
     setLoading(true);
@@ -643,8 +612,6 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     exchangeRate, discountCode, setDiscountCode, isValidating, validationResult, setValidationResult,
     hasReferralCode, setHasReferralCode, showCodeStep, setShowCodeStep,
     showCpfModal, setShowCpfModal, codeApplied, setCodeApplied,
-    showInlineCpf, setShowInlineCpf, inlineCpf, setInlineCpf,
-    savingCpf, cpfError, setCpfError,
     payerInfo, setPayerInfo,
     promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon,
     promotionalCouponValidation, setPromotionalCouponValidation,
@@ -658,7 +625,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     // Functions
     handleCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
-    saveCpfAndCheckout, formatCpf, onNext, refetchUserProfile,
+    onNext, refetchUserProfile,
     setError,
   };
 };

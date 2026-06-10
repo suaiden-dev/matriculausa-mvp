@@ -1662,44 +1662,60 @@ Deno.serve(async (req: Request) => {
           break;
 
         case "ds160_package":
-          console.log("[parcelow-webhook] 🔄 Processando ds160_package...");
-
-          const { error: ds160UpdateError } = await supabase
-            .from("user_profiles")
-            .update({
-              has_paid_ds160_package: true,
-              ds160_package_payment_method: "parcelow",
-            })
-            .eq("user_id", userId);
-
-          if (ds160UpdateError) {
-            console.error(
-              "[parcelow-webhook] ❌ Erro ao atualizar ds160_package:",
-              ds160UpdateError,
-            );
-          } else {
-            console.log("[parcelow-webhook] ✅ DS160 package status atualizado!");
-          }
-          break;
-
         case "i539_cos_package":
-          console.log("[parcelow-webhook] 🔄 Processando i539_cos_package...");
+          console.log(`[parcelow-webhook] 🔄 Processando ${feeType}...`);
 
-          const { error: i539UpdateError } = await supabase
-            .from("user_profiles")
-            .update({
-              has_paid_i539_cos_package: true,
-              i539_cos_package_payment_method: "parcelow",
-            })
-            .eq("user_id", userId);
-
-          if (i539UpdateError) {
-            console.error(
-              "[parcelow-webhook] ❌ Erro ao atualizar i539_cos_package:",
-              i539UpdateError,
+          try {
+            const paymentDate = new Date().toISOString();
+            
+            // Resolver installment plan (novo sistema dinâmico)
+            // Parcelow não retorna metadata → metadataNum = null → usa installments_paid do plano
+            const { installmentNumber, plan } = await resolveInstallmentNumber(
+              supabase, userId, feeType, null
             );
-          } else {
-            console.log("[parcelow-webhook] ✅ I539 COS package status atualizado!");
+
+            let swIsFullyPaid = true;
+            let swRemainingAmount = 0;
+
+            if (plan) {
+              const result = await recordInstallmentPayment(supabase, plan, netAmount, paymentDate);
+              swIsFullyPaid = result.isFullyPaid;
+              swRemainingAmount = result.remainingAmount;
+              console.log(
+                `[parcelow-webhook] 📦 Installment ${installmentNumber} of ${plan.total_installments} for ${feeType}`,
+                swIsFullyPaid ? "— Plan COMPLETED" : `— $${swRemainingAmount} remaining`,
+              );
+
+              // Linkar individual_fee_payment ao plano
+              if (payment?.id) {
+                await linkPaymentToPlan(supabase, payment.id, plan.id);
+              }
+            }
+
+            const updateData: any = {
+              updated_at: paymentDate,
+            };
+
+            if (feeType === "ds160_package") {
+              updateData.has_paid_ds160_package = swIsFullyPaid;
+              updateData.ds160_package_payment_method = "parcelow";
+            } else {
+              updateData.has_paid_i539_cos_package = swIsFullyPaid;
+              updateData.i539_cos_package_payment_method = "parcelow";
+            }
+
+            const { error: updateError } = await supabase
+              .from("user_profiles")
+              .update(updateData)
+              .eq("user_id", userId);
+
+            if (updateError) {
+              console.error(`[parcelow-webhook] ❌ Erro ao atualizar status de ${feeType}:`, updateError);
+            } else {
+              console.log(`[parcelow-webhook] ✅ Status de ${feeType} atualizado! (Pago completo: ${swIsFullyPaid})`);
+            }
+          } catch (err) {
+            console.error(`[parcelow-webhook] Erro ao processar parcelamento de ${feeType}:`, err);
           }
           break;
 
@@ -2104,7 +2120,7 @@ Deno.serve(async (req: Request) => {
                   "Pagamento de Placement Fee confirmado - Admin";
               } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
                 tipoNotfAdmin =
-                  "Pagamento de Control Fee confirmado - Admin";
+                  "O pagamento da taxa Control Fee foi confirmado via Parcelow. - Admin";
               }
 
               const adminNotificationPayload = {
@@ -2467,7 +2483,7 @@ Deno.serve(async (req: Request) => {
                   "Pagamento Parcelow de Placement Fee confirmado - Admin";
               } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
                 tipoNotfAdminNoSeller =
-                  "Pagamento Parcelow de Control Fee confirmado - Admin";
+                  "O pagamento da taxa Control Fee foi confirmado via Parcelow. - Admin";
               }
 
               const adminNotificationPayload = {
@@ -2577,6 +2593,9 @@ Deno.serve(async (req: Request) => {
             } else if (feeType === "selection_process") {
               tipoNotfAdminNoReferral =
                 "Pagamento Stripe de selection process confirmado - Admin";
+            } else if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+              tipoNotfAdminNoReferral =
+                "O pagamento da taxa Control Fee foi confirmado via Parcelow. - Admin";
             }
 
             const adminNotificationPayload = {

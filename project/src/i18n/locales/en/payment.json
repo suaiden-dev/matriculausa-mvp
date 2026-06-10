@@ -121,7 +121,7 @@
       "sendingTitle": "Sending for Verification...",
       "sendingMessage": "Your payment proof is being sent for automatic validation",
       "analyzingTitle": "Analyzing Payment...",
-      "analyzingMessage": "Our AI is validating your payment confirmation"
+      "analyzingMessage": "We are validating your payment confirmation, please wait"
     },
     "errors": {
       "fileSize": "File size must be less than 5MB",
@@ -254,7 +254,7 @@
     },
     "details": {
       "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
-      "analyzingAi": "Our AI is validating your payment confirmation",
+      "analyzingAi": "We are validating your payment confirmation, please wait",
       "approved": "Your payment has been verified and approved successfully.",
       "rejected": "Your receipt was not approved. Please check that all information is visible.",
       "error": "An error occurred while verifying your payment. Please try again.",

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CreditCard, Check, Loader2, AlertCircle, X, Shield, CheckCircle2, XCircle } from 'lucide-react';
+import { CreditCard, Check, Loader2, AlertCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
@@ -64,20 +64,15 @@ interface PackageFeeTabProps {
   setSelectedPaymentMethod: (v: PaymentMethod | null) => void;
   showZelle: boolean;
   setShowZelle: (v: boolean) => void;
-  showInlineCpf: boolean;
-  setShowInlineCpf: (v: boolean) => void;
-  inlineCpf: string;
-  setInlineCpf: (v: string) => void;
-  savingCpf: boolean;
-  setSavingCpf: (v: boolean) => void;
-  cpfError: string | null;
-  setCpfError: (v: string | null) => void;
   userProfile: any;
   onPaymentSuccess: () => void;
   currentStep: string;
   universityLogo?: string;
   universityName?: string;
   scholarshipTitle?: string;
+  isInstallment?: boolean;
+  installmentNumber?: number;
+  totalInstallments?: number;
 }
 
 export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
@@ -92,14 +87,6 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   setSelectedPaymentMethod,
   showZelle,
   setShowZelle,
-  showInlineCpf,
-  setShowInlineCpf,
-  inlineCpf,
-  setInlineCpf,
-  savingCpf,
-  setSavingCpf,
-  cpfError,
-  setCpfError,
   userProfile,
   onPaymentSuccess,
   amount,
@@ -107,8 +94,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   universityLogo,
   universityName,
   scholarshipTitle,
+  isInstallment = false,
+  installmentNumber = 1,
+  totalInstallments = 1,
 }) => {
-  const { t } = useTranslation(['registration', 'common', 'scholarships', 'payment']);
+  const { t, i18n } = useTranslation(['registration', 'common', 'scholarships', 'payment']);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -255,6 +245,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
           fee_type: feeType,
           final_amount: effectiveAmount.toString(),
           promotional_coupon: appliedCoupon,
+          ...(isInstallment && {
+            is_installment: 'true',
+            installment_number: String(installmentNumber),
+            total_installments: String(totalInstallments),
+          }),
         },
       };
 
@@ -290,10 +285,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       return;
     }
 
-    if (!userProfile?.cpf_document) {
-      setShowInlineCpf(true);
-      return;
-    }
+    if (!userProfile?.cpf_document) return;
     await launchParcelowCheckout();
   };
 
@@ -316,6 +308,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
             // final_amount = valor com desconto (ou cheio se sem cupom)
             final_amount: effectiveAmount.toString(),
             promotional_coupon: appliedCoupon,
+            ...(isInstallment && {
+              is_installment: 'true',
+              installment_number: String(installmentNumber),
+              total_installments: String(totalInstallments),
+            }),
           },
           ...(payerInfo && { payer_info: payerInfo }),
         }),
@@ -324,11 +321,6 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.error === 'document_number_required') {
-          setShowInlineCpf(true);
-          setLoading(false);
-          return;
-        }
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed'));
       }
       if (data.checkout_url) {
@@ -344,31 +336,6 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     }
   };
 
-  const handleSaveCpf = async () => {
-    if (!inlineCpf.trim()) { setCpfError(t('rapidRegistration.payment.cpf.error')); return; }
-    const digits = inlineCpf.replace(/\D/g, '');
-    if (digits.length !== 11) { setCpfError(t('rapidRegistration.payment.cpf.error')); return; }
-    setSavingCpf(true);
-    setCpfError(null);
-    try {
-      const targetUserId = userProfile?.user_id || userProfile?.id;
-      if (!targetUserId) throw new Error(t('rapidRegistration.payment.error.userIdNotFound'));
-
-      const { error: updateErr } = await supabase
-        .from('user_profiles')
-        .update({ cpf_document: digits })
-        .eq('user_id', targetUserId);
-
-      if (updateErr) throw updateErr;
-
-      setShowInlineCpf(false);
-      await launchParcelowCheckout();
-    } catch (err: any) {
-      setCpfError(err.message || t('rapidRegistration.payment.error.saveCpfFailed'));
-    } finally {
-      setSavingCpf(false);
-    }
-  };
 
   const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(effectiveAmount, exchangeRate).totalWithIOF : null;
   const cardAmount = calculateCardAmountWithFees(effectiveAmount);
@@ -419,6 +386,15 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                     <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                       {feeLabel}
                     </h2>
+                    {isInstallment && (
+                      <div className="mt-2 text-sm font-bold text-blue-600 bg-blue-50/80 border border-blue-200/50 px-4 py-1.5 rounded-full inline-flex items-center">
+                        {i18n.language === 'en'
+                          ? `Installment ${installmentNumber} of ${totalInstallments}`
+                          : i18n.language === 'es'
+                            ? `Cuota ${installmentNumber} of ${totalInstallments}`
+                            : `Parcela ${installmentNumber} de ${totalInstallments}`}
+                      </div>
+                    )}
                     <p className="text-sm md:text-base text-slate-500 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                       {universityName || scholarshipTitle}
                     </p>
@@ -427,7 +403,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                   {/* Exibição de preço */}
                   <div className="pt-4">
                     <div className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter flex flex-col items-center">
-                      <span className="text-sm text-slate-400 font-black uppercase tracking-[0.3em] mb-1">Total Amount</span>
+                      <span className="text-sm text-slate-400 font-black uppercase tracking-[0.3em] mb-1">
+                        {isInstallment
+                          ? (i18n.language === 'en' ? 'Installment Amount' : i18n.language === 'es' ? 'Valor de la Cuota' : 'Valor da Parcela')
+                          : 'Total Amount'}
+                      </span>
                       {couponValidation?.isValid && couponValidation.finalAmount !== undefined ? (
                         <div className="flex flex-col items-center gap-1">
                           {/* Preço original riscado */}
@@ -573,6 +553,13 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                           onProcessingChange={(isProcessing) => isProcessing && refetchPaymentStatus()}
                           hideHeader={true}
                           onSuccess={onPaymentSuccess}
+                          ignoreApprovedState={isInstallment}
+                          metadata={{
+                            fee_type: feeType,
+                            is_installment: isInstallment ? 'true' : 'false',
+                            installment_number: isInstallment ? String(installmentNumber) : undefined,
+                            total_installments: isInstallment ? String(totalInstallments) : undefined,
+                          }}
                         />
                       </div>
                     </div>
@@ -650,7 +637,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                           onClick={() => { setSelectedPaymentMethod('parcelow'); handleParcelowCheckout(); }}
                           disabled={loading}
                           className={`group/btn relative bg-white border p-5 md:p-6 text-left hover:scale-[1.01] active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-blue-600/30 hover:bg-blue-50/10 ${
-                            showInlineCpf ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/50' : 'rounded-[2rem] border-slate-200'
+                            'rounded-[2rem] border-slate-200'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -681,49 +668,13 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
 
                         {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
                         <div className="mt-4">
-                          <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                          <PayerAlternativeForm
+                            onPayerInfoChange={setPayerInfo}
+                            onPayButtonClick={handleParcelowCheckout}
+                            isProcessing={loading && selectedPaymentMethod === 'parcelow'}
+                          />
                         </div>
 
-                        {showInlineCpf && !payerInfo && (
-                          <div className="p-6 bg-blue-50 border border-slate-200 border-t-0 rounded-b-[2rem] space-y-4 animate-in fade-in slide-in-from-top-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] flex items-center gap-2">
-                                <Shield className="w-3.5 h-3.5" />
-                                {t('studentOnboarding.documentsUpload.packageFees.cpfRequiredTitle')}
-                              </h4>
-                              <button onClick={() => setShowInlineCpf(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                placeholder="000.000.000-00"
-                                value={inlineCpf}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                                  const masked = val.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                                  setInlineCpf(masked);
-                                  setCpfError(null);
-                                }}
-                                className="w-full bg-white border border-blue-200 rounded-2xl px-5 py-4 text-xl font-black text-slate-900 tracking-tighter focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
-                              />
-                              {cpfError && (
-                                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-2 flex items-center gap-2">
-                                  <AlertCircle className="w-3 h-3" />
-                                  {cpfError}
-                                </p>
-                              )}
-                              <button
-                                onClick={handleSaveCpf}
-                                disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                className="w-full mt-4 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50"
-                              >
-                                {savingCpf ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('studentOnboarding.documentsUpload.packageFees.saveCpfContinue')}
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Zelle */}
@@ -765,6 +716,13 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                               feeType={feeType as any}
                               amount={effectiveAmount}
                               onSuccess={() => { setShowZelle(false); onPaymentSuccess(); }}
+                              ignoreApprovedState={isInstallment}
+                              metadata={{
+                                fee_type: feeType,
+                                is_installment: isInstallment ? 'true' : 'false',
+                                installment_number: isInstallment ? String(installmentNumber) : undefined,
+                                total_installments: isInstallment ? String(totalInstallments) : undefined,
+                              }}
                             />
                           </div>
                         )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { PaymentMethod } from './types';
 import PayerAlternativeForm, { PayerInfo } from '../../../../components/PayerAlternativeForm';
 
@@ -20,15 +20,7 @@ interface PaymentMethodButtonProps {
   exchangeRate: number | null;
   isBlocked: boolean;
   pendingPayment: any;
-  showInlineCpf: boolean;
-  inlineCpf: string;
-  savingCpf: boolean;
-  cpfError: string | null;
   onCheckout: (methodId: PaymentMethod) => void;
-  onSaveCpf: () => void;
-  onCpfChange: (value: string) => void;
-  onCpfErrorClear: () => void;
-  formatCpf: (value: string) => string;
   payerInfo: PayerInfo | null;
   onPayerInfoChange: (info: PayerInfo | null) => void;
   t: (key: string) => string;
@@ -45,16 +37,7 @@ export const PaymentMethodButton: React.FC<PaymentMethodButtonProps> = ({
   exchangeRate,
   isBlocked,
   pendingPayment,
-  showInlineCpf,
-  inlineCpf,
-  savingCpf,
-  cpfError,
   onCheckout,
-  onSaveCpf,
-  onCpfChange,
-  onCpfErrorClear,
-  formatCpf,
-  payerInfo,
   onPayerInfoChange,
   t,
 }) => {
@@ -158,53 +141,15 @@ export const PaymentMethodButton: React.FC<PaymentMethodButtonProps> = ({
         </div>
       </button>
 
-      {/* Lógica de CPF / Cartão de Outra Pessoa para Parcelow */}
       {method.id === 'parcelow' && isSelected && (
-        <div className="mt-4 space-y-4 animate-fadeIn relative z-0">
-          {/* Formulário de Cartão de Outra Pessoa */}
+        <div className="mt-4 animate-fadeIn relative z-0">
           <div className="bg-white border border-gray-100 rounded-2xl p-1 shadow-sm">
-            <PayerAlternativeForm onPayerInfoChange={onPayerInfoChange} />
+            <PayerAlternativeForm
+              onPayerInfoChange={onPayerInfoChange}
+              onPayButtonClick={() => onCheckout('parcelow')}
+              isProcessing={isProcessing}
+            />
           </div>
-
-          {/* Campo inline de CPF (Apenas se NÃO for Cartão de Outra Pessoa) */}
-          {!payerInfo && showInlineCpf && (
-            <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-initial sm:w-[300px]">
-                  <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Shield className="w-3 h-3" />
-                    {t('selectionFeeStep.main.parcelowVerification')}
-                  </p>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={inlineCpf}
-                      onChange={(e) => {
-                        onCpfChange(formatCpf(e.target.value));
-                        onCpfErrorClear();
-                      }}
-                      placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
-                      maxLength={14}
-                      className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={onSaveCpf}
-                  disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                  className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
-                >
-                  {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('selectionFeeStep.main.goToPayment')}
-                </button>
-              </div>
-              {cpfError && (
-                <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
-                  <AlertCircle className="w-4 h-4" />
-                  {cpfError}
-                </p>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>
