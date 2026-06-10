@@ -107,13 +107,6 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
   const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
 
-  // CPF inline states (para Parcelow)
-  const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null); // app.id quando aberto
-  const [inlineCpf, setInlineCpf] = useState('');
-  const [savingCpf, setSavingCpf] = useState(false);
-  const [cpfError, setCpfError] = useState<string | null>(null);
-  const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
-
   // Promotional coupon states
   const [hasCoupon, setHasCoupon] = useState(false);
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
@@ -294,64 +287,16 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   // Detecta se há um Zelle pendente do tipo application_fee
   const hasZellePendingApplicationFee = isBlocked && pendingPayment?.fee_type === 'application_fee';
 
-  // Formatar CPF enquanto digita (000.000.000-00)
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    return digits
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  };
-
-  // Salvar CPF inline e prosseguir ao checkout Parcelow
-  const saveCpfAndCheckout = async () => {
-    const cleaned = inlineCpf.replace(/\D/g, '');
-    if (cleaned.length !== 11) {
-      setCpfError(t('paymentStep.parcelowCpfInvalid'));
-      return;
-    }
-    if (!pendingParcelowApp) return;
-
-    setSavingCpf(true);
-    setCpfError(null);
-
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ cpf_document: cleaned })
-        .eq('user_id', userProfile?.user_id);
-
-      if (error) throw error;
-
-      // Fechar campo inline
-      setShowInlineCpf(null);
-      setInlineCpf('');
-
-      // Chamar checkout normalmente agora que CPF está salvo (pulando a checagem no estado local)
-      processCheckout(pendingParcelowApp, 'parcelow', true);
-    } catch (err: any) {
-      setCpfError(t('paymentStep.parcelowCpfError'));
-      console.error('[PaymentStep] Erro ao salvar CPF inline:', err);
-    } finally {
-      setSavingCpf(false);
-    }
-  };
-
   const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow', skipCpfCheck = false) => {
     // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
     const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
 
     // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem e não houver payerInfo
     if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck && !hasPayerInfo) {
-      setPendingParcelowApp(application);
-      setShowInlineCpf(application.id);
       // Fechar Zelle se aberto
       setZelleActiveApp(null);
       return;
     }
-    // Se mudando de método, fechar CPF inline
-    setShowInlineCpf(null);
-
     try {
       setIsProcessingCheckout(`${application.id}_${method}`);
       const { data: sessionData } = await supabase.auth.getSession();
@@ -853,48 +798,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                               {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
                               <div className="mt-4">
-                                <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                                <PayerAlternativeForm
+                                  onPayerInfoChange={setPayerInfo}
+                                  onPayButtonClick={() => processCheckout(app, 'parcelow')}
+                                  isProcessing={isProcessingCheckout === `${app.id}_parcelow`}
+                                />
                               </div>
 
-                              {/* Campo inline de CPF para Parcelow (apenas se não houver PayerInfo e o perfil não tiver CPF) */}
-                              {showInlineCpf === app.id && !payerInfo && (
-                                <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                                    <div className="flex-initial sm:w-[300px]">
-                                      <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                        <Shield className="w-3 h-3" />
-                                        {t('paymentStep.parcelowCpfTitle')}
-                                      </p>
-                                      <div className="relative">
-                                        <input
-                                          type="text"
-                                          value={inlineCpf}
-                                          onChange={(e) => {
-                                            setInlineCpf(formatCpf(e.target.value));
-                                            setCpfError(null);
-                                          }}
-                                          placeholder={t('paymentStep.parcelowCpfPlaceholder')}
-                                          maxLength={14}
-                                          className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                                        />
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={saveCpfAndCheckout}
-                                      disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                      className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
-                                    >
-                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('paymentStep.goToPayment')}
-                                    </button>
-                                  </div>
-                                  {cpfError && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
-                                      <AlertCircle className="w-4 h-4" />
-                                      {cpfError}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
                             </div>
 
                             {/* Zelle Option — accordion inline */}

@@ -8,7 +8,6 @@ import {
     AlertCircle,
     RefreshCw,
     Shield,
-    X,
     Loader2,
     Building
 } from 'lucide-react';
@@ -95,10 +94,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
     const [isZelleActive, setIsZelleActive] = useState(false);
-    const [showInlineCpf, setShowInlineCpf] = useState(false);
-    const [inlineCpf, setInlineCpf] = useState('');
-    const [savingCpf, setSavingCpf] = useState(false);
-    const [cpfError, setCpfError] = useState<string | null>(null);
     const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
     const [loadingApp, setLoadingApp] = useState(true);
@@ -269,8 +264,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
             if (!token) throw new Error('User not authenticated');
 
             // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
-            const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
-
             let apiUrl = `${SUPABASE_URL}/functions/v1/stripe-checkout-reinstatement-fee`;
             if (method === 'parcelow') {
                 apiUrl = `${SUPABASE_URL}/functions/v1/parcelow-checkout-reinstatement-fee`;
@@ -323,34 +316,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
         }
     };
 
-    const saveCpfAndCheckout = async () => {
-        const cleaned = inlineCpf.replace(/\D/g, '');
-        if (cleaned.length !== 11) {
-            setCpfError(t('payment:paymentStep.parcelowCpfInvalid'));
-            return;
-        }
-
-        try {
-            setSavingCpf(true);
-            setCpfError(null);
-
-            const { error: updateError } = await supabase
-                .from('user_profiles')
-                .update({ cpf_document: cleaned })
-                .eq('user_id', userProfile?.user_id);
-
-            if (updateError) throw updateError;
-
-            setShowInlineCpf(false);
-            await processCheckout('parcelow');
-        } catch (err: any) {
-            console.error('[ReinstatementFeeStep] Error saving CPF:', err);
-            setCpfError(t('payment:paymentStep.parcelowCpfError'));
-        } finally {
-            setSavingCpf(false);
-        }
-    };
-
     const handleParcelowClick = () => {
         // Verificar se há informações de titular de Cartão de Outra Pessoa
         if (payerInfo) {
@@ -358,10 +323,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
             return;
         }
 
-        if (!(userProfile as any)?.cpf_document) {
-            setShowInlineCpf(true);
-            return;
-        }
+        if (!(userProfile as any)?.cpf_document) return;
         processCheckout('parcelow');
     };
 
@@ -710,7 +672,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                                 <button
                                                     onClick={handleParcelowClick}
                                                     disabled={!!isProcessingCheckout}
-                                                    className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf ? 'rounded-t-[2rem] border-b-0' : 'rounded-[2rem]'}`}
+                                                    className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full rounded-[2rem]"
                                                 >
                                                     <div className="flex items-center justify-between w-full">
                                                         <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
@@ -736,52 +698,13 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
 
                                                 {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
                                                 <div className="mt-4">
-                                                    <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                                                    <PayerAlternativeForm
+                                                        onPayerInfoChange={setPayerInfo}
+                                                        onPayButtonClick={() => processCheckout('parcelow')}
+                                                        isProcessing={isProcessingCheckout === 'parcelow'}
+                                                    />
                                                 </div>
 
-                                                {showInlineCpf && !payerInfo && (
-                                                    <div className="p-6 bg-slate-50 border border-gray-200 border-t-0 rounded-b-[2rem] animate-in fade-in slide-in-from-top-2 duration-300">
-                                                        <div className="flex items-center justify-between mb-4">
-                                                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{t('payment:paymentStep.cpfRequiredTitle')}</h4>
-                                                            <button onClick={() => setShowInlineCpf(false)} title="Fechar">
-                                                                <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-                                                            </button>
-                                                        </div>
-                                                        <div className="space-y-4">
-                                                            <div className="relative">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder={t('payment:paymentStep.cpfPlaceholder')}
-                                                                    value={inlineCpf}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                                                                        setInlineCpf(val);
-                                                                        if (cpfError) setCpfError(null);
-                                                                    }}
-                                                                    className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
-                                                                />
-                                                                {savingCpf && (
-                                                                    <div className="absolute right-3 top-3">
-                                                                        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            {cpfError && (
-                                                                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                                                                    <AlertCircle className="w-3 h-3" />
-                                                                    {cpfError}
-                                                                </p>
-                                                            )}
-                                                            <button
-                                                                onClick={saveCpfAndCheckout}
-                                                                disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                                                className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
-                                                            >
-                                                                {t('payment:paymentStep.payWith', { method: 'Parcelow' })}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
 
                                             {/* Zelle */}

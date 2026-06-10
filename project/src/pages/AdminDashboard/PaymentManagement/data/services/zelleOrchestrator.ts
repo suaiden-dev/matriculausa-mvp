@@ -353,11 +353,28 @@ export async function approveZelleFlow(params: {
                   feeTypeSafe === "control_fee";
   
   if (isDs160) {
+    // Buscar se há plano de parcelamento ativo
+    const { data: activePlan } = await supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', payment.user_id)
+      .eq('fee_type', 'ds160_package')
+      .eq('status', 'active')
+      .maybeSingle();
+
+    let isFullyPaid = true;
+    if (activePlan) {
+      const nextPaidCount = (activePlan.installments_paid || 0) + 1;
+      const nextAmountPaid = Number(activePlan.amount_paid || 0) + payment.amount;
+      isFullyPaid = nextPaidCount >= (activePlan.total_installments || 2) || 
+                   nextAmountPaid >= Number(activePlan.total_amount || 0);
+    }
+
     // Mark on profile
     await supabase
       .from("user_profiles")
       .update({
-        has_paid_ds160_package: true,
+        has_paid_ds160_package: isFullyPaid,
         ds160_package_payment_method: "zelle",
         updated_at: new Date().toISOString(),
       })
@@ -366,7 +383,7 @@ export async function approveZelleFlow(params: {
 
     // Record payment (individual table)
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(
+    const paymentRecord = await recordIndividualFeePayment(
       supabase,
       {
         userId: payment.user_id,
@@ -377,6 +394,10 @@ export async function approveZelleFlow(params: {
         zellePaymentId: payment.id,
       },
     );
+
+    if (paymentRecord.success && paymentRecord.recordId) {
+      await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "ds160_package", paymentRecord.recordId);
+    }
 
     // Log action
     await supabase.rpc("log_student_action", {
@@ -410,11 +431,28 @@ export async function approveZelleFlow(params: {
                  feeTypeSafe === "control_fee";
   
   if (isI539) {
+    // Buscar se há plano de parcelamento ativo
+    const { data: activePlan } = await supabase
+      .from('fee_installment_plans')
+      .select('*')
+      .eq('user_id', payment.user_id)
+      .eq('fee_type', 'i539_cos_package')
+      .eq('status', 'active')
+      .maybeSingle();
+
+    let isFullyPaid = true;
+    if (activePlan) {
+      const nextPaidCount = (activePlan.installments_paid || 0) + 1;
+      const nextAmountPaid = Number(activePlan.amount_paid || 0) + payment.amount;
+      isFullyPaid = nextPaidCount >= (activePlan.total_installments || 2) || 
+                   nextAmountPaid >= Number(activePlan.total_amount || 0);
+    }
+
     // Mark on profile
     await supabase
       .from("user_profiles")
       .update({
-        has_paid_i539_cos_package: true,
+        has_paid_i539_cos_package: isFullyPaid,
         i539_cos_package_payment_method: "zelle",
         updated_at: new Date().toISOString(),
       })
@@ -423,7 +461,7 @@ export async function approveZelleFlow(params: {
 
     // Record payment (individual table)
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(
+    const paymentRecord = await recordIndividualFeePayment(
       supabase,
       {
         userId: payment.user_id,
@@ -434,6 +472,10 @@ export async function approveZelleFlow(params: {
         zellePaymentId: payment.id,
       },
     );
+
+    if (paymentRecord.success && paymentRecord.recordId) {
+      await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "i539_cos_package", paymentRecord.recordId);
+    }
 
     // Log action
     await supabase.rpc("log_student_action", {
@@ -1422,6 +1464,10 @@ async function handleInstallmentPlanAssociation(
       planFeeType = 'selection_process_fee';
     } else if (paymentFeeType === 'i20_control' || paymentFeeType === 'i20_control_fee' || paymentFeeType === 'control_fee') {
       planFeeType = 'i20_control_fee';
+    } else if (paymentFeeType === 'ds160_package') {
+      planFeeType = 'ds160_package';
+    } else if (paymentFeeType === 'i539_cos_package') {
+      planFeeType = 'i539_cos_package';
     }
 
     // Buscar plano ativo para o user_id + fee_type

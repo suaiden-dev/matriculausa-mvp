@@ -175,7 +175,7 @@
     },
     "details": {
       "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
-      "analyzingAi": "Nossa IA está validando seu comprovante de pagamento",
+      "analyzingAi": "Estamos validando seu comprovante de pagamento, aguarde",
       "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
       "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
       "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente.",

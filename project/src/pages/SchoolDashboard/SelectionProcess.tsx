@@ -1896,7 +1896,7 @@ const SelectionProcess: React.FC = () => {
                                                                               {/* Botões de Approve e Request Changes */}
                                 <div className="flex gap-2">
                                   <button
-                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved'}
+                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved' || selectedStudent?.status === 'rejected'}
                                     onClick={() => {
                                       if (d) approveDoc(d.type);
                                     }}
@@ -1910,7 +1910,7 @@ const SelectionProcess: React.FC = () => {
                                     {status === 'approved' ? 'Approved' : 'Approve'}
                                   </button>
                                   <button
-                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved'}
+                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved' || selectedStudent?.status === 'rejected'}
                                     onClick={() => {
                                       if (d) {
                                         setPendingRejectType(d.type);
@@ -1961,13 +1961,13 @@ const SelectionProcess: React.FC = () => {
                                 <div className="flex flex-col sm:flex-row gap-3">
                                   <button
                                     onClick={() => setShowRejectStudentModal(true)}
-                                    disabled={acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved'}
+                                    disabled={acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved' || selectedStudent?.status === 'rejected'}
                                     className="px-4 sm:px-5 py-2 rounded-lg font-semibold text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors text-center"
                                   >
-                                    {selectedStudent?.status === 'approved' ? 'Application Approved' : 'Reject Application'}
+                                    {selectedStudent?.status === 'approved' ? 'Application Approved' : selectedStudent?.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
                                   </button>
                                   <button
-                                    disabled={!allApproved || acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved'}
+                                    disabled={!allApproved || acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved' || selectedStudent?.status === 'rejected'}
                                     onClick={approveStudent}
                                     className="px-4 sm:px-5 py-2 rounded-lg font-semibold bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 transition-colors text-center"
                                   >

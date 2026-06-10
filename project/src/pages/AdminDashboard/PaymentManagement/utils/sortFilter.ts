@@ -31,7 +31,7 @@ export function filterPayments(
       const REINSTATEMENT_FEE_TYPES = ['reinstatement_fee', 'reinstatement', 'reinstatement_package'];
 
       const matchesValue = (filterVal: string): boolean => {
-        if (filterVal === 'control_fee')      return payment.fee_type === 'control_fee' || CONTROL_FEE_TYPES.includes(payment.fee_type);
+        if (filterVal === 'control_fee')      return (payment.fee_type as string) === 'control_fee' || CONTROL_FEE_TYPES.includes(payment.fee_type);
         if (filterVal === 'placement')        return PLACEMENT_FEE_TYPES.includes(payment.fee_type);
         if (filterVal === 'reinstatement_fee') return REINSTATEMENT_FEE_TYPES.includes(payment.fee_type);
         return payment.fee_type === filterVal;
@@ -142,6 +142,10 @@ export function sortPayments(
 ): PaymentRecord[] {
   const arr = [...payments];
   arr.sort((a, b) => {
+    // Prioritize 'pending' status at the top
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (b.status === 'pending' && a.status !== 'pending') return 1;
+
     let aValue: any = a[sortBy] as any;
     let bValue: any = b[sortBy] as any;
     if (sortBy === 'amount') {

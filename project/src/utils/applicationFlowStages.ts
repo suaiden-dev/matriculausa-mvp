@@ -83,6 +83,7 @@ export interface StudentRecord {
   has_sent_docs_to_university?: boolean;
   sevis_transfer_completed?: boolean;
   visa_approved?: boolean;
+  scholarship_level?: string | null;
   // Doc aggregation fields (computed separately)
   docs_total_required?: number;
   docs_total_uploaded?: number;

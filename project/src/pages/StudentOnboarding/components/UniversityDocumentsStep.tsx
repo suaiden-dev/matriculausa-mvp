@@ -59,7 +59,7 @@ const StripeIcon2 = ({ className }: { className?: string }) => (
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     console.log('[UniversityDocumentsStep] Renderizando...');
-    const { t } = useTranslation(['registration', 'common', 'scholarships', 'dashboard', 'auth', 'payment']);
+    const { t, i18n } = useTranslation(['registration', 'common', 'scholarships', 'dashboard', 'auth', 'payment']);
     const navigate = useNavigate();
     const { user, userProfile } = useAuth();
     const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
@@ -99,11 +99,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const [packageLoading, setPackageLoading] = useState(false);
     const [packageError, setPackageError] = useState<string | null>(null);
     const [showZelle, setShowZelle] = useState(false);
-    const [showInlineCpf, setShowInlineCpf] = useState(false);
-    const [inlineCpf, setInlineCpf] = useState('');
-    const [savingCpf, setSavingCpf] = useState(false);
-    const [cpfError, setCpfError] = useState<string | null>(null);
-
     // Estados do pagamento da 2ª parcela (installment)
     const [installmentZelleActive, setInstallmentZelleActive] = useState(false);
     const [installmentShowCpf, setInstallmentShowCpf] = useState(false);
@@ -113,27 +108,41 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     // 2. HOOKS DE CÁLCULO (Sempre No Topo)
     const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
 
-    // Plano de parcelamento ativo (novo sistema dinâmico)
+    // Planos de parcelamento ativos (novo sistema dinâmico)
     const [activePlacementPlan, setActivePlacementPlan] = useState<InstallmentPlan | null>(null);
+    const [activeDs160Plan, setActiveDs160Plan] = useState<InstallmentPlan | null>(null);
+    const [activeI539Plan, setActiveI539Plan] = useState<InstallmentPlan | null>(null);
+
     useEffect(() => {
         const userId = user?.id || userProfile?.user_id;
         if (!userId) return;
 
-        const fetchPlan = () => {
-            supabase
+        const fetchPlans = async () => {
+            const { data } = await supabase
                 .from('fee_installment_plans')
                 .select('*')
                 .eq('user_id', userId)
-                .eq('fee_type', 'placement_fee')
-                .eq('status', 'active')
-                .maybeSingle()
-                .then(({ data }) => setActivePlacementPlan(data ?? null));
+                .eq('status', 'active');
+
+            if (data) {
+                const placement = data.find(p => p.fee_type === 'placement_fee');
+                const ds160 = data.find(p => p.fee_type === 'ds160_package');
+                const i539 = data.find(p => p.fee_type === 'i539_cos_package');
+
+                setActivePlacementPlan(placement ?? null);
+                setActiveDs160Plan(ds160 ?? null);
+                setActiveI539Plan(i539 ?? null);
+            } else {
+                setActivePlacementPlan(null);
+                setActiveDs160Plan(null);
+                setActiveI539Plan(null);
+            }
         };
 
-        fetchPlan();
+        fetchPlans();
 
         const channel = supabase
-            .channel(`realtime-placement-plans-docs-${userId}`)
+            .channel(`realtime-fee-plans-docs-${userId}`)
             .on(
                 'postgres_changes',
                 {
@@ -143,7 +152,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     filter: `user_id=eq.${userId}`
                 },
                 () => {
-                    fetchPlan();
+                    fetchPlans();
                 }
             )
             .subscribe();
@@ -153,22 +162,49 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         };
     }, [user?.id, userProfile?.user_id]);
 
-    // Valor a pagar nesta parcela (próxima parcela do plano)
+    // Lógica para obter o status localizado da parcela
+    const getInstallmentStatus = (n: number, total: number) => {
+        const isEn = i18n.language === 'en';
+        const isEs = i18n.language === 'es';
+        if (isEn) return `Installment ${n} of ${total}`;
+        if (isEs) return `Cuota ${n} de ${total}`;
+        return `Parcela ${n} de ${total}`;
+    };
+
+    // Lógica para parcelamento da Placement Fee
     const currentInstallmentNumber = (activePlacementPlan?.installments_paid ?? 0) + 1;
     const totalInstallments = activePlacementPlan?.total_installments ?? 2;
-
-    // Calcular o valor da próxima parcela usando a mesma lógica de divisão
     const remainingAmount = activePlacementPlan
         ? Math.max(0, activePlacementPlan.total_amount - activePlacementPlan.amount_paid)
         : 0;
-    // Amount for THIS specific installment (evenly divided, last absorbs rounding)
     const placementFeePendingBalance = activePlacementPlan
         ? computeInstallmentAmounts(activePlacementPlan.total_amount, totalInstallments)[currentInstallmentNumber - 1] ?? remainingAmount
         : ((userProfile as any)?.placement_fee_pending_balance ?? 0); // backward compat
-
     const hasPlacementInstallmentPending = activePlacementPlan
         ? activePlacementPlan.status === 'active' && activePlacementPlan.installments_paid < activePlacementPlan.total_installments
         : (userProfile as any)?.placement_fee_pending_balance > 0; // backward compat
+
+    // Lógica para parcelamento do DS-160
+    const ds160Amount = getFeeAmount('ds160_package');
+    const currentDs160InstallmentNumber = (activeDs160Plan?.installments_paid ?? 0) + 1;
+    const totalDs160Installments = activeDs160Plan?.total_installments ?? 1;
+    const remainingDs160Amount = activeDs160Plan
+        ? Math.max(0, activeDs160Plan.total_amount - activeDs160Plan.amount_paid)
+        : 0;
+    const ds160FeePendingBalance = activeDs160Plan
+        ? computeInstallmentAmounts(activeDs160Plan.total_amount, totalDs160Installments)[currentDs160InstallmentNumber - 1] ?? remainingDs160Amount
+        : ds160Amount;
+
+    // Lógica para parcelamento do I-539
+    const i539Amount = getFeeAmount('i539_cos_package');
+    const currentI539InstallmentNumber = (activeI539Plan?.installments_paid ?? 0) + 1;
+    const totalI539Installments = activeI539Plan?.total_installments ?? 1;
+    const remainingI539Amount = activeI539Plan
+        ? Math.max(0, activeI539Plan.total_amount - activeI539Plan.amount_paid)
+        : 0;
+    const i539FeePendingBalance = activeI539Plan
+        ? computeInstallmentAmounts(activeI539Plan.total_amount, totalI539Installments)[currentI539InstallmentNumber - 1] ?? remainingI539Amount
+        : i539Amount;
 
     const installmentCardAmount = hasPlacementInstallmentPending ? calculateCardAmountWithFees(placementFeePendingBalance) : 0;
     const installmentPixInfo = hasPlacementInstallmentPending && exchangeRate > 0
@@ -240,8 +276,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const studentProcessType = userProfile?.student_process_type || applicationDetails?.student_process_type || 'initial';
     const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
     const showI539Tab = isPlacementFlow && (studentProcessType === 'change_of_status' || (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false));
-    const packageFeeRequired = (showDs160Tab && !ds160PackagePaid) || (showI539Tab && !i539PackagePaid);
-    const canDownloadOriginal = !hasPlacementInstallmentPending && !packageFeeRequired;
+    const hasPaidDs160Installment = !!activeDs160Plan && (activeDs160Plan.installments_paid ?? 0) > 0;
+    const hasPaidI539Installment = !!activeI539Plan && (activeI539Plan.installments_paid ?? 0) > 0;
+    const packageFeeBlockingAcceptance =
+        (showDs160Tab && !ds160PackagePaid && !hasPaidDs160Installment) ||
+        (showI539Tab && !i539PackagePaid && !hasPaidI539Installment);
+    const canDownloadOriginal = !hasPlacementInstallmentPending && !packageFeeBlockingAcceptance;
+    const acceptanceLetterDisplayUrl = packageFeeBlockingAcceptance
+        ? undefined
+        : (canDownloadOriginal ? applicationDetails?.acceptance_letter_url : applicationDetails?.acceptance_letter_preview_url);
     const showI20DocumentTab = studentProcessType === 'change_of_status';
     const i20DocumentAvailable = !!applicationDetails?.i20_document_url;
     
@@ -318,7 +361,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         // Só ignora docs pendentes se houver URL de carta ou pacote pago — não apenas status 'enrolled'
         if (isAcceptanceReady && !hasPendingUploads && !hasUnderReviewDocs) {
             // 2.1 Pagamento do Pacote Pendente (DS160/I539)
-            if (packageFeeRequired) {
+            if (packageFeeBlockingAcceptance) {
                 const feeName = 'Control Fee'; // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' independentemente do tipo de pacote 
 
                 return { 
@@ -420,7 +463,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             nextStepLabel: '', 
             action: () => { } 
         };
-    }, [pendingDocNames, hasPendingUploads, hasUnderReviewDocs, hasPendingZelle, packageFeeRequired, applicationDetails, t, showDs160Tab, documentRequests.length, allDocsApproved]);
+    }, [pendingDocNames, hasPendingUploads, hasUnderReviewDocs, hasPendingZelle, isAcceptanceReady, packageFeeBlockingAcceptance, applicationDetails, t, showDs160Tab, documentRequests.length, allDocsApproved]);
 
     const sidebarSteps = useMemo(() => [
         {
@@ -447,11 +490,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         {
             id: 'acceptance',
             title: t('dashboard:studentDashboard.myApplicationStep.tabs.acceptanceLetter'),
-            status: applicationDetails?.acceptance_letter_url
+            status: packageFeeBlockingAcceptance
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired')
+                : applicationDetails?.acceptance_letter_url
                 ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')
                 : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'),
-            variant: 'info' as any,
-            disabled: !allDocsApproved && !applicationDetails?.acceptance_letter_url
+            variant: (packageFeeBlockingAcceptance ? 'warning' : 'info') as any,
+            disabled: packageFeeBlockingAcceptance || (!allDocsApproved && !applicationDetails?.acceptance_letter_url)
         },
         ...(showI20DocumentTab ? [{
             id: 'i20_document',
@@ -475,7 +520,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
                 : (!isAcceptanceReady 
                     ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress')
-                    : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired')), 
+                    : (activeDs160Plan 
+                        ? getInstallmentStatus(currentDs160InstallmentNumber, totalDs160Installments)
+                        : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired'))), 
             variant: (ds160PackagePaid ? 'success' : 'info') as any,
             disabled: !isAcceptanceReady && !ds160PackagePaid
         }] : []),
@@ -486,11 +533,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed')
                 : (!isAcceptanceReady
                     ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress')
-                    : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired')),
+                    : (activeI539Plan 
+                        ? getInstallmentStatus(currentI539InstallmentNumber, totalI539Installments)
+                        : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired'))),
             variant: (i539PackagePaid ? 'success' : 'info') as any,
             disabled: !isAcceptanceReady && !i539PackagePaid
         }] : []),
-    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, showI20DocumentTab, i20DocumentAvailable, applicationDetails?.acceptance_letter_url, applicationDetails?.i20_document_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
+    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, showI20DocumentTab, i20DocumentAvailable, applicationDetails?.acceptance_letter_url, applicationDetails?.i20_document_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeBlockingAcceptance, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance, activeDs160Plan, currentDs160InstallmentNumber, totalDs160Installments, activeI539Plan, currentI539InstallmentNumber, totalI539Installments]);
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
@@ -539,8 +588,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                 const { data: reqs } = await reqQuery;
 
-                let ds160PaidFinal = !!(userProfile as any)?.has_paid_ds160_package;
-                let i539PaidFinal = !!(userProfile as any)?.has_paid_i539_cos_package;
+                let ds160PaidFinal = !activeDs160Plan && !!(userProfile as any)?.has_paid_ds160_package;
+                let i539PaidFinal = !activeI539Plan && !!(userProfile as any)?.has_paid_i539_cos_package;
                 let hasPendingZelleFinal = false;
 
                 if (userProfile?.user_id) {
@@ -566,8 +615,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                 !ds160Paid && !i539Paid
                         );
 
-                        ds160PaidFinal = ds160Paid || !!(userProfile as any)?.has_paid_ds160_package;
-                        i539PaidFinal = i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package;
+                        ds160PaidFinal = !activeDs160Plan && (ds160Paid || !!(userProfile as any)?.has_paid_ds160_package);
+                        i539PaidFinal = !activeI539Plan && (i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package);
                         hasPendingZelleFinal = hasPending;
                     }
                 }
@@ -622,7 +671,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             console.error('Error fetching university documents details:', err);
             setDataState(prev => ({ ...prev, loading: false }));
         }
-    }, [userProfile?.id, userProfile?.selected_application_id, userProfile?.user_id, (userProfile as any)?.has_paid_ds160_package, (userProfile as any)?.has_paid_i539_cos_package]);
+    }, [userProfile?.id, userProfile?.selected_application_id, userProfile?.user_id, (userProfile as any)?.has_paid_ds160_package, (userProfile as any)?.has_paid_i539_cos_package, activeDs160Plan, activeI539Plan]);
 
 
     // 3. EFEITOS
@@ -784,14 +833,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             scholarship={applicationDetails.scholarships}
                                             userProfile={userProfile}
                                             acceptanceLetter={{
-                                                url: canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url,
+                                                url: acceptanceLetterDisplayUrl,
                                                 onView: () => {
-                                                    const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
-                                                    if (!urlToView) {
+                                                    if (!acceptanceLetterDisplayUrl) {
                                                         toast.error('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
                                                         return;
                                                     }
-                                                    handleViewDocument(urlToView);
+                                                    handleViewDocument(acceptanceLetterDisplayUrl);
                                                 },
                                                 onDownload: canDownloadOriginal ? handleDownloadDocument : undefined,
                                             }}
@@ -947,9 +995,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             {activeTab === 'ds160' && (
                                 <PackageFeeTab 
                                     feeType="ds160_package" 
-                                    amount={getFeeAmount('ds160_package')}
+                                    amount={ds160FeePendingBalance}
                                     feeLabel="Control Fee" // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
                                     isPaid={ds160PackagePaid}
+                                    isInstallment={!!activeDs160Plan}
+                                    installmentNumber={currentDs160InstallmentNumber}
+                                    totalInstallments={totalDs160Installments}
                                     loading={packageLoading}
                                     setLoading={setPackageLoading}
                                     error={packageError}
@@ -958,14 +1009,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                     setSelectedPaymentMethod={setSelectedPaymentMethod as any}
                                     showZelle={showZelle}
                                     setShowZelle={setShowZelle}
-                                    showInlineCpf={showInlineCpf}
-                                    setShowInlineCpf={setShowInlineCpf}
-                                    inlineCpf={inlineCpf}
-                                    setInlineCpf={setInlineCpf}
-                                    savingCpf={savingCpf}
-                                    setSavingCpf={setSavingCpf}
-                                    cpfError={cpfError}
-                                    setCpfError={setCpfError}
                                     userProfile={userProfile}
                                     onPaymentSuccess={fetchApplicationDetails}
                                     currentStep="my_applications"
@@ -977,9 +1020,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             {activeTab === 'i539' && (
                                 <PackageFeeTab 
                                     feeType="i539_cos_package" 
-                                    amount={getFeeAmount('i539_cos_package')}
+                                    amount={i539FeePendingBalance}
                                     feeLabel="Control Fee" // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
                                     isPaid={i539PackagePaid}
+                                    isInstallment={!!activeI539Plan}
+                                    installmentNumber={currentI539InstallmentNumber}
+                                    totalInstallments={totalI539Installments}
                                     loading={packageLoading}
                                     setLoading={setPackageLoading}
                                     error={packageError}
@@ -988,14 +1034,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                     setSelectedPaymentMethod={setSelectedPaymentMethod as any}
                                     showZelle={showZelle}
                                     setShowZelle={setShowZelle}
-                                    showInlineCpf={showInlineCpf}
-                                    setShowInlineCpf={setShowInlineCpf}
-                                    inlineCpf={inlineCpf}
-                                    setInlineCpf={setInlineCpf}
-                                    savingCpf={savingCpf}
-                                    setSavingCpf={setSavingCpf}
-                                    cpfError={cpfError}
-                                    setCpfError={setCpfError}
                                     userProfile={userProfile}
                                     onPaymentSuccess={fetchApplicationDetails}
                                     currentStep="my_applications"
@@ -1011,14 +1049,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             scholarship={applicationDetails.scholarships}
                                             userProfile={userProfile}
                                             acceptanceLetter={{
-                                                url: canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url,
+                                                url: acceptanceLetterDisplayUrl,
                                                 onView: () => {
-                                                    const urlToView = canDownloadOriginal ? applicationDetails.acceptance_letter_url : applicationDetails.acceptance_letter_preview_url;
-                                                    if (!urlToView) {
+                                                    if (!acceptanceLetterDisplayUrl) {
                                                         toast.error('Preview deste documento ainda está sendo gerado ou não está disponível. Por favor, contate o suporte.');
                                                         return;
                                                     }
-                                                    handleViewDocument(urlToView);
+                                                    handleViewDocument(acceptanceLetterDisplayUrl);
                                                 },
                                                 onDownload: canDownloadOriginal ? handleDownloadDocument : undefined,
                                             }}
