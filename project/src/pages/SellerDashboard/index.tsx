@@ -418,6 +418,17 @@ const SellerDashboard: React.FC = () => {
     }
   }, [user?.id, user?.email]);
 
+  // Reload data when the tab regains focus (student may have paid in another tab/session)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user?.email) {
+        loadSellerData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadSellerData, user?.email]);
+
   // Detect URL changes and set view automatically
   useEffect(() => {
     // Only update view from URL if it's a direct navigation (not from cards)
