@@ -332,7 +332,7 @@ export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
             >
               {isFreeProcessing
                 ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</>
-                : 'Confirmar inscrição gratuita'
+                : 'Confirmar pagamento gratuito'
               }
             </button>
           </div>

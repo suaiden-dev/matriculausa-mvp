@@ -722,7 +722,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                             disabled={isFreeProcessing}
                                                             className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                                                         >
-                                                            {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</> : 'Confirmar inscrição gratuita'}
+                                                            {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</> : 'Confirmar pagamento gratuito'}
                                                         </button>
                                                     </div>
                                                 ) : hasZellePendingPlacementFee ? (
