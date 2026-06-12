@@ -37,15 +37,32 @@ const feeTypeToProfileColumn: Record<FreeFeeType, string> = {
   i539_cos_package: 'has_paid_i539_cos_package',
 };
 
+// Columns on user_profiles that store the payment method for each fee type.
+// application_fee uses scholarship_applications.application_fee_payment_method instead.
+const feeTypeToPaymentMethodColumn: Partial<Record<FreeFeeType, string>> = {
+  placement_fee: 'placement_fee_payment_method',
+  reinstatement_package: 'reinstatement_package_payment_method',
+  i20_control_fee: 'i20_control_fee_payment_method',
+  ds160_package: 'ds160_package_payment_method',
+  i539_cos_package: 'i539_cos_package_payment_method',
+};
+
 export async function applyFreePayment(params: ApplyFreePaymentParams): Promise<{ error: any }> {
   const { supabase, feeType, userId, applicationId, couponCode, amount, onSuccess } = params;
 
   try {
     const profileColumn = feeTypeToProfileColumn[feeType];
+    const paymentMethodColumn = feeTypeToPaymentMethodColumn[feeType];
+
+    const profileUpdate: Record<string, any> = {
+      [profileColumn]: true,
+      updated_at: new Date().toISOString(),
+    };
+    if (paymentMethodColumn) profileUpdate[paymentMethodColumn] = 'coupon';
 
     const { error: profileError } = await supabase
       .from('user_profiles')
-      .update({ [profileColumn]: true, updated_at: new Date().toISOString() })
+      .update(profileUpdate)
       .eq('user_id', userId);
 
     if (profileError) throw profileError;
@@ -53,7 +70,7 @@ export async function applyFreePayment(params: ApplyFreePaymentParams): Promise<
     if (feeType === 'application_fee' && applicationId) {
       await supabase
         .from('scholarship_applications')
-        .update({ is_application_fee_paid: true })
+        .update({ is_application_fee_paid: true, application_fee_payment_method: 'coupon' })
         .eq('id', applicationId);
     }
 
