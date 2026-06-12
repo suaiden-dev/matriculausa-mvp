@@ -441,11 +441,12 @@ const AffiliateManagement: React.FC = () => {
     setApprovalModalRequest(req);
   };
 
-  const handleConfirmApprove = async () => {
+  const handleConfirmApprove = async (rulesOverride?: Record<string, CommissionRule>) => {
     if (!approvalModalRequest) return;
     setApprovingAgency(true);
     setApprovalError(null);
     setProcessingRequest(approvalModalRequest.id);
+    const finalRules = rulesOverride ?? approvalRules;
     try {
       const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-agency-user', {
         body: {
@@ -453,7 +454,7 @@ const AffiliateManagement: React.FC = () => {
           full_name: approvalModalRequest.full_name,
           company_name: approvalModalRequest.company_name,
           agency_request_id: approvalModalRequest.id,
-          commission_rules: approvalRules,
+          commission_rules: finalRules,
         },
       });
       if (inviteError) throw inviteError;
@@ -1024,7 +1025,7 @@ const AffiliateManagement: React.FC = () => {
           confirmLabel="Confirm & Approve"
           saving={approvingAgency}
           error={approvalError}
-          onSave={() => handleConfirmApprove()}
+          onSave={(rules) => handleConfirmApprove(rules)}
           onClose={() => { setApprovalModalRequest(null); setApprovalError(null); }}
         />
       )}
