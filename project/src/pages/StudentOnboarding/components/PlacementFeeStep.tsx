@@ -201,6 +201,26 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         }
     }, [isAlreadyPaid, loading, onNext]);
 
+    const PLACEMENT_SESSION_KEY = 'musa_coupon_placement_fee';
+
+    // Restore coupon from sessionStorage on mount (avoids re-calling RPC on refresh)
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem(PLACEMENT_SESSION_KEY);
+            if (!saved) return;
+            const { couponCode, validation } = JSON.parse(saved);
+            if (couponCode && validation?.isValid) {
+                setHasCoupon(true);
+                setPromotionalCoupon(couponCode);
+                setCouponValidation(validation);
+                (window as any).__checkout_placement_fee_coupon = couponCode;
+                (window as any).__checkout_placement_fee_final_amount = validation.finalAmount;
+            }
+        } catch {
+            sessionStorage.removeItem(PLACEMENT_SESSION_KEY);
+        }
+    }, []);
+
     const validateCoupon = async (baseAmount: number) => {
         if (!promotionalCoupon.trim()) return;
         const normalizedCode = promotionalCoupon.trim().toUpperCase();
@@ -222,7 +242,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 : result.discount_value;
             discountAmount = Math.min(discountAmount, baseAmount);
             const finalAmount = Math.max(0, baseAmount - discountAmount);
-            setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
+            const validation = { isValid: true, discountAmount, finalAmount, couponId: result.id };
+            setCouponValidation(validation);
+            // Persist so refresh doesn't re-call the RPC
+            sessionStorage.setItem(PLACEMENT_SESSION_KEY, JSON.stringify({ couponCode: normalizedCode, validation }));
             (window as any).__checkout_placement_fee_coupon = normalizedCode;
             (window as any).__checkout_placement_fee_final_amount = finalAmount;
             // Registrar validação
@@ -243,8 +266,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         }),
                     });
                 }
-            } catch (recordError) {
-                console.warn('[PlacementFeeStep] Não foi possível registrar uso do cupom:', recordError);
+            } catch {
+                // non-blocking
             }
         } catch (e: any) {
             setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
@@ -254,7 +277,16 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
     const removeCoupon = async () => {
-        if (!promotionalCoupon.trim()) return;
+        const code = promotionalCoupon.trim();
+        if (!code) return;
+        // Clear immediately for instant UX
+        sessionStorage.removeItem(PLACEMENT_SESSION_KEY);
+        setHasCoupon(false);
+        setPromotionalCoupon('');
+        setCouponValidation(null);
+        delete (window as any).__checkout_placement_fee_coupon;
+        delete (window as any).__checkout_placement_fee_final_amount;
+        // Decrement usage in background
         try {
             const { data: sessionData } = await supabase.auth.getSession();
             const token = sessionData.session?.access_token;
@@ -262,17 +294,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: 'placement_fee' }),
+                    body: JSON.stringify({ coupon_code: code.toUpperCase(), fee_type: 'placement_fee' }),
                 });
             }
-        } catch (e) {
-            console.warn('[PlacementFeeStep] Erro ao remover cupom:', e);
+        } catch {
+            // non-blocking
         }
-        setHasCoupon(false);
-        setPromotionalCoupon('');
-        setCouponValidation(null);
-        delete (window as any).__checkout_placement_fee_coupon;
-        delete (window as any).__checkout_placement_fee_final_amount;
     };
 
     const processCheckout = async (
@@ -395,7 +422,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             applicationId: app.id,
             couponCode: couponCode || undefined,
             amount: originalAmount || 0,
-            onSuccess: onNext,
+            onSuccess: () => {
+                sessionStorage.removeItem('musa_coupon_placement_fee');
+                onNext();
+            },
         });
         if (error) {
             alert('Erro ao processar pagamento gratuito. Tente novamente.');

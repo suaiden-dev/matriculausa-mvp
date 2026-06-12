@@ -1,98 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
 import { applyFreePayment } from '../../../lib/freePaymentHandler';
-
-interface CouponValidation {
-  isValid: boolean;
-  message?: string;
-  discountAmount?: number;
-  finalAmount?: number;
-  couponId?: string;
-}
+import { useCouponState } from '../../../hooks/useCouponState';
 
 export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
 
   const baseAmount = getFeeAmount('application_fee');
-  const formattedAmount = baseAmount && !isNaN(baseAmount)
-    ? formatFeeAmount(baseAmount)
-    : '$0.00';
-
+  const formattedAmount = baseAmount && !isNaN(baseAmount) ? formatFeeAmount(baseAmount) : '$0.00';
   const hasPaid = userProfile?.is_application_fee_paid || false;
 
-  // ── Coupon states ─────────────────────────────────────────────────────────
-  const [hasCoupon, setHasCoupon] = useState(false);
-  const [promotionalCoupon, setPromotionalCoupon] = useState('');
-  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
-  const couponInputRef = useRef<HTMLInputElement>(null);
-
-  const effectiveAmount = couponValidation?.isValid && couponValidation.finalAmount !== undefined
-    ? couponValidation.finalAmount
-    : baseAmount;
-
-  const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
-    ? promotionalCoupon.trim().toUpperCase()
-    : null;
+  // ── Cupom (persiste no sessionStorage — refresh não gasta uso) ────────────
+  const {
+    hasCoupon, setHasCoupon,
+    promotionalCoupon, setPromotionalCoupon,
+    couponValidation,
+    isValidatingCoupon,
+    couponInputRef,
+    validateCoupon,
+    removeCoupon,
+    clearCouponStorage,
+    effectiveAmount,
+    appliedCoupon,
+  } = useCouponState('application_fee', baseAmount);
 
   const isFreePayment = effectiveAmount === 0;
 
   useEffect(() => {
     if (hasPaid) onNext();
   }, [hasPaid, onNext]);
-
-  // ── Coupon validation ─────────────────────────────────────────────────────
-  const validateCoupon = async () => {
-    if (!promotionalCoupon.trim()) return;
-    const normalizedCode = promotionalCoupon.trim().toUpperCase();
-    setIsValidatingCoupon(true);
-    setCouponValidation(null);
-
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const { data: result, error: rpcError } = await supabase.rpc(
-        'validate_and_apply_admin_promotional_coupon',
-        {
-          p_code: normalizedCode,
-          p_fee_type: 'application_fee',
-          p_user_id: currentUser?.id,
-        }
-      );
-
-      if (rpcError) throw rpcError;
-
-      if (!result || !result.valid) {
-        setCouponValidation({ isValid: false, message: result?.message || 'Código de cupom inválido' });
-        return;
-      }
-
-      let discountAmount = result.discount_type === 'percentage'
-        ? (baseAmount * result.discount_value) / 100
-        : result.discount_value;
-      discountAmount = Math.min(discountAmount, baseAmount);
-      const finalAmount = Math.max(0, baseAmount - discountAmount);
-
-      setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
-    } catch (e: any) {
-      setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
-    } finally {
-      setIsValidatingCoupon(false);
-    }
-  };
-
-  const removeCoupon = () => {
-    setHasCoupon(false);
-    setPromotionalCoupon('');
-    setCouponValidation(null);
-  };
 
   // ── Free payment handler ──────────────────────────────────────────────────
   const handleFreePayment = async () => {
@@ -116,7 +60,7 @@ export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
         applicationId,
         couponCode: appliedCoupon || undefined,
         amount: baseAmount,
-        onSuccess: onNext,
+        onSuccess: () => { clearCouponStorage(); onNext(); },
       });
 
       if (freeErr) throw freeErr;
