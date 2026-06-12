@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../../hooks/useDynamicFees';
 import { I20ControlFeeModal } from '../../../components/I20ControlFeeModal';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import { PayerInfo } from '../../../components/PayerAlternativeForm';
 import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
@@ -191,14 +192,33 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
     setI20Error(null);
 
     try {
+      const baseAmount = getFeeAmount('i20_control_fee');
+      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      const finalAmountWithDiscount = (window as any).__checkout_final_amount ?? baseAmount;
+
+      if (finalAmountWithDiscount === 0) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) throw new Error('User not authenticated');
+        const { error: freeErr } = await applyFreePayment({
+          supabase,
+          feeType: 'i20_control_fee',
+          userId: currentUser.id,
+          couponCode: promotionalCoupon || undefined,
+          amount: baseAmount,
+          onSuccess: () => {
+            handleCloseI20Modal();
+            refetchUserProfile?.();
+          },
+        });
+        if (freeErr) throw freeErr;
+        setI20Loading(false);
+        return;
+      }
+
       if (selectedPaymentMethod === 'stripe') {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
-
-        const baseAmount = getFeeAmount('i20_control_fee');
-        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-        const finalAmountWithDiscount = (window as any).__checkout_final_amount || baseAmount;
 
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -225,10 +245,6 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
-
-        const baseAmount = getFeeAmount('i20_control_fee');
-        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-        const finalAmountWithDiscount = (window as any).__checkout_final_amount || baseAmount;
 
         const metadata: any = {};
         if (exchangeRate && exchangeRate > 0) {
@@ -266,9 +282,6 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
 
-        const finalAmount = (window as any).__checkout_final_amount || parseFloat(i20ControlFee?.replace('$', '') || '0');
-        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -276,11 +289,11 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
-            amount: finalAmount,
+            amount: finalAmountWithDiscount,
             fee_type: 'i20_control_fee',
             metadata: {
               application_id: application?.id,
-              final_amount: finalAmount,
+              final_amount: finalAmountWithDiscount,
               promotional_coupon: promotionalCoupon,
             },
             promotional_coupon: promotionalCoupon,
@@ -319,7 +332,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
       setI20Loading(false);
       handleCloseI20Modal();
     }
-  }, [selectedPaymentMethod, application, getFeeAmount, i20ControlFee, exchangeRate]);
+  }, [selectedPaymentMethod, application, getFeeAmount, i20ControlFee, exchangeRate, handleCloseI20Modal, refetchUserProfile]);
 
   // Auto-process payment when method is selected
   useEffect(() => {

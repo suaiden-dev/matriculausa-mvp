@@ -665,5 +665,11 @@
       "errorMessage": "There was a problem processing your payment.",
       "errorRetry": "Try again. If the error persists, please contact support."
     }
+  },
+  "freePayment": {
+    "title": "Free payment",
+    "subtitle": "100% covered by promotional coupon",
+    "button": "Continue to next step",
+    "processing": "Processing..."
   }
 }
