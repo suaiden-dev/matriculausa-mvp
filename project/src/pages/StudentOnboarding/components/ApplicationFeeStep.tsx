@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { supabase } from '../../../lib/supabase';
@@ -8,6 +9,7 @@ import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import { useCouponState } from '../../../hooks/useCouponState';
 
 export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
+  const { t } = useTranslation('payment');
   const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const [loading, setLoading] = useState(false);
@@ -265,8 +267,8 @@ export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
               <div>
-                <p className="text-sm font-bold text-emerald-800">Pagamento gratuito</p>
-                <p className="text-xs text-emerald-700">100% coberto pelo cupom promocional</p>
+                <p className="text-sm font-bold text-emerald-800">{t('freePayment.title')}</p>
+                <p className="text-xs text-emerald-700">{t('freePayment.subtitle')}</p>
               </div>
             </div>
             <button
@@ -275,8 +277,8 @@ export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
               className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg hover:bg-emerald-700 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isFreeProcessing
-                ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</>
-                : 'Prosseguir para a próxima etapa'
+                ? <><RefreshCw className="w-5 h-5 animate-spin" /> {t('freePayment.processing')}</>
+                : t('freePayment.button')
               }
             </button>
           </div>

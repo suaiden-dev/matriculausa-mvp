@@ -597,5 +597,11 @@
       "errorMessage": "Houve um problema ao processar seu pagamento.",
       "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
     }
+  },
+  "freePayment": {
+    "title": "Pagamento gratuito",
+    "subtitle": "100% coberto pelo cupom promocional",
+    "button": "Prosseguir para a próxima etapa",
+    "processing": "Processando..."
   }
 }

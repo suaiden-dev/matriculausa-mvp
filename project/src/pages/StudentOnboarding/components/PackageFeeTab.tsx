@@ -462,8 +462,8 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                       <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
                         <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
                         <div>
-                          <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">Pagamento gratuito</p>
-                          <p className="text-xs text-emerald-700 mt-0.5">100% coberto pelo cupom promocional</p>
+                          <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">{t('freePayment.title', { ns: 'payment' })}</p>
+                          <p className="text-xs text-emerald-700 mt-0.5">{t('freePayment.subtitle', { ns: 'payment' })}</p>
                         </div>
                       </div>
                       <button
@@ -471,7 +471,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                         disabled={isFreeProcessing}
                         className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
-                        {isFreeProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> Processando...</> : 'Prosseguir para a próxima etapa'}
+                        {isFreeProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('freePayment.processing', { ns: 'payment' })}</> : t('freePayment.button', { ns: 'payment' })}
                       </button>
                     </div>
                   ) : hasZellePendingPackageFee ? (
