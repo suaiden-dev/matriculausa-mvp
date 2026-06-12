@@ -592,6 +592,22 @@ export async function approveZelleFlow(params: {
         .eq("student_id", profileRow.id)
         .neq("status", "rejected");
     }
+
+    await supabase.rpc("log_student_action", {
+      p_student_id: finalStudentId,
+      p_action_type: "fee_payment",
+      p_action_description: `Application Fee (Migma) paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "application",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+        source: "migma",
+      },
+    });
   }
 
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
