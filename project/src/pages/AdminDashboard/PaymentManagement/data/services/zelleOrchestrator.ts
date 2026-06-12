@@ -796,38 +796,23 @@ export async function approveZelleFlow(params: {
     .single();
   const adminName = adminProfile?.full_name || "Admin";
 
-  // Migma callback: if payment originated from Migma, notify migma-approve-application-fee
+  // Migma callback: if payment originated from Migma, notify via server-side edge function (with logs)
   if (payment.fee_type === "application_fee_migma" && payment.metadata?.source === 'migma') {
-    const migmaFunctionsUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
-    const migmaWebhookSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
-
-    if (migmaFunctionsUrl && payment.metadata?.migma_application_id && payment.metadata?.migma_profile_id) {
-      try {
-        const response = await fetch(`${migmaFunctionsUrl}/migma-approve-application-fee`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-migma-webhook-secret': migmaWebhookSecret || '',
-          },
-          body: JSON.stringify({
-            action: 'approved',
-            migma_application_id: payment.metadata.migma_application_id,
-            migma_profile_id: payment.metadata.migma_profile_id,
-            migma_user_id: payment.metadata.migma_user_id,
-            matriculausa_payment_id: payment.id,
-            approved_by: adminName,
-          }),
-        });
-        if (response.ok) {
-          console.log('✅ [zelleOrchestrator] Migma callback enviado com sucesso');
-        } else {
-          console.error('❌ [zelleOrchestrator] Migma callback falhou:', response.status, await response.text());
-        }
-      } catch (migmaErr) {
-        console.error('❌ [zelleOrchestrator] Erro ao chamar Migma callback:', migmaErr);
+    try {
+      const { data: migmaResult, error: migmaErr } = await supabase.functions.invoke('migma-notify-payment', {
+        body: {
+          zelle_payment_id: payment.id,
+          action: 'approved',
+          approved_by: adminName,
+        },
+      });
+      if (migmaErr) {
+        console.error('❌ [zelleOrchestrator] Migma callback falhou:', migmaErr);
+      } else {
+        console.log('✅ [zelleOrchestrator] Migma callback enviado com sucesso:', migmaResult);
       }
-    } else {
-      console.warn('[zelleOrchestrator] Migma callback ignorado: dados insuficientes no metadata', payment.metadata);
+    } catch (migmaErr) {
+      console.error('❌ [zelleOrchestrator] Erro ao chamar Migma callback:', migmaErr);
     }
   }
 
@@ -1324,37 +1309,24 @@ export async function rejectZelleFlow(params: {
       body: JSON.stringify(rejectionPayload),
     });
 
-    // Migma callback: if payment originated from Migma, notify migma-approve-application-fee (rejected)
+    // Migma callback: if payment originated from Migma, notify via server-side edge function (with logs)
     if (payment.fee_type === "application_fee_migma" && payment.metadata?.source === 'migma') {
-      const migmaFunctionsUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
-      const migmaWebhookSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
-
-      if (migmaFunctionsUrl && payment.metadata?.migma_application_id && payment.metadata?.migma_profile_id) {
-        try {
-          const response = await fetch(`${migmaFunctionsUrl}/migma-approve-application-fee`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-migma-webhook-secret': migmaWebhookSecret || '',
-            },
-            body: JSON.stringify({
-              action: 'rejected',
-              migma_application_id: payment.metadata.migma_application_id,
-              migma_profile_id: payment.metadata.migma_profile_id,
-              migma_user_id: payment.metadata.migma_user_id,
-              matriculausa_payment_id: payment.id,
-              rejected_by: adminName,
-              rejection_reason: reason,
-            }),
-          });
-          if (response.ok) {
-            console.log('✅ [zelleOrchestrator] Migma rejection callback enviado com sucesso');
-          } else {
-            console.error('❌ [zelleOrchestrator] Migma rejection callback falhou:', response.status, await response.text());
-          }
-        } catch (migmaErr) {
-          console.error('❌ [zelleOrchestrator] Erro ao chamar Migma rejection callback:', migmaErr);
+      try {
+        const { data: migmaResult, error: migmaErr } = await supabase.functions.invoke('migma-notify-payment', {
+          body: {
+            zelle_payment_id: payment.id,
+            action: 'rejected',
+            rejected_by: adminName,
+            rejection_reason: reason,
+          },
+        });
+        if (migmaErr) {
+          console.error('❌ [zelleOrchestrator] Migma rejection callback falhou:', migmaErr);
+        } else {
+          console.log('✅ [zelleOrchestrator] Migma rejection callback enviado com sucesso:', migmaResult);
         }
+      } catch (migmaErr) {
+        console.error('❌ [zelleOrchestrator] Erro ao chamar Migma rejection callback:', migmaErr);
       }
     }
   } catch (_) {}
