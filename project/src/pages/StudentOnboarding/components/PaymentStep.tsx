@@ -161,42 +161,25 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, [fetchApplications]);
 
-  // Restaurar cupom salvo ao montar o componente
-  useEffect(() => {
-    const restoreCoupon = async () => {
-      if (!user?.id) return;
-      try {
-        const { data: couponRecords, error } = await supabase
-          .from('promotional_coupon_usage')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'application_fee')
-          .order('created_at', { ascending: false });
+  const APP_FEE_SESSION_KEY = 'musa_coupon_application_fee';
 
-        if (error) return;
-        const validationRecords = (couponRecords || []).filter((r: any) =>
-          r.payment_id?.startsWith('validation_') || r.metadata?.is_validation === true
-        );
-        if (validationRecords.length > 0) {
-          const latest = validationRecords[0];
-          setHasCoupon(true);
-          setPromotionalCoupon(latest.coupon_code);
-          setCouponValidation({
-            isValid: true,
-            message: `Coupon ${latest.coupon_code} applied!`,
-            discountAmount: latest.discount_amount,
-            finalAmount: latest.final_amount,
-            couponId: latest.coupon_id,
-          });
-          (window as any).__checkout_app_fee_coupon = latest.coupon_code;
-          (window as any).__checkout_app_fee_final_amount = latest.final_amount;
-        }
-      } catch (e) {
-        console.error('[PaymentStep] Erro ao restaurar cupom:', e);
+  // Restore coupon from sessionStorage on mount (avoids re-calling RPC on refresh)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(APP_FEE_SESSION_KEY);
+      if (!saved) return;
+      const { couponCode, validation } = JSON.parse(saved);
+      if (couponCode && validation?.isValid) {
+        setHasCoupon(true);
+        setPromotionalCoupon(couponCode);
+        setCouponValidation(validation);
+        (window as any).__checkout_app_fee_coupon = couponCode;
+        (window as any).__checkout_app_fee_final_amount = validation.finalAmount;
       }
-    };
-    restoreCoupon();
-  }, [user?.id]);
+    } catch {
+      sessionStorage.removeItem(APP_FEE_SESSION_KEY);
+    }
+  }, []);
 
   const validateCoupon = async (baseAmount: number) => {
     if (!promotionalCoupon.trim()) {
@@ -224,13 +207,15 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       discountAmount = Math.min(discountAmount, baseAmount);
       const finalAmount = Math.max(0, baseAmount - discountAmount);
 
-      setCouponValidation({
+      const validation = {
         isValid: true,
         message: `Cupom ${normalizedCode} aplicado! Você economizou $${discountAmount.toFixed(2)}`,
         discountAmount,
         finalAmount,
         couponId: result.id,
-      });
+      };
+      setCouponValidation(validation);
+      sessionStorage.setItem(APP_FEE_SESSION_KEY, JSON.stringify({ couponCode: normalizedCode, validation }));
       (window as any).__checkout_app_fee_coupon = normalizedCode;
       (window as any).__checkout_app_fee_final_amount = finalAmount;
 
@@ -276,6 +261,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     } catch (e) {
       console.warn('[PaymentStep] Erro ao remover cupom:', e);
     }
+    sessionStorage.removeItem(APP_FEE_SESSION_KEY);
     setHasCoupon(false);
     setPromotionalCoupon('');
     setCouponValidation(null);
@@ -306,6 +292,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         couponCode: appliedCoupon,
         amount: baseAmount,
         onSuccess: () => {
+          sessionStorage.removeItem(APP_FEE_SESSION_KEY);
           setCouponValidation(null);
           setPromotionalCoupon('');
           setHasCoupon(false);
