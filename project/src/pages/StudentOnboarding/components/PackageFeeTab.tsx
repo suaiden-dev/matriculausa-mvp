@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { CreditCard, Check, Loader2, AlertCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
+import { CreditCard, Check, Loader2, AlertCircle, Shield, CheckCircle2, XCircle, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
@@ -110,6 +111,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
   const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
   const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
   const couponInputRef = useRef<HTMLInputElement>(null);
 
@@ -222,8 +224,29 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     ? promotionalCoupon.trim().toUpperCase()
     : null;
 
+  const isFreePayment = effectiveAmount === 0;
+
+  const handleFreePayment = async () => {
+    setIsFreeProcessing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsFreeProcessing(false); return; }
+    const { error } = await applyFreePayment({
+      supabase,
+      feeType: feeType as any,
+      userId: user.id,
+      couponCode: appliedCoupon || undefined,
+      amount,
+      onSuccess: onPaymentSuccess,
+    });
+    if (error) {
+      setError('Erro ao processar pagamento gratuito. Tente novamente.');
+      setIsFreeProcessing(false);
+    }
+  };
+
   // ── Checkout Stripe/PIX ──────────────────────────────────────────────────
   const handleStripeCheckout = async (paymentMethod: 'stripe' | 'pix') => {
+    if (effectiveAmount === 0) { await handleFreePayment(); return; }
     setLoading(true);
     setError(null);
     try {
@@ -290,6 +313,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   };
 
   const launchParcelowCheckout = async () => {
+    if (effectiveAmount === 0) { await handleFreePayment(); return; }
     setLoading(true);
     setError(null);
     try {
@@ -530,7 +554,24 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  {hasZellePendingPackageFee ? (
+                  {isFreePayment ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                        <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">Pagamento gratuito</p>
+                          <p className="text-xs text-emerald-700 mt-0.5">100% coberto pelo cupom promocional</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleFreePayment}
+                        disabled={isFreeProcessing}
+                        className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isFreeProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> Processando...</> : 'Confirmar pagamento gratuito'}
+                      </button>
+                    </div>
+                  ) : hasZellePendingPackageFee ? (
                     <div className="flex flex-col gap-0 border-2 border-amber-200 rounded-[2.5rem] overflow-hidden">
                       <div className="bg-amber-50 px-6 py-4 flex items-start gap-4">
                         <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">

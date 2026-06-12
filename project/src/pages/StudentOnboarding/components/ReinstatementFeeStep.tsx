@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import {
     CheckCircle,
     AlertCircle,
@@ -93,6 +94,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
 
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
+    const [isFreeProcessing, setIsFreeProcessing] = useState(false);
     const [isZelleActive, setIsZelleActive] = useState(false);
     const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
@@ -118,6 +120,26 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
     const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
         ? promotionalCoupon.trim().toUpperCase()
         : null;
+
+    const isFreePayment = effectiveAmount === 0;
+
+    const handleFreePayment = async () => {
+        setIsFreeProcessing(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsFreeProcessing(false); return; }
+        const { error } = await applyFreePayment({
+            supabase,
+            feeType: 'reinstatement_package',
+            userId: user.id,
+            couponCode: appliedCoupon || undefined,
+            amount: baseAmount,
+            onSuccess: onNext,
+        });
+        if (error) {
+            alert('Erro ao processar pagamento gratuito. Tente novamente.');
+            setIsFreeProcessing(false);
+        }
+    };
 
     useEffect(() => {
         getExchangeRate().then(rate => setExchangeRate(rate));
@@ -257,6 +279,10 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
 
     // ── Checkout Stripe / PIX ────────────────────────────────────────────────
     const processCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
+        if (effectiveAmount === 0) {
+            await handleFreePayment();
+            return;
+        }
         try {
             setIsProcessingCheckout(method);
             const { data: sessionData } = await supabase.auth.getSession();
@@ -585,7 +611,24 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                 {/* ────────────────────────────────────────────────────── */}
 
                                 <div className="flex flex-col gap-4 mt-4">
-                                    {hasZellePending ? (
+                                    {isFreePayment ? (
+                                        <div className="flex flex-col items-center gap-4 py-4">
+                                            <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                                                <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">Pagamento gratuito</p>
+                                                    <p className="text-xs text-emerald-700 mt-0.5">100% coberto pelo cupom promocional</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleFreePayment}
+                                                disabled={isFreeProcessing}
+                                                className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</> : 'Confirmar inscrição gratuita'}
+                                            </button>
+                                        </div>
+                                    ) : hasZellePending ? (
                                         <div className="flex flex-col gap-0">
                                             <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
                                                 <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">

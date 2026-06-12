@@ -4,6 +4,7 @@ import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAltern
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import {
     CheckCircle,
     AlertCircle,
@@ -91,6 +92,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     const [loading, setLoading] = useState(true);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
+    const [isFreeProcessing, setIsFreeProcessing] = useState(false);
     const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
     const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null);
 
@@ -303,6 +305,22 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 ? promotionalCoupon.trim().toUpperCase()
                 : null;
 
+            if (finalAmount === 0) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('User not authenticated');
+                const { error: freeErr } = await applyFreePayment({
+                    supabase,
+                    feeType: 'placement_fee',
+                    userId: user.id,
+                    applicationId: application.id,
+                    couponCode: appliedCoupon || undefined,
+                    amount: fullAmount,
+                    onSuccess: onNext,
+                });
+                if (freeErr) throw freeErr;
+                return;
+            }
+
             let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-placement-fee`;
             if (method === 'parcelow') {
                 apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-placement-fee`;
@@ -365,6 +383,25 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
 
+
+    const handleFreePaymentForApp = async (app: ApplicationWithScholarship, couponCode?: string | null, originalAmount?: number) => {
+        setIsFreeProcessing(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsFreeProcessing(false); return; }
+        const { error } = await applyFreePayment({
+            supabase,
+            feeType: 'placement_fee',
+            userId: user.id,
+            applicationId: app.id,
+            couponCode: couponCode || undefined,
+            amount: originalAmount || 0,
+            onSuccess: onNext,
+        });
+        if (error) {
+            alert('Erro ao processar pagamento gratuito. Tente novamente.');
+            setIsFreeProcessing(false);
+        }
+    };
 
     const handleParcelowClick = (app: ApplicationWithScholarship) => {
         // Verificar se há informações de titular de Cartão de Outra Pessoa
@@ -667,7 +704,28 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                 )}
                                                 {/* ────────────────────────────────────────────────────── */}
 
-                                                {hasZellePendingPlacementFee ? (
+                                                {effectiveAmount === 0 ? (
+                                                    <div className="flex flex-col items-center gap-4 py-2">
+                                                        <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                                                            <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                                                            <div>
+                                                                <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">Pagamento gratuito</p>
+                                                                <p className="text-xs text-emerald-700 mt-0.5">100% coberto pelo cupom promocional</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleFreePaymentForApp(
+                                                                app,
+                                                                couponValidation?.isValid ? promotionalCoupon.trim().toUpperCase() : null,
+                                                                baseAmount
+                                                            )}
+                                                            disabled={isFreeProcessing}
+                                                            className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                                        >
+                                                            {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> Processando...</> : 'Confirmar inscrição gratuita'}
+                                                        </button>
+                                                    </div>
+                                                ) : hasZellePendingPlacementFee ? (
                                                     <div className="flex flex-col gap-0">
                                                         <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
                                                             <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
