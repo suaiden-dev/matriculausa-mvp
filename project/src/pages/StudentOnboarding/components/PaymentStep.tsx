@@ -16,6 +16,7 @@ import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAltern
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 
 interface CouponValidation {
   isValid: boolean;
@@ -106,6 +107,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
   const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
+  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
 
   // Promotional coupon states
   const [hasCoupon, setHasCoupon] = useState(false);
@@ -287,9 +289,51 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   // Detecta se há um Zelle pendente do tipo application_fee
   const hasZellePendingApplicationFee = isBlocked && pendingPayment?.fee_type === 'application_fee';
 
+  const handleFreePaymentForApp = async (application: ApplicationWithScholarship) => {
+    if (!user?.id) return;
+    setIsFreeProcessing(true);
+    try {
+      const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
+      const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
+        ? promotionalCoupon.trim().toUpperCase()
+        : undefined;
+
+      const { error } = await applyFreePayment({
+        supabase,
+        feeType: 'application_fee',
+        userId: user.id,
+        applicationId: application.id,
+        couponCode: appliedCoupon,
+        amount: baseAmount,
+        onSuccess: () => {
+          setCouponValidation(null);
+          setPromotionalCoupon('');
+          setHasCoupon(false);
+          delete (window as any).__checkout_app_fee_coupon;
+          delete (window as any).__checkout_app_fee_final_amount;
+          onNext();
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(err.message || 'Erro ao processar pagamento gratuito. Tente novamente.');
+      setIsFreeProcessing(false);
+    }
+  };
+
   const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow', skipCpfCheck = false) => {
     // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
     const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
+
+    const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
+    const finalAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
+      ? couponValidation.finalAmount
+      : baseAmount;
+
+    if (finalAmount === 0) {
+      await handleFreePaymentForApp(application);
+      return;
+    }
 
     // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem e não houver payerInfo
     if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck && !hasPayerInfo) {
@@ -309,11 +353,6 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
       }
 
-      const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
-      // Usar valor com desconto do cupom se aplicado
-      const finalAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
-        ? couponValidation.finalAmount
-        : baseAmount;
       const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
         ? promotionalCoupon.trim().toUpperCase()
         : null;
@@ -690,6 +729,26 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 onSuccess={onNext}
                               />
                             </div>
+                          </div>
+                        ) : effectiveAmount === 0 ? (
+                          <div className="space-y-3">
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                              <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-bold text-emerald-800">{t('payment:freePayment.title')}</p>
+                                <p className="text-xs text-emerald-700">{t('payment:freePayment.subtitle')}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFreePaymentForApp(app)}
+                              disabled={isFreeProcessing}
+                              className="w-full bg-emerald-600 text-white py-3 px-6 rounded-xl hover:bg-emerald-700 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {isFreeProcessing
+                                ? <><RefreshCw className="w-5 h-5 animate-spin" /> {t('payment:freePayment.processing')}</>
+                                : t('payment:freePayment.button')
+                              }
+                            </button>
                           </div>
                         ) : (
                           <>
