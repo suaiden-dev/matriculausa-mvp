@@ -307,7 +307,7 @@
       "sendingTitle": "Enviando para Verificação...",
       "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
       "analyzingTitle": "Analisando Pagamento...",
-      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
+      "analyzingMessage": "Estamos validando sua confirmação de pagamento, aguarde"
     },
     "errors": {
       "fileSize": "O tamanho do arquivo deve ser inferior a 20MB",

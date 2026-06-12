@@ -80,7 +80,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   } = props;
 
   const [savingInstallment, setSavingInstallment] = useState(false);
-  const [showCancelPlanModal, setShowCancelPlanModal] = useState(false);
+  const [cancelPlanFeeType, setCancelPlanFeeType] = useState<SupportedInstallmentFeeType | null>(null);
+  const [pendingInstallmentFeeType, setPendingInstallmentFeeType] = useState<SupportedInstallmentFeeType | null>(null);
   const [pendingInstallmentN, setPendingInstallmentN] = useState<number | null>(null);
 
   // ✅ Buscar affiliate admin email do aluno para verificar se é do Brant
@@ -183,14 +184,121 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
   // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com"
   const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
+  const getFeeTotalAmount = (feeType: SupportedInstallmentFeeType): number => {
+    if (feeType === 'placement_fee') return placementFeeTotalAmount;
+    if (feeType === 'ds160_package') {
+      return currentOverrides?.ds160_package_fee != null
+        ? Number(currentOverrides.ds160_package_fee)
+        : 1800;
+    }
+    if (feeType === 'i539_cos_package') {
+      return currentOverrides?.i539_cos_package_fee != null
+        ? Number(currentOverrides.i539_cos_package_fee)
+        : 1800;
+    }
+    return getFeeAmount(feeType);
+  };
 
+  const renderInstallmentSelector = (feeType: SupportedInstallmentFeeType) => {
+    if (!onSetInstallmentPlan) return null;
+    const activePlan = installmentPlans?.[feeType] ?? null;
+    const options = INSTALLMENT_CONFIG.INSTALLMENT_OPTIONS[feeType];
+    const totalAmount = getFeeTotalAmount(feeType);
 
+    return (
+      <div className="flex flex-col gap-1.5 mt-2">
+        <span className="text-xs font-semibold text-slate-600">Installment plan</span>
+        {activePlan && activePlan.status === 'active' ? (
+          <div className="flex flex-col gap-1">
+            {/* Progresso do plano ativo */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                {activePlan.installments_paid}/{activePlan.total_installments} paid
+              </span>
+              <span className="text-xs text-slate-500">
+                ${Math.max(0, totalAmount - activePlan.amount_paid).toFixed(0)} remaining
+              </span>
+            </div>
+            {/* Barra de progresso */}
+            <div className="w-32 bg-slate-200 rounded-full h-1.5">
+              <div
+                className="bg-amber-500 h-1.5 rounded-full transition-all"
+                style={{ width: `${(activePlan.installments_paid / activePlan.total_installments) * 100}%` }}
+              />
+            </div>
+            <button
+              onClick={() => setCancelPlanFeeType(feeType)}
+              disabled={savingInstallment}
+              className="text-xs text-red-500 hover:text-red-700 underline w-fit disabled:opacity-50 text-left"
+            >
+              {savingInstallment ? 'Saving...' : 'Cancel plan'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-400 italic">No plan</span>
+            {options.map((n) => (
+              <button
+                key={n}
+                onClick={() => {
+                  setPendingInstallmentFeeType(feeType);
+                  setPendingInstallmentN(n);
+                }}
+                disabled={savingInstallment}
+                className="text-xs px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md font-semibold disabled:opacity-50 transition-colors"
+              >
+                {savingInstallment ? '...' : `${n}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const effectiveProcessType = React.useMemo(() => {
+    if (student.student_process_type) return student.student_process_type;
+    const apps = student.all_applications || [];
+    const appWithType =
+      apps.find((app: any) => (app.status === 'enrolled' || app.status === 'approved') && app.student_process_type) ||
+      apps.find((app: any) => app.student_process_type);
+    return appWithType?.student_process_type ?? null;
+  }, [student.student_process_type, student.all_applications]);
+
+  const hasInstallmentPlanFor = (feeType: SupportedInstallmentFeeType) => Boolean(installmentPlans?.[feeType]);
+  const isInstallmentPlanComplete = (feeType: SupportedInstallmentFeeType) => {
+    const plan = installmentPlans?.[feeType] ?? null;
+    return !!plan && (plan.status === 'completed' || plan.installments_paid >= plan.total_installments);
+  };
+  const isPackageFeePaid = (
+    feeType: 'ds160_package' | 'i539_cos_package',
+    legacyPaidFlag: boolean | undefined,
+  ) => {
+    const plan = installmentPlans?.[feeType] ?? null;
+    if (plan && plan.status === 'active' && plan.installments_paid < plan.total_installments) {
+      return false;
+    }
+    return isInstallmentPlanComplete(feeType) || !!legacyPaidFlag;
+  };
+  const isTransferInactiveVisa = effectiveProcessType === 'transfer' && student.visa_transfer_active !== true;
+  const shouldShowTransferI539Package =
+    isTransferInactiveVisa ||
+    (effectiveProcessType === 'transfer' && hasInstallmentPlanFor('i539_cos_package'));
+  const shouldShowDs160Package =
+    (student.source !== 'migma' && effectiveProcessType === 'initial') ||
+    hasInstallmentPlanFor('ds160_package');
+  const shouldShowCosI539Package =
+    !shouldShowTransferI539Package &&
+    (
+      (student.source !== 'migma' && effectiveProcessType === 'change_of_status') ||
+      (effectiveProcessType !== 'initial' && hasInstallmentPlanFor('i539_cos_package'))
+    );
 
   // This is a simplified version - full implementation would include all fee types
   return (
     <>
     {/* Cancel Installment Plan Modal */}
-    {showCancelPlanModal && onSetInstallmentPlan && createPortal(
+    {cancelPlanFeeType !== null && onSetInstallmentPlan && createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
           <div className="flex items-start gap-3">
@@ -198,7 +306,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               <AlertCircle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-800">Cancel installment plan?</h3>
+              <h3 className="text-base font-semibold text-slate-800">
+                Cancel {INSTALLMENT_CONFIG.FEE_TYPE_LABELS[cancelPlanFeeType]} installment plan?
+              </h3>
               <p className="text-sm text-slate-500 mt-1">
                 The current plan will be cancelled. The student will need a new plan to continue paying in installments. Payments already made are preserved.
               </p>
@@ -206,16 +316,17 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button
-              onClick={() => setShowCancelPlanModal(false)}
+              onClick={() => setCancelPlanFeeType(null)}
               className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
             >
               Keep plan
             </button>
             <button
               onClick={async () => {
-                setShowCancelPlanModal(false);
+                const targetFee = cancelPlanFeeType;
+                setCancelPlanFeeType(null);
                 setSavingInstallment(true);
-                try { await onSetInstallmentPlan('placement_fee', null); }
+                try { await onSetInstallmentPlan(targetFee, null); }
                 finally { setSavingInstallment(false); }
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
@@ -227,9 +338,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
       </div>,
       document.body
     )}
-    {pendingInstallmentN !== null && onSetInstallmentPlan && (() => {
-      const totalAmount = placementFeeTotalAmount;
+    {pendingInstallmentN !== null && pendingInstallmentFeeType !== null && onSetInstallmentPlan && (() => {
+      const totalAmount = getFeeTotalAmount(pendingInstallmentFeeType);
       const amounts = computeInstallmentAmounts(totalAmount, pendingInstallmentN);
+      const label = INSTALLMENT_CONFIG.FEE_TYPE_LABELS[pendingInstallmentFeeType];
       return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 p-6 flex flex-col gap-4">
@@ -242,7 +354,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                   Create {pendingInstallmentN}× installment plan?
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">
-                  The placement fee of <span className="font-semibold text-slate-700">{formatFeeAmount(totalAmount, true)}</span> will be split into {pendingInstallmentN} installments:
+                  The {label.toLowerCase()} of <span className="font-semibold text-slate-700">{formatFeeAmount(totalAmount, true)}</span> will be split into {pendingInstallmentN} installments:
                 </p>
               </div>
             </div>
@@ -262,7 +374,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             </p>
             <div className="flex justify-end gap-2 pt-1">
               <button
-                onClick={() => setPendingInstallmentN(null)}
+                onClick={() => {
+                  setPendingInstallmentN(null);
+                  setPendingInstallmentFeeType(null);
+                }}
                 className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
               >
                 Cancel
@@ -270,9 +385,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               <button
                 onClick={async () => {
                   const n = pendingInstallmentN;
+                  const targetFee = pendingInstallmentFeeType;
                   setPendingInstallmentN(null);
+                  setPendingInstallmentFeeType(null);
                   setSavingInstallment(true);
-                  try { await onSetInstallmentPlan('placement_fee', n); }
+                  try { await onSetInstallmentPlan(targetFee, n); }
                   finally { setSavingInstallment(false); }
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
@@ -858,56 +975,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 </button>
                               )}
                               {/* Seletor de parcelamento dinâmico — só exibir quando há application aprovada */}
-                              {onSetInstallmentPlan && approvedApp && (() => {
-                                const activePlan = installmentPlans?.['placement_fee'] ?? null;
-                                const options = INSTALLMENT_CONFIG.INSTALLMENT_OPTIONS.placement_fee;
-                                return (
-                                  <div className="flex flex-col gap-1.5">
-                                    <span className="text-xs font-semibold text-slate-600">Installment plan</span>
-                                    {activePlan && activePlan.status === 'active' ? (
-                                      <div className="flex flex-col gap-1">
-                                        {/* Progresso do plano ativo */}
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                                            {activePlan.installments_paid}/{activePlan.total_installments} paid
-                                          </span>
-                                          <span className="text-xs text-slate-500">
-                                            ${Math.max(0, placementFeeTotalAmount - activePlan.amount_paid).toFixed(0)} remaining
-                                          </span>
-                                        </div>
-                                        {/* Barra de progresso */}
-                                        <div className="w-32 bg-slate-200 rounded-full h-1.5">
-                                          <div
-                                            className="bg-amber-500 h-1.5 rounded-full transition-all"
-                                            style={{ width: `${(activePlan.installments_paid / activePlan.total_installments) * 100}%` }}
-                                          />
-                                        </div>
-                                        <button
-                                          onClick={() => setShowCancelPlanModal(true)}
-                                          disabled={savingInstallment}
-                                          className="text-xs text-red-500 hover:text-red-700 underline w-fit disabled:opacity-50"
-                                        >
-                                          {savingInstallment ? 'Saving...' : 'Cancel plan'}
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs text-slate-400 italic">No plan</span>
-                                        {options.map((n) => (
-                                          <button
-                                            key={n}
-                                            onClick={() => setPendingInstallmentN(n)}
-                                            disabled={savingInstallment}
-                                            className="text-xs px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md font-semibold disabled:opacity-50 transition-colors"
-                                          >
-                                            {savingInstallment ? '...' : `${n}×`}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
+                              {approvedApp && renderInstallmentSelector('placement_fee')}
                             </div>
                           );
                         })()}
@@ -1203,7 +1271,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* Reinstatement Fee — apenas para alunos transfer com visto inativo */}
-        {student.student_process_type === 'transfer' && student.visa_transfer_active !== true && (() => {
+        {isTransferInactiveVisa && (() => {
           const isPaid = !!student.has_paid_reinstatement_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
@@ -1297,8 +1365,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
 
         {/* I-539 Package ($1800) — reinstatement students (transfer + inactive visa) */}
-        {student.student_process_type === 'transfer' && student.visa_transfer_active !== true && (() => {
-          const isPaid = !!student.has_paid_i539_cos_package;
+        {shouldShowTransferI539Package && (() => {
+          const isPaid = isPackageFeePaid('i539_cos_package', student.has_paid_i539_cos_package);
           return (
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1322,6 +1390,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span className="text-sm font-medium text-green-600">Paid</span>
+                        {installmentPlans?.['i539_cos_package']?.total_installments && installmentPlans['i539_cos_package'].total_installments > 1 && (
+                          <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-lg font-semibold">
+                            {installmentPlans['i539_cos_package'].total_installments}x installments
+                          </span>
+                        )}
                       </div>
                       {isPlatformAdmin && (
                         <button
@@ -1336,23 +1409,49 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center space-x-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                  ) : (() => {
+                    const activePlan = installmentPlans?.['i539_cos_package'] ?? null;
+                    const hasInstallmentPlan = activePlan && activePlan.status === 'active';
+                    const installmentsPaid = activePlan?.installments_paid ?? 0;
+                    const isPartial = hasInstallmentPlan && installmentsPaid > 0;
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        <div className="w-full">
+                          {isPartial ? (
+                            <div className="flex flex-col gap-2.5 w-full">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                <span className="text-sm font-semibold text-amber-700">
+                                  {installmentsPaid}/{activePlan.total_installments} Paid
+                                </span>
+                              </div>
+                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
+                                Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('i539_cos_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <XCircle className="h-5 w-5 text-red-600" />
+                              <span className="text-sm font-medium text-red-600">Not Paid</span>
+                            </div>
+                          )}
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-2 items-end">
+                            <button
+                              onClick={() => onMarkAsPaid('i539_cos_package')}
+                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Mark as Paid</span>
+                            </button>
+                            {renderInstallmentSelector('i539_cos_package')}
+                          </div>
+                        )}
                       </div>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => onMarkAsPaid('i539_cos_package')}
-                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Mark as Paid</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1360,8 +1459,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
-        {student.student_process_type === 'initial' && student.source !== 'migma' && (() => {
-          const isPaid = !!student.has_paid_ds160_package;
+        {shouldShowDs160Package && (() => {
+          const isPaid = isPackageFeePaid('ds160_package', student.has_paid_ds160_package);
           return (
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1413,6 +1512,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span className="text-sm font-medium text-green-600">Paid</span>
+                        {installmentPlans?.['ds160_package']?.total_installments && installmentPlans['ds160_package'].total_installments > 1 && (
+                          <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-lg font-semibold">
+                            {installmentPlans['ds160_package'].total_installments}x installments
+                          </span>
+                        )}
                       </div>
                       {isPlatformAdmin && (
                         <div className="flex flex-col gap-3">
@@ -1461,23 +1565,49 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center space-x-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                  ) : (() => {
+                    const activePlan = installmentPlans?.['ds160_package'] ?? null;
+                    const hasInstallmentPlan = activePlan && activePlan.status === 'active';
+                    const installmentsPaid = activePlan?.installments_paid ?? 0;
+                    const isPartial = hasInstallmentPlan && installmentsPaid > 0;
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        <div className="w-full">
+                          {isPartial ? (
+                            <div className="flex flex-col gap-2.5 w-full">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                <span className="text-sm font-semibold text-amber-700">
+                                  {installmentsPaid}/{activePlan.total_installments} Paid
+                                </span>
+                              </div>
+                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
+                                Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('ds160_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <XCircle className="h-5 w-5 text-red-600" />
+                              <span className="text-sm font-medium text-red-600">Not Paid</span>
+                            </div>
+                          )}
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-2 items-end">
+                            <button
+                              onClick={() => onMarkAsPaid('ds160_package')}
+                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Mark as Paid</span>
+                            </button>
+                            {renderInstallmentSelector('ds160_package')}
+                          </div>
+                        )}
                       </div>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => onMarkAsPaid('ds160_package')}
-                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Mark as Paid</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1485,8 +1615,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* I-539 COS Package — apenas para alunos change_of_status */}
-        {student.student_process_type === 'change_of_status' && student.source !== 'migma' && (() => {
-          const isPaid = !!student.has_paid_i539_cos_package;
+        {shouldShowCosI539Package && (() => {
+          const isPaid = isPackageFeePaid('i539_cos_package', student.has_paid_i539_cos_package);
           return (
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1538,6 +1668,11 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span className="text-sm font-medium text-green-600">Paid</span>
+                        {installmentPlans?.['i539_cos_package']?.total_installments && installmentPlans['i539_cos_package'].total_installments > 1 && (
+                          <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-lg font-semibold">
+                            {installmentPlans['i539_cos_package'].total_installments}x installments
+                          </span>
+                        )}
                       </div>
                       {isPlatformAdmin && (
                         <div className="flex flex-col gap-3">
@@ -1586,23 +1721,49 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center space-x-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                  ) : (() => {
+                    const activePlan = installmentPlans?.['i539_cos_package'] ?? null;
+                    const hasInstallmentPlan = activePlan && activePlan.status === 'active';
+                    const installmentsPaid = activePlan?.installments_paid ?? 0;
+                    const isPartial = hasInstallmentPlan && installmentsPaid > 0;
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        <div className="w-full">
+                          {isPartial ? (
+                            <div className="flex flex-col gap-2.5 w-full">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                <span className="text-sm font-semibold text-amber-700">
+                                  {installmentsPaid}/{activePlan.total_installments} Paid
+                                </span>
+                              </div>
+                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
+                                Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('i539_cos_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <XCircle className="h-5 w-5 text-red-600" />
+                              <span className="text-sm font-medium text-red-600">Not Paid</span>
+                            </div>
+                          )}
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-2 items-end">
+                            <button
+                              onClick={() => onMarkAsPaid('i539_cos_package')}
+                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Mark as Paid</span>
+                            </button>
+                            {renderInstallmentSelector('i539_cos_package')}
+                          </div>
+                        )}
                       </div>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => onMarkAsPaid('i539_cos_package')}
-                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Mark as Paid</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             </div>

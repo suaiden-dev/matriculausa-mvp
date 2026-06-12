@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 // @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
+import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan } from "../utils/installmentHelper.ts";
 
 // @ts-ignore
 declare const Deno: any;
@@ -93,12 +94,21 @@ Deno.serve(async (req: Request) => {
       searchValues.push('i20_control_fee');
     }
     
-    const { data: existingPayment, error: searchError } = await supabaseClient
+    const isPackageFee = normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package';
+    
+    let query = supabaseClient
       .from('zelle_payments')
-      .select('id, status, amount, fee_type_global')
+      .select('id, status, amount, fee_type_global, fee_type')
       .eq('user_id', user_id)
-      .in('fee_type_global', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal])
-      .in('status', ['pending', 'pending_verification'])
+      .in('status', ['pending', 'pending_verification']);
+      
+    if (isPackageFee) {
+      query = query.in('fee_type', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal]);
+    } else {
+      query = query.in('fee_type_global', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal]);
+    }
+    
+    const { data: existingPayment, error: searchError } = await query
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -114,15 +124,25 @@ Deno.serve(async (req: Request) => {
       paymentAmount = existingPayment.amount || 0;
       console.log('✅ [approve-zelle-payment-automatic] Pagamento existente encontrado:', paymentId, 'Amount:', paymentAmount)
       
-      // Atualizar o status do pagamento para aprovado e garantir fee_type_global correto
+      const updatePayload: any = {
+        status: 'approved',
+        admin_approved_at: new Date().toISOString(),
+        admin_notes: 'Automatically approved by n8n system'
+      };
+      
+      if (isPackageFee) {
+        updatePayload.fee_type = normalizedFeeTypeGlobal;
+        if (existingPayment.fee_type_global) {
+          updatePayload.fee_type_global = null;
+        }
+      } else {
+        updatePayload.fee_type_global = normalizedFeeTypeGlobal;
+      }
+
+      // Atualizar o status do pagamento para aprovado
       const { error: paymentError } = await supabaseClient
         .from('zelle_payments')
-        .update({
-          status: 'approved',
-          fee_type_global: normalizedFeeTypeGlobal, // Garantir que está com o valor correto
-          admin_approved_at: new Date().toISOString(),
-          admin_notes: 'Automatically approved by n8n system'
-        })
+        .update(updatePayload)
         .eq('id', paymentId)
 
       if (paymentError) {
@@ -133,17 +153,25 @@ Deno.serve(async (req: Request) => {
       // Criar novo pagamento
       console.log('📝 [approve-zelle-payment-automatic] Criando novo pagamento...')
       
+      const insertPayload: any = {
+        user_id: user_id,
+        status: 'approved',
+        admin_approved_at: new Date().toISOString(),
+        admin_notes: 'Automatically approved by n8n system',
+        amount: 0, // Valor será preenchido se necessário
+        created_at: new Date().toISOString()
+      };
+      
+      if (isPackageFee) {
+        insertPayload.fee_type = normalizedFeeTypeGlobal;
+        insertPayload.fee_type_global = null;
+      } else {
+        insertPayload.fee_type_global = normalizedFeeTypeGlobal;
+      }
+
       const { data: newPayment, error: createError } = await supabaseClient
         .from('zelle_payments')
-        .insert({
-          user_id: user_id,
-          fee_type_global: normalizedFeeTypeGlobal,
-          status: 'approved',
-          admin_approved_at: new Date().toISOString(),
-          admin_notes: 'Automatically approved by n8n system',
-          amount: 0, // Valor será preenchido se necessário
-          created_at: new Date().toISOString()
-        })
+        .insert(insertPayload)
         .select('id, amount')
         .single()
 
@@ -530,6 +558,143 @@ Deno.serve(async (req: Request) => {
         console.error('❌ [approve-zelle-payment-automatic] Erro ao processar notificação de Matricula Rewards:', rewardsError);
       }
       // --- FIM MATRICULA REWARDS ---
+
+    } else if (normalizedFeeTypeGlobal === 'ds160_package' || normalizedFeeTypeGlobal === 'i539_cos_package') {
+      console.log(`🎯 [approve-zelle-payment-automatic] Atualizando ${normalizedFeeTypeGlobal} para Zelle...`)
+
+      // Buscar o perfil do estudante para obter o id correto
+      const { data: userProfile, error: userError } = await supabaseClient
+        .from('user_profiles')
+        .select('id, user_id')
+        .eq('user_id', user_id)
+        .single()
+
+      if (userError || !userProfile) {
+        console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar user_profile:', userError)
+        throw userError
+      }
+
+      // Resolver installment plan (novo sistema dinâmico)
+      const { installmentNumber, plan } = await resolveInstallmentNumber(
+        supabaseClient, user_id, normalizedFeeTypeGlobal, null
+      );
+
+      let swIsFullyPaid = true;
+      let swRemainingAmount = 0;
+      const paymentDate = new Date().toISOString();
+
+      if (plan) {
+        const result = await recordInstallmentPayment(supabaseClient, plan, paymentAmount, paymentDate);
+        swIsFullyPaid = result.isFullyPaid;
+        swRemainingAmount = result.remainingAmount;
+        console.log(
+          `[approve-zelle-payment-automatic] 📦 Zelle Installment ${installmentNumber} of ${plan.total_installments} for ${normalizedFeeTypeGlobal}`,
+          swIsFullyPaid ? "— Plan COMPLETED" : `— $${swRemainingAmount} remaining`,
+        );
+
+        try {
+          const { data: currentPayment } = await supabaseClient
+            .from('zelle_payments')
+            .select('metadata')
+            .eq('id', paymentId)
+            .maybeSingle();
+
+          await supabaseClient
+            .from('zelle_payments')
+            .update({
+              metadata: {
+                ...(currentPayment?.metadata || {}),
+                fee_type: normalizedFeeTypeGlobal,
+                is_installment: 'true',
+                installment_plan_id: plan.id,
+                installment_number: String(installmentNumber),
+                total_installments: String(plan.total_installments),
+                updated_at: paymentDate,
+              },
+            })
+            .eq('id', paymentId);
+        } catch (metadataError) {
+          console.warn('[approve-zelle-payment-automatic] Warning: Failed to update Zelle installment metadata:', metadataError);
+        }
+      }
+
+      // Atualizar user_profiles para refletir o status de pagamento
+      const updateData: any = {
+        updated_at: paymentDate,
+      };
+
+      if (normalizedFeeTypeGlobal === 'ds160_package') {
+        updateData.has_paid_ds160_package = swIsFullyPaid;
+        updateData.ds160_package_payment_method = 'zelle';
+      } else {
+        updateData.has_paid_i539_cos_package = swIsFullyPaid;
+        updateData.i539_cos_package_payment_method = 'zelle';
+      }
+
+      const { error: profileError } = await supabaseClient
+        .from('user_profiles')
+        .update(updateData)
+        .eq('user_id', user_id);
+
+      if (profileError) {
+        console.error(`❌ [approve-zelle-payment-automatic] Erro ao atualizar perfil para ${normalizedFeeTypeGlobal}:`, profileError)
+        throw profileError
+      }
+
+      // Registrar pagamento na individual_fee_payments e vincular ao plano se houver
+      if (plan) {
+        try {
+          // Buscar o registro criado pelo trigger public.sync_user_profile_payment_flags
+          const { data: indivPayments, error: indivError } = await supabaseClient
+            .from('individual_fee_payments')
+            .select('id')
+            .eq('zelle_payment_id', paymentId)
+            .limit(1)
+
+          if (!indivError && indivPayments && indivPayments.length > 0) {
+            const paymentIdToLink = indivPayments[0].id && typeof indivPayments[0].id === 'object' ? (indivPayments[0].id.id || indivPayments[0].id) : indivPayments[0].id;
+            await linkPaymentToPlan(supabaseClient, paymentIdToLink, plan.id);
+          } else {
+            // Se o trigger não criou, criamos nós
+            const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+              p_user_id: user_id,
+              p_fee_type: normalizedFeeTypeGlobal,
+              p_amount: paymentAmount,
+              p_payment_date: paymentDate,
+              p_payment_method: 'zelle',
+              p_payment_intent_id: null,
+              p_stripe_charge_id: null,
+              p_zelle_payment_id: paymentId
+            });
+
+            if (!feePaymentError && feePaymentData) {
+              const paymentIdToLink = feePaymentData.id && typeof feePaymentData === 'object' ? (feePaymentData.id || feePaymentData) : feePaymentData;
+              await linkPaymentToPlan(supabaseClient, paymentIdToLink, plan.id);
+            }
+          }
+        } catch (linkError) {
+          console.warn('[approve-zelle-payment-automatic] Warning: Failed to link Zelle payment to installment plan:', linkError);
+        }
+      }
+
+      // Log the payment action
+      try {
+        await supabaseClient.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `${normalizedFeeTypeGlobal.replace(/_/g, ' ')} paid via Zelle (${temp_payment_id})`,
+          p_performed_by: user_id,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: normalizedFeeTypeGlobal,
+            payment_method: 'zelle',
+            temp_payment_id: temp_payment_id,
+            payment_id: paymentId
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
 
     } else if (normalizedFeeTypeGlobal === 'application_fee' || normalizedFeeTypeGlobal === 'scholarship_fee') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando scholarship_applications...')

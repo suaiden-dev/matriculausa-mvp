@@ -38,13 +38,18 @@ function createPaymentRecordsForFee({
 }) {
   const userPhysicalPayments = (individualFeePayments || []).filter((p) => {
     if (p.user_id !== student.user_id) return false;
+    if (
+      p.payment_method === 'parcelow' &&
+      p.parcelow_status &&
+      p.parcelow_status !== 'paid'
+    ) return false;
     const typeNormalized = p.fee_type === 'selection_process_fee' || p.fee_type === 'selection_process' ? 'selection_process' :
                            p.fee_type === 'application_fee' || p.fee_type === 'application' ? 'application' :
                            p.fee_type === 'scholarship_fee' || p.fee_type === 'scholarship' ? 'scholarship' :
                            p.fee_type === 'i20_control' || p.fee_type === 'i20_control_fee' ? 'i20_control_fee' :
                            p.fee_type === 'placement_fee' || p.fee_type === 'placement' ? 'placement' :
                            p.fee_type === 'reinstatement' || p.fee_type === 'reinstatement_fee' || p.fee_type === 'reinstatement_package' ? 'reinstatement_fee' :
-                           p.fee_type === 'ds160_package' || p.fee_type === 'i539_cos_package' || p.fee_type === 'i539_package' ? 'control_fee' : p.fee_type;
+                           p.fee_type === 'i539_package' ? 'i539_cos_package' : p.fee_type;
     return typeNormalized === feeType;
   });
 
@@ -142,10 +147,12 @@ export function transformPaymentsToRecordsAndStats({
     // I-20 Control Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let i20ControlFee: number;
     const expectedI20Control = getFeeAmount('i20_control_fee');
-    
+
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       i20ControlFee = Math.round(realPaid.i20_control * 100);
+    } else if (student.i20_control_fee_payment_method === 'coupon') {
+      i20ControlFee = 0;
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
@@ -155,7 +162,7 @@ export function transformPaymentsToRecordsAndStats({
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
     const expectedScholarship = systemType === 'simplified' ? 900 : 900;
-    
+
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       scholarshipFee = Math.round(realPaid.scholarship * 100);
@@ -168,11 +175,11 @@ export function transformPaymentsToRecordsAndStats({
     // Application Fee - Prioridade: valor real pago (se razoável) > scholarship.application_fee_amount > cálculo fixo
     let applicationFee: number;
 
-
-    
     if (realPaid?.application !== undefined && realPaid.application > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       applicationFee = Math.round(realPaid.application * 100);
+    } else if (app.application_fee_payment_method === 'coupon') {
+      applicationFee = 0;
     } else if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
@@ -313,6 +320,8 @@ export function transformPaymentsToRecordsAndStats({
       let ds160PackageFeeAmount: number;
       if (realPaid?.ds160_package !== undefined && realPaid.ds160_package > 0) {
         ds160PackageFeeAmount = Math.round(realPaid.ds160_package * 100);
+      } else if (student.ds160_package_payment_method === 'coupon') {
+        ds160PackageFeeAmount = 0;
       } else if (userOverrides.ds160_package_fee !== undefined) {
         ds160PackageFeeAmount = Math.round(userOverrides.ds160_package_fee * 100);
       } else {
@@ -321,7 +330,7 @@ export function transformPaymentsToRecordsAndStats({
 
       createPaymentRecordsForFee({
         student,
-        feeType: 'control_fee',
+        feeType: 'ds160_package',
         canonicalFeeType: 'ds160',
         fallbackAmount: ds160PackageFeeAmount,
         fallbackDate: individualPaymentDates.get(student.user_id)?.get('ds160_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -335,7 +344,7 @@ export function transformPaymentsToRecordsAndStats({
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           field_of_study: scholarship?.field_of_study || null,
-          fee_type: 'control_fee',
+          fee_type: 'ds160_package',
           status: 'paid',
           created_at: app.created_at,
           seller_referral_code: student.seller_referral_code,
@@ -353,6 +362,8 @@ export function transformPaymentsToRecordsAndStats({
       let i539CosPackageFeeAmount: number;
       if (realPaid?.i539_cos_package !== undefined && realPaid.i539_cos_package > 0) {
         i539CosPackageFeeAmount = Math.round(realPaid.i539_cos_package * 100);
+      } else if (student.i539_cos_package_payment_method === 'coupon') {
+        i539CosPackageFeeAmount = 0;
       } else if (userOverrides.i539_cos_package_fee !== undefined) {
         i539CosPackageFeeAmount = Math.round(userOverrides.i539_cos_package_fee * 100);
       } else {
@@ -361,7 +372,7 @@ export function transformPaymentsToRecordsAndStats({
 
       createPaymentRecordsForFee({
         student,
-        feeType: 'control_fee',
+        feeType: 'i539_cos_package',
         canonicalFeeType: 'i539',
         fallbackAmount: i539CosPackageFeeAmount,
         fallbackDate: individualPaymentDates.get(student.user_id)?.get('i539_cos_package') || student.last_payment_date || app.paid_at || app.created_at,
@@ -375,7 +386,7 @@ export function transformPaymentsToRecordsAndStats({
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           field_of_study: scholarship?.field_of_study || null,
-          fee_type: 'control_fee',
+          fee_type: 'i539_cos_package',
           status: 'paid',
           created_at: app.created_at,
           seller_referral_code: student.seller_referral_code,
@@ -426,6 +437,8 @@ export function transformPaymentsToRecordsAndStats({
           placementFeeAmount = Math.round((installmentRows[0].gross_amount_usd ?? installmentRows[0].amount) * 100);
         } else if (realPaid?.placement !== undefined && realPaid.placement > 0) {
           placementFeeAmount = Math.round(realPaid.placement * 100);
+        } else if (student.placement_fee_payment_method === 'coupon') {
+          placementFeeAmount = 0;
         } else if (userOverrides.placement_fee !== undefined) {
           placementFeeAmount = Math.round(userOverrides.placement_fee * 100);
         } else if (scholarship?.placement_fee_amount) {
@@ -644,7 +657,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'control_fee',
+        fee_type: 'ds160_package',
         amount: Math.round(parseFloat(ds160Payment.amount) * 100),
         status: 'paid',
         payment_date: individualPaymentDates.get(ds160Payment.user_id)?.get('ds160_package') || ds160Payment.admin_approved_at || ds160Payment.created_at,
@@ -672,7 +685,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
         field_of_study: null,
-        fee_type: 'control_fee',
+        fee_type: 'i539_cos_package',
         amount: Math.round(parseFloat(i539Payment.amount) * 100),
         status: 'paid',
         payment_date: individualPaymentDates.get(i539Payment.user_id)?.get('i539_cos_package') || i539Payment.admin_approved_at || i539Payment.created_at,
@@ -730,10 +743,12 @@ export function transformPaymentsToRecordsAndStats({
     // I-20 Control Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let i20ControlFee: number;
     const expectedI20Control = getFeeAmount('i20_control_fee');
-    
+
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       i20ControlFee = Math.round(realPaid.i20_control * 100);
+    } else if (stripeUser.i20_control_fee_payment_method === 'coupon') {
+      i20ControlFee = 0;
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
@@ -743,7 +758,7 @@ export function transformPaymentsToRecordsAndStats({
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
     const expectedScholarship = systemType === 'simplified' ? 900 : 900;
-    
+
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       scholarshipFee = Math.round(realPaid.scholarship * 100);
@@ -757,7 +772,6 @@ export function transformPaymentsToRecordsAndStats({
     let applicationFee: number;
     const expectedApplicationFee = getFeeAmount('application_fee');
 
-    
     if (realPaid?.application !== undefined && realPaid.application > 0) {
       // ✅ PRIORIDADE: Valor real pago (Auditável)
       applicationFee = Math.round(realPaid.application * 100);
@@ -771,13 +785,50 @@ export function transformPaymentsToRecordsAndStats({
     // Placement Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let placementFee: number;
     const expectedPlacementValue = 1450;
-    
+
     if (realPaid?.placement !== undefined && realPaid.placement > 0) {
       placementFee = Math.round(realPaid.placement * 100);
+    } else if (stripeUser.placement_fee_payment_method === 'coupon') {
+      placementFee = 0;
     } else if (userOverrides.placement_fee !== undefined) {
       placementFee = Math.round(userOverrides.placement_fee * 100);
     } else {
       placementFee = expectedPlacementValue * 100;
+    }
+
+    let ds160PackageAmount: number;
+    if (realPaid?.ds160_package !== undefined && realPaid.ds160_package > 0) {
+      ds160PackageAmount = Math.round(realPaid.ds160_package * 100);
+    } else if (stripeUser.ds160_package_payment_method === 'coupon') {
+      ds160PackageAmount = 0;
+    } else if (userOverrides.ds160_package_fee !== undefined) {
+      ds160PackageAmount = Math.round(userOverrides.ds160_package_fee * 100);
+    } else {
+      ds160PackageAmount = 180000;
+    }
+
+    let i539CosPackageAmount: number;
+    if (realPaid?.i539_cos_package !== undefined && realPaid.i539_cos_package > 0) {
+      i539CosPackageAmount = Math.round(realPaid.i539_cos_package * 100);
+    } else if (stripeUser.i539_cos_package_payment_method === 'coupon') {
+      i539CosPackageAmount = 0;
+    } else if (userOverrides.i539_cos_package_fee !== undefined) {
+      i539CosPackageAmount = Math.round(userOverrides.i539_cos_package_fee * 100);
+    } else {
+      i539CosPackageAmount = 180000;
+    }
+
+    let reinstatementPackageAmount: number;
+    if (realPaid?.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
+      reinstatementPackageAmount = Math.round(realPaid.reinstatement_package * 100);
+    } else if (stripeUser.reinstatement_package_payment_method === 'coupon') {
+      reinstatementPackageAmount = 0;
+    } else if (userOverrides.reinstatement_package_fee !== undefined) {
+      reinstatementPackageAmount = Math.round(userOverrides.reinstatement_package_fee * 100);
+    } else if (userOverrides.reinstatement_fee !== undefined) {
+      reinstatementPackageAmount = Math.round(userOverrides.reinstatement_fee * 100);
+    } else {
+      reinstatementPackageAmount = 180000;
     }
 
     if (stripeUser.has_paid_selection_process_fee && stripeUser?.source !== 'migma') {
@@ -923,7 +974,7 @@ export function transformPaymentsToRecordsAndStats({
     if (stripeUser.has_paid_ds160_package) {
       createPaymentRecordsForFee({
         student: stripeUser,
-        feeType: 'control_fee',
+        feeType: 'ds160_package',
         canonicalFeeType: 'ds160',
         fallbackAmount: ds160PackageAmount,
         fallbackDate: individualPaymentDates.get(stripeUser.user_id)?.get('ds160_package') || stripeUser.last_payment_date || stripeUser.created_at,
@@ -937,7 +988,7 @@ export function transformPaymentsToRecordsAndStats({
           scholarship_id: '00000000-0000-0000-0000-000000000000',
           scholarship_title: 'No Scholarship Selected',
           field_of_study: null,
-          fee_type: 'control_fee',
+          fee_type: 'ds160_package',
           status: 'paid',
           created_at: stripeUser.created_at,
           seller_referral_code: stripeUser.seller_referral_code,
@@ -951,7 +1002,7 @@ export function transformPaymentsToRecordsAndStats({
     if (stripeUser.has_paid_i539_cos_package) {
       createPaymentRecordsForFee({
         student: stripeUser,
-        feeType: 'control_fee',
+        feeType: 'i539_cos_package',
         canonicalFeeType: 'i539',
         fallbackAmount: i539CosPackageAmount,
         fallbackDate: individualPaymentDates.get(stripeUser.user_id)?.get('i539_cos_package') || stripeUser.last_payment_date || stripeUser.created_at,
@@ -965,7 +1016,7 @@ export function transformPaymentsToRecordsAndStats({
           scholarship_id: '00000000-0000-0000-0000-000000000000',
           scholarship_title: 'No Scholarship Selected',
           field_of_study: null,
-          fee_type: 'control_fee',
+          fee_type: 'i539_cos_package',
           status: 'paid',
           created_at: stripeUser.created_at,
           seller_referral_code: stripeUser.seller_referral_code,

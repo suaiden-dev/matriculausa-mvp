@@ -23,6 +23,40 @@ function corsResponse(body: string | object | null, status = 200) {
   });
 }
 
+async function resolvePackageInstallmentMetadata(userId: string, feeType: string, metadata: Record<string, any>) {
+  if (feeType !== 'ds160_package' && feeType !== 'i539_cos_package') {
+    return { metadata, activePlan: null, installmentNumber: null };
+  }
+
+  const { data: plan, error } = await supabase
+    .from('fee_installment_plans')
+    .select('id, total_installments, installments_paid, status')
+    .eq('user_id', userId)
+    .eq('fee_type', feeType)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[create-zelle-payment] Could not fetch installment plan:', error.message);
+  }
+
+  if (!plan || Number(plan.installments_paid) >= Number(plan.total_installments)) {
+    return { metadata, activePlan: null, installmentNumber: null };
+  }
+
+  const installmentNumber = Number(plan.installments_paid) + 1;
+  const resolvedMetadata = {
+    ...metadata,
+    fee_type: feeType,
+    is_installment: 'true',
+    installment_plan_id: plan.id,
+    installment_number: String(installmentNumber),
+    total_installments: String(plan.total_installments),
+  };
+
+  return { metadata: resolvedMetadata, activePlan: plan, installmentNumber };
+}
+
 // @ts-ignore
 Deno.serve(async (req: any) => {
   try {
@@ -131,6 +165,12 @@ Deno.serve(async (req: any) => {
       console.log(`[create-zelle-payment] Admin ${user.id} acting on behalf of ${finalUserId}`);
     }
 
+    const {
+      metadata: resolvedMetadata,
+      activePlan,
+      installmentNumber,
+    } = await resolvePackageInstallmentMetadata(finalUserId, fee_type, metadata || {});
+
     // PARÂMETROS PARA O RPC (Restaurado para garantir que o comprovante seja salvo)
     const rpcParams = {
       p_user_id: finalUserId,
@@ -143,7 +183,7 @@ Deno.serve(async (req: any) => {
       p_payment_date: payment_date || new Date().toISOString(),
       p_screenshot_url: comprovante_url,
       p_metadata: {
-        ...metadata,
+        ...resolvedMetadata,
         scholarships_ids: Array.isArray(scholarships_ids) ? scholarships_ids : [],
         source: 'edge_function_v74',
         updated_at: new Date().toISOString()
@@ -154,14 +194,23 @@ Deno.serve(async (req: any) => {
 
     // Verificar se já existe um pagamento pendente idêntico criado nos últimos 5 minutos (Idempotência)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const { data: existingRecentPayment, error: searchError } = await supabase
+    let pendingPaymentQuery = supabase
       .from('zelle_payments')
       .select('id')
       .eq('user_id', finalUserId)
       .eq('fee_type', fee_type)
       .eq('amount', Number(amount))
-      .eq('status', 'pending_verification')
-      .gt('created_at', fiveMinutesAgo)
+      .eq('status', 'pending_verification');
+
+    if (activePlan && installmentNumber) {
+      pendingPaymentQuery = pendingPaymentQuery
+        .eq('metadata->>installment_plan_id', activePlan.id)
+        .eq('metadata->>installment_number', String(installmentNumber));
+    } else {
+      pendingPaymentQuery = pendingPaymentQuery.gt('created_at', fiveMinutesAgo);
+    }
+
+    const { data: existingRecentPayment, error: searchError } = await pendingPaymentQuery
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

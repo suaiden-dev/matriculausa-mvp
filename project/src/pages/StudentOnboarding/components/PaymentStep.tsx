@@ -16,6 +16,7 @@ import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAltern
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 
 interface CouponValidation {
   isValid: boolean;
@@ -106,13 +107,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
   const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
-
-  // CPF inline states (para Parcelow)
-  const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null); // app.id quando aberto
-  const [inlineCpf, setInlineCpf] = useState('');
-  const [savingCpf, setSavingCpf] = useState(false);
-  const [cpfError, setCpfError] = useState<string | null>(null);
-  const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
+  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
 
   // Promotional coupon states
   const [hasCoupon, setHasCoupon] = useState(false);
@@ -166,42 +161,25 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, [fetchApplications]);
 
-  // Restaurar cupom salvo ao montar o componente
-  useEffect(() => {
-    const restoreCoupon = async () => {
-      if (!user?.id) return;
-      try {
-        const { data: couponRecords, error } = await supabase
-          .from('promotional_coupon_usage')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'application_fee')
-          .order('created_at', { ascending: false });
+  const APP_FEE_SESSION_KEY = 'musa_coupon_application_fee';
 
-        if (error) return;
-        const validationRecords = (couponRecords || []).filter((r: any) =>
-          r.payment_id?.startsWith('validation_') || r.metadata?.is_validation === true
-        );
-        if (validationRecords.length > 0) {
-          const latest = validationRecords[0];
-          setHasCoupon(true);
-          setPromotionalCoupon(latest.coupon_code);
-          setCouponValidation({
-            isValid: true,
-            message: `Coupon ${latest.coupon_code} applied!`,
-            discountAmount: latest.discount_amount,
-            finalAmount: latest.final_amount,
-            couponId: latest.coupon_id,
-          });
-          (window as any).__checkout_app_fee_coupon = latest.coupon_code;
-          (window as any).__checkout_app_fee_final_amount = latest.final_amount;
-        }
-      } catch (e) {
-        console.error('[PaymentStep] Erro ao restaurar cupom:', e);
+  // Restore coupon from sessionStorage on mount (avoids re-calling RPC on refresh)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(APP_FEE_SESSION_KEY);
+      if (!saved) return;
+      const { couponCode, validation } = JSON.parse(saved);
+      if (couponCode && validation?.isValid) {
+        setHasCoupon(true);
+        setPromotionalCoupon(couponCode);
+        setCouponValidation(validation);
+        (window as any).__checkout_app_fee_coupon = couponCode;
+        (window as any).__checkout_app_fee_final_amount = validation.finalAmount;
       }
-    };
-    restoreCoupon();
-  }, [user?.id]);
+    } catch {
+      sessionStorage.removeItem(APP_FEE_SESSION_KEY);
+    }
+  }, []);
 
   const validateCoupon = async (baseAmount: number) => {
     if (!promotionalCoupon.trim()) {
@@ -229,13 +207,15 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       discountAmount = Math.min(discountAmount, baseAmount);
       const finalAmount = Math.max(0, baseAmount - discountAmount);
 
-      setCouponValidation({
+      const validation = {
         isValid: true,
         message: `Cupom ${normalizedCode} aplicado! Você economizou $${discountAmount.toFixed(2)}`,
         discountAmount,
         finalAmount,
         couponId: result.id,
-      });
+      };
+      setCouponValidation(validation);
+      sessionStorage.setItem(APP_FEE_SESSION_KEY, JSON.stringify({ couponCode: normalizedCode, validation }));
       (window as any).__checkout_app_fee_coupon = normalizedCode;
       (window as any).__checkout_app_fee_final_amount = finalAmount;
 
@@ -281,6 +261,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     } catch (e) {
       console.warn('[PaymentStep] Erro ao remover cupom:', e);
     }
+    sessionStorage.removeItem(APP_FEE_SESSION_KEY);
     setHasCoupon(false);
     setPromotionalCoupon('');
     setCouponValidation(null);
@@ -294,46 +275,36 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   // Detecta se há um Zelle pendente do tipo application_fee
   const hasZellePendingApplicationFee = isBlocked && pendingPayment?.fee_type === 'application_fee';
 
-  // Formatar CPF enquanto digita (000.000.000-00)
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    return digits
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-  };
-
-  // Salvar CPF inline e prosseguir ao checkout Parcelow
-  const saveCpfAndCheckout = async () => {
-    const cleaned = inlineCpf.replace(/\D/g, '');
-    if (cleaned.length !== 11) {
-      setCpfError(t('paymentStep.parcelowCpfInvalid'));
-      return;
-    }
-    if (!pendingParcelowApp) return;
-
-    setSavingCpf(true);
-    setCpfError(null);
-
+  const handleFreePaymentForApp = async (application: ApplicationWithScholarship) => {
+    if (!user?.id) return;
+    setIsFreeProcessing(true);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ cpf_document: cleaned })
-        .eq('user_id', userProfile?.user_id);
+      const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
+      const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
+        ? promotionalCoupon.trim().toUpperCase()
+        : undefined;
 
+      const { error } = await applyFreePayment({
+        supabase,
+        feeType: 'application_fee',
+        userId: user.id,
+        applicationId: application.id,
+        couponCode: appliedCoupon,
+        amount: baseAmount,
+        onSuccess: () => {
+          sessionStorage.removeItem(APP_FEE_SESSION_KEY);
+          setCouponValidation(null);
+          setPromotionalCoupon('');
+          setHasCoupon(false);
+          delete (window as any).__checkout_app_fee_coupon;
+          delete (window as any).__checkout_app_fee_final_amount;
+          onNext();
+        },
+      });
       if (error) throw error;
-
-      // Fechar campo inline
-      setShowInlineCpf(null);
-      setInlineCpf('');
-
-      // Chamar checkout normalmente agora que CPF está salvo (pulando a checagem no estado local)
-      processCheckout(pendingParcelowApp, 'parcelow', true);
     } catch (err: any) {
-      setCpfError(t('paymentStep.parcelowCpfError'));
-      console.error('[PaymentStep] Erro ao salvar CPF inline:', err);
-    } finally {
-      setSavingCpf(false);
+      alert(err.message || 'Erro ao processar pagamento gratuito. Tente novamente.');
+      setIsFreeProcessing(false);
     }
   };
 
@@ -341,17 +312,22 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     // Verificar se o método é Parcelow e se há informações de titular de Cartão de Outra Pessoa
     const hasPayerInfo = method === 'parcelow' && payerInfo !== null;
 
+    const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
+    const finalAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
+      ? couponValidation.finalAmount
+      : baseAmount;
+
+    if (finalAmount === 0) {
+      await handleFreePaymentForApp(application);
+      return;
+    }
+
     // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem e não houver payerInfo
     if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck && !hasPayerInfo) {
-      setPendingParcelowApp(application);
-      setShowInlineCpf(application.id);
       // Fechar Zelle se aberto
       setZelleActiveApp(null);
       return;
     }
-    // Se mudando de método, fechar CPF inline
-    setShowInlineCpf(null);
-
     try {
       setIsProcessingCheckout(`${application.id}_${method}`);
       const { data: sessionData } = await supabase.auth.getSession();
@@ -364,11 +340,6 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
       }
 
-      const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
-      // Usar valor com desconto do cupom se aplicado
-      const finalAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
-        ? couponValidation.finalAmount
-        : baseAmount;
       const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
         ? promotionalCoupon.trim().toUpperCase()
         : null;
@@ -746,6 +717,26 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               />
                             </div>
                           </div>
+                        ) : effectiveAmount === 0 ? (
+                          <div className="space-y-3">
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                              <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-bold text-emerald-800">{t('payment:freePayment.title')}</p>
+                                <p className="text-xs text-emerald-700">{t('payment:freePayment.subtitle')}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFreePaymentForApp(app)}
+                              disabled={isFreeProcessing}
+                              className="w-full bg-emerald-600 text-white py-3 px-6 rounded-xl hover:bg-emerald-700 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {isFreeProcessing
+                                ? <><RefreshCw className="w-5 h-5 animate-spin" /> {t('payment:freePayment.processing')}</>
+                                : t('payment:freePayment.button')
+                              }
+                            </button>
+                          </div>
                         ) : (
                           <>
                             {/* Stripe Option */}
@@ -853,48 +844,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                               {/* Formulário de Cartão de Outra Pessoa para Parcelow */}
                               <div className="mt-4">
-                                <PayerAlternativeForm onPayerInfoChange={setPayerInfo} />
+                                <PayerAlternativeForm
+                                  onPayerInfoChange={setPayerInfo}
+                                  onPayButtonClick={() => processCheckout(app, 'parcelow')}
+                                  isProcessing={isProcessingCheckout === `${app.id}_parcelow`}
+                                />
                               </div>
 
-                              {/* Campo inline de CPF para Parcelow (apenas se não houver PayerInfo e o perfil não tiver CPF) */}
-                              {showInlineCpf === app.id && !payerInfo && (
-                                <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                                    <div className="flex-initial sm:w-[300px]">
-                                      <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                        <Shield className="w-3 h-3" />
-                                        {t('paymentStep.parcelowCpfTitle')}
-                                      </p>
-                                      <div className="relative">
-                                        <input
-                                          type="text"
-                                          value={inlineCpf}
-                                          onChange={(e) => {
-                                            setInlineCpf(formatCpf(e.target.value));
-                                            setCpfError(null);
-                                          }}
-                                          placeholder={t('paymentStep.parcelowCpfPlaceholder')}
-                                          maxLength={14}
-                                          className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                                        />
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={saveCpfAndCheckout}
-                                      disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                      className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
-                                    >
-                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('paymentStep.goToPayment')}
-                                    </button>
-                                  </div>
-                                  {cpfError && (
-                                    <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
-                                      <AlertCircle className="w-4 h-4" />
-                                      {cpfError}
-                                    </p>
-                                  )}
-                                </div>
-                              )}
                             </div>
 
                             {/* Zelle Option — accordion inline */}

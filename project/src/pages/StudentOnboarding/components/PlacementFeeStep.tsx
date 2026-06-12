@@ -4,6 +4,7 @@ import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAltern
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
 import {
     CheckCircle,
     AlertCircle,
@@ -91,6 +92,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     const [loading, setLoading] = useState(true);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
+    const [isFreeProcessing, setIsFreeProcessing] = useState(false);
     const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
     const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null);
 
@@ -199,6 +201,26 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
         }
     }, [isAlreadyPaid, loading, onNext]);
 
+    const PLACEMENT_SESSION_KEY = 'musa_coupon_placement_fee';
+
+    // Restore coupon from sessionStorage on mount (avoids re-calling RPC on refresh)
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem(PLACEMENT_SESSION_KEY);
+            if (!saved) return;
+            const { couponCode, validation } = JSON.parse(saved);
+            if (couponCode && validation?.isValid) {
+                setHasCoupon(true);
+                setPromotionalCoupon(couponCode);
+                setCouponValidation(validation);
+                (window as any).__checkout_placement_fee_coupon = couponCode;
+                (window as any).__checkout_placement_fee_final_amount = validation.finalAmount;
+            }
+        } catch {
+            sessionStorage.removeItem(PLACEMENT_SESSION_KEY);
+        }
+    }, []);
+
     const validateCoupon = async (baseAmount: number) => {
         if (!promotionalCoupon.trim()) return;
         const normalizedCode = promotionalCoupon.trim().toUpperCase();
@@ -220,7 +242,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 : result.discount_value;
             discountAmount = Math.min(discountAmount, baseAmount);
             const finalAmount = Math.max(0, baseAmount - discountAmount);
-            setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
+            const validation = { isValid: true, discountAmount, finalAmount, couponId: result.id };
+            setCouponValidation(validation);
+            // Persist so refresh doesn't re-call the RPC
+            sessionStorage.setItem(PLACEMENT_SESSION_KEY, JSON.stringify({ couponCode: normalizedCode, validation }));
             (window as any).__checkout_placement_fee_coupon = normalizedCode;
             (window as any).__checkout_placement_fee_final_amount = finalAmount;
             // Registrar validação
@@ -241,8 +266,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                         }),
                     });
                 }
-            } catch (recordError) {
-                console.warn('[PlacementFeeStep] Não foi possível registrar uso do cupom:', recordError);
+            } catch {
+                // non-blocking
             }
         } catch (e: any) {
             setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
@@ -252,7 +277,16 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
     const removeCoupon = async () => {
-        if (!promotionalCoupon.trim()) return;
+        const code = promotionalCoupon.trim();
+        if (!code) return;
+        // Clear immediately for instant UX
+        sessionStorage.removeItem(PLACEMENT_SESSION_KEY);
+        setHasCoupon(false);
+        setPromotionalCoupon('');
+        setCouponValidation(null);
+        delete (window as any).__checkout_placement_fee_coupon;
+        delete (window as any).__checkout_placement_fee_final_amount;
+        // Decrement usage in background
         try {
             const { data: sessionData } = await supabase.auth.getSession();
             const token = sessionData.session?.access_token;
@@ -260,17 +294,12 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                 await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: 'placement_fee' }),
+                    body: JSON.stringify({ coupon_code: code.toUpperCase(), fee_type: 'placement_fee' }),
                 });
             }
-        } catch (e) {
-            console.warn('[PlacementFeeStep] Erro ao remover cupom:', e);
+        } catch {
+            // non-blocking
         }
-        setHasCoupon(false);
-        setPromotionalCoupon('');
-        setCouponValidation(null);
-        delete (window as any).__checkout_placement_fee_coupon;
-        delete (window as any).__checkout_placement_fee_final_amount;
     };
 
     const processCheckout = async (
@@ -302,6 +331,22 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
                 ? promotionalCoupon.trim().toUpperCase()
                 : null;
+
+            if (finalAmount === 0) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('User not authenticated');
+                const { error: freeErr } = await applyFreePayment({
+                    supabase,
+                    feeType: 'placement_fee',
+                    userId: user.id,
+                    applicationId: application.id,
+                    couponCode: appliedCoupon || undefined,
+                    amount: fullAmount,
+                    onSuccess: onNext,
+                });
+                if (freeErr) throw freeErr;
+                return;
+            }
 
             let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-placement-fee`;
             if (method === 'parcelow') {
@@ -365,6 +410,28 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     };
 
 
+
+    const handleFreePaymentForApp = async (app: ApplicationWithScholarship, couponCode?: string | null, originalAmount?: number) => {
+        setIsFreeProcessing(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsFreeProcessing(false); return; }
+        const { error } = await applyFreePayment({
+            supabase,
+            feeType: 'placement_fee',
+            userId: user.id,
+            applicationId: app.id,
+            couponCode: couponCode || undefined,
+            amount: originalAmount || 0,
+            onSuccess: () => {
+                sessionStorage.removeItem('musa_coupon_placement_fee');
+                onNext();
+            },
+        });
+        if (error) {
+            alert('Erro ao processar pagamento gratuito. Tente novamente.');
+            setIsFreeProcessing(false);
+        }
+    };
 
     const handleParcelowClick = (app: ApplicationWithScholarship) => {
         // Verificar se há informações de titular de Cartão de Outra Pessoa
@@ -667,7 +734,28 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                 )}
                                                 {/* ────────────────────────────────────────────────────── */}
 
-                                                {hasZellePendingPlacementFee ? (
+                                                {effectiveAmount === 0 ? (
+                                                    <div className="flex flex-col items-center gap-4 py-2">
+                                                        <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                                                            <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                                                            <div>
+                                                                <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">{t('freePayment.title')}</p>
+                                                                <p className="text-xs text-emerald-700 mt-0.5">{t('freePayment.subtitle')}</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleFreePaymentForApp(
+                                                                app,
+                                                                couponValidation?.isValid ? promotionalCoupon.trim().toUpperCase() : null,
+                                                                baseAmount
+                                                            )}
+                                                            disabled={isFreeProcessing}
+                                                            className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                                        >
+                                                            {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> {t('freePayment.processing')}</> : t('freePayment.button')}
+                                                        </button>
+                                                    </div>
+                                                ) : hasZellePendingPlacementFee ? (
                                                     <div className="flex flex-col gap-0">
                                                         <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
                                                             <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">

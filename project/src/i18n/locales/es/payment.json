@@ -100,7 +100,7 @@
       "sendingTitle": "Enviando para Verificación...",
       "sendingMessage": "Su comprobante de pago está siendo enviado para validación automática",
       "analyzingTitle": "Analizando Pago...",
-      "analyzingMessage": "Nuestra IA está validando su confirmación de pago"
+      "analyzingMessage": "Estamos validando su confirmación de pago, por favor espere"
     },
     "errors": {
       "fileSize": "El tamaño del archivo debe ser inferior a 5MB",
@@ -231,7 +231,7 @@
     },
     "details": {
       "analyzing": "Nuestro equipo está verificando tu comprobante. Esto puede tomar unos minutos.",
-      "analyzingAi": "Nuestra IA está validando tu comprobante de pago",
+      "analyzingAi": "Estamos validando tu comprobante de pago, por favor espera",
       "approved": "Tu pago ha sido verificado y aprobado con éxito.",
       "rejected": "Tu comprobante no fue aprobado. Verifica que toda la información sea visible.",
       "error": "Ocurrió un error al verificar tu pago. Por favor, inténtalo de nuevo.",
@@ -619,5 +619,11 @@
       "errorMessage": "Hubo un problema al procesar su pago.",
       "errorRetry": "Inténtelo de nuevo. Si el error persiste, contacte al soporte."
     }
+  },
+  "freePayment": {
+    "title": "Pago gratuito",
+    "subtitle": "100% cubierto por el cupón promocional",
+    "button": "Continuar al siguiente paso",
+    "processing": "Procesando..."
   }
 }

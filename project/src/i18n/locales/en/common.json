@@ -303,7 +303,7 @@
       "sendingTitle": "Sending for Verification...",
       "sendingMessage": "Your payment proof is being sent for automatic validation",
       "analyzingTitle": "Analyzing Payment...",
-      "analyzingMessage": "Our AI is validating your payment confirmation"
+      "analyzingMessage": "We are validating your payment confirmation, please wait"
     },
     "errors": {
       "fileSize": "File size must be less than 20MB",

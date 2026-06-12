@@ -84,7 +84,9 @@ export async function resolveInstallmentNumber(
  *
  * @param supabase    Service role Supabase client
  * @param plan        The active plan (from resolveInstallmentNumber)
- * @param amountPaid  Net amount of THIS installment in USD
+ * @param amountPaid  Actual paid amount of THIS installment in USD. The plan
+ *                    progress uses the scheduled installment amount so gateway
+ *                    fees/surcharges do not distort the remaining balance.
  * @param paymentDate ISO timestamp of the payment
  */
 export async function recordInstallmentPayment(
@@ -94,13 +96,19 @@ export async function recordInstallmentPayment(
   paymentDate: string,
 ): Promise<RecordResult> {
   const newInstallmentsPaid = plan.installments_paid + 1;
-  const newAmountPaid = Math.round((Number(plan.amount_paid) + amountPaid) * 100) / 100;
+  const totalAmount = Number(plan.total_amount);
+  const currentAmountPaid = Number(plan.amount_paid);
+  const scheduledInstallmentAmount = Math.round((totalAmount / plan.total_installments) * 100) / 100;
+  const remainingBeforePayment = Math.max(0, Math.round((totalAmount - currentAmountPaid) * 100) / 100);
+  const planProgressAmount = Math.min(remainingBeforePayment, scheduledInstallmentAmount);
+  const newAmountPaid = Math.round((currentAmountPaid + planProgressAmount) * 100) / 100;
   const isFullyPaid = newInstallmentsPaid >= plan.total_installments;
-  const remainingAmount = Math.max(0, Math.round((Number(plan.total_amount) - newAmountPaid) * 100) / 100);
+  const finalAmountPaid = isFullyPaid ? totalAmount : newAmountPaid;
+  const remainingAmount = Math.max(0, Math.round((totalAmount - finalAmountPaid) * 100) / 100);
 
   const updatePayload: any = {
     installments_paid: newInstallmentsPaid,
-    amount_paid: newAmountPaid,
+    amount_paid: finalAmountPaid,
     updated_at: paymentDate,
   };
 
@@ -122,7 +130,9 @@ export async function recordInstallmentPayment(
 
   console.log(
     `[installmentHelper] Plan ${plan.id}: installment ${newInstallmentsPaid}/${plan.total_installments} recorded.`,
-    isFullyPaid ? "Plan COMPLETED." : `$${remainingAmount} remaining.`,
+    isFullyPaid
+      ? "Plan COMPLETED."
+      : `$${remainingAmount} remaining. Actual payment amount: $${amountPaid}. Plan progress amount: $${planProgressAmount}.`,
   );
 
   return { isFullyPaid, updatedPlan, remainingAmount };
@@ -138,16 +148,28 @@ export async function recordInstallmentPayment(
  */
 export async function linkPaymentToPlan(
   supabase: any,
-  individualPaymentId: string,
+  individualPaymentId: any,
   planId: string,
 ): Promise<void> {
+  const paymentId =
+    Array.isArray(individualPaymentId)
+      ? individualPaymentId[0]?.id
+      : typeof individualPaymentId === "object"
+        ? individualPaymentId?.id
+        : individualPaymentId;
+
+  if (!paymentId) {
+    console.warn(`[installmentHelper] Cannot link payment to plan ${planId}: missing payment id`);
+    return;
+  }
+
   const { error } = await supabase
     .from("individual_fee_payments")
     .update({ installment_plan_id: planId })
-    .eq("id", individualPaymentId);
+    .eq("id", paymentId);
 
   if (error) {
-    console.warn(`[installmentHelper] Failed to link payment ${individualPaymentId} to plan ${planId}:`, error.message);
+    console.warn(`[installmentHelper] Failed to link payment ${paymentId} to plan ${planId}:`, error.message);
     // Non-fatal: audit trail is preserved; just the FK is missing
   }
 }

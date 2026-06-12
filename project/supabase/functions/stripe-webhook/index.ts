@@ -1093,6 +1093,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           updated_at: new Date().toISOString(),
         }).eq("user_id", userId);
 
+        let paymentAmount = 0;
         // 4. Registrar em individual_fee_payments (sempre em USD)
         try {
           const amountTotal = session.amount_total
@@ -1101,7 +1102,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           const currency = session.currency?.toUpperCase() || "USD";
           const paymentIntentId = session.payment_intent as string || "";
           
-          let paymentAmount = amountTotal;
+          paymentAmount = amountTotal;
           let grossAmountUsd: number | null = null;
           let feeAmountUsd: number | null = null;
 
@@ -1687,61 +1688,86 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
     if (finalUserId) {
       console.log(`[stripe-webhook] Processing ${paymentType} for user: ${finalUserId}`);
       const paymentMethod = metadata?.payment_method || "stripe";
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
+      const paymentDate = new Date().toISOString();
 
-      if (paymentType === "ds160_package") {
-        updateData.has_paid_ds160_package = true;
-        updateData.ds160_package_payment_method = paymentMethod;
-      } else if (paymentType === "i539_cos_package") {
-        updateData.has_paid_i539_cos_package = true;
-        updateData.i539_cos_package_payment_method = paymentMethod;
-      } else if (paymentType === "reinstatement_package") {
-        updateData.has_paid_reinstatement_package = true;
-        updateData.reinstatement_package_payment_method = paymentMethod;
-      }
-
-      const { error: profileError } = await supabase
-        .from("user_profiles")
-        .update(updateData)
-        .eq("user_id", finalUserId);
-
-      if (profileError) {
-        console.error(`[stripe-webhook] Error updating profile for ${paymentType}:`, profileError);
-      } else {
-        console.log(`[stripe-webhook] ${paymentType} profile updated successfully for user:`, finalUserId);
-      }
-
-      // Registrar pagamento na individual_fee_payments
       try {
-        const paymentDate = new Date().toISOString();
         const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
         const currency = session.currency?.toUpperCase() || "USD";
         const paymentIntentId = session.payment_intent as string || "";
 
-        const stripeInfo = await getStripeBalanceTransaction(
-          stripe,
-          paymentIntentId,
-          paymentAmountRaw,
-          currency
+        // Buscar valores reais de net/gross/fee no Stripe BalanceTransaction
+        const stripeInfo = await getStripeBalanceTransaction(stripe, paymentIntentId, paymentAmountRaw, currency);
+        let paymentAmount = stripeInfo.amount;
+        const grossAmountUsd = stripeInfo.gross_amount_usd;
+        const feeAmountUsd = stripeInfo.fee_amount_usd;
+
+        // Fallback de conversão BRL→USD se BT não retornou
+        if (!grossAmountUsd && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
+        }
+
+        // Resolver installment plan (novo sistema dinâmico)
+        const { installmentNumber, plan } = await resolveInstallmentNumber(
+          supabase, finalUserId, paymentType, metadata?.installment_number,
         );
 
-        const { error: insertError } = await supabase.rpc("insert_individual_fee_payment", {
+        let swIsFullyPaid = true;
+        let swRemainingAmount = 0;
+
+        if (plan) {
+          const result = await recordInstallmentPayment(supabase, plan, paymentAmount, paymentDate);
+          swIsFullyPaid = result.isFullyPaid;
+          swRemainingAmount = result.remainingAmount;
+        }
+
+        const updateData: any = {
+          updated_at: paymentDate,
+          last_payment_date: paymentDate,
+        };
+
+        if (paymentType === "ds160_package") {
+          updateData.has_paid_ds160_package = swIsFullyPaid;
+          updateData.ds160_package_payment_method = paymentMethod;
+        } else if (paymentType === "i539_cos_package") {
+          updateData.has_paid_i539_cos_package = swIsFullyPaid;
+          updateData.i539_cos_package_payment_method = paymentMethod;
+        } else if (paymentType === "reinstatement_package") {
+          updateData.has_paid_reinstatement_package = true;
+          updateData.reinstatement_package_payment_method = paymentMethod;
+        }
+
+        const { error: profileError } = await supabase
+          .from("user_profiles")
+          .update(updateData)
+          .eq("user_id", finalUserId);
+
+        if (profileError) {
+          console.error(`[stripe-webhook] Error updating profile for ${paymentType}:`, profileError);
+        } else {
+          console.log(`[stripe-webhook] ${paymentType} profile updated successfully for user:`, finalUserId);
+        }
+
+        // Registrar pagamento na individual_fee_payments
+        const { data: indivPayment, error: insertError } = await supabase.rpc("insert_individual_fee_payment", {
           p_user_id: finalUserId,
           p_fee_type: paymentType,
-          p_amount: stripeInfo.amount,
+          p_amount: paymentAmount,
           p_payment_date: paymentDate,
           p_payment_method: "stripe",
           p_payment_intent_id: paymentIntentId,
           p_stripe_charge_id: null,
           p_zelle_payment_id: null,
-          p_gross_amount_usd: stripeInfo.gross_amount_usd,
-          p_fee_amount_usd: stripeInfo.fee_amount_usd,
+          p_gross_amount_usd: grossAmountUsd,
+          p_fee_amount_usd: feeAmountUsd,
         });
         
-        if (insertError) console.error(`[stripe-webhook] Error inserting payment record for ${paymentType}:`, insertError);
-        else console.log(`[stripe-webhook] ${paymentType} payment record inserted successfully.`);
+        if (insertError) {
+          console.error(`[stripe-webhook] Error inserting payment record for ${paymentType}:`, insertError);
+        } else if (plan && indivPayment) {
+          const paymentId = indivPayment && typeof indivPayment === 'object' ? (indivPayment.id || indivPayment) : indivPayment;
+          await linkPaymentToPlan(supabase, paymentId, plan.id);
+        }
       } catch (recordError) {
         console.error(`[stripe-webhook] Exception recording ${paymentType} payment:`, recordError);
       }

@@ -25,7 +25,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     exchangeRate, discountCode, setDiscountCode, isValidating, validationResult, setValidationResult,
     hasReferralCode, setHasReferralCode, showCodeStep, setShowCodeStep,
     showCpfModal, setShowCpfModal, codeApplied, setCodeApplied,
-    showInlineCpf, setShowInlineCpf, inlineCpf, setInlineCpf, savingCpf, cpfError, setCpfError,
     promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon, promotionalCouponValidation,
     selectionFeeAmount, computedBasePrice, formattedAmount, originalFormattedAmount, cardAmountWithFees, pixAmountWithFees,
     hasSellerReferralCode, hasAffiliateCode, hasZellePendingSelectionFee, hasPaid,
@@ -33,7 +32,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     activeDiscount,
     handleCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
-    saveCpfAndCheckout, formatCpf, setError,
+    setError,
     payerInfo, setPayerInfo,
   } = state;
 
@@ -165,7 +164,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
                   <div className="flex items-center justify-end mb-2 relative z-10 sm:px-0">
                     {!isZelleProcessing && (
-                      <button onClick={() => { setShowZelleCheckout(false); setIsZelleProcessing(false); setSelectedMethod(null); setShowInlineCpf(false); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
+                      <button onClick={() => { setShowZelleCheckout(false); setIsZelleProcessing(false); setSelectedMethod(null); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
                         <X className="w-5 h-5" />
                       </button>
                     )}
@@ -258,15 +257,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     exchangeRate={exchangeRate}
                     isBlocked={!!isBlocked}
                     pendingPayment={pendingPayment}
-                    showInlineCpf={showInlineCpf}
-                    inlineCpf={inlineCpf}
-                    savingCpf={savingCpf}
-                    cpfError={cpfError}
                     onCheckout={handleCheckout}
-                    onSaveCpf={saveCpfAndCheckout}
-                    onCpfChange={setInlineCpf}
-                    onCpfErrorClear={() => setCpfError(null)}
-                    formatCpf={formatCpf}
                     payerInfo={payerInfo}
                     onPayerInfoChange={setPayerInfo}
                     t={t}
