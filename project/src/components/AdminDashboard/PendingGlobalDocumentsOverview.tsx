@@ -27,6 +27,7 @@ interface GlobalDocumentUpload {
         user_id: string;
         full_name: string;
         email: string;
+        is_dropped?: boolean;
     };
 }
 
@@ -65,6 +66,7 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
                         user_id,
                         full_name,
                         email,
+                        is_dropped,
                         selected_application_id,
                         scholarship_applications!student_id (
                             id,
@@ -87,6 +89,10 @@ const PendingGlobalDocumentsOverview: React.FC = () => {
             // Filtrar por host de produção e por nível de bolsa (scholarship level)
             const filtered = (data || []).filter((u: any) => {
                 if (isProductionHost && (u.user_profiles?.email || '').toLowerCase().includes('uorak')) {
+                    return false;
+                }
+
+                if (u.user_profiles?.is_dropped) {
                     return false;
                 }
 
