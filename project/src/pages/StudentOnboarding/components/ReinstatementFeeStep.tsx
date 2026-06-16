@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
+import { useCouponState } from '../../../hooks/useCouponState';
 import {
     CheckCircle,
     AlertCircle,
@@ -33,13 +35,6 @@ interface ApplicationWithScholarship {
     } | null;
 }
 
-interface CouponValidation {
-    isValid: boolean;
-    message?: string;
-    discountAmount?: number;
-    finalAmount?: number;
-    couponId?: string;
-}
 
 // Componente SVG para o logo do PIX (oficial)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -93,31 +88,50 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
 
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
+    const [isFreeProcessing, setIsFreeProcessing] = useState(false);
     const [isZelleActive, setIsZelleActive] = useState(false);
     const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
     const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
     const [loadingApp, setLoadingApp] = useState(true);
-
-    // ── Estados de cupom ─────────────────────────────────────────────────────
-    const [hasCoupon, setHasCoupon] = useState(false);
-    const [promotionalCoupon, setPromotionalCoupon] = useState('');
-    const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
-    const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-    const couponInputRef = useRef<HTMLInputElement>(null);
 
     const baseAmount = 500; // Valor fixo da Reinstatement Fee
 
     // Se has_paid_reinstatement_package já está true no perfil, avançar automaticamente
     const isAlreadyPaid = !!(userProfile as any)?.has_paid_reinstatement_package;
 
-    // Valor efetivo (com ou sem cupom aplicado)
-    const effectiveAmount = couponValidation?.isValid && couponValidation.finalAmount !== undefined
-        ? couponValidation.finalAmount
-        : baseAmount;
+    // ── Cupom (persiste no sessionStorage — refresh não gasta uso) ────────────
+    const {
+        hasCoupon, setHasCoupon,
+        promotionalCoupon, setPromotionalCoupon,
+        couponValidation, setCouponValidation,
+        isValidatingCoupon,
+        couponInputRef,
+        validateCoupon,
+        removeCoupon,
+        clearCouponStorage,
+        effectiveAmount,
+        appliedCoupon,
+    } = useCouponState('reinstatement_package', baseAmount);
 
-    const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
-        ? promotionalCoupon.trim().toUpperCase()
-        : null;
+    const isFreePayment = effectiveAmount === 0;
+
+    const handleFreePayment = async () => {
+        setIsFreeProcessing(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsFreeProcessing(false); return; }
+        const { error } = await applyFreePayment({
+            supabase,
+            feeType: 'reinstatement_package',
+            userId: user.id,
+            couponCode: appliedCoupon || undefined,
+            amount: baseAmount,
+            onSuccess: () => { clearCouponStorage(); onNext(); },
+        });
+        if (error) {
+            alert('Erro ao processar pagamento gratuito. Tente novamente.');
+            setIsFreeProcessing(false);
+        }
+    };
 
     useEffect(() => {
         getExchangeRate().then(rate => setExchangeRate(rate));
@@ -168,95 +182,12 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
         }
     }, [isAlreadyPaid, onNext]);
 
-    // ── Validação de cupom ───────────────────────────────────────────────────
-    const validateCoupon = async () => {
-        if (!promotionalCoupon.trim()) return;
-        const normalizedCode = promotionalCoupon.trim().toUpperCase();
-        setIsValidatingCoupon(true);
-        setCouponValidation(null);
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data: result, error: rpcError } = await supabase.rpc(
-                'validate_and_apply_admin_promotional_coupon',
-                {
-                    p_code: normalizedCode,
-                    p_fee_type: 'reinstatement_package',
-                    p_user_id: user?.id,
-                }
-            );
-
-            if (rpcError) throw rpcError;
-
-            if (!result || !result.valid) {
-                setCouponValidation({ isValid: false, message: result?.message || 'Código de cupom inválido' });
-                return;
-            }
-
-            let discountAmount = result.discount_type === 'percentage'
-                ? (baseAmount * result.discount_value) / 100
-                : result.discount_value;
-            discountAmount = Math.min(discountAmount, baseAmount);
-            const finalAmount = Math.max(0, baseAmount - discountAmount);
-
-            setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
-
-            // Persistir no window para garantir o valor correto durante o redirect
-            (window as any).__checkout_reinstatement_package_coupon = normalizedCode;
-            (window as any).__checkout_reinstatement_package_final_amount = finalAmount;
-
-            // Registrar validação
-            try {
-                const { data: sessionData } = await supabase.auth.getSession();
-                const token = sessionData.session?.access_token;
-                if (token) {
-                    await fetch(`${SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify({
-                            coupon_code: normalizedCode,
-                            coupon_id: result.id,
-                            fee_type: 'reinstatement_package',
-                            original_amount: baseAmount,
-                            discount_amount: discountAmount,
-                            final_amount: finalAmount,
-                        }),
-                    });
-                }
-            } catch (recordError) {
-                console.warn('[ReinstatementFeeStep] Não foi possível registrar uso do cupom:', recordError);
-            }
-        } catch (e: any) {
-            setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
-        } finally {
-            setIsValidatingCoupon(false);
-        }
-    };
-
-    const removeCoupon = async () => {
-        if (!promotionalCoupon.trim()) return;
-        try {
-            const { data: sessionData } = await supabase.auth.getSession();
-            const token = sessionData.session?.access_token;
-            if (token) {
-                await fetch(`${SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: 'reinstatement_package' }),
-                });
-            }
-        } catch (e) {
-            console.warn('[ReinstatementFeeStep] Erro ao remover cupom:', e);
-        }
-        setHasCoupon(false);
-        setPromotionalCoupon('');
-        setCouponValidation(null);
-        delete (window as any).__checkout_reinstatement_package_coupon;
-        delete (window as any).__checkout_reinstatement_package_final_amount;
-    };
-
     // ── Checkout Stripe / PIX ────────────────────────────────────────────────
     const processCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
+        if (effectiveAmount === 0) {
+            await handleFreePayment();
+            return;
+        }
         try {
             setIsProcessingCheckout(method);
             const { data: sessionData } = await supabase.auth.getSession();
@@ -585,7 +516,24 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                 {/* ────────────────────────────────────────────────────── */}
 
                                 <div className="flex flex-col gap-4 mt-4">
-                                    {hasZellePending ? (
+                                    {isFreePayment ? (
+                                        <div className="flex flex-col items-center gap-4 py-4">
+                                            <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                                                <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">{t('payment:freePayment.title')}</p>
+                                                    <p className="text-xs text-emerald-700 mt-0.5">{t('payment:freePayment.subtitle')}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleFreePayment}
+                                                disabled={isFreeProcessing}
+                                                className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {isFreeProcessing ? <><RefreshCw className="w-5 h-5 animate-spin" /> {t('payment:freePayment.processing')}</> : t('payment:freePayment.button')}
+                                            </button>
+                                        </div>
+                                    ) : hasZellePending ? (
                                         <div className="flex flex-col gap-0">
                                             <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
                                                 <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">

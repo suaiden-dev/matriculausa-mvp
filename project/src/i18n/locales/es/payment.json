@@ -619,5 +619,11 @@
       "errorMessage": "Hubo un problema al procesar su pago.",
       "errorRetry": "Inténtelo de nuevo. Si el error persiste, contacte al soporte."
     }
+  },
+  "freePayment": {
+    "title": "Pago gratuito",
+    "subtitle": "100% cubierto por el cupón promocional",
+    "button": "Continuar al siguiente paso",
+    "processing": "Procesando..."
   }
 }

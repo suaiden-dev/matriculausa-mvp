@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { CreditCard, Check, Loader2, AlertCircle, Shield, CheckCircle2, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { CreditCard, Check, Loader2, AlertCircle, Shield, CheckCircle2, XCircle, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { applyFreePayment } from '../../../lib/freePaymentHandler';
+import { useCouponState } from '../../../hooks/useCouponState';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 import PayerAlternativeForm, { PayerInfo } from '../../../components/PayerAlternativeForm';
@@ -40,14 +42,6 @@ const StripeIcon = ({ className }: { className?: string }) => (
 );
 
 type PaymentMethod = 'stripe' | 'pix' | 'parcelow' | 'zelle';
-
-interface CouponValidation {
-  isValid: boolean;
-  message?: string;
-  discountAmount?: number;
-  finalAmount?: number;
-  couponId?: string;
-}
 
 interface PackageFeeTabProps {
   feeType: 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
@@ -105,17 +99,8 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
   const hasZellePendingPackageFee = isBlocked && pendingPayment?.fee_type === feeType;
 
-  // ── Estados de cupom ─────────────────────────────────────────────────────
-  const [hasCoupon, setHasCoupon] = useState(false);
-  const [promotionalCoupon, setPromotionalCoupon] = useState('');
-  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isFreeProcessing, setIsFreeProcessing] = useState(false);
   const [payerInfo, setPayerInfo] = useState<PayerInfo | null>(null);
-  const couponInputRef = useRef<HTMLInputElement>(null);
-
-  // Chave de window para persistência entre re-renders
-  const windowCouponKey = `__checkout_${feeType}_coupon`;
-  const windowAmountKey = `__checkout_${feeType}_final_amount`;
 
   React.useEffect(() => {
     getExchangeRate().then(rate => setExchangeRate(rate));
@@ -128,102 +113,43 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     } catch { return null; }
   };
 
-  // ── Validação de cupom ───────────────────────────────────────────────────
-  const validateCoupon = async () => {
-    if (!promotionalCoupon.trim()) return;
-    const normalizedCode = promotionalCoupon.trim().toUpperCase();
-    setIsValidatingCoupon(true);
-    setCouponValidation(null);
+  // ── Cupom (persiste no sessionStorage — refresh não gasta uso) ────────────
+  const {
+    hasCoupon, setHasCoupon,
+    promotionalCoupon, setPromotionalCoupon,
+    couponValidation,
+    isValidatingCoupon,
+    couponInputRef,
+    validateCoupon,
+    removeCoupon,
+    clearCouponStorage,
+    effectiveAmount,
+    appliedCoupon,
+  } = useCouponState(feeType, amount);
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: result, error: rpcError } = await supabase.rpc(
-        'validate_and_apply_admin_promotional_coupon',
-        {
-          p_code: normalizedCode,
-          p_fee_type: feeType,
-          p_user_id: user?.id,
-        }
-      );
+  const isFreePayment = effectiveAmount === 0;
 
-      if (rpcError) throw rpcError;
-
-      if (!result || !result.valid) {
-        setCouponValidation({ isValid: false, message: result?.message || 'Código de cupom inválido' });
-        return;
-      }
-
-      let discountAmount = result.discount_type === 'percentage'
-        ? (amount * result.discount_value) / 100
-        : result.discount_value;
-      discountAmount = Math.min(discountAmount, amount);
-      const finalAmount = Math.max(0, amount - discountAmount);
-
-      setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
-
-      // Persistir valores no window para o momento do redirect
-      (window as any)[windowCouponKey] = normalizedCode;
-      (window as any)[windowAmountKey] = finalAmount;
-
-      // Registrar validação no log
-      try {
-        const token = await getAccessToken();
-        if (token) {
-          await fetch(`${SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-              coupon_code: normalizedCode,
-              coupon_id: result.id,
-              fee_type: feeType,
-              original_amount: amount,
-              discount_amount: discountAmount,
-              final_amount: finalAmount,
-            }),
-          });
-        }
-      } catch (recordError) {
-        console.warn('[PackageFeeTab] Não foi possível registrar uso do cupom:', recordError);
-      }
-    } catch (e: any) {
-      setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
-    } finally {
-      setIsValidatingCoupon(false);
+  const handleFreePayment = async () => {
+    setIsFreeProcessing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsFreeProcessing(false); return; }
+    const { error } = await applyFreePayment({
+      supabase,
+      feeType: feeType as any,
+      userId: user.id,
+      couponCode: appliedCoupon || undefined,
+      amount,
+      onSuccess: () => { clearCouponStorage(); onPaymentSuccess(); },
+    });
+    if (error) {
+      setError('Erro ao processar pagamento gratuito. Tente novamente.');
+      setIsFreeProcessing(false);
     }
   };
-
-  const removeCoupon = async () => {
-    if (!promotionalCoupon.trim()) return;
-    try {
-      const token = await getAccessToken();
-      if (token) {
-        await fetch(`${SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: feeType }),
-        });
-      }
-    } catch (e) {
-      console.warn('[PackageFeeTab] Erro ao remover cupom:', e);
-    }
-    setHasCoupon(false);
-    setPromotionalCoupon('');
-    setCouponValidation(null);
-    delete (window as any)[windowCouponKey];
-    delete (window as any)[windowAmountKey];
-  };
-
-  // Valor efetivo (com ou sem cupom)
-  const effectiveAmount = couponValidation?.isValid && couponValidation.finalAmount !== undefined
-    ? couponValidation.finalAmount
-    : amount;
-
-  const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
-    ? promotionalCoupon.trim().toUpperCase()
-    : null;
 
   // ── Checkout Stripe/PIX ──────────────────────────────────────────────────
   const handleStripeCheckout = async (paymentMethod: 'stripe' | 'pix') => {
+    if (effectiveAmount === 0) { await handleFreePayment(); return; }
     setLoading(true);
     setError(null);
     try {
@@ -290,6 +216,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   };
 
   const launchParcelowCheckout = async () => {
+    if (effectiveAmount === 0) { await handleFreePayment(); return; }
     setLoading(true);
     setError(null);
     try {
@@ -530,7 +457,24 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  {hasZellePendingPackageFee ? (
+                  {isFreePayment ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-full bg-emerald-50 border border-emerald-200 rounded-[2rem] px-6 py-5 flex items-center gap-4">
+                        <CheckCircle className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-black text-emerald-800 uppercase tracking-tight">{t('freePayment.title', { ns: 'payment' })}</p>
+                          <p className="text-xs text-emerald-700 mt-0.5">{t('freePayment.subtitle', { ns: 'payment' })}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleFreePayment}
+                        disabled={isFreeProcessing}
+                        className="w-full bg-emerald-600 text-white py-4 px-8 rounded-[2rem] hover:bg-emerald-700 transition-all font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isFreeProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('freePayment.processing', { ns: 'payment' })}</> : t('freePayment.button', { ns: 'payment' })}
+                      </button>
+                    </div>
+                  ) : hasZellePendingPackageFee ? (
                     <div className="flex flex-col gap-0 border-2 border-amber-200 rounded-[2.5rem] overflow-hidden">
                       <div className="bg-amber-50 px-6 py-4 flex items-start gap-4">
                         <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">

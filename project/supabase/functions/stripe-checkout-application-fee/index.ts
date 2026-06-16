@@ -265,8 +265,7 @@ Deno.serve(async (req: Request) => {
         applicationFeeAmount,
       );
 
-      // Ainda precisamos buscar universityId e stripeConnectAccountId para o metadata
-      // Application fee sempre usa o valor da universidade (não muda com pacotes)
+      // Buscar dados da bolsa para obter universityId E base_amount (para cálculo correto de comissão)
       console.log(
         "[stripe-checkout-application-fee] Buscando dados da universidade para scholarship_id:",
         application.scholarship_id,
@@ -274,16 +273,20 @@ Deno.serve(async (req: Request) => {
 
       if (application.scholarship_id) {
         try {
-          // Buscar dados da bolsa incluindo universidade (apenas para obter universityId)
+          // Buscar application_fee_amount para usar como base de comissão (sem dependentes)
           const { data: scholarshipData, error: scholarshipError } =
             await supabase
               .from("scholarships")
-              .select("id, university_id")
+              .select("id, university_id, application_fee_amount")
               .eq("id", application.scholarship_id)
               .single();
 
           if (!scholarshipError && scholarshipData) {
             universityId = scholarshipData.university_id;
+            // base_amount = taxa base da bolsa (sem dependentes) para cálculo de comissão por %
+            if (scholarshipData.application_fee_amount) {
+              baseAmount = scholarshipData.application_fee_amount;
+            }
 
             // Buscar conta Stripe Connect da universidade
             if (universityId) {
@@ -569,13 +572,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // Sempre aplicar markup de taxas do Stripe
+    // applicationFeeAmount = valor total (com dependentes) → cobrado do aluno
+    // baseAmount = taxa base da bolsa (sem dependentes) → usado APENAS para cálculo de comissão por %
     let grossAmountInCents: number;
     if (finalPaymentMethod === "pix") {
-      // Para PIX: calcular markup considerando taxa de câmbio
-      grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+      // Para PIX: calcular markup considerando taxa de câmbio sobre o valor TOTAL (com dependentes)
+      grossAmountInCents = calculatePIXAmountWithFees(applicationFeeAmount, exchangeRate);
     } else {
-      // Para cartão: calcular markup
-      grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+      // Para cartão: calcular markup sobre o valor TOTAL (com dependentes)
+      grossAmountInCents = calculateCardAmountWithFees(applicationFeeAmount);
     }
     console.log(
       "[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:",
@@ -585,7 +590,7 @@ Deno.serve(async (req: Request) => {
 
     // Atualizar metadata com valores gross e fee
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount)
+    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - applicationFeeAmount)
       .toString();
     sessionMetadata.markup_enabled = "true";
 
