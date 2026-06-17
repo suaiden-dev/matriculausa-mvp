@@ -408,6 +408,10 @@
       "q12": {
         "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
         "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
+      },
+      "q13": {
+        "question": "¿Necesito comprobar que tengo fondos para estudiar?",
+        "answer": "Sí. Antes de finalizar su proceso, debe enviar un extracto bancario que demuestre tener al menos US$ 22.000 disponibles."
       }
     },
     "mockups": {
@@ -430,6 +434,7 @@
       "academicTranscripts": "Historial Académico",
       "underReview": "En Análisis",
       "financialStatement": "Comprovante Financiero",
+      "financialStatementMin": "Mín. US$ 22.000",
       "uploading": "Enviando...",
       "officeAdmissions": "Oficina de Admisiones",
       "congratulations": "¡Felicitaciones!",

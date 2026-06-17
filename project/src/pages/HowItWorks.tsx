@@ -741,6 +741,7 @@ const JourneySection: React.FC<{
                               </div>
                               <div>
                                 <h5 className="text-[10px] font-black text-slate-800 leading-tight">{t('howItWorks.mockups.financialStatement')}</h5>
+                                <p className="text-[8px] text-slate-500 font-bold mt-0.5">{t('howItWorks.mockups.financialStatementMin')}</p>
                                 <p className="text-[8px] text-blue-600 font-black tracking-wider uppercase mt-0.5">{t('howItWorks.mockups.uploading')} 65%</p>
                               </div>
                             </div>
@@ -995,7 +996,7 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 items-start">
             {/* Coluna Esquerda */}
             <div className="space-y-1">
-              {[1, 3, 5, 7, 9, 11].map((num) => (
+              {[1, 3, 5, 7, 9, 11, 13].map((num) => (
                 <div 
                   key={num} 
                   className={`group transition-all duration-300 border-b border-slate-200 ${
