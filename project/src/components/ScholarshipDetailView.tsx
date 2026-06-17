@@ -230,13 +230,13 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
               {/* Investimento Anual Sem Bolsa */}
               <div className="flex flex-col">
                 <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                  {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Anual (Sem Bolsa)')}
+                  {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Semestral (Sem Bolsa)')}
                 </span>
                 <div className="flex items-baseline gap-1">
                   <span className="text-xl font-bold text-slate-400/80 line-through decoration-red-400/80">
                     ${formatAmount(scholarship.original_annual_value)}
                   </span>
-                  <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+                  <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
                 </div>
               </div>
 
@@ -251,11 +251,11 @@ export const ScholarshipDetailView: React.FC<ScholarshipDetailViewProps> = ({
                   <span className="text-3xl sm:text-4xl font-black text-green-700">
                     ${formatAmount(scholarship.annual_value_with_scholarship)}
                   </span>
-                  <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+                  <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
                 </div>
                 <div>
                   <span className="inline-flex items-center px-3 py-1.5 bg-green-100/60 text-green-800 text-xs font-black rounded-full uppercase tracking-wider">
-                    {t('scholarshipsPage.detail.annualSavingsBadge', 'Economia de ${{amount}}/ano').replace('{{amount}}', formatAmount(annualSavings))}
+                    {t('scholarshipsPage.detail.annualSavingsBadge', 'Economia de ${{amount}}/semestre').replace('{{amount}}', formatAmount(annualSavings))}
                   </span>
                 </div>
               </div>

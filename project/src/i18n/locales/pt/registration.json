@@ -206,7 +206,7 @@
         "clickToSelect": "Clique para selecionar",
         "originalValue": "Valor original",
         "withScholarship": "Com Bolsa",
-        "perYear": "/ ano",
+        "perYear": "/ semestre",
         "university": "Universidade"
       },
       "actions": {
@@ -783,7 +783,7 @@
     "feeLabel": "Taxa de Reintegração",
     "description": "",
     "securePayment": "Pagamento Seguro",
-    "annualTuition": "Valor anual da bolsa: {{amount}}",
+    "annualTuition": "Valor semestral da bolsa: {{amount}}",
     "confirmedMessage": "Sua taxa de reintegração foi confirmada com sucesso.",
     "paidSuccess": "Pagamento Confirmado"
   },

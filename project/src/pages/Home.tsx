@@ -537,14 +537,14 @@ const Home: React.FC = () => {
                                   {/* Left Side: Original Cost & Savings Badge */}
                                   <div className="flex flex-col text-left">
                                     <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
-                                      {tSch('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+                                      {tSch('scholarshipsPage.detail.annualCost', 'Investimento Semestral')}
                                     </span>
                                     <span className="text-sm font-bold text-slate-400 line-through leading-tight">
                                       ${formatAmount(scholarship.original_annual_value)}
                                     </span>
                                     {recAnnualSavings > 0 && (
                                       <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
-                                        -{tSch('scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmount(recAnnualSavings)}
+                                        -{tSch('scholarshipsPage.detail.annualSavings', 'Economia Semestral').split(' ')[0]} ${formatAmount(recAnnualSavings)}
                                       </span>
                                     )}
                                   </div>
@@ -559,7 +559,7 @@ const Home: React.FC = () => {
                                         ${formatAmount(scholarship.annual_value_with_scholarship)}
                                       </span>
                                       <span className="text-xs font-bold text-slate-500 ml-0.5">
-                                        {tSch('scholarshipsPage.detail.perYear', '/ano')}
+                                        {tSch('scholarshipsPage.detail.perYear', '/semestre')}
                                       </span>
                                     </div>
                                   </div>

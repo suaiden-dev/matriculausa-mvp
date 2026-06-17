@@ -74,7 +74,7 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
           </dd>
         </div>
         <div>
-          <dt className="text-sm font-medium text-slate-600">Annual Value (with Scholarship)</dt>
+          <dt className="text-sm font-medium text-slate-600">Semester Value (with Scholarship)</dt>
           <dd className="text-base font-semibold text-slate-900">
             {(() => {
               const v = scholarship?.annual_value_with_scholarship;

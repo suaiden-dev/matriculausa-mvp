@@ -724,14 +724,14 @@ const MyApplications: React.FC = () => {
           <div className="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-4 sm:p-5 mt-2 flex items-center justify-between gap-4">
             <div className="flex flex-col text-left">
               <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
-                {t('scholarships:scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+                {t('scholarships:scholarshipsPage.detail.annualCost', 'Investimento Semestral')}
               </span>
               <span className="text-sm font-bold text-slate-400 line-through leading-tight">
                 ${formatAmountShort(Number((scholarship as any).original_annual_value))}
               </span>
               {annualSavings > 0 && (
                 <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
-                  -{t('scholarships:scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmountShort(annualSavings)}
+                  -{t('scholarships:scholarshipsPage.detail.annualSavings', 'Economia Semestral').split(' ')[0]} ${formatAmountShort(annualSavings)}
                 </span>
               )}
             </div>
@@ -744,7 +744,7 @@ const MyApplications: React.FC = () => {
                   ${formatAmountShort(Number(scholarship.annual_value_with_scholarship))}
                 </span>
                 <span className="text-xs font-bold text-slate-500 ml-0.5">
-                  {t('scholarships:scholarshipsPage.detail.perYear', '/ano')}
+                  {t('scholarships:scholarshipsPage.detail.perYear', '/semestre')}
                 </span>
               </div>
             </div>

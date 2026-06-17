@@ -206,7 +206,7 @@
         "clickToSelect": "Click to select",
         "originalValue": "Original value",
         "withScholarship": "With Scholarship",
-        "perYear": "/ year",
+        "perYear": "/ semester",
         "university": "University"
       },
       "actions": {
@@ -784,7 +784,7 @@
     "feeLabel": "Reinstatement Fee",
     "description": "",
     "securePayment": "Secure Payment",
-    "annualTuition": "Annual scholarship value: {{amount}}",
+    "annualTuition": "Semester scholarship value: {{amount}}",
     "confirmedMessage": "Your reinstatement fee has been successfully confirmed.",
     "paidSuccess": "Payment Confirmed"
   },

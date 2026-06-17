@@ -408,6 +408,10 @@
       "q12": {
         "question": "Who can I contact if I have questions about fees or payments?",
         "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+      },
+      "q13": {
+        "question": "Do I need to prove I have funds to study?",
+        "answer": "Yes. Before completing your process, you must submit a bank statement proving you have at least US$ 22,000 available."
       }
     },
     "mockups": {
@@ -416,7 +420,7 @@
       "selectedCount": "4 / 4 Selected",
       "undergraduate": "Undergraduate",
       "graduate": "Graduate",
-      "year": "yr",
+      "year": "semester",
       "exclusive": "Exclusive",
       "originalTuition": "Original Tuition",
       "withScholarship": "With Scholarship",
@@ -430,6 +434,7 @@
       "academicTranscripts": "Academic Transcripts",
       "underReview": "Under Review",
       "financialStatement": "Financial Statement",
+      "financialStatementMin": "Min. $22,000 USD",
       "uploading": "Uploading...",
       "officeAdmissions": "Office of Admissions",
       "congratulations": "Congratulations!",
