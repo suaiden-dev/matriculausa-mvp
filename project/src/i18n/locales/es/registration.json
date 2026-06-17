@@ -204,7 +204,7 @@
         "clickToSelect": "Haga clic para seleccionar",
         "originalValue": "Valor original",
         "withScholarship": "Con Beca",
-        "perYear": "/ año",
+        "perYear": "/ semestre",
         "university": "Universidad"
       },
       "actions": {
@@ -779,7 +779,7 @@
     "feeLabel": "Tarifa de Reintegración",
     "description": "",
     "securePayment": "Pago Seguro",
-    "annualTuition": "Valor anual de la beca: {{amount}}",
+    "annualTuition": "Valor semestral de la beca: {{amount}}",
     "confirmedMessage": "Su tarifa de reintegración ha sido confirmada con éxito.",
     "paidSuccess": "Pago Confirmado"
   },

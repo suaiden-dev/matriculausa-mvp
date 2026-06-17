@@ -299,8 +299,8 @@
         "studyMode": "Course Modality",
         "workAuthorization": "Work Authorization",
         "financialOverview": "Financial Overview",
-        "originalPrice": "Original Price per year:",
-        "withScholarship": "With Scholarship per year:",
+        "originalPrice": "Original Price per semester:",
+        "withScholarship": "With Scholarship per semester:",
         "perCredit": "Per Credit:",
         "level": "Level",
         "deadline": "Deadline",
@@ -573,9 +573,9 @@
       },
       "rejectionReason": "Reason:",
       "scholarshipDetails": {
-        "annualScholarshipValue": "Annual Scholarships starting from",
+        "annualScholarshipValue": "Semester Scholarships starting from",
         "applicationDate": "Application Date",
-        "annualValue": "Annual value",
+        "annualValue": "Semester value",
         "appliedOn": "Applied on"
       },
       "rejectedApplication": {
@@ -589,7 +589,7 @@
       },
       "general": {
         "value": "Value",
-        "annualValue": "Annual Value",
+        "annualValue": "Semester Value",
         "accessYourApplication": "Access Your Application"
       }
     },
@@ -952,11 +952,11 @@
           "view": "View",
           "download": "Download",
           "finance": {
-            "originalAnnualCost": "Original Annual Investment",
+            "originalAnnualCost": "Original Semester Investment",
             "withExclusiveScholarship": "With Exclusive Scholarship",
-            "perYear": "/year",
+            "perYear": "/semester",
             "perCredit": "Per Credit",
-            "guaranteedAnnualSavings": "Guaranteed Annual Savings",
+            "guaranteedAnnualSavings": "Guaranteed Semester Savings",
             "financialSummary": "Financial Summary"
           },
           "institution": {

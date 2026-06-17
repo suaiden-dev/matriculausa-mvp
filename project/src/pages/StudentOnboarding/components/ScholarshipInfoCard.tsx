@@ -198,7 +198,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
               <DollarSign className="w-4 h-4 text-green-600" />
             </div>
             <p className="text-[9px] uppercase tracking-widest font-black text-green-600 mb-0.5">
-              {t('scholarships:scholarshipsPage.modal.annualSavings', 'Economia Anual')}
+              {t('scholarships:scholarshipsPage.modal.annualSavings', 'Economia Semestral')}
             </p>
             <p className="text-lg font-black text-green-700">${formatAmount(annualSavings)}</p>
           </div>
@@ -248,7 +248,7 @@ const ScholarshipInfoCard: React.FC<ScholarshipInfoCardProps> = ({
               </tr>
               <tr className="bg-green-50/30">
                 <td className="py-3 px-4 text-slate-700 font-bold">
-                  {t('scholarships:scholarshipsPage.modal.withScholarship', 'Com Bolsa por ano')}
+                  {t('scholarships:scholarshipsPage.modal.withScholarship', 'Com Bolsa por semestre')}
                 </td>
                 <td className="py-3 px-4 text-right text-green-700 font-black text-base">
                   ${formatAmount(scholarship.annual_value_with_scholarship)}

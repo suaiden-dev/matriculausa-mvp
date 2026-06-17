@@ -583,8 +583,8 @@
         "studyMode": "Modalidad",
         "workAuthorization": "Autorización de Trabajo",
         "financialOverview": "Resumen Financiero",
-        "originalPrice": "Precio Original por año:",
-        "withScholarship": "Con Beca por año:",
+        "originalPrice": "Precio Original por semestre:",
+        "withScholarship": "Con Beca por semestre:",
         "perCredit": "Por Crédito:",
         "level": "Nivel",
         "deadline": "Fecha Límite",
@@ -994,11 +994,11 @@
         "view": "Ver",
         "download": "Descargar",
         "finance": {
-          "originalAnnualCost": "Inversión Anual Original",
+          "originalAnnualCost": "Inversión Semestral Original",
           "withExclusiveScholarship": "Con Beca Exclusiva",
-          "perYear": "/año",
+          "perYear": "/semestre",
           "perCredit": "Por Crédito",
-          "guaranteedAnnualSavings": "Ahorro Anual Garantizado",
+          "guaranteedAnnualSavings": "Ahorro Semestral Garantizado",
           "financialSummary": "Resumen Financiero"
         },
         "institution": {

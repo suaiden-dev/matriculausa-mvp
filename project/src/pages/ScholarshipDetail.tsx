@@ -382,11 +382,11 @@ const ScholarshipDetail: React.FC = () => {
     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100/60 text-left space-y-4">
       <div>
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Anual (Sem Bolsa)')}
+          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Semestral (Sem Bolsa)')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-bold text-slate-400 line-through decoration-red-400/80">${formatAmount(scholarship.original_annual_value)}</span>
-          <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+          <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
         </div>
       </div>
 
@@ -396,13 +396,13 @@ const ScholarshipDetail: React.FC = () => {
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-3xl sm:text-4xl font-black text-green-700">${formatAmount(scholarship.annual_value_with_scholarship)}</span>
-          <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+          <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
         </div>
       </div>
 
       <div>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-700 rounded-lg text-[11px] font-bold uppercase tracking-widest">
-          {t('scholarshipsPage.detail.annualSavingsBadge', { amount: formatAmount(annualSavings), defaultValue: `Economia de $${formatAmount(annualSavings)}/ano` })}
+          {t('scholarshipsPage.detail.annualSavingsBadge', { amount: formatAmount(annualSavings), defaultValue: `Economia de $${formatAmount(annualSavings)}/semestre` })}
         </span>
       </div>
 
@@ -1089,14 +1089,14 @@ const ScholarshipDetail: React.FC = () => {
                         {/* Left Side: Original Cost & Savings Badge */}
                         <div className="flex flex-col text-left">
                           <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
-                            {t('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+                            {t('scholarshipsPage.detail.annualCost', 'Investimento Semestral')}
                           </span>
                           <span className="text-sm font-bold text-slate-400 line-through leading-tight">
                             ${formatAmount(rec.original_annual_value)}
                           </span>
                           {recAnnualSavings > 0 && (
                             <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
-                              -{t('scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmount(recAnnualSavings)}
+                              -{t('scholarshipsPage.detail.annualSavings', 'Economia Semestral').split(' ')[0]} ${formatAmount(recAnnualSavings)}
                             </span>
                           )}
                         </div>
@@ -1111,7 +1111,7 @@ const ScholarshipDetail: React.FC = () => {
                               ${formatAmount(rec.annual_value_with_scholarship)}
                             </span>
                             <span className="text-xs font-bold text-slate-500 ml-0.5">
-                              {t('scholarshipsPage.detail.perYear', '/ano')}
+                              {t('scholarshipsPage.detail.perYear', '/semestre')}
                             </span>
                           </div>
                         </div>

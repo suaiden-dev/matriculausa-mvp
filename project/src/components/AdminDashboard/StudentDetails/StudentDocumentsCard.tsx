@@ -210,7 +210,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                           <span className="font-medium">{fieldOfStudy}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500">Annual Value:</span>{' '}
+                          <span className="text-slate-500">Semester Value:</span>{' '}
                           <span className="font-medium">{formattedValue}</span>
                         </div>
                       </div>
