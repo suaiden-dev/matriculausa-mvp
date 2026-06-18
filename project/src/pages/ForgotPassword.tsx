@@ -22,6 +22,17 @@ const ForgotPassword: React.FC = () => {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Primary: onAuthStateChange PASSWORD_RECOVERY — works on mobile Safari where
+    // Supabase clears the hash before useEffect can read it
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowResetForm(true);
+        setEmailVerified(true);
+        setEmailSent(true);
+      }
+    });
+
+    // Fallback: read hash directly (catches cases where hash is still present)
     const hash = window.location.hash;
     const params = new URLSearchParams(hash.replace(/^#/, '?'));
     const token = params.get('access_token');
@@ -30,10 +41,12 @@ const ForgotPassword: React.FC = () => {
       setShowResetForm(true);
       setAccessToken(token);
       setRefreshToken(refresh);
-      setEmailVerified(true); // Skip to password reset step
+      setEmailVerified(true);
       setEmailSent(true);
     }
-  }, [location]);
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSendVerification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,25 +236,21 @@ const ForgotPassword: React.FC = () => {
                 return;
               }
               try {
-                if (showResetForm && accessToken && refreshToken) {
-                  // Só autentica e atualiza senha agora
+                // If hash tokens were captured directly, set session manually first
+                if (accessToken && refreshToken) {
                   const { error: sessionError } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken,
                   });
                   if (sessionError) throw sessionError;
-                  const { error } = await supabase.auth.updateUser({ password });
-                  if (error) throw error;
-                  // Desloga imediatamente após atualizar senha
-                  await supabase.auth.signOut();
-                  setMessage('Password updated successfully! You can now sign in with your new password.');
-                  setTimeout(() => { window.location.href = '/login'; }, 3000);
-                } else {
-                  // Simulação local (fluxo antigo)
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  setMessage('Password updated successfully! You can now sign in with your new password.');
-                  setTimeout(() => { window.location.href = '/login'; }, 3000);
                 }
+                // Session is already active (either from setSession above or from
+                // PASSWORD_RECOVERY event which Supabase auto-processes on mobile)
+                const { error } = await supabase.auth.updateUser({ password });
+                if (error) throw error;
+                await supabase.auth.signOut();
+                setMessage('Password updated successfully! You can now sign in with your new password.');
+                setTimeout(() => { window.location.href = '/login'; }, 3000);
               } catch (err: any) {
                 setError(err.message || 'An error occurred while updating your password. Please try again.');
               } finally {
