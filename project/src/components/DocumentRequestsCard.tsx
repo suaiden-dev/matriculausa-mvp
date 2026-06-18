@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useResumableUpload } from '../hooks/useResumableUpload';
@@ -16,10 +17,14 @@ import {
   Upload,
   ChevronDown,
   X,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  Globe,
+  Languages
 } from 'lucide-react';
 
 import { groupUploadsBySubmission, getFileName } from '../utils/documentUploadUtils';
+import { TranslationQuoteModal } from './TranslationQuoteModal';
 
 interface DocumentRequest {
   id: string;
@@ -61,6 +66,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   applicationStatus
 }) => {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
 
   const { progress: uploadProgress, uploading: tusUploading, startUpload } = useResumableUpload();
 
@@ -89,6 +95,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [stagedFiles, setStagedFiles] = useState<{ [requestId: string]: File[] }>({});
   const [submitting, setSubmitting] = useState<{ [requestId: string]: boolean }>({});
   const [stagingErrors, setStagingErrors] = useState<{ [requestId: string]: string | null }>({});
+  const [verifyingLanguage, setVerifyingLanguage] = useState<{ [requestId: string]: boolean }>({});
+  const [showTranslationQuoteModal, setShowTranslationQuoteModal] = useState(false);
+  const [pendingTranslationUpload, setPendingTranslationUpload] = useState<{
+    uploadId: string;
+    storagePath: string;
+    requestId: string;
+    fileName: string;
+    file?: File;
+  } | null>(null);
 
   // Função para sanitizar nome do arquivo
   const handleProofUpload = async (file: File) => {
@@ -800,6 +815,42 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         file_url,
         status: 'under_review',
       }).select('id').single();
+
+      // DESATIVADO: verificação automática de idioma via n8n/verify-english
+      // Admin/universidade rejeita manualmente documentos fora do inglês via rejection_reason='needs_translation'
+      // if (!isSchool && insertedUpload?.id) {
+      //   const uploadId = insertedUpload.id;
+      //   const storagePath = file_url;
+      //   const capturedRequestId = requestId;
+      //   const capturedFileName = file.name;
+      //   const capturedFile = file;
+      //   setVerifyingLanguage(prev => ({ ...prev, [requestId]: true }));
+      //   supabase.storage
+      //     .from('document-attachments')
+      //     .createSignedUrl(storagePath, 3600)
+      //     .then(({ data: signedData }) => {
+      //       const signedUrl = signedData?.signedUrl;
+      //       if (!signedUrl) return;
+      //       return fetch('https://nwh.suaiden.com/webhook/verify-english', {
+      //         method: 'POST',
+      //         headers: { 'Content-Type': 'application/json' },
+      //         body: JSON.stringify({ url: signedUrl }),
+      //       });
+      //     })
+      //     .then(res => res?.json())
+      //     .then(data => {
+      //       setVerifyingLanguage(prev => ({ ...prev, [requestId]: false }));
+      //       const isEnglish = typeof data === 'object' && data !== null ? data.is_english : data;
+      //       if (isEnglish === true || isEnglish === false) {
+      //         supabase.from('document_request_uploads').update({ needs_translation: !isEnglish }).eq('id', uploadId).then(() => {});
+      //       }
+      //       if (isEnglish === false) {
+      //         setPendingTranslationUpload({ uploadId, storagePath, requestId: capturedRequestId, fileName: capturedFileName, file: capturedFile });
+      //         setShowTranslationQuoteModal(true);
+      //       }
+      //     })
+      //     .catch(() => setVerifyingLanguage(prev => ({ ...prev, [requestId]: false })));
+      // }
 
       // Notificar universidade e admins (skipped para global batches — notificado 1x pelo handleSubmitStaging)
       if (!options?.skipNotification) {
@@ -1565,7 +1616,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           </div>
         </div>
 
-
         <div className="space-y-6">
           {/* Item Especial: Transfer Form (Apenas para Transfer se o admin já tiver disponibilizado o template) */}
           {studentType === 'transfer' && transferForm?.transfer_form_url && (
@@ -1728,6 +1778,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </div>
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
+                      {req.requires_english && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-blue-50 text-blue-600 border border-blue-100">
+                          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                          {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                        </span>
+                      )}
                       <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                     </div>
                   </div>
@@ -1768,13 +1824,35 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                 </p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => setPreviewUrl(upload.file_url)}
-                              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              Ver
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {/* DESATIVADO: botão "Solicitar Tradução" removido temporariamente.
+                                  O fluxo de tradução agora é iniciado pelo admin/universidade ao rejeitar
+                                  o documento com rejection_reason='needs_translation', não pelo aluno. */}
+                              {/* {!isSchool && !isUploadApproved && (
+                                <button
+                                  onClick={() => {
+                                    setPendingTranslationUpload({
+                                      uploadId: upload.id,
+                                      storagePath: upload.file_url,
+                                      requestId: req.id,
+                                      fileName: getFileName(upload.file_url),
+                                    });
+                                    setShowTranslationQuoteModal(true);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                                >
+                                  <Languages className="w-3 h-3" />
+                                  {t('studentDashboard.documentRequests.uploadSection.requestTranslation')}
+                                </button>
+                              )} */}
+                              <button
+                                onClick={() => setPreviewUrl(upload.file_url)}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Ver
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -1797,15 +1875,41 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
-                          <div className="max-h-32 overflow-y-auto pr-2">
-                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                              {lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
-                            </p>
+                          <div className="max-h-32 overflow-y-auto pr-2 space-y-1">
+                            {lastClosedUpload.rejection_reason && lastClosedUpload.rejection_reason !== 'needs_translation' && (
+                              <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                                {lastClosedUpload.rejection_reason}
+                              </p>
+                            )}
+                            {!lastClosedUpload.rejection_reason && !lastClosedUpload.needs_translation && (
+                              <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                                {t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                              </p>
+                            )}
+                            {(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') && (
+                              <p className="text-amber-800 font-semibold text-xs bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                                {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                              </p>
+                            )}
                           </div>
+                          {!isSchool && (lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') && (
+                            <button
+                              onClick={() => navigate('/student/dashboard/translations')}
+                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
+                            >
+                              <Languages className="w-3.5 h-3.5" />
+                              Solicitar Tradução Certificada
+                            </button>
+                          )}
                         </div>
                       </div>
                       <button
-                        onClick={() => setViewingRejectionReason(lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'))}
+                        onClick={() => {
+                          const baseReason = lastClosedUpload.rejection_reason === 'needs_translation' ? '' : (lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
+                          const note = (lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? t('studentDashboard.documentRequests.uploadSection.requiresEnglish') : '';
+                          setViewingRejectionReason([baseReason, note].filter(Boolean).join('\n\n'));
+                        }}
                         className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
                       >
                         <div className="flex items-center gap-3">
@@ -1823,6 +1927,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       </button>
                     </>
                   ) : null}
+
+                  {/* Badge de verificação de idioma */}
+                  {!isSchool && verifyingLanguage[req.id] && (
+                    <div className="flex items-center gap-2.5 px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl mb-3">
+                      <Loader2 className="w-4 h-4 text-violet-600 animate-spin flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-violet-900">{t('studentDashboard.documentRequests.uploadSection.verifyingLanguageTitle')}</p>
+                        <p className="text-[10px] text-violet-600 mt-0.5">{t('studentDashboard.documentRequests.uploadSection.verifyingLanguageDescription')}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Staging area — hidden when approved or school view */}
                   {!isSchool && !isGlobalApproved && (
@@ -1919,10 +2034,20 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                     <span className="text-xs text-slate-400">{group.length} arquivo{group.length > 1 ? 's' : ''}</span>
                                   </div>
                                 </div>
-                                {lastUpload.rejection_reason && (
-                                  <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
-                                    <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
-                                  </p>
+                                {(lastUpload.rejection_reason || lastUpload.needs_translation) && (
+                                  <div className="space-y-1 mb-2">
+                                    {lastUpload.rejection_reason && lastUpload.rejection_reason !== 'needs_translation' && (
+                                      <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+                                        <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                      </p>
+                                    )}
+                                    {(lastUpload.needs_translation || lastUpload.rejection_reason === 'needs_translation') && (
+                                      <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                                        {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                                 <div className="space-y-1">
                                   {group.map((upload: any) => (
@@ -1974,6 +2099,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   </div>
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate whitespace-nowrap" title={req.title}>{req.title}</h4>
+                    {req.requires_english && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-blue-50 text-blue-600 border border-blue-100">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                        {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                      </span>
+                    )}
                     <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
                   </div>
                 </div>
@@ -2014,13 +2145,35 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                               </p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => setPreviewUrl(upload.file_url)}
-                            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Ver
-                          </button>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {/* DESATIVADO: botão "Solicitar Tradução" removido temporariamente.
+                                O fluxo de tradução agora é iniciado pelo admin/universidade ao rejeitar
+                                o documento com rejection_reason='needs_translation', não pelo aluno. */}
+                            {/* {!isSchool && !isUploadApproved && (
+                              <button
+                                onClick={() => {
+                                  setPendingTranslationUpload({
+                                    uploadId: upload.id,
+                                    storagePath: upload.file_url,
+                                    requestId: req.id,
+                                    fileName: getFileName(upload.file_url),
+                                  });
+                                  setShowTranslationQuoteModal(true);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                              >
+                                <Languages className="w-3 h-3" />
+                                {t('studentDashboard.documentRequests.uploadSection.requestTranslation')}
+                              </button>
+                            )} */}
+                            <button
+                              onClick={() => setPreviewUrl(upload.file_url)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#05294E] text-white hover:bg-[#041f38] transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Ver
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -2043,15 +2196,41 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
-                        <div className="max-h-32 overflow-y-auto pr-2">
-                          <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                            {indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
-                          </p>
+                        <div className="max-h-32 overflow-y-auto pr-2 space-y-1">
+                          {indLastClosedUpload.rejection_reason && indLastClosedUpload.rejection_reason !== 'needs_translation' && (
+                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                              {indLastClosedUpload.rejection_reason}
+                            </p>
+                          )}
+                          {!indLastClosedUpload.rejection_reason && !indLastClosedUpload.needs_translation && (
+                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                              {t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                            </p>
+                          )}
+                          {(indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') && (
+                            <p className="text-amber-800 font-semibold text-xs bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                              {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                            </p>
+                          )}
                         </div>
+                        {!isSchool && (indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') && (
+                          <button
+                            onClick={() => navigate('/student/dashboard/translations')}
+                            className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
+                          >
+                            <Languages className="w-3.5 h-3.5" />
+                            Solicitar Tradução Certificada
+                          </button>
+                        )}
                       </div>
                     </div>
                     <button
-                      onClick={() => setViewingRejectionReason(indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'))}
+                      onClick={() => {
+                        const baseReason = indLastClosedUpload.rejection_reason === 'needs_translation' ? '' : (indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
+                        const note = (indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') ? t('studentDashboard.documentRequests.uploadSection.requiresEnglish') : '';
+                        setViewingRejectionReason([baseReason, note].filter(Boolean).join('\n\n'));
+                      }}
                       className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
                     >
                       <div className="flex items-center gap-3">
@@ -2069,6 +2248,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </button>
                   </>
                 ) : null}
+
+                {/* Badge de verificação de idioma */}
+                {!isSchool && verifyingLanguage[req.id] && (
+                  <div className="flex items-center gap-2.5 px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl mb-3">
+                    <Loader2 className="w-4 h-4 text-violet-600 animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-violet-900">Analyzing document language...</p>
+                      <p className="text-[10px] text-violet-600 mt-0.5">Checking if your document needs translation</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Staging area — hidden when approved or school view */}
                 {!isSchool && !indIsApproved && (
@@ -2165,10 +2355,20 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                   <span className="text-xs text-slate-400">{group.length} arquivo{group.length > 1 ? 's' : ''}</span>
                                 </div>
                               </div>
-                              {lastUpload.rejection_reason && (
-                                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
-                                  <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
-                                </p>
+                              {(lastUpload.rejection_reason || lastUpload.needs_translation) && (
+                                <div className="space-y-1 mb-2">
+                                  {lastUpload.rejection_reason && lastUpload.rejection_reason !== 'needs_translation' && (
+                                    <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+                                      <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                    </p>
+                                  )}
+                                  {(lastUpload.needs_translation || lastUpload.rejection_reason === 'needs_translation') && (
+                                    <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                                      {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
+                                    </p>
+                                  )}
+                                </div>
                               )}
                               <div className="space-y-1">
                                 {group.map((upload: any) => (
@@ -2295,6 +2495,26 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           </div>
         </div>,
         document.body
+      )}
+
+      {showTranslationQuoteModal && pendingTranslationUpload && (
+        <TranslationQuoteModal
+          open={showTranslationQuoteModal}
+          uploadId={pendingTranslationUpload.uploadId}
+          storagePath={pendingTranslationUpload.storagePath}
+          file={pendingTranslationUpload.file}
+          requestId={pendingTranslationUpload.requestId}
+          fileName={pendingTranslationUpload.fileName}
+          studentId={currentUserId}
+          onClose={() => {
+            setShowTranslationQuoteModal(false);
+            setPendingTranslationUpload(null);
+          }}
+          onOrderCreated={(_orderId) => {
+            setShowTranslationQuoteModal(false);
+            setPendingTranslationUpload(null);
+          }}
+        />
       )}
     </div>
   );

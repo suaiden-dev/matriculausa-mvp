@@ -7,6 +7,7 @@ interface NewDocumentRequest {
   description: string;
   due_date: string;
   attachment: File | null;
+  requires_english: boolean;
 }
 
 interface StudentRecord {
@@ -27,7 +28,8 @@ export const useDocumentRequests = (
     title: '',
     description: '',
     due_date: '',
-    attachment: null
+    attachment: null,
+    requires_english: false,
   });
 
   // Função utilitária para sanitizar nome de arquivo
@@ -43,7 +45,7 @@ export const useDocumentRequests = (
   // Fechar modal e limpar formulário
   const closeNewRequestModal = useCallback(() => {
     setShowNewRequestModal(false);
-    setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
+    setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null, requires_english: false });
   }, []);
 
   // Handler para atualizar campos do formulário
@@ -107,7 +109,8 @@ export const useDocumentRequests = (
         is_global: false,
         status: 'open',
         created_by: userId || '',
-        scholarship_application_id: targetApp.id
+        scholarship_application_id: targetApp.id,
+        requires_english: newDocumentRequest.requires_english,
       };
 
       const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;

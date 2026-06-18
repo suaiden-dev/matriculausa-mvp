@@ -12,7 +12,7 @@ interface DocumentsViewProps {
   onDownloadDocument: (doc: any) => void;
   onUploadDocument?: (requestId: string, file: File) => void;
   onApproveDocument?: (uploadId: string) => void;
-  onRejectDocument?: (uploadId: string, reason: string) => void;
+  onRejectDocument?: (uploadId: string, reason: string, needsTranslation?: boolean) => void;
   onEditTemplate?: (requestId: string, currentTemplate: string | null) => void;
   onDeleteDocumentRequest?: (requestId: string) => void;
   isAdmin?: boolean;
@@ -58,6 +58,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectNeedsTranslation, setRejectNeedsTranslation] = useState(false);
 
   // Estados para modal de confirmação de exclusão
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
@@ -67,17 +68,26 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const handleRejectClick = (uploadId: string) => {
     setPendingRejectUploadId(uploadId);
     setRejectReason('');
+    setRejectNeedsTranslation(false);
     setShowRejectModal(true);
   };
 
   // Função para confirmar rejeição
   const handleConfirmReject = () => {
-    if (pendingRejectUploadId && onRejectDocument && rejectReason.trim()) {
-      onRejectDocument(pendingRejectUploadId, rejectReason.trim());
-      setShowRejectModal(false);
-      setPendingRejectUploadId(null);
-      setRejectReason('');
-    }
+    if (!pendingRejectUploadId || !onRejectDocument) return;
+    if (!rejectNeedsTranslation && !rejectReason.trim()) return;
+    const customText = rejectReason.trim();
+    const translationNote = 'Document must be translated to English before resubmitting.';
+    const reason = rejectNeedsTranslation && customText
+      ? `${customText}\n\n${translationNote}`
+      : rejectNeedsTranslation
+        ? translationNote
+        : customText;
+    onRejectDocument(pendingRejectUploadId, reason, rejectNeedsTranslation);
+    setShowRejectModal(false);
+    setPendingRejectUploadId(null);
+    setRejectReason('');
+    setRejectNeedsTranslation(false);
   };
 
   // Função para cancelar rejeição
@@ -85,6 +95,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     setShowRejectModal(false);
     setPendingRejectUploadId(null);
     setRejectReason('');
+    setRejectNeedsTranslation(false);
   };
 
   // Funções para modal de confirmação de exclusão
@@ -193,7 +204,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             document_request_uploads (
               *,
               reviewed_by,
-              reviewed_at
+              reviewed_at,
+              translation_orders (
+                payment_status,
+                translation_status
+              )
             )
           `)
           .eq('is_global', true);
@@ -685,11 +700,19 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     </svg>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                       <p className="font-medium text-slate-900 break-words">{filename}</p>
                                       {upload.is_admin_upload && (
                                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
                                           Admin
+                                        </span>
+                                      )}
+                                      {upload.source === 'translation_resubmit' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                          </svg>
+                                          Translated &amp; Resubmitted
                                         </span>
                                       )}
                                     </div>
@@ -1270,12 +1293,41 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
             <h3 className="text-lg font-bold text-[#05294E] mb-3">Reject Document</h3>
             <p className="text-sm text-slate-600 mb-4">Please provide a reason for rejecting this document. The student will be able to submit a new document after rejection.</p>
+
+            {/* Needs Translation — checkbox combinável com motivo customizado */}
+            <button
+              onClick={() => setRejectNeedsTranslation(v => !v)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all mb-4 ${
+                rejectNeedsTranslation
+                  ? 'border-amber-400 bg-amber-50 text-amber-800'
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-300 hover:bg-amber-50/50'
+              }`}
+            >
+              <svg className={`w-5 h-5 flex-shrink-0 ${rejectNeedsTranslation ? 'text-amber-600' : 'text-slate-400'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              </svg>
+              <div>
+                <p className="text-sm font-bold">Needs Translation</p>
+                <p className="text-xs">Document must be translated to English before resubmitting.</p>
+              </div>
+              <div className={`ml-auto w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                rejectNeedsTranslation ? 'border-amber-500 bg-amber-500' : 'border-slate-300'
+              }`}>
+                {rejectNeedsTranslation && (
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+            </button>
+
             <textarea
               className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 min-h-[120px]"
               placeholder="Enter reason for rejection..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
+
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={handleCancelReject}
@@ -1285,7 +1337,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               </button>
               <button
                 onClick={handleConfirmReject}
-                disabled={!rejectReason.trim()}
+                disabled={!rejectNeedsTranslation && !rejectReason.trim()}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
               >
                 Reject Document

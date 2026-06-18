@@ -5,6 +5,7 @@ interface NewDocumentRequest {
   description: string;
   due_date: string;
   attachment: File | null;
+  requires_english: boolean;
 }
 
 interface NewRequestModalProps {
@@ -66,6 +67,21 @@ export const NewRequestModal: React.FC<NewRequestModalProps> = React.memo(({
               value={newDocumentRequest.due_date}
               onChange={(e) => onRequestChange({ due_date: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={newDocumentRequest.requires_english}
+                onChange={(e) => onRequestChange({ requires_english: e.target.checked })}
+                disabled={creatingDocumentRequest}
+                className="w-4 h-4 accent-amber-500 rounded"
+              />
+              <span className="text-sm font-semibold text-slate-700">
+                Este documento deve estar em inglês
+              </span>
+            </label>
+            <p className="text-xs text-slate-500 mt-1 ml-6">O aluno verá um aviso ao enviar este documento.</p>
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">
