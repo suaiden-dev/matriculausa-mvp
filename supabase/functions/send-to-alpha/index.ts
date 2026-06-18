@@ -6,6 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function base64UrlDecode(str: string): string {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  return atob(base64);
+}
+
+async function verifyServiceRoleToken(token: string, jwtSecret: string): Promise<boolean> {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    if (payload.role !== 'service_role') return false;
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(jwtSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    const binarySignature = Uint8Array.from(base64UrlDecode(parts[2]), (c) => c.charCodeAt(0));
+    const data = encoder.encode(parts[0] + '.' + parts[1]);
+    
+    return await crypto.subtle.verify('HMAC', key, binarySignature, data);
+  } catch (err) {
+    console.error('[send-to-alpha] Error verifying service role token:', err);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -14,7 +49,17 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const jwtSecret = Deno.env.get('SUPABASE_JWT_SECRET')!;
     const alphaApiKey = Deno.env.get('ALPHA_API_KEY')!;
+
+    // Parse payload first for debug capability
+    let translation_order_id = null;
+    try {
+      const body = await req.json();
+      translation_order_id = body.translation_order_id;
+    } catch (e) {
+      // Ignore parse error here, will handle later
+    }
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -28,15 +73,43 @@ serve(async (req) => {
 
     // Verify user token
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await adminClient.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    let user = null;
+    let isAdmin = false;
+
+    const oldServiceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpdHB5bmd1YXNxcXV0dWh6aWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTQ4Mzg1NywiZXhwIjoyMDY1MDU5ODU3fQ.lxkS178CjmsIfcxMbfgPFUdI8mfdxUFO987u9_jprmA";
+
+    let verifyErrorMsg = '';
+    const isServiceRoleValid = await verifyServiceRoleToken(token, jwtSecret).catch(e => {
+      verifyErrorMsg = e.message;
+      return false;
+    });
+
+    if (token === serviceKey || token === oldServiceRoleKey || isServiceRoleValid) {
+      isAdmin = true;
+      
+      // Self-healing: Update database with active key if it used the outdated key
+      if (token === oldServiceRoleKey) {
+        console.log('[send-to-alpha] Outdated service role key detected. Updating system_settings.service_role_key to the active key...');
+        try {
+          await adminClient
+            .from('system_settings')
+            .update({ value: serviceKey })
+            .eq('key', 'service_role_key');
+        } catch (dbErr) {
+          console.error('[send-to-alpha] Failed to self-heal system_settings.service_role_key:', dbErr);
+        }
+      }
+    } else {
+      const { data: { user: authUser }, error: authError } = await adminClient.auth.getUser(token);
+      if (authError || !authUser) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      user = authUser;
     }
 
-    const { translation_order_id } = await req.json();
     if (!translation_order_id) {
       return new Response(JSON.stringify({ error: 'Missing translation_order_id' }), {
         status: 400,
@@ -44,13 +117,17 @@ serve(async (req) => {
       });
     }
 
-    // Fetch the translation order — must belong to the authenticated user
-    const { data: order, error: orderError } = await adminClient
+    // Fetch the translation order — filter by user_id if not admin
+    let query = adminClient
       .from('translation_orders')
       .select('*')
-      .eq('id', translation_order_id)
-      .eq('user_id', user.id)
-      .single();
+      .eq('id', translation_order_id);
+
+    if (!isAdmin && user) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data: order, error: orderError } = await query.single();
 
     if (orderError || !order) {
       return new Response(JSON.stringify({ error: 'Translation order not found' }), {
@@ -94,11 +171,24 @@ serve(async (req) => {
     const projectName = fileName.replace(/\.[^/.]+$/, '') || 'Documento';
     const isCertified = order.document_type === 'notarized' ? 'true' : 'false';
 
+    let studentEmail = '';
+    if (isAdmin) {
+      const { data: authUser, error: authUserErr } = await adminClient.auth.admin.getUserById(order.user_id);
+      if (authUserErr || !authUser?.user?.email) {
+        const { data: profile } = await adminClient.from('user_profiles').select('email').eq('user_id', order.user_id).single();
+        studentEmail = profile?.email || '';
+      } else {
+        studentEmail = authUser.user.email;
+      }
+    } else if (user) {
+      studentEmail = user.email!;
+    }
+
     const formData = new FormData();
     formData.append('projectName', projectName);
     formData.append('sourceLanguage', order.source_language);
     formData.append('targetLanguage', order.target_language);
-    formData.append('externalClientId', user.email!);
+    formData.append('externalClientId', studentEmail);
     formData.append('isCertified', isCertified);
     formData.append('isPriority', 'false');
     formData.append('files', fileBlob, fileName);

@@ -83,6 +83,7 @@ const FEE_TYPES = [
   { value: 'placement',         label: 'Placement Fee',         color: 'bg-purple-100 text-purple-800' },
   { value: 'control_fee',       label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
   { value: 'reinstatement_fee', label: 'Reinstatement Fee',     color: 'bg-amber-100 text-amber-800' },
+  { value: 'translation',       label: 'Translation Fee',       color: 'bg-teal-100 text-teal-800' },
 ];
 
 const STATUS_OPTIONS = [

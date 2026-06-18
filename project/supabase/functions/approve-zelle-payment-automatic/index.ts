@@ -943,6 +943,36 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Translation payment approval
+    if (normalizedFeeTypeGlobal === 'translation') {
+      console.log('🌐 [approve-zelle-payment-automatic] Atualizando translation_orders...')
+
+      const { data: zp } = await supabaseClient
+        .from('zelle_payments')
+        .select('metadata')
+        .eq('id', paymentId)
+        .maybeSingle()
+
+      const translationOrderId = zp?.metadata?.translation_order_id
+      if (!translationOrderId) {
+        console.error('❌ [approve-zelle-payment-automatic] translation_order_id não encontrado no metadata')
+      } else {
+        const { error: orderError } = await supabaseClient
+          .from('translation_orders')
+          .update({
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+          })
+          .eq('id', translationOrderId)
+
+        if (orderError) {
+          console.error('❌ [approve-zelle-payment-automatic] Erro ao atualizar translation_orders:', orderError)
+        } else {
+          console.log('✅ [approve-zelle-payment-automatic] translation_order marcada como paga:', translationOrderId)
+        }
+      }
+    }
+
     // 3. ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO SOBRE APROVAÇÃO
     console.log('📤 [approve-zelle-payment-automatic] Enviando notificação de aprovação para o aluno...')
     

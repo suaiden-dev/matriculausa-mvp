@@ -108,7 +108,7 @@ Deno.serve(async (req: any) => {
     }
 
     // Validar tipo de taxa
-    const validFeeTypes = ['selection_process', 'selection_process_fee', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i20_control_fee', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package'];
+    const validFeeTypes = ['selection_process', 'selection_process_fee', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i20_control_fee', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package', 'translation'];
     if (!validFeeTypes.includes(fee_type)) {
       return corsResponse({ error: 'Invalid fee_type: ' + fee_type }, 400);
     }

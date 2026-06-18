@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { X, Upload, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Upload, Loader2, AlertCircle, CheckCircle, Copy, Check, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -60,6 +60,9 @@ export interface TranslationQuoteModalProps {
   onDisclaimerAccepted?: (dontShowAgain: boolean) => void;
   onClose: () => void;
   onOrderCreated: (orderId: string) => void;
+  /** Resume an existing Zelle unpaid order — skips configure and goes straight to proof upload */
+  resumeOrderId?: string;
+  resumeAmount?: number;
 }
 
 export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
@@ -76,8 +79,10 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   onDisclaimerAccepted,
   onClose,
   onOrderCreated,
+  resumeOrderId,
+  resumeAmount,
 }) => {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation(['dashboard', 'payment']);
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,10 +94,14 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const [isBankStatement, setIsBankStatement] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'configure' | 'disclaimer'>('configure');
+  const [step, setStep] = useState<'configure' | 'disclaimer' | 'zelle-payment' | 'zelle-sent'>('configure');
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [standaloneFile, setStandaloneFile] = useState<File | null>(null);
+  const [zelleFile, setZelleFile] = useState<File | null>(null);
+  const [zelleOrderId, setZelleOrderId] = useState<string | null>(null);
+  const zelleFileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState('');
+  const [copied, setCopied] = useState(false);
   const [linkedRequestId, setLinkedRequestId] = useState<string>('');
   const [availableRequests, setAvailableRequests] = useState<Array<{
     id: string;
@@ -111,11 +120,18 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     setError(null);
     setFileError('');
     setSelectedMethod(null);
-    setStep('configure');
     setDontShowAgain(false);
     setStandaloneFile(null);
+    setZelleFile(null);
     setLinkedRequestId('');
     setIsBankStatement(false);
+    if (resumeOrderId) {
+      setZelleOrderId(resumeOrderId);
+      setStep('zelle-payment');
+    } else {
+      setZelleOrderId(null);
+      setStep('configure');
+    }
 
     if (file) {
       setCountingPages(true);
@@ -127,7 +143,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         return countPagesFromUrl(data.signedUrl).then(n => setPages(n)).catch(() => setPages(1));
       }).finally(() => setCountingPages(false));
     }
-  }, [open, file, storagePath]);
+  }, [open, file, storagePath, resumeOrderId]);
 
   // Fetch document requests for the student (only in standalone mode)
   useEffect(() => {
@@ -265,6 +281,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
           document_url: finalStoragePath,
           original_filename: finalFileName,
           document_type: docType,
+          original_document_type: docType,
           is_bank_statement: isBankStatement === true,
           source_language: sourceLanguage,
           target_language: 'Inglês',
@@ -280,6 +297,13 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         .single();
 
       if (insertError) throw insertError;
+
+      if (selectedMethod === 'zelle') {
+        setZelleOrderId(data.id);
+        setStep('zelle-payment');
+        setSubmitting(false);
+        return;
+      }
 
       if (selectedMethod === 'stripe') {
         const baseUrl = window.location.origin;
@@ -319,17 +343,85 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     }
   };
 
+  const copyEmail = () => {
+    navigator.clipboard.writeText('pay@matriculausa.com');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleZelleBack = async () => {
+    if (resumeOrderId) { onClose(); return; }
+    if (zelleOrderId) {
+      await supabase.from('translation_orders').delete().eq('id', zelleOrderId);
+    }
+    setZelleOrderId(null);
+    setZelleFile(null);
+    setError(null);
+    setStep('configure');
+  };
+
+  const handleZelleSubmit = async () => {
+    if (!zelleFile || !zelleOrderId) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const ext = zelleFile.name.split('.').pop() || 'jpg';
+      const filePath = `zelle-payments/${studentId}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('zelle_comprovantes')
+        .upload(filePath, zelleFile);
+      if (uploadError) throw uploadError;
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const imageUrl = `${supabaseUrl}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
+
+      const { error: fnError } = await supabase.functions.invoke('create-zelle-payment', {
+        body: {
+          fee_type: 'translation',
+          amount: effectiveAmount,
+          comprovante_url: imageUrl,
+          metadata: { translation_order_id: zelleOrderId },
+        },
+      });
+      if (fnError) throw fnError;
+
+      await supabase
+        .from('translation_orders')
+        .update({ payment_reference: imageUrl })
+        .eq('id', zelleOrderId);
+
+      setStep('zelle-sent');
+    } catch (e: any) {
+      setError(e.message || 'Erro ao enviar comprovante.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleDisclaimerAccept = async () => {
     if (onDisclaimerAccepted) onDisclaimerAccepted(dontShowAgain);
     await doSubmit();
   };
+
+  const handleClose = async () => {
+    if (step === 'zelle-payment' && zelleOrderId && !resumeOrderId) {
+      try {
+        await supabase.from('translation_orders').delete().eq('id', zelleOrderId);
+      } catch (err) {
+        console.error('Error deleting unpaid order on close:', err);
+      }
+    }
+    onClose();
+  };
+
+  const effectiveAmount = resumeAmount ?? total;
 
   const canSubmit = selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile) && isBankStatement !== null;
 
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-white w-full sm:rounded-2xl sm:max-w-lg max-h-[95dvh] flex flex-col overflow-hidden shadow-2xl rounded-t-2xl"
@@ -338,10 +430,20 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-900">{t('translationQuoteModal.title')}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{t('translationQuoteModal.subtitle')}</p>
+            <h2 className="text-base font-bold text-gray-900">
+              {step === 'zelle-payment' || step === 'zelle-sent'
+                ? 'Pagamento via Zelle'
+                : t('translationQuoteModal.title')}
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {step === 'zelle-payment'
+                ? 'Envie o comprovante para confirmar sua tradução'
+                : step === 'zelle-sent'
+                ? 'Comprovante recebido!'
+                : t('translationQuoteModal.subtitle')}
+            </p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+          <button onClick={handleClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -375,7 +477,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : step === 'configure' ? (
             <div className="p-4 space-y-4">
 
               {/* File upload zone (standalone) or file info (pre-loaded) */}
@@ -604,6 +706,126 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               )}
             </div>
+          ) : null}
+          {step === 'zelle-payment' && (
+            <div className="p-5 space-y-4">
+              {/* Instruções numeradas */}
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500">
+                  1 — Realize a transferência do valor para o destinatário informado abaixo.
+                </p>
+                <p className="text-sm text-gray-500">
+                  2 — Envie o comprovante da sua transferência no campo de upload abaixo.{' '}
+                  <span className="text-red-500 font-bold">*</span>
+                </p>
+              </div>
+
+              {/* Email + Valor */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-600">Email do Destinatário</p>
+                  <div className="flex items-center justify-between gap-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+                    <span className="text-xs font-mono font-bold text-gray-800 truncate">pay@matriculausa.com</span>
+                    <div className="relative shrink-0">
+                      <button
+                        onClick={copyEmail}
+                        className="p-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-[#1e3a5f]"
+                        title="Copiar email"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                      {copied && (
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap">
+                          Copiado!
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-600">Valor do Pagamento</p>
+                  <div className="bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+                    <span className="text-sm font-black text-gray-900">${effectiveAmount.toFixed(2)} USD</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box importante */}
+              <div className="border border-red-400 bg-red-50 rounded-xl px-3 py-2.5">
+                <p className="text-sm font-semibold text-red-700">Importante:</p>
+                <p className="text-sm text-red-700 mt-0.5">
+                  <span className="font-bold">*</span> O envio do comprovante é obrigatório e necessário para dar continuidade à sua tradução.
+                </p>
+              </div>
+
+              {/* Upload */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">
+                  Comprovante de pagamento <span className="text-red-500">*</span>
+                </p>
+                <div
+                  onClick={() => zelleFileInputRef.current?.click()}
+                  className={`cursor-pointer rounded-xl border-2 border-dashed p-5 text-center transition-colors ${
+                    zelleFile
+                      ? 'border-green-400 bg-green-50'
+                      : 'border-gray-300 hover:border-[#1e3a5f] hover:bg-gray-50'
+                  }`}
+                >
+                  {zelleFile ? (
+                    <div className="flex items-center justify-center gap-2 text-green-700">
+                      <CheckCircle className="w-5 h-5 shrink-0" />
+                      <span className="text-sm font-medium truncate max-w-[220px]">{zelleFile.name}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1.5" />
+                      <p className="text-sm text-gray-500">Arraste ou clique para selecionar</p>
+                      <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, WEBP — máx 10 MB</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={zelleFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f && f.size <= 10 * 1024 * 1024) setZelleFile(f);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'zelle-sent' && (
+            <div className="p-6 flex flex-col items-center text-center gap-4 py-10 bg-gradient-to-br from-amber-50/30 to-orange-50/10">
+              <div className="relative w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center border border-amber-200 shadow-inner">
+                <Clock className="w-8 h-8 text-amber-600 animate-pulse" />
+              </div>
+              <div>
+                <p className="text-lg font-black text-amber-800 uppercase tracking-tight">
+                  {t('payment:zelleWaiting.messages.under_review') || 'Processando Pagamento'}
+                </p>
+                <p className="text-sm text-amber-700/90 font-medium leading-relaxed max-w-xs mt-2 mx-auto">
+                  {t('payment:zelleWaiting.details.under_review') || 'Seu comprovante foi recebido e está em análise. Nossa equipe o revisará em breve.'}
+                </p>
+              </div>
+              
+              <div className="flex justify-center space-x-1.5 mt-2">
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+              </div>
+            </div>
           )}
         </div>
 
@@ -621,6 +843,39 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 : selectedMethod
                   ? t('translationQuoteModal.orderButton', { total: (selectedMethod === 'stripe' ? stripeTotal : total).toFixed(2) })
                   : 'Selecione um método de pagamento'}
+            </button>
+          </div>
+        )}
+
+        {step === 'zelle-payment' && (
+          <div className="px-5 py-4 border-t border-gray-100 shrink-0 flex gap-2">
+            {!resumeOrderId && (
+              <button
+                onClick={handleZelleBack}
+                disabled={submitting}
+                className="px-4 py-3 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                ← Voltar
+              </button>
+            )}
+            <button
+              onClick={handleZelleSubmit}
+              disabled={!zelleFile || submitting}
+              className="flex-1 px-4 py-3 bg-[#1e3a5f] hover:bg-[#16304f] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting ? 'Enviando...' : 'Confirmar Pagamento →'}
+            </button>
+          </div>
+        )}
+
+        {step === 'zelle-sent' && (
+          <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+            <button
+              onClick={handleClose}
+              className="w-full px-4 py-3 bg-[#1e3a5f] hover:bg-[#16304f] text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              Fechar
             </button>
           </div>
         )}

@@ -36,6 +36,7 @@ const ReferralAffiliatesManagement = lazy(() => import('./ReferralAffiliatesMana
 const AffiliateDetails = lazy(() => import('./AffiliateDetails'));
 const AdminStudentDetailsRefactored = lazy(() => import('./AdminStudentDetails.refactored'));
 const SystemSettings = lazy(() => import('./SystemSettings'));
+const TranslationsManagement = lazy(() => import('./TranslationsManagement'));
 
 import { AdminContentSkeleton } from '../../components/AdminDashboardSkeleton';
 
@@ -636,6 +637,7 @@ const AdminDashboard: React.FC = () => {
             <Route path="universities/:universityId" element={<UniversityDetails />} />
             <Route path="users" element={<UsersHub />} />
             <Route path="payments" element={<PaymentManagement />} />
+            <Route path="translations" element={<TranslationsManagement />} />
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />

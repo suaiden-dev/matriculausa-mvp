@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Languages, Plus, AlertCircle, Loader2, FileDown, Download, X, RefreshCw } from 'lucide-react';
+import { Languages, Plus, Clock, Loader2, FileDown, Download, X, RefreshCw, Upload, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { TranslationQuoteModal } from '../../components/TranslationQuoteModal';
@@ -30,6 +30,8 @@ interface TranslationOrder {
   document_request_upload_id?: string | null;
   amount_paid?: number | null;
   is_bank_statement?: boolean | null;
+  alpha_project_number?: number | null;
+  payment_reference?: string | null;
 }
 
 interface PendingTranslationUpload {
@@ -49,11 +51,17 @@ interface ModalState {
   requestId?: string;
   documentRequestUploadId?: string;
   rejectionOrigin?: boolean;
+  resumeOrderId?: string;
+  resumeAmount?: number;
 }
 
 function getFileName(url: string): string {
   const parts = url.split('/');
   return decodeURIComponent(parts[parts.length - 1]);
+}
+
+function cleanFileName(url: string): string {
+  return getFileName(url).replace(/^\d+_/, '');
 }
 
 function fmt(n: number) {
@@ -178,7 +186,11 @@ function translationLabel(status: string, t: (k: string) => string): string {
 
 // ── Payment cell: badge + Stripe retry if needed ──────────────────────────────
 
-function PaymentCell({ order, t }: { order: TranslationOrder; t: (k: string) => string }) {
+function PaymentCell({ order, t, onZelleProof }: {
+  order: TranslationOrder;
+  t: (k: string) => string;
+  onZelleProof?: (orderId: string, amount: number) => void;
+}) {
   const isPaid = order.payment_status === 'paid';
   const [loading, setLoading] = useState(false);
 
@@ -214,6 +226,15 @@ function PaymentCell({ order, t }: { order: TranslationOrder; t: (k: string) => 
         >
           {loading && <Loader2 className="w-3 h-3 animate-spin" />}
           {loading ? '…' : t('translationsPage.payWithCard') || 'Pagar com Cartão →'}
+        </button>
+      )}
+      {order.payment_method === 'zelle' && onZelleProof && (
+        <button
+          onClick={() => onZelleProof(order.id, order.total_price)}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e3a5f] hover:underline"
+        >
+          <Upload className="w-3 h-3" />
+          Enviar Comprovante →
         </button>
       )}
     </div>
@@ -276,7 +297,7 @@ function Skeleton() {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Translations: React.FC = () => {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation(['dashboard', 'payment']);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -293,7 +314,7 @@ const Translations: React.FC = () => {
     const { data } = await supabase
       .from('translation_orders')
       .select(
-        'id,original_filename,document_type,is_bank_statement,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,amount_paid'
+        'id,original_filename,document_type,is_bank_statement,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,amount_paid,alpha_project_number,payment_reference'
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -380,6 +401,9 @@ const Translations: React.FC = () => {
     () => pendingUploads.filter((u) => !orderedUploadIds.has(u.id)),
     [pendingUploads, orderedUploadIds]
   );
+  const unpaidOrders = useMemo(() => orders.filter(o => o.payment_status !== 'paid' && !(o.payment_method === 'zelle' && o.payment_reference)), [orders]);
+  const paidOrders = useMemo(() => orders.filter(o => o.payment_status === 'paid' || (o.payment_method === 'zelle' && o.payment_reference)), [orders]);
+  const totalPending = trulyPendingUploads.length + unpaidOrders.length;
 
   const handleDisclaimerAccepted = useCallback(
     async (dontShowAgain: boolean) => {
@@ -393,6 +417,26 @@ const Translations: React.FC = () => {
     },
     [user?.id]
   );
+
+  const [stripeRetrying, setStripeRetrying] = useState<string | null>(null);
+  const handleStripeRetry = async (orderId: string) => {
+    setStripeRetrying(orderId);
+    try {
+      const baseUrl = window.location.origin;
+      const { data, error } = await supabase.functions.invoke('stripe-checkout-translation', {
+        body: {
+          translation_order_id: orderId,
+          success_url: `${baseUrl}/student/dashboard/translations?payment=success&order=${orderId}`,
+          cancel_url: `${baseUrl}/student/dashboard/translations?payment=cancelled`,
+        },
+      });
+      if (error || !data?.session_url) throw new Error(error?.message || 'Erro');
+      window.location.href = data.session_url;
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao iniciar pagamento');
+      setStripeRetrying(null);
+    }
+  };
 
   const openModalForUpload = (upload: PendingTranslationUpload) => {
     setQuoteModal({
@@ -416,9 +460,9 @@ const Translations: React.FC = () => {
             <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
               {t('translationsPage.title')}
             </h1>
-            {orders.length > 0 && !loading && (
+            {paidOrders.length > 0 && !loading && (
               <p className="mt-0.5 text-sm text-gray-500">
-                {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
+                {paidOrders.length} {paidOrders.length === 1 ? 'pedido' : 'pedidos'}
               </p>
             )}
           </div>
@@ -445,39 +489,91 @@ const Translations: React.FC = () => {
           </div>
         </div>
 
-        {/* Pending uploads — compact banner */}
-        {trulyPendingUploads.length > 0 && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 divide-y divide-amber-100 overflow-hidden">
+        {/* Pending section: uploads awaiting translation + unpaid orders */}
+        {totalPending > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden border-l-4 border-l-amber-400 divide-y divide-gray-100">
+            <div className="flex items-center gap-2 px-4 py-3">
+              <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="text-sm font-semibold text-gray-700">
+                {totalPending}{' '}
+                {totalPending === 1 ? 'pedido pendente' : 'pedidos pendentes'}
+              </span>
+            </div>
+
+            {/* Pending uploads (rejected docs needing translation) */}
             {trulyPendingUploads.map((upload) => (
               <div key={upload.id} className="flex items-center gap-3 px-4 py-3">
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-amber-900 truncate">
-                    {getFileName(upload.file_url)}
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {upload.document_requests?.title ?? cleanFileName(upload.file_url)}
                   </p>
                   {upload.document_requests?.title && (
-                    <p className="text-xs text-amber-700">
-                      {t('translationsPage.linkedTo')} {upload.document_requests.title}
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                      {cleanFileName(upload.file_url)}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => openModalForUpload(upload)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors"
                 >
                   <Languages className="w-3.5 h-3.5" />
                   {t('translationsPage.pendingBannerCta')}
                 </button>
               </div>
             ))}
+
+            {/* Unpaid orders: started but payment not completed */}
+            {unpaidOrders.map((o) => (
+              <div key={o.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {o.original_filename}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                    {' · '}
+                    {fmt(o.total_price)}
+                    {' · '}
+                    {o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'stripe' ? 'Cartão' : o.payment_method}
+                  </p>
+                </div>
+                {o.payment_method === 'zelle' && o.payment_reference ? (
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                    <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                    {t('payment:zelleWaiting.messages.under_review') || 'Processando Pagamento'}
+                  </span>
+                ) : o.payment_method === 'zelle' && (
+                  <button
+                    onClick={() => setQuoteModal({ open: true, resumeOrderId: o.id, resumeAmount: o.total_price })}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Enviar comprovante
+                  </button>
+                )}
+                {o.payment_method === 'stripe' && (
+                  <button
+                    onClick={() => handleStripeRetry(o.id)}
+                    disabled={stripeRetrying === o.id}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                  >
+                    {stripeRetrying === o.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <Plus className="w-3.5 h-3.5" />}
+                    Pagar
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Orders card */}
+        {/* Orders card — paid orders only */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
           {loading ? (
             <Skeleton />
-          ) : orders.length === 0 ? (
+          ) : paidOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-4">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
                 <Languages className="h-7 w-7 text-gray-300" />
@@ -507,7 +603,7 @@ const Translations: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {orders.map((o) => (
+                    {paidOrders.map((o) => (
                       <tr key={o.id} className="hover:bg-gray-50/70 transition-colors">
                         <td className="px-6 py-4">
                           <p className="font-semibold text-gray-900 truncate max-w-[220px]">
@@ -520,9 +616,24 @@ const Translations: React.FC = () => {
                             {' · '}
                             {o.page_count}p
                           </p>
+                          {o.alpha_project_number && (
+                            <p className="mt-1 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
+                          )}
                         </td>
                         <td className="px-6 py-4">
-                          <PaymentCell order={o} t={t} />
+                          <div className="flex flex-col gap-1">
+                            {o.payment_status === 'paid' ? (
+                              <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                                <Clock className="w-3 h-3 animate-pulse" />
+                                Processando
+                              </span>
+                            )}
+                            <span className="text-[11px] text-gray-400">
+                              {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <TranslationCell
@@ -553,7 +664,7 @@ const Translations: React.FC = () => {
 
               {/* Mobile list */}
               <div className="divide-y divide-gray-100 md:hidden">
-                {orders.map((o) => (
+                {paidOrders.map((o) => (
                   <div key={o.id} className="px-4 py-4 space-y-2.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -565,6 +676,9 @@ const Translations: React.FC = () => {
                           {' · '}
                           {o.source_language} → {o.target_language}
                         </p>
+                        {o.alpha_project_number && (
+                          <p className="mt-0.5 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
+                        )}
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="font-bold text-gray-900 text-sm">
@@ -577,8 +691,20 @@ const Translations: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-start gap-4">
-                      <PaymentCell order={o} t={t} />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-col gap-0.5">
+                        {o.payment_status === 'paid' ? (
+                          <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            <Clock className="w-3 h-3 animate-pulse" />
+                            Processando
+                          </span>
+                        )}
+                        <span className="text-[11px] text-gray-400 ml-0.5">
+                          {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
+                        </span>
+                      </div>
                       <TranslationCell
                         order={o}
                         t={t}
@@ -618,7 +744,9 @@ const Translations: React.FC = () => {
         rejectionOrigin={quoteModal.rejectionOrigin}
         disclaimerAccepted={disclaimerAccepted}
         onDisclaimerAccepted={handleDisclaimerAccepted}
-        onClose={() => setQuoteModal({ open: false })}
+        resumeOrderId={quoteModal.resumeOrderId}
+        resumeAmount={quoteModal.resumeAmount}
+        onClose={() => { setQuoteModal({ open: false }); fetchOrders(); }}
         onOrderCreated={() => {
           setQuoteModal({ open: false });
           fetchOrders();

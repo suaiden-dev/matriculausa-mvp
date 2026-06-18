@@ -854,6 +854,9 @@ export async function approveZelleFlow(params: {
       tipoNotfAluno = "Pagamento de Control Fee confirmado";
     } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
       tipoNotfAluno = "Pagamento de reinstatement_fee confirmado";
+    } else if (payment.fee_type === 'translation') {
+      tipoNotfAluno = "Pagamento de tradução confirmado";
+      oQueEnviar = `Seu pagamento de tradução no valor de $${payment.amount} foi aprovado. Sua tradução será iniciada em breve!`;
     }
 
     const approvalPayload = {
@@ -1087,6 +1090,8 @@ export async function approveZelleFlow(params: {
           tipoNotfAdmin = "Pagamento de Control Fee confirmado";
         } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
           tipoNotfAdmin = "Pagamento de reinstatement_fee confirmado";
+        } else if (payment.fee_type === 'translation') {
+          tipoNotfAdmin = "Pagamento de tradução confirmado";
         }
 
         for (const admin of adminUsers) {
