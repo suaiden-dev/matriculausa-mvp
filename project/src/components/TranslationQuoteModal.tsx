@@ -25,11 +25,10 @@ const ParcelowBadge = ({ className }: { className?: string }) => {
 };
 
 const DOC_TYPES = [
-  { id: 'certified',      pricePerPage: 15, descKey: 'translationQuoteModal.docType_certified_desc' },
-  { id: 'notarized',      pricePerPage: 20, descKey: 'translationQuoteModal.docType_notarized_desc' },
-  { id: 'bank_statement', pricePerPage: 25, descKey: 'translationQuoteModal.docType_bank_statement_desc' },
+  { id: 'certified', label: 'Tradução Certificada', pricePerPage: 15, bankSurcharge: 10 },
+  { id: 'notarized', label: 'Tradução Juramentada', pricePerPage: 25, bankSurcharge: 5 },
 ] as const;
-type DocType = typeof DOC_TYPES[number]['id'];
+type DocType = 'certified' | 'notarized';
 type PaymentMethod = 'stripe' | 'zelle' | 'parcelow';
 
 const SOURCE_LANGUAGES = [
@@ -87,12 +86,19 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const [sourceLanguage, setSourceLanguage] = useState(SOURCE_LANGUAGES[0]);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [docType, setDocType] = useState<DocType>('certified');
+  const [isBankStatement, setIsBankStatement] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'configure' | 'disclaimer'>('configure');
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [standaloneFile, setStandaloneFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
+  const [linkedRequestId, setLinkedRequestId] = useState<string>('');
+  const [availableRequests, setAvailableRequests] = useState<Array<{
+    id: string;
+    title: string;
+    context: string;
+  }>>([]);
 
   const isStandaloneMode = !fileName && !file && !storagePath;
   const activeFile = standaloneFile || file || null;
@@ -108,6 +114,8 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     setStep('configure');
     setDontShowAgain(false);
     setStandaloneFile(null);
+    setLinkedRequestId('');
+    setIsBankStatement(false);
 
     if (file) {
       setCountingPages(true);
@@ -120,6 +128,77 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
       }).finally(() => setCountingPages(false));
     }
   }, [open, file, storagePath]);
+
+  // Fetch document requests for the student (only in standalone mode)
+  useEffect(() => {
+    if (!open || !studentId) return;
+
+    const fetchRequests = async () => {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', studentId)
+        .maybeSingle();
+
+      if (!profile?.id) return;
+
+      const { data: apps } = await supabase
+        .from('scholarship_applications')
+        .select('id, student_process_type, scholarships(title, university_id, level)')
+        .eq('student_id', profile.id)
+        .neq('status', 'rejected');
+
+      const appIds = (apps || []).map((a: any) => a.id);
+      const items: Array<{ id: string; title: string; context: string }> = [];
+
+      // Per-application requests
+      if (appIds.length > 0) {
+        const { data: appReqs } = await supabase
+          .from('document_requests')
+          .select('id, title, scholarship_application_id')
+          .in('scholarship_application_id', appIds)
+          .neq('status', 'closed');
+
+        (appReqs || []).forEach((r: any) => {
+          const app = (apps || []).find((a: any) => a.id === r.scholarship_application_id);
+          const scholarship = Array.isArray(app?.scholarships) ? app.scholarships[0] : app?.scholarships;
+          items.push({ id: r.id, title: r.title, context: scholarship?.title || 'Bolsa' });
+        });
+      }
+
+      // Global requests — filter by student's university + process type (same logic as DocumentRequestsCard)
+      const universityIds = [...new Set((apps || []).flatMap((a: any) => {
+        const s = Array.isArray(a.scholarships) ? a.scholarships[0] : a.scholarships;
+        return s?.university_id ? [s.university_id] : [];
+      }))];
+      const studentProcessTypes = [...new Set((apps || []).map((a: any) => a.student_process_type).filter(Boolean))];
+
+      if (universityIds.length > 0) {
+        const uniFilter = universityIds.map((id: string) => `university_id.eq.${id}`).join(',') + ',university_id.is.null';
+        const { data: globalReqs } = await supabase
+          .from('document_requests')
+          .select('id, title, applicable_student_types')
+          .eq('is_global', true)
+          .or(uniFilter)
+          .neq('status', 'closed');
+
+        (globalReqs || []).forEach((r: any) => {
+          const types: string[] = r.applicable_student_types || [];
+          if (types.length === 0) return; // sem tipos definidos = não exibir (mesmo comportamento do DocumentRequestsCard)
+          if (studentProcessTypes.length > 0) {
+            const passes = studentProcessTypes.some((t: string) => types.includes(t) || types.includes('all'));
+            if (!passes) return;
+          }
+          items.push({ id: r.id, title: r.title, context: 'Global' });
+        });
+      }
+
+      console.log('[TranslationQuoteModal] availableRequests para student_id=%s profile_id=%s', studentId, profile.id, items);
+      setAvailableRequests(items);
+    };
+
+    fetchRequests();
+  }, [open, studentId]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -146,7 +225,8 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   if (!open) return null;
 
   const pageCount = pages ?? 1;
-  const pricePerPage = DOC_TYPES.find(d => d.id === docType)!.pricePerPage;
+  const selectedDocType = DOC_TYPES.find(d => d.id === docType)!;
+  const pricePerPage = selectedDocType.pricePerPage + (isBankStatement === true ? selectedDocType.bankSurcharge : 0);
   const total = pageCount * pricePerPage;
   const stripeTotal = Math.round(((total + STRIPE_FIXED) / (1 - STRIPE_RATE)) * 100) / 100;
   const stripeFee = Math.round((stripeTotal - total) * 100) / 100;
@@ -179,15 +259,15 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         .insert({
           user_id: studentId,
           upload_id: uploadId || null,
-          document_request_id: requestId || null,
+          document_request_id: requestId || linkedRequestId || null,
           document_request_upload_id: documentRequestUploadId || null,
           rejection_origin: rejectionOrigin,
           document_url: finalStoragePath,
           original_filename: finalFileName,
           document_type: docType,
+          is_bank_statement: isBankStatement === true,
           source_language: sourceLanguage,
           target_language: 'Inglês',
-          original_document_type: 'other',
           page_count: pageCount,
           price_per_page: pricePerPage,
           total_price: total,
@@ -244,7 +324,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     await doSubmit();
   };
 
-  const canSubmit = selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile);
+  const canSubmit = selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile) && isBankStatement !== null;
 
   return createPortal(
     <div
@@ -296,7 +376,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-5 space-y-5">
+            <div className="p-4 space-y-4">
 
               {/* File upload zone (standalone) or file info (pre-loaded) */}
               {isStandaloneMode ? (
@@ -304,7 +384,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center transition hover:border-[#1e3a5f]/40 hover:bg-blue-50/30"
+                    className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-center transition hover:border-[#1e3a5f]/40 hover:bg-blue-50/30"
                   >
                     <Upload className="mb-2 h-6 w-6 text-gray-400" />
                     <p className="text-sm font-medium text-gray-600">
@@ -329,7 +409,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               ) : (
                 activeFileName && (
-                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{activeFileName}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -354,27 +434,61 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               {/* Document type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentType')}</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {DOC_TYPES.map(d => (
                     <button
                       key={d.id}
                       type="button"
                       onClick={() => setDocType(d.id)}
-                      className={`flex flex-col items-start rounded-xl border-2 p-3 text-left transition ${
+                      className={`flex items-center justify-between rounded-xl border-2 px-3 py-2 text-left transition ${
                         docType === d.id
                           ? 'border-[#1e3a5f] bg-[#1e3a5f]/5'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
-                      <p className={`text-[11px] font-semibold leading-tight ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>
-                        {t(`translationQuoteModal.docType_${d.id}`)}
+                      <p className={`text-xs font-semibold leading-tight ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>
+                        {d.label}
                       </p>
-                      <p className={`text-base font-bold mt-1.5 ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-700'}`}>
-                        ${d.pricePerPage}
-                        <span className="text-[10px] font-normal text-gray-400">/pág</span>
+                      <p className={`text-sm font-bold ml-2 shrink-0 ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-600'}`}>
+                        ${d.pricePerPage}<span className="text-[10px] font-normal text-gray-400">/pág</span>
                       </p>
                     </button>
                   ))}
+                </div>
+                <div className="mt-2.5">
+                  <p className="text-xs font-medium text-gray-700 mb-1.5">
+                    É um extrato bancário?
+                    <span className="ml-1 text-gray-400 font-normal">
+                      (se sim: +${selectedDocType.bankSurcharge}/pág)
+                    </span>
+                    {isBankStatement === null && (
+                      <span className="ml-1.5 text-red-400 text-[11px]">* obrigatório</span>
+                    )}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsBankStatement(true)}
+                      className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
+                        isBankStatement === true
+                          ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsBankStatement(false)}
+                      className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
+                        isBankStatement === false
+                          ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      Não
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -389,6 +503,31 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                   {SOURCE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
+
+              {/* Link to document request (only when not coming from a rejection) */}
+              {!requestId && !documentRequestUploadId && availableRequests.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vincular a um pedido de documento
+                    <span className="ml-1.5 text-xs font-normal text-gray-400">(opcional)</span>
+                  </label>
+                  <p className="text-xs text-gray-400 mb-2 leading-relaxed">
+                    Quando a tradução for entregue, o documento traduzido será enviado automaticamente para o pedido selecionado.
+                  </p>
+                  <select
+                    value={linkedRequestId}
+                    onChange={e => setLinkedRequestId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f]"
+                  >
+                    <option value="">Não vincular</option>
+                    {availableRequests.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.context} · {r.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Price summary */}
               <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
@@ -406,7 +545,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               {/* Payment method */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.paymentMethod')}</label>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {([
                     {
                       id: 'stripe' as const,
@@ -434,24 +573,24 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                       key={m.id}
                       type="button"
                       onClick={() => setSelectedMethod(m.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition ${
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border-2 text-left transition ${
                         selectedMethod === m.id
                           ? 'border-[#1e3a5f] bg-[#1e3a5f]/5'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
-                      <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-gray-100 shadow-sm shrink-0 overflow-hidden">
-                        <m.Icon className="w-6 h-6" />
+                      <div className="w-7 h-7 flex items-center justify-center rounded-md bg-white border border-gray-100 shadow-sm shrink-0 overflow-hidden">
+                        <m.Icon className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{m.label}</p>
-                        <p className="text-xs text-gray-400">{m.note}</p>
+                        <p className="text-xs font-semibold text-gray-900">{m.label}</p>
+                        <p className="text-[11px] text-gray-400 leading-tight">{m.note}</p>
                       </div>
                       <p className="text-sm font-bold text-gray-900 shrink-0">
                         {countingPages ? '...' : `$${m.amount.toFixed(2)}`}
                       </p>
                       {selectedMethod === m.id && (
-                        <CheckCircle className="w-4 h-4 text-[#1e3a5f] shrink-0" />
+                        <CheckCircle className="w-3.5 h-3.5 text-[#1e3a5f] shrink-0" />
                       )}
                     </button>
                   ))}

@@ -104,6 +104,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     fileName: string;
     file?: File;
   } | null>(null);
+  const [translationOrdersByUpload, setTranslationOrdersByUpload] = useState<Record<string, { payment_status: string; translation_status: string }>>({});
 
   // Função para sanitizar nome do arquivo
   const handleProofUpload = async (file: File) => {
@@ -285,6 +286,35 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   }, [uploads]);
 
+  // Buscar ordens de tradução para uploads rejeitados com needs_translation
+  useEffect(() => {
+    if (isSchool) return;
+    const allUploadIds: string[] = Object.values(uploads)
+      .flat()
+      .filter((u: any) => u.id)
+      .map((u: any) => u.id as string);
+    if (allUploadIds.length === 0) return;
+
+    const fetchTranslationOrders = async () => {
+      const { data } = await supabase
+        .from('translation_orders')
+        .select('document_request_upload_id, payment_status, translation_status')
+        .in('document_request_upload_id', allUploadIds);
+      if (!data) return;
+      const map: Record<string, { payment_status: string; translation_status: string }> = {};
+      data.forEach((o: any) => {
+        if (o.document_request_upload_id) {
+          map[o.document_request_upload_id] = {
+            payment_status: o.payment_status || '',
+            translation_status: o.translation_status || '',
+          };
+        }
+      });
+      setTranslationOrdersByUpload(map);
+    };
+    fetchTranslationOrders();
+  }, [uploads, isSchool]);
+
   // LOGS DE DEBUG PARA BOTÕES DE APROVAÇÃO/REJEIÇÃO
   useEffect(() => {
     // console.log('[DocumentRequestsCard] MONTADO', {
@@ -420,6 +450,53 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   // ✅ SEGURANÇA: Verificar se o aluno pode fazer upload
   const canUploadDocuments = !applicationStatus || ['approved', 'enrolled'].includes(applicationStatus);
+
+  const cleanRejectionNote = (reason: string) =>
+    reason
+      .replace(/\n\nDocument must be translated to English before resubmitting\./g, '')
+      .replace(/Document must be translated to English before resubmitting\./g, '')
+      .trim();
+
+  const renderTranslationAction = (
+    uploadId: string,
+    storagePath?: string,
+    fileName?: string,
+    requestId?: string,
+  ) => {
+    const order = translationOrdersByUpload[uploadId];
+    if (!order) {
+      return (
+        <button
+          onClick={() => navigate('/student/dashboard/translations', {
+            state: { uploadId, storagePath, fileName, requestId },
+          })}
+          className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-700 text-xs font-semibold hover:bg-amber-50 transition-colors"
+        >
+          <Languages className="w-3.5 h-3.5" />
+          Translate Document
+        </button>
+      );
+    }
+    const isPaid = order.payment_status === 'paid';
+    const status = (order.translation_status || '').toLowerCase();
+    const isDone = status === 'finalizado' || status === 'completed';
+    return (
+      <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-100 bg-blue-50 text-blue-700 text-xs font-semibold">
+        <Languages className="w-3.5 h-3.5 flex-shrink-0" />
+        {isDone
+          ? 'Tradução concluída'
+          : isPaid
+            ? 'Tradução em andamento'
+            : 'Aguardando pagamento da tradução'}
+        <button
+          onClick={() => navigate('/student/dashboard/translations')}
+          className="ml-1 underline underline-offset-2 hover:text-blue-900 transition-colors"
+        >
+          Ver →
+        </button>
+      </div>
+    );
+  };
 
   const handleFileSelect = (requestId: string, file: File | null, isGlobal?: boolean, inputEl?: HTMLInputElement) => {
     if (!canUploadDocuments) {
@@ -1869,60 +1946,73 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </div>
                   ) : isGlobalRejected && lastClosedUpload ? (
                     <>
-                      <div className="hidden md:flex mb-4 p-5 bg-red-50 rounded-[1.5rem] border border-red-100 gap-3 items-start">
-                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <AlertCircle className="w-4 h-4 text-red-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
-                          <div className="max-h-32 overflow-y-auto pr-2 space-y-1">
-                            {lastClosedUpload.rejection_reason && lastClosedUpload.rejection_reason !== 'needs_translation' && (
-                              <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                                {lastClosedUpload.rejection_reason}
-                              </p>
+                      {(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? (
+                        <div className="hidden md:flex mb-4 p-4 bg-amber-50 rounded-2xl border border-amber-200 gap-3 items-start">
+                          <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Languages className="w-4 h-4 text-amber-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black uppercase tracking-widest text-[9px] text-amber-600 mb-1.5">Translation Required</p>
+                            <p className="text-amber-900 font-semibold text-sm leading-snug">This document needs to be in English</p>
+                            {lastClosedUpload.rejection_reason && lastClosedUpload.rejection_reason !== 'needs_translation' && cleanRejectionNote(lastClosedUpload.rejection_reason) && (
+                              <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">{cleanRejectionNote(lastClosedUpload.rejection_reason)}</p>
                             )}
-                            {!lastClosedUpload.rejection_reason && !lastClosedUpload.needs_translation && (
-                              <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                                {t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
-                              </p>
-                            )}
-                            {(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') && (
-                              <p className="text-amber-800 font-semibold text-xs bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
-                                {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
-                              </p>
+                            {!isSchool && renderTranslationAction(
+                              lastClosedUpload.id,
+                              lastClosedUpload.file_url,
+                              lastClosedUpload.file_url?.split('/').pop()?.split('?')[0],
+                              req.id,
                             )}
                           </div>
-                          {!isSchool && (lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') && (
-                            <button
-                              onClick={() => navigate('/student/dashboard/translations')}
-                              className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
-                            >
-                              <Languages className="w-3.5 h-3.5" />
-                              Solicitar Tradução Certificada
-                            </button>
-                          )}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="hidden md:flex mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 gap-3 items-start">
+                          <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black uppercase tracking-widest text-[9px] text-red-500 mb-1.5">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
+                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                              {lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       <button
                         onClick={() => {
-                          const baseReason = lastClosedUpload.rejection_reason === 'needs_translation' ? '' : (lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
-                          const note = (lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? t('studentDashboard.documentRequests.uploadSection.requiresEnglish') : '';
-                          setViewingRejectionReason([baseReason, note].filter(Boolean).join('\n\n'));
+                          const isNeedsTranslation = lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation';
+                          const rawNote = lastClosedUpload.rejection_reason && lastClosedUpload.rejection_reason !== 'needs_translation' ? cleanRejectionNote(lastClosedUpload.rejection_reason) : '';
+                          setViewingRejectionReason(isNeedsTranslation
+                            ? ['This document needs to be in English', rawNote].filter(Boolean).join('\n\n')
+                            : lastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
                         }}
-                        className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
+                        className={`flex md:hidden mb-4 w-full p-4 rounded-xl border items-center justify-between active:scale-[0.98] transition-all text-left ${(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-100'}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <AlertCircle className="w-4 h-4 text-red-600" />
-                          </div>
-                          <div>
-                            <p className="font-black uppercase tracking-widest text-[10px] text-red-600 leading-tight">{t('studentDashboard.documentRequests.modals.adminNotice')}</p>
-                            <p className="font-bold text-xs text-red-900 mt-0.5 truncate max-w-[170px]">{t('studentDashboard.documentRequests.modals.viewCorrectionReason')}</p>
-                          </div>
+                          {(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? (
+                            <>
+                              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <Languages className="w-4 h-4 text-amber-600" />
+                              </div>
+                              <div>
+                                <p className="font-black uppercase tracking-widest text-[10px] text-amber-600 leading-tight">Translation Required</p>
+                                <p className="font-bold text-xs text-amber-900 mt-0.5">View details →</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <AlertCircle className="w-4 h-4 text-red-600" />
+                              </div>
+                              <div>
+                                <p className="font-black uppercase tracking-widest text-[10px] text-red-600 leading-tight">{t('studentDashboard.documentRequests.modals.adminNotice')}</p>
+                                <p className="font-bold text-xs text-red-900 mt-0.5 truncate max-w-[170px]">{t('studentDashboard.documentRequests.modals.viewCorrectionReason')}</p>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div className="w-8 h-8 bg-red-100/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <ChevronDown className="w-4 h-4 text-red-600" />
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? 'bg-amber-100/50' : 'bg-red-100/50'}`}>
+                          <ChevronDown className={`w-4 h-4 ${(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? 'text-amber-600' : 'text-red-600'}`} />
                         </div>
                       </button>
                     </>
@@ -2190,61 +2280,79 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   </div>
                 ) : indIsRejected && indLastClosedUpload ? (
                   <>
-                    <div className="hidden md:flex mb-4 p-5 bg-red-50 rounded-[1.5rem] border border-red-100 gap-3 items-start">
-                      <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <AlertCircle className="w-4 h-4 text-red-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
-                        <div className="max-h-32 overflow-y-auto pr-2 space-y-1">
-                          {indLastClosedUpload.rejection_reason && indLastClosedUpload.rejection_reason !== 'needs_translation' && (
-                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                              {indLastClosedUpload.rejection_reason}
-                            </p>
+                    {(indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') ? (
+                      <div className="hidden md:flex mb-4 p-4 bg-amber-50 rounded-2xl border border-amber-200 gap-3 items-start">
+                        <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Languages className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black uppercase tracking-widest text-[9px] text-amber-600 mb-1.5">Translation Required</p>
+                          <p className="text-amber-900 font-semibold text-sm leading-snug">This document needs to be in English</p>
+                          {indLastClosedUpload.rejection_reason && indLastClosedUpload.rejection_reason !== 'needs_translation' && cleanRejectionNote(indLastClosedUpload.rejection_reason) && (
+                            <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">{cleanRejectionNote(indLastClosedUpload.rejection_reason)}</p>
                           )}
-                          {!indLastClosedUpload.rejection_reason && !indLastClosedUpload.needs_translation && (
-                            <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
-                              {t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
-                            </p>
-                          )}
-                          {(indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') && (
-                            <p className="text-amber-800 font-semibold text-xs bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
-                              {t('studentDashboard.documentRequests.uploadSection.requiresEnglish')}
-                            </p>
+                          {!isSchool && renderTranslationAction(
+                            indLastClosedUpload.id,
+                            indLastClosedUpload.file_url,
+                            indLastClosedUpload.file_url?.split('/').pop()?.split('?')[0],
+                            req.id,
                           )}
                         </div>
-                        {!isSchool && (indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') && (
-                          <button
-                            onClick={() => navigate('/student/dashboard/translations')}
-                            className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
-                          >
-                            <Languages className="w-3.5 h-3.5" />
-                            Solicitar Tradução Certificada
-                          </button>
-                        )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="hidden md:flex mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 gap-3 items-start">
+                        <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black uppercase tracking-widest text-[9px] text-red-500 mb-1.5">{t('studentDashboard.documentRequests.modals.rejectionAttention')}</p>
+                          <p className="text-red-900 font-medium text-sm leading-relaxed break-words">
+                            {indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <button
                       onClick={() => {
-                        const baseReason = indLastClosedUpload.rejection_reason === 'needs_translation' ? '' : (indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
-                        const note = (indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') ? t('studentDashboard.documentRequests.uploadSection.requiresEnglish') : '';
-                        setViewingRejectionReason([baseReason, note].filter(Boolean).join('\n\n'));
+                        const isNeedsTranslation = indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation';
+                        const rawNote = indLastClosedUpload.rejection_reason && indLastClosedUpload.rejection_reason !== 'needs_translation' ? cleanRejectionNote(indLastClosedUpload.rejection_reason) : '';
+                        setViewingRejectionReason(isNeedsTranslation
+                          ? ['This document needs to be in English', rawNote].filter(Boolean).join('\n\n')
+                          : indLastClosedUpload.rejection_reason || t('studentDashboard.documentRequests.modals.pleaseReviewRejection'));
                       }}
-                      className="flex md:hidden mb-4 w-full p-4 bg-red-50 rounded-xl border border-red-100 items-center justify-between active:scale-[0.98] transition-all text-left"
+                      className={`flex md:hidden mb-4 w-full p-4 rounded-xl border items-center justify-between active:scale-[0.98] transition-all text-left ${(indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-100'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <AlertCircle className="w-4 h-4 text-red-600" />
-                        </div>
-                        <div>
-                          <p className="font-black uppercase tracking-widest text-[10px] text-red-600 leading-tight">{t('studentDashboard.documentRequests.modals.adminNotice')}</p>
-                          <p className="font-bold text-xs text-red-900 mt-0.5 truncate max-w-[170px]">{t('studentDashboard.documentRequests.modals.viewCorrectionReason')}</p>
-                        </div>
-                      </div>
-                      <div className="w-8 h-8 bg-red-100/50 rounded-full flex items-center justify-center flex-shrink-0">
-                        <ChevronDown className="w-4 h-4 text-red-600" />
-                      </div>
+                      {(indLastClosedUpload.needs_translation || indLastClosedUpload.rejection_reason === 'needs_translation') ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Languages className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="font-black uppercase tracking-widest text-[10px] text-amber-600 leading-tight">Translation Required</p>
+                              <p className="font-bold text-xs text-amber-900 mt-0.5 truncate max-w-[170px]">This document needs to be in English</p>
+                            </div>
+                          </div>
+                          <div className="w-8 h-8 bg-amber-100/50 rounded-full flex items-center justify-center flex-shrink-0">
+                            <ChevronDown className="w-4 h-4 text-amber-600" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <AlertCircle className="w-4 h-4 text-red-600" />
+                            </div>
+                            <div>
+                              <p className="font-black uppercase tracking-widest text-[10px] text-red-600 leading-tight">{t('studentDashboard.documentRequests.modals.adminNotice')}</p>
+                              <p className="font-bold text-xs text-red-900 mt-0.5 truncate max-w-[170px]">{t('studentDashboard.documentRequests.modals.viewCorrectionReason')}</p>
+                            </div>
+                          </div>
+                          <div className="w-8 h-8 bg-red-100/50 rounded-full flex items-center justify-center flex-shrink-0">
+                            <ChevronDown className="w-4 h-4 text-red-600" />
+                          </div>
+                        </>
+                      )}
                     </button>
                   </>
                 ) : null}

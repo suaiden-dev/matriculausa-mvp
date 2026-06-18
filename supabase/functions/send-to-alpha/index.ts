@@ -91,12 +91,15 @@ serve(async (req) => {
     const fileName = order.original_filename || storagePath.split('/').pop() || 'document.pdf';
 
     // Build multipart payload for Alpha API
+    const projectName = fileName.replace(/\.[^/.]+$/, '') || 'Documento';
+    const isCertified = order.document_type === 'notarized' ? 'true' : 'false';
+
     const formData = new FormData();
-    formData.append('projectName', order.document_type || 'Documento');
+    formData.append('projectName', projectName);
     formData.append('sourceLanguage', order.source_language);
     formData.append('targetLanguage', order.target_language);
     formData.append('externalClientId', user.email!);
-    formData.append('isCertified', 'true');
+    formData.append('isCertified', isCertified);
     formData.append('isPriority', 'false');
     formData.append('files', fileBlob, fileName);
 

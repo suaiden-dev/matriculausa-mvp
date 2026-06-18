@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Languages, Plus, AlertCircle, Loader2, FileDown, Download, X, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -11,7 +11,6 @@ import { TranslationQuoteModal } from '../../components/TranslationQuoteModal';
 const DOC_TYPE_LABELS: Record<string, string> = {
   certified: 'translationQuoteModal.docType_certified',
   notarized: 'translationQuoteModal.docType_notarized',
-  bank_statement: 'translationQuoteModal.docType_bank_statement',
 };
 
 interface TranslationOrder {
@@ -30,6 +29,7 @@ interface TranslationOrder {
   certified_file_url?: string | null;
   document_request_upload_id?: string | null;
   amount_paid?: number | null;
+  is_bank_statement?: boolean | null;
 }
 
 interface PendingTranslationUpload {
@@ -279,6 +279,7 @@ const Translations: React.FC = () => {
   const { t } = useTranslation('dashboard');
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [orders, setOrders] = useState<TranslationOrder[]>([]);
   const [pendingUploads, setPendingUploads] = useState<PendingTranslationUpload[]>([]);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
@@ -292,7 +293,7 @@ const Translations: React.FC = () => {
     const { data } = await supabase
       .from('translation_orders')
       .select(
-        'id,original_filename,document_type,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,amount_paid'
+        'id,original_filename,document_type,is_bank_statement,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,amount_paid'
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -353,6 +354,23 @@ const Translations: React.FC = () => {
     const id = setInterval(fetchOrders, 30_000);
     return () => clearInterval(id);
   }, [orders, fetchOrders]);
+
+  useEffect(() => {
+    const nav = location.state as { uploadId?: string; storagePath?: string; fileName?: string; requestId?: string } | null;
+    if (nav?.uploadId) {
+      setQuoteModal({
+        open: true,
+        uploadId: nav.uploadId,
+        storagePath: nav.storagePath,
+        fileName: nav.fileName,
+        requestId: nav.requestId,
+        documentRequestUploadId: nav.uploadId,
+        rejectionOrigin: true,
+      });
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const orderedUploadIds = useMemo(
     () => new Set(orders.map((o) => o.document_request_upload_id).filter(Boolean)),
@@ -496,7 +514,7 @@ const Translations: React.FC = () => {
                             {o.original_filename}
                           </p>
                           <p className="mt-0.5 text-xs text-gray-400">
-                            {t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                            {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
                             {' · '}
                             {o.source_language} → {o.target_language}
                             {' · '}
@@ -543,7 +561,7 @@ const Translations: React.FC = () => {
                           {o.original_filename}
                         </p>
                         <p className="mt-0.5 text-xs text-gray-400">
-                          {t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                          {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
                           {' · '}
                           {o.source_language} → {o.target_language}
                         </p>
