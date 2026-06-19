@@ -76,29 +76,10 @@ serve(async (req) => {
     let user = null;
     let isAdmin = false;
 
-    const oldServiceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpdHB5bmd1YXNxcXV0dWh6aWZ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTQ4Mzg1NywiZXhwIjoyMDY1MDU5ODU3fQ.lxkS178CjmsIfcxMbfgPFUdI8mfdxUFO987u9_jprmA";
+    const isServiceRoleValid = await verifyServiceRoleToken(token, jwtSecret).catch(() => false);
 
-    let verifyErrorMsg = '';
-    const isServiceRoleValid = await verifyServiceRoleToken(token, jwtSecret).catch(e => {
-      verifyErrorMsg = e.message;
-      return false;
-    });
-
-    if (token === serviceKey || token === oldServiceRoleKey || isServiceRoleValid) {
+    if (token === serviceKey || isServiceRoleValid) {
       isAdmin = true;
-      
-      // Self-healing: Update database with active key if it used the outdated key
-      if (token === oldServiceRoleKey) {
-        console.log('[send-to-alpha] Outdated service role key detected. Updating system_settings.service_role_key to the active key...');
-        try {
-          await adminClient
-            .from('system_settings')
-            .update({ value: serviceKey })
-            .eq('key', 'service_role_key');
-        } catch (dbErr) {
-          console.error('[send-to-alpha] Failed to self-heal system_settings.service_role_key:', dbErr);
-        }
-      }
     } else {
       const { data: { user: authUser }, error: authError } = await adminClient.auth.getUser(token);
       if (authError || !authUser) {
