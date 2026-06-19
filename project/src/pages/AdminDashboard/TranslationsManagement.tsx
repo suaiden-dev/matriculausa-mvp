@@ -59,14 +59,24 @@ function paymentMethodLabel(m: string | null) {
   return PAYMENT_METHOD_LABEL[m] || m;
 }
 
-function translationStatusBadge(status: string) {
-  const s = status?.toLowerCase();
-  if (s === 'finalizado') return 'bg-green-100 text-green-700 ring-green-600/20';
-  if (s === 'cancelado') return 'bg-red-100 text-red-700 ring-red-600/20';
-  if (s === 'em tradução' || s === 'em revisão' || s === 'em certificação')
-    return 'bg-blue-100 text-blue-700 ring-blue-600/20';
-  if (s === 'em análise') return 'bg-amber-100 text-amber-700 ring-amber-600/20';
-  return 'bg-slate-100 text-slate-600 ring-slate-500/20';
+function getTranslationStatusLabel(status: string, paymentStatus: string) {
+  if (paymentStatus !== 'paid') {
+    return 'Pendente';
+  }
+  const s = (status || '').toLowerCase().trim();
+  if (s === 'finalizado' || s === 'completed') return 'Concluído';
+  if (s === 'cancelado' || s === 'cancelled') return 'Cancelado';
+  if (s === 'n/a' || s === 'em análise' || s === 'em analise' || s === 'rascunho' || s === 'pending')
+    return 'Enviado';
+  return 'Em Tradução';
+}
+
+function translationStatusBadge(statusLabel: string) {
+  if (statusLabel === 'Concluído') return 'bg-green-100 text-green-700 ring-green-600/20';
+  if (statusLabel === 'Cancelado') return 'bg-red-100 text-red-700 ring-red-600/20';
+  if (statusLabel === 'Enviado') return 'bg-amber-100 text-amber-700 ring-amber-600/20';
+  if (statusLabel === 'Pendente') return 'bg-slate-100 text-slate-600 ring-slate-500/20';
+  return 'bg-blue-100 text-blue-700 ring-blue-600/20'; // "Em Tradução"
 }
 
 function paymentStatusBadge(status: string) {
@@ -145,6 +155,8 @@ const TranslationsManagement: React.FC = () => {
       }));
 
       setOrders(merged);
+    } catch (err: any) {
+      console.error('Error fetching translations:', err);
     } finally {
       setLoading(false);
     }
@@ -417,12 +429,12 @@ const OrderRow: React.FC<{ order: TranslationOrder }> = ({ order: o }) => {
       <td className="px-4 py-3">
         <span
           className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${translationStatusBadge(
-            o.translation_status
+            getTranslationStatusLabel(o.translation_status, o.payment_status)
           )}`}
         >
           {finalized && <CheckCircle className="h-3 w-3" />}
           {inProgress && <Clock className="h-3 w-3" />}
-          {o.translation_status}
+          {getTranslationStatusLabel(o.translation_status, o.payment_status)}
         </span>
         {o.resubmit_upload_id && (
           <div className="mt-1 flex items-center gap-1 text-[10px] text-teal-600 font-semibold">
