@@ -509,55 +509,66 @@ const ScholarshipDetail: React.FC = () => {
       </div>
 
       {/* Pré-Requisitos e Elegibilidade */}
-      {(scholarship.min_gpa || scholarship.min_english_proficiency || scholarship.requirements) && (
-        <div className="p-5 space-y-4">
-          <h4 className="text-xs font-black uppercase tracking-widest text-[#05294E] pb-1">
-            {t('scholarshipsPage.detail.prerequisites', 'Pré-Requisitos e Elegibilidade')}
-          </h4>
+      {(() => {
+        const levelDocs: string[] = [];
+        switch (scholarship.level?.toLowerCase()) {
+          case 'undergraduate': levelDocs.push('High School Diploma'); break;
+          case 'graduate':      levelDocs.push("Bachelor's Diploma"); break;
+          case 'doctorate':     levelDocs.push("Master's Diploma"); break;
+        }
+        levelDocs.push('Proof of Funds');
 
-          <div className="space-y-3 text-sm">
-            {scholarship.min_gpa && (
+        const extraReqs: string[] = Array.isArray(scholarship.requirements)
+          ? scholarship.requirements.filter(Boolean)
+          : scholarship.requirements ? [scholarship.requirements] : [];
+
+        return (
+          <div className="p-5 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#05294E] pb-1">
+              {t('scholarshipsPage.detail.prerequisites', 'Pré-Requisitos e Elegibilidade')}
+            </h4>
+
+            <div className="space-y-3">
+              {/* Documentos obrigatórios derivados do nível acadêmico */}
               <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
-                  {t('scholarshipsPage.detail.minGPA', 'GPA Mínimo Acadêmico')}
-                </span>
-                <span className="font-bold text-slate-700">{Number(scholarship.min_gpa).toFixed(1)} / 4.0</span>
-              </div>
-            )}
-
-            {scholarship.min_english_proficiency && (
-              <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
-                  {t('scholarshipsPage.detail.englishProficiency', 'Proficiência em Inglês')}
-                </span>
-                <span className="font-bold text-slate-700">
-                  {t(`dashboard:profileManagement.form.fields.${scholarship.min_english_proficiency}`, { defaultValue: scholarship.min_english_proficiency })}
-                </span>
-              </div>
-            )}
-
-            {scholarship.requirements && (
-              <div className="pt-2 border-t border-slate-100">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                  {t('scholarshipsPage.detail.academicRequirements', 'Exigências Acadêmicas')}
+                  {t('scholarshipsPage.detail.requiredDocuments', 'Required Documents')}
                 </span>
-                <ul className="space-y-2 text-xs text-slate-600 font-medium">
-                  {Array.isArray(scholarship.requirements) ? (
-                    scholarship.requirements.map((req: string, idx: number) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {levelDocs.map((doc) => (
+                    <span
+                      key={doc}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-bold rounded-lg"
+                    >
+                      {doc}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium mt-2 leading-relaxed">
+                  Proof of Funds: min. <strong className="text-slate-500">$22,000 USD</strong> + <strong className="text-slate-500">$5,000 USD</strong> por dependente.
+                </p>
+              </div>
+
+              {/* Requisitos adicionais cadastrados na bolsa */}
+              {extraReqs.length > 0 && (
+                <div className="pt-3 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                    {t('scholarshipsPage.detail.academicRequirements', 'Requisitos')}
+                  </span>
+                  <ul className="space-y-2 text-xs text-slate-600 font-medium">
+                    {extraReqs.map((req: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-1.5">
                         <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-1.5 flex-shrink-0" />
                         <span>{req}</span>
                       </li>
-                    ))
-                  ) : (
-                    <li className="whitespace-pre-line leading-relaxed">{scholarship.requirements}</li>
-                  )}
-                </ul>
-              </div>
-            )}
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 
