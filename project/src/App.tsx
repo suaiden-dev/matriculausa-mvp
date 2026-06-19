@@ -78,6 +78,7 @@ const SellerAcceptInvite = React.lazy(() => import('./pages/SellerAcceptInvite')
 const AgencyTermsAndConditions = React.lazy(() => import('./pages/AgencyTermsAndConditions'));
 const AffiliateTermsAndConditions = React.lazy(() => import('./pages/AffiliateTermsAndConditions'));
 const BioPage = React.lazy(() => import('./pages/Bio'));
+const MissaoCalifornia = React.lazy(() => import('./pages/initial/MissaoCalifornia'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -152,6 +153,8 @@ const AppContent = () => {
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
+          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
+          <Route path="/initial/california-mission" element={<MissaoCalifornia />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/onboarding" element={<StudentOnboarding />} />
