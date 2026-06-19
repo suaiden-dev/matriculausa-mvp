@@ -104,32 +104,26 @@ serve(async (req) => {
         let mirrored: { name: string; storagePath: string; signedUrl: string }[] = [];
 
         if (isFirstFinalization) {
-          updates.certified_at = now;
           console.log(`[sync-alpha-status] Order ${order.id} finalized — ${project.certifiedFiles.length} file(s)`);
 
           // Mirror all certified files to Supabase Storage
           mirrored = await mirrorCertifiedFiles(adminClient, order.id, order.user_id, project.certifiedFiles);
 
-          if (mirrored.length > 0) {
-            // Use our own Storage URLs (signed, 10 years) instead of Firebase URLs
-            updates.certified_file_url = mirrored[0].signedUrl;
-            updates.certified_files = mirrored.map(f => ({ name: f.name, url: f.signedUrl }));
-            updates.certified_files_storage = mirrored.map(f => ({ name: f.name, path: f.storagePath }));
-            console.log(`[sync-alpha-status] [mirror] Order ${order.id} — ${mirrored.length} file(s) mirrored to Storage`);
-          } else {
-            // Fallback: keep Firebase URLs if mirroring failed completely
-            updates.certified_file_url = project.certifiedFiles[0].url;
-            updates.certified_files = project.certifiedFiles;
-            console.warn(`[sync-alpha-status] [mirror] Order ${order.id} — mirror failed, using Firebase URLs as fallback`);
+          if (mirrored.length === 0) {
+            // Mirror failed completely — skip update entirely, cron will retry next cycle
+            console.error(`[sync-alpha-status] [mirror] Order ${order.id} — mirror failed completely, skipping update (will retry)`);
+            continue;
           }
+
+          updates.certified_at = now;
+          updates.certified_file_url = mirrored[0].signedUrl;
+          updates.certified_files = mirrored.map(f => ({ name: f.name, url: f.signedUrl }));
+          updates.certified_files_storage = mirrored.map(f => ({ name: f.name, path: f.storagePath }));
+          console.log(`[sync-alpha-status] [mirror] Order ${order.id} — ${mirrored.length} file(s) mirrored to Storage`);
 
           // T17/T17B — Auto-submit to document_request if linked
           if (order.document_request_id && !order.resubmit_upload_id) {
-            const certFile = mirrored[0] ?? {
-              storagePath: '',
-              signedUrl: project.certifiedFiles[0].url,
-              name: project.certifiedFiles[0].name || order.original_filename || 'document.pdf',
-            };
+            const certFile = mirrored[0];
 
             if (order.document_request_upload_id) {
               // Cenário A — resubmit: replace the rejected upload

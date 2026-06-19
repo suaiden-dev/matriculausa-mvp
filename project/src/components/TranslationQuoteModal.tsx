@@ -324,6 +324,18 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         return;
       }
 
+      if (selectedMethod === 'parcelow') {
+        const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+          'parcelow-checkout-translation',
+          { body: { translation_order_id: data.id, amount: total } },
+        );
+        if (checkoutError || !checkoutData?.checkout_url) {
+          throw new Error(checkoutError?.message || t('translationQuoteModal.errorFallback'));
+        }
+        window.location.href = checkoutData.checkout_url;
+        return;
+      }
+
       onOrderCreated(data.id);
       onClose();
       toast.success(

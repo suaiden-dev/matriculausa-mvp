@@ -1743,6 +1743,32 @@ Deno.serve(async (req: Request) => {
           }
           break;
 
+        case "translation": {
+          console.log("[parcelow-webhook] 🔄 Processando translation...");
+
+          const translationOrderId = parcelowOrder.metadata?.translation_order_id;
+
+          if (!translationOrderId) {
+            console.error("[parcelow-webhook] ❌ translation_order_id não encontrado no metadata");
+            break;
+          }
+
+          const { error: translationUpdateError } = await supabase
+            .from("translation_orders")
+            .update({
+              payment_status: "paid",
+              payment_date: new Date().toISOString(),
+            })
+            .eq("id", translationOrderId);
+
+          if (translationUpdateError) {
+            console.error("[parcelow-webhook] ❌ Erro ao atualizar translation_orders:", translationUpdateError);
+          } else {
+            console.log(`[parcelow-webhook] ✅ Translation order ${translationOrderId} marcada como paga`);
+          }
+          break;
+        }
+
         default:
           console.warn(
             `[parcelow-webhook] ⚠️ Fee type não reconhecido: ${feeType}`,
