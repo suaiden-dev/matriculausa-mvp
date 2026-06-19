@@ -22,7 +22,6 @@ serve(async (req) => {
 
   try {
     // Fetch all in-progress orders already submitted to Alpha
-    // Include new fields for resubmit logic (T16/T17)
     const { data: orders, error: fetchError } = await adminClient
       .from('translation_orders')
       .select('id, user_id, alpha_project_number, translation_status, certified_at, original_filename, document_request_upload_id, document_request_id, resubmit_upload_id')
@@ -102,31 +101,62 @@ serve(async (req) => {
           project.certifiedFiles.length > 0 &&
           !order.certified_at;
 
+        let mirrored: { name: string; storagePath: string; signedUrl: string }[] = [];
+
         if (isFirstFinalization) {
-          updates.certified_files = project.certifiedFiles;
           updates.certified_at = now;
-          // Expose first file URL for student download button
-          updates.certified_file_url = project.certifiedFiles[0].url;
           console.log(`[sync-alpha-status] Order ${order.id} finalized — ${project.certifiedFiles.length} file(s)`);
 
-          // T17 — Resubmit if linked to a rejected document_request_upload
-          if (order.document_request_upload_id && !order.resubmit_upload_id) {
-            console.log(`[sync-alpha-status] Order ${order.id} has link — attempting resubmit`);
-            const resubmit = await performResubmit(adminClient, order, project.certifiedFiles[0], now);
-            if (resubmit.uploadId) {
-              updates.resubmit_upload_id = resubmit.uploadId;
-              updates.resubmitted_at = now;
-              console.log(`[sync-alpha-status] Resubmit OK — new upload ${resubmit.uploadId}`);
+          // Mirror all certified files to Supabase Storage
+          mirrored = await mirrorCertifiedFiles(adminClient, order.id, order.user_id, project.certifiedFiles);
 
-              // T18 — Notify student and admin
-              await sendResubmitNotifications(
-                adminClient,
-                order.user_id,
-                order.original_filename || 'document'
-              );
+          if (mirrored.length > 0) {
+            // Use our own Storage URLs (signed, 10 years) instead of Firebase URLs
+            updates.certified_file_url = mirrored[0].signedUrl;
+            updates.certified_files = mirrored.map(f => ({ name: f.name, url: f.signedUrl }));
+            updates.certified_files_storage = mirrored.map(f => ({ name: f.name, path: f.storagePath }));
+            console.log(`[sync-alpha-status] [mirror] Order ${order.id} — ${mirrored.length} file(s) mirrored to Storage`);
+          } else {
+            // Fallback: keep Firebase URLs if mirroring failed completely
+            updates.certified_file_url = project.certifiedFiles[0].url;
+            updates.certified_files = project.certifiedFiles;
+            console.warn(`[sync-alpha-status] [mirror] Order ${order.id} — mirror failed, using Firebase URLs as fallback`);
+          }
+
+          // T17/T17B — Auto-submit to document_request if linked
+          if (order.document_request_id && !order.resubmit_upload_id) {
+            const certFile = mirrored[0] ?? {
+              storagePath: '',
+              signedUrl: project.certifiedFiles[0].url,
+              name: project.certifiedFiles[0].name || order.original_filename || 'document.pdf',
+            };
+
+            if (order.document_request_upload_id) {
+              // Cenário A — resubmit: replace the rejected upload
+              console.log(`[sync-alpha-status] Order ${order.id} — Cenário A: resubmitting rejected upload`);
+              const resubmit = await performResubmit(adminClient, order, certFile, now);
+              if (resubmit.uploadId) {
+                updates.resubmit_upload_id = resubmit.uploadId;
+                updates.resubmitted_at = now;
+                console.log(`[sync-alpha-status] Resubmit OK — new upload ${resubmit.uploadId}`);
+              } else {
+                console.error(`[sync-alpha-status] Resubmit FAILED for order ${order.id}: ${resubmit.error}`);
+              }
             } else {
-              console.error(`[sync-alpha-status] Resubmit FAILED for order ${order.id}: ${resubmit.error}`);
+              // Cenário B — voluntary link: create first upload for the linked request
+              console.log(`[sync-alpha-status] Order ${order.id} — Cenário B: first submit to linked request ${order.document_request_id}`);
+              const submit = await performFirstSubmit(adminClient, order, certFile, now);
+              if (submit.uploadId) {
+                updates.resubmit_upload_id = submit.uploadId;
+                updates.resubmitted_at = now;
+                console.log(`[sync-alpha-status] First submit OK — new upload ${submit.uploadId}`);
+              } else {
+                console.error(`[sync-alpha-status] First submit FAILED for order ${order.id}: ${submit.error}`);
+              }
             }
+
+            // T18 — Notify student and admin (both Cenários A and B)
+            await sendResubmitNotifications(adminClient, order.user_id, order.original_filename || 'document');
           }
         }
 
@@ -152,7 +182,62 @@ serve(async (req) => {
   }
 });
 
-// ─── T17: Resubmit automático ─────────────────────────────────────────────────
+// ─── Mirror certified files to Supabase Storage ───────────────────────────────
+
+async function mirrorCertifiedFiles(
+  adminClient: ReturnType<typeof createClient>,
+  orderId: string,
+  _userId: string,
+  certifiedFiles: { url: string; name?: string }[]
+): Promise<{ name: string; storagePath: string; signedUrl: string }[]> {
+  const results: { name: string; storagePath: string; signedUrl: string }[] = [];
+
+  for (let i = 0; i < certifiedFiles.length; i++) {
+    const file = certifiedFiles[i];
+    try {
+      // 1. Download from Firebase
+      const fileRes = await fetch(file.url);
+      if (!fileRes.ok) {
+        throw new Error(`HTTP ${fileRes.status} fetching Firebase URL`);
+      }
+      const fileBlob = await fileRes.blob();
+
+      // 2. Build filename and storage path
+      const rawName = file.name
+        || file.url.split('/').pop()?.split('?')[0]
+        || 'document.pdf';
+      const storagePath = `translations/certified/${orderId}/${i}_${rawName}`;
+
+      // 3. Upload to Supabase Storage
+      const { error: uploadError } = await adminClient.storage
+        .from('document-attachments')
+        .upload(storagePath, fileBlob, {
+          contentType: fileBlob.type || 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 4. Generate long-lived signed URL (10 years = 315360000 seconds)
+      const { data: signedData, error: signedError } = await adminClient.storage
+        .from('document-attachments')
+        .createSignedUrl(storagePath, 315360000);
+
+      if (signedError || !signedData?.signedUrl) {
+        throw signedError ?? new Error('No signed URL returned');
+      }
+
+      results.push({ name: rawName, storagePath, signedUrl: signedData.signedUrl });
+    } catch (err: any) {
+      console.error(`[sync-alpha-status] [mirror] Failed to mirror file ${i} for order ${orderId}:`, err?.message ?? err);
+      // Continue with remaining files
+    }
+  }
+
+  return results;
+}
+
+// ─── T17: Resubmit automático (Cenário A — upload rejeitado) ──────────────────
 
 async function performResubmit(
   adminClient: ReturnType<typeof createClient>,
@@ -162,40 +247,38 @@ async function performResubmit(
     document_request_upload_id: string;
     document_request_id: string | null;
   },
-  certifiedFile: { url: string; name?: string },
+  certFile: { storagePath?: string; signedUrl?: string; name?: string },
   _now: string
 ): Promise<{ uploadId: string | null; error: string | null }> {
   try {
-    // 1. Download certified file from Firebase Storage (public URL)
-    const fileRes = await fetch(certifiedFile.url);
-    if (!fileRes.ok) {
-      throw new Error(`Failed to download certified file: HTTP ${fileRes.status}`);
+    const storagePath = certFile.storagePath;
+
+    // If we have a storage path (mirroring succeeded), use it directly
+    // If not (mirror failed), download from Firebase URL and re-upload
+    let finalPath = storagePath;
+    if (!finalPath && certFile.signedUrl) {
+      const fileRes = await fetch(certFile.signedUrl);
+      if (!fileRes.ok) throw new Error(`Failed to download certified file: HTTP ${fileRes.status}`);
+      const fileBlob = await fileRes.blob();
+      const rawName = certFile.name || 'translated_document.pdf';
+      const fileName = `translated_${rawName}`;
+      finalPath = `translations/resubmit/${order.user_id}/${Date.now()}_${fileName}`;
+      const { data: storageData, error: uploadError } = await adminClient.storage
+        .from('document-attachments')
+        .upload(finalPath, fileBlob, { contentType: fileBlob.type || 'application/pdf', upsert: false });
+      if (uploadError) throw uploadError;
+      finalPath = storageData.path;
     }
-    const fileBlob = await fileRes.blob();
 
-    // Build a clean filename: prepend "translated_" to the original name
-    const rawName = certifiedFile.name
-      || certifiedFile.url.split('/').pop()?.split('?')[0]
-      || 'document.pdf';
-    const fileName = `translated_${rawName}`;
+    if (!finalPath) throw new Error('No storage path available for resubmit');
 
-    // 2. Upload to Supabase Storage
-    const storagePath = `translations/resubmit/${order.user_id}/${Date.now()}_${fileName}`;
-    const { data: storageData, error: uploadError } = await adminClient.storage
-      .from('document-attachments')
-      .upload(storagePath, fileBlob, {
-        contentType: fileBlob.type || 'application/pdf',
-        upsert: false,
-      });
-    if (uploadError) throw uploadError;
-
-    // 3. Create new document_request_uploads record
+    // Create new document_request_uploads record
     const { data: newUpload, error: insertError } = await adminClient
       .from('document_request_uploads')
       .insert({
         document_request_id: order.document_request_id,
         uploaded_by: order.user_id,
-        file_url: storageData.path,
+        file_url: finalPath,
         status: 'pending',
         source: 'translation_resubmit',
         translation_order_id: order.id,
@@ -203,15 +286,53 @@ async function performResubmit(
       })
       .select('id')
       .single();
-    if (insertError) throw insertError;
 
+    if (insertError) throw insertError;
     return { uploadId: newUpload.id, error: null };
   } catch (err: any) {
     return { uploadId: null, error: err.message ?? String(err) };
   }
 }
 
-// ─── T18: Notificações pós-resubmit ──────────────────────────────────────────
+// ─── T17B: First submit automático (Cenário B — vínculo voluntário) ───────────
+
+async function performFirstSubmit(
+  adminClient: ReturnType<typeof createClient>,
+  order: {
+    id: string;
+    user_id: string;
+    document_request_id: string;
+  },
+  certFile: { storagePath?: string; name?: string },
+  _now: string
+): Promise<{ uploadId: string | null; error: string | null }> {
+  try {
+    if (!certFile.storagePath) {
+      throw new Error('No storage path available for first submit');
+    }
+
+    const { data: newUpload, error: insertError } = await adminClient
+      .from('document_request_uploads')
+      .insert({
+        document_request_id: order.document_request_id,
+        uploaded_by: order.user_id,
+        file_url: certFile.storagePath,
+        status: 'pending',
+        source: 'translation_first_submit',
+        translation_order_id: order.id,
+        is_admin_upload: false,
+      })
+      .select('id')
+      .single();
+
+    if (insertError) throw insertError;
+    return { uploadId: newUpload.id, error: null };
+  } catch (err: any) {
+    return { uploadId: null, error: err.message ?? String(err) };
+  }
+}
+
+// ─── T18: Notificações pós-resubmit/first-submit ─────────────────────────────
 
 async function sendResubmitNotifications(
   adminClient: ReturnType<typeof createClient>,
@@ -220,7 +341,6 @@ async function sendResubmitNotifications(
 ): Promise<void> {
   const idempotencyKey = `translation_resubmit_${userId}_${Date.now()}`;
 
-  // Student notification (user_id = auth user ID)
   const { error: studentErr } = await adminClient
     .from('student_notifications')
     .insert({
@@ -236,7 +356,6 @@ async function sendResubmitNotifications(
     console.warn('[sync-alpha-status] Failed to insert student notification:', studentErr.message);
   }
 
-  // Admin notification
   const { error: adminErr } = await adminClient
     .from('admin_notifications')
     .insert({
