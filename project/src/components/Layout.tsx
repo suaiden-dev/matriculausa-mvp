@@ -29,6 +29,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/selection-process' ||
                      location.pathname === '/agency/onboarding' ||
                      location.pathname === '/bio' ||
+                     location.pathname.startsWith('/initial/') ||
                      ['/login', '/register', '/auth', '/forgot-password'].includes(location.pathname);
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
 
@@ -49,6 +50,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/vsl-cos' ||
                        location.pathname === '/selection-process' ||
                        location.pathname === '/bio' ||
+                       location.pathname.startsWith('/initial/') ||
                        location.pathname.startsWith('/school') || // 🎯 Esconder no dashboard da universidade
                        location.pathname.startsWith('/agency') || // 🎯 Esconder no dashboard da agência B2B
                        location.pathname.startsWith('/seller') || // 🎯 Esconder no dashboard do seller
