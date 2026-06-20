@@ -1,0 +1,65 @@
+/* Estilos específicos da landing California Dreams/MatrículaUSA.
+   Importe este arquivo uma vez no CSS global da aplicação. */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --cu-ink: oklch(0.16 0.01 260);
+  --cu-ink-soft: oklch(0.32 0.01 260);
+  --cu-muted: oklch(0.52 0.01 260);
+  --cu-line: oklch(0.90 0.005 260);
+  --cu-cream: oklch(0.985 0.003 90);
+  --cu-paper: oklch(1 0 0);
+
+  --cu-sun: oklch(0.78 0.18 55);
+  --cu-sun-deep: oklch(0.68 0.20 40);
+  --cu-coral: oklch(0.72 0.20 25);
+  --cu-sky: oklch(0.75 0.12 230);
+  --cu-sand: oklch(0.93 0.04 80);
+
+  --cu-navy: var(--cu-ink);
+  --cu-navy-deep: var(--cu-ink);
+  --cu-navy-soft: var(--cu-ink-soft);
+  --cu-gold: var(--cu-sun);
+  --cu-gold-soft: var(--cu-sun);
+  --cu-gold-deep: var(--cu-sun-deep);
+  --cu-red: var(--cu-coral);
+
+  --cu-gradient-hero: linear-gradient(180deg, transparent 0%, transparent 55%, oklch(0 0 0 / 0.55) 100%);
+  --cu-gradient-gold: linear-gradient(135deg, var(--cu-sun) 0%, var(--cu-sun-deep) 100%);
+  --cu-gradient-navy: linear-gradient(180deg, var(--cu-ink) 0%, oklch(0.10 0.01 260) 100%);
+
+  --cu-shadow-premium: 0 30px 80px -30px oklch(0 0 0 / 0.25);
+  --cu-shadow-card: 0 14px 40px -18px oklch(0 0 0 / 0.18);
+  --cu-shadow-gold: 0 12px 30px -12px oklch(0.68 0.20 40 / 0.55);
+
+  --cu-font-display: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  --cu-font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.cu-display { font-family: var(--cu-font-display); letter-spacing: -0.035em; font-weight: 800; }
+.cu-body { font-family: var(--cu-font-body); }
+.cu-hero-gradient { background: var(--cu-gradient-hero); }
+.cu-navy-gradient { background: var(--cu-gradient-navy); }
+.cu-gold-gradient { background: var(--cu-gradient-gold); }
+.cu-text-gold-gradient {
+  background: linear-gradient(110deg, var(--cu-sun) 0%, var(--cu-coral) 60%, var(--cu-sun-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-inline: 0.15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.cu-shadow-premium { box-shadow: var(--cu-shadow-premium); }
+.cu-shadow-card { box-shadow: var(--cu-shadow-card); }
+.cu-shadow-gold { box-shadow: var(--cu-shadow-gold); }
+
+.cu-fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.cu-fade-in.cu-in {
+  opacity: 1;
+  transform: translateY(0);
+}

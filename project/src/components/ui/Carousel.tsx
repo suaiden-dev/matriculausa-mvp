@@ -12,6 +12,7 @@ interface CarouselProps {
   slides: SlideData[];
   autoPlay?: boolean;
   autoPlayInterval?: number;
+  showControls?: boolean;
 }
 
 interface SlidePosition {
@@ -35,6 +36,7 @@ const Carousel: React.FC<CarouselProps> = ({
   slides,
   autoPlay = true,
   autoPlayInterval = 5000,
+  showControls = true,
 }) => {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -87,6 +89,33 @@ const Carousel: React.FC<CarouselProps> = ({
     setPaused(false);
   }, [goNext, goPrev]);
 
+  const dragging = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current = true;
+    touchStartX.current = e.clientX;
+    touchEndX.current = e.clientX;
+    setPaused(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging.current) return;
+    touchEndX.current = e.clientX;
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const diff = touchStartX.current - touchEndX.current;
+    const threshold = 50;
+    if (diff > threshold) {
+      goNext();
+    } else if (diff < -threshold) {
+      goPrev();
+    }
+    setPaused(false);
+  }, [goNext, goPrev]);
+
   useEffect(() => {
     if (!autoPlay || paused) return;
     const timer = setInterval(next, autoPlayInterval);
@@ -105,11 +134,15 @@ const Carousel: React.FC<CarouselProps> = ({
   return (
     <div className="relative w-full max-w-6xl mx-auto">
       <div
-        className="relative h-[380px] sm:h-[380px] md:h-[460px] lg:h-[520px] touch-pan-y"
+        className="relative h-[380px] sm:h-[380px] md:h-[460px] lg:h-[520px] touch-pan-y cursor-grab active:cursor-grabbing select-none"
         style={{ perspective: '1200px' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         {slides.map((slide, i) => {
           const pos = getPosition(i);
@@ -186,7 +219,7 @@ const Carousel: React.FC<CarouselProps> = ({
       </div>
 
       {/* Navigation controls */}
-      <div className="flex items-center justify-center gap-4 mt-6">
+      <div className={`flex items-center justify-center gap-4 mt-6${showControls ? '' : ' hidden'}`}>
         <button
           onClick={goPrev}
           className="hidden sm:flex w-10 h-10 rounded-full bg-[#05294E]/10 hover:bg-[#05294E]/20 items-center justify-center text-[#05294E] transition-colors"
