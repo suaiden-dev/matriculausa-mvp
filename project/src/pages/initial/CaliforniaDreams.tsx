@@ -488,9 +488,8 @@ function ProgramsCards({ onPick }: { onPick?: (id: ProgramId) => void }) {
               <div className="mt-auto pt-8">
                 <div className="flex items-end justify-between border-t border-[var(--cu-ink)]/10 pt-5">
                   <div>
-                    <p className="text-sm font-medium text-[var(--cu-muted)] line-through">US$ 15.000</p>
-                    <p className="cu-display text-3xl font-semibold text-[var(--cu-ink)]">US$ 3.800</p>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--cu-muted)]">Tuition anual com bolsa</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--cu-muted)]">Investimento total</p>
+                    <p className="cu-display text-3xl font-semibold text-[var(--cu-ink)]">US$ 15.000</p>
                   </div>
                   <Dialog open={open === p.id} onOpenChange={(v) => setOpen(v ? p.id : null)}>
                     <DialogTrigger asChild>
@@ -518,12 +517,8 @@ function ProgramsCards({ onPick }: { onPick?: (id: ProgramId) => void }) {
                           </ul>
                           <div className="mt-6 rounded-xl bg-[var(--cu-cream)] p-4">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs uppercase tracking-[0.2em] text-[var(--cu-muted)]">Tuition oficial</span>
-                              <span className="text-lg font-medium text-[var(--cu-muted)] line-through">US$ 15.000</span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                              <span className="text-xs uppercase tracking-[0.2em] text-emerald-700">Com bolsa exclusiva</span>
-                              <span className="cu-display text-3xl font-semibold text-[var(--cu-ink)]">US$ 3.800<span className="text-sm font-normal text-[var(--cu-muted)]">/ano</span></span>
+                              <span className="text-xs uppercase tracking-[0.2em] text-[var(--cu-muted)]">Tuition anual</span>
+                              <span className="cu-display text-3xl font-semibold text-[var(--cu-ink)]">US$ 15.000<span className="text-sm font-normal text-[var(--cu-muted)]">/ano</span></span>
                             </div>
                           </div>
                           <button
@@ -570,45 +565,40 @@ function WhatsIncluded() {
     <section className="bg-[var(--cu-cream)] py-24 sm:py-32">
       <div ref={ref} className="cu-fade-in mx-auto max-w-6xl px-6 sm:px-10">
         <div className="text-center sm:text-left">
-          <p className="text-sm uppercase tracking-[0.3em] text-[var(--cu-gold-deep)]">Bolsa de estudos exclusiva</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-[var(--cu-gold-deep)]">O que está incluído</p>
           <h2 className="cu-display mt-4 text-[clamp(2rem,5vw,3.5rem)] font-medium leading-[1.05] text-[var(--cu-ink)]">
-            Economia real. <span className="cu-text-gold-gradient italic">Oportunidade única.</span>
+            Transparência Total. <span className="cu-text-gold-gradient italic">Zero Surpresas.</span>
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-xl text-[var(--cu-muted)] sm:mx-0">
-            Cada aluno recebe uma bolsa exclusiva que reduz drasticamente o valor da tuition — válida para todos os três programas.
-          </p>
         </div>
 
         <div className="mt-14">
           <div className="rounded-3xl bg-white p-8 cu-shadow-card sm:p-10">
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--cu-muted)]">Comparativo de investimento</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--cu-muted)]">Composição do investimento</p>
             <div className="mt-6 space-y-5">
               <div className="flex flex-col border-b border-[var(--cu-ink)]/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="cu-display text-2xl font-medium text-[var(--cu-ink)]">Tuition oficial anual</p>
-                  <p className="text-base text-[var(--cu-muted)]">Valor padrão da Caroline University</p>
+                  <p className="cu-display text-2xl font-medium text-[var(--cu-ink)]">Custo anual do programa</p>
+                  <p className="text-base text-[var(--cu-muted)]">Investimento anual completo</p>
                 </div>
-                <p className="cu-display mt-2 text-3xl font-semibold text-[var(--cu-muted)] line-through sm:mt-0">US$ 15.000</p>
+                <p className="cu-display mt-2 text-3xl font-semibold text-[var(--cu-ink)] sm:mt-0">US$ 10.000</p>
               </div>
               <div className="flex flex-col border-b border-[var(--cu-ink)]/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="cu-display text-2xl font-medium text-emerald-700">Bolsa de estudos</p>
-                  <p className="text-base text-[var(--cu-muted)]">Desconto exclusivo MatrículaUSA</p>
+                  <p className="cu-display text-2xl font-medium text-[var(--cu-ink)]">Admissão Premium</p>
+                  <p className="text-base text-[var(--cu-muted)]">Admissão escolar</p>
                 </div>
-                <p className="cu-display mt-2 text-3xl font-semibold text-emerald-600 sm:mt-0">− US$ 11.200</p>
+                <p className="cu-display mt-2 text-3xl font-semibold text-[var(--cu-ink)] sm:mt-0">US$ 5.000</p>
               </div>
             </div>
-            <div className="mt-8 flex flex-col gap-4 rounded-2xl cu-navy-gradient p-6 text-white sm:flex-row sm:items-end sm:justify-between">
+            <div className="mt-8 flex flex-col gap-4 rounded-2xl bg-[var(--cu-ink)] p-6 text-white sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/60">Tuition com bolsa</p>
-                <p className="cu-display text-4xl font-semibold">US$ 3.800</p>
-                <p className="mt-1 text-sm text-white/50">por ano</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/60">Investimento total</p>
+                <p className="cu-display text-4xl font-semibold">US$ 15.000</p>
               </div>
               <div className="sm:text-right">
-                <span className="rounded-full cu-gold-gradient px-4 py-1.5 text-sm font-semibold uppercase tracking-[0.15em] text-[var(--cu-navy-deep)]">
-                  75% off
+                <span className="rounded-full bg-[var(--cu-gold-deep)] px-4 py-1.5 text-sm font-semibold uppercase tracking-[0.15em] text-white">
+                  Por apenas
                 </span>
-                <p className="mt-2 text-xs text-white/50">economia de US$ 11.200/ano</p>
               </div>
             </div>
           </div>
@@ -1043,8 +1033,8 @@ export default function CaliforniaDreams() {
       <WhyCalifornia />
       <ProfileQuiz onResult={setPicked} />
       <ProgramsCards onPick={setPicked} />
-      <UniversityPrograms />
       <WhatsIncluded />
+      <UniversityPrograms />
       <EmotionalValue />
       <IfItWereYou />
       <Testimonials />
