@@ -45,53 +45,94 @@ const SchoolApplicationTrackingView: React.FC = () => {
       .values()
   );
 
-  // Map Context Applications to StudentRecord format
+  // Map Context Applications to StudentRecord format, grouped by student
   const studentRecords: StudentRecord[] = useMemo(() => {
-    const mappedRecords = applications.map((app: any) => {
-      const student = app.user_profiles || {};
-      const scholarship = app.scholarships || {};
-      const status = app.status; // scholarship_applications status
+    // Group applications by student_id
+    const studentMap = new Map<string, { student: any; apps: any[] }>();
 
-      // For University View, we show ALL documents in the application
-      const universityDocs = Array.isArray(app.documents) ? app.documents : [];
+    applications.forEach((app: any) => {
+      const student = app.user_profiles || {};
+      const studentId = student.id;
+      if (!studentId) return;
+
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, { student, apps: [] });
+      }
+      studentMap.get(studentId)!.apps.push(app);
+    });
+
+    const groupedRecords: StudentRecord[] = [];
+
+    studentMap.forEach(({ student, apps }) => {
+      // Pick the "main" application (same priority as admin dashboard)
+      const mainApp =
+        apps.find((a: any) => a.status === 'enrolled') ||
+        apps.find((a: any) => a.is_application_fee_paid && a.acceptance_letter_url) ||
+        apps.find((a: any) => a.is_application_fee_paid) ||
+        apps.find((a: any) => a.status === 'approved') ||
+        apps.find((a: any) => a.status === 'under_review') ||
+        apps.find((a: any) => a.status !== 'rejected') ||
+        apps[0];
+
+      const scholarship = mainApp.scholarships || {};
+      const status = mainApp.status;
+
+      const universityDocs = Array.isArray(mainApp.documents) ? mainApp.documents : [];
       const docsUploaded = universityDocs.length;
 
       const getMostRecentActivity = () => {
-        const dates = [];
+        const dates: Date[] = [];
         if (student.updated_at) dates.push(new Date(student.updated_at));
-        if (app.updated_at) dates.push(new Date(app.updated_at));
-        if (app.created_at) dates.push(new Date(app.created_at));
-        return dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date(app.created_at || Date.now());
+        apps.forEach((a: any) => {
+          if (a.updated_at) dates.push(new Date(a.updated_at));
+          if (a.created_at) dates.push(new Date(a.created_at));
+        });
+        return dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date(mainApp.created_at || Date.now());
       };
       const mostRecentActivity = getMostRecentActivity();
 
-      return {
-        student_id: student.id, // Student profile primary key id
+      // Aggregate doc stats across all applications
+      const docStats = apps.reduce((acc: any, a: any) => {
+        const s = a.university_document_stats;
+        if (!s) return acc;
+        return {
+          required: acc.required + (s.required || 0),
+          uploaded: acc.uploaded + (s.uploaded || 0),
+          approved: acc.approved + (s.approved || 0),
+          rejected: acc.rejected + (s.rejected || 0),
+          under_review: acc.under_review + (s.under_review || 0),
+        };
+      }, { required: 0, uploaded: 0, approved: 0, rejected: 0, under_review: 0 });
+
+      const isDropped = apps.every((a: any) => a.status === 'rejected' || a.status === 'dropped') || student.is_dropped === true;
+
+      groupedRecords.push({
+        student_id: student.id,
         user_id: student.user_id,
         student_name: student.full_name || student.name || 'Unknown',
         student_email: student.email || '',
-        student_created_at: app.created_at,
+        student_created_at: mainApp.created_at,
         has_paid_selection_process_fee: student.is_selection_process_fee_paid || false,
         has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
         selected_scholarship_id: student.selected_scholarship_id || null,
         selected_application_id: student.selected_application_id || null,
         seller_referral_code: null,
 
-        application_id: app.id,
-        scholarship_id: app.scholarship_id,
+        application_id: mainApp.id,
+        scholarship_id: mainApp.scholarship_id,
         university_id: university?.id || scholarship.university_id || null,
         status: status,
-        application_status: status, // Keeping it simple, matching DB
-        applied_at: app.created_at,
-        is_application_fee_paid: app.is_application_fee_paid || student.is_application_fee_paid || false,
-        is_placement_fee_paid: student.is_placement_fee_paid === true || app.is_placement_fee_paid === true || false,
-        placement_fee_flow: student.placement_fee_flow === true || app.is_placement_fee_paid === true || scholarship.placement_fee_flow === true,
-        is_scholarship_fee_paid: app.is_scholarship_fee_paid || student.is_scholarship_fee_paid || false,
-        acceptance_letter_status: app.acceptance_letter_status || null,
-        acceptance_letter_url: app.acceptance_letter_url || null,
+        application_status: status,
+        applied_at: mainApp.created_at,
+        is_application_fee_paid: mainApp.is_application_fee_paid || student.is_application_fee_paid || false,
+        is_placement_fee_paid: student.is_placement_fee_paid === true || mainApp.is_placement_fee_paid === true || false,
+        placement_fee_flow: student.placement_fee_flow === true || mainApp.is_placement_fee_paid === true || scholarship.placement_fee_flow === true,
+        is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid || student.is_scholarship_fee_paid || false,
+        acceptance_letter_status: mainApp.acceptance_letter_status || null,
+        acceptance_letter_url: mainApp.acceptance_letter_url || null,
         payment_status: null,
-        student_process_type: app.student_process_type || student.student_process_type || 'initial',
-        transfer_form_status: app.transfer_form_status || null,
+        student_process_type: mainApp.student_process_type || student.student_process_type || 'initial',
+        transfer_form_status: mainApp.transfer_form_status || null,
         scholarship_title: scholarship.title || 'Unknown',
         course_name: null,
         university_name: university?.name || null,
@@ -99,10 +140,10 @@ const SchoolApplicationTrackingView: React.FC = () => {
         reviewed_by: null,
 
         is_locked: false,
-        total_applications: 1, 
-        all_applications: [app],
+        total_applications: apps.length,
+        all_applications: apps,
         is_archived: false,
-        is_dropped: status === 'rejected' || status === 'dropped' || student.is_dropped === true,
+        is_dropped: isDropped,
         assigned_to_admin_id: null,
         assigned_to_admin_name: null,
         placement_fee_pending_balance: student.placement_fee_pending_balance || 0,
@@ -110,37 +151,33 @@ const SchoolApplicationTrackingView: React.FC = () => {
         placement_fee_installment_number: student.placement_fee_installment_number || 0,
         placement_fee_installment_enabled: student.placement_fee_installment_enabled || false,
 
-        // Doc aggregation - University Specific Docs only (new document_requests system)
-        // Basic docs (passport, diploma) are managed by admin in the 'review' stage
-        // and should not affect the school's docs_approval column logic
-        docs_total_required: app.university_document_stats?.required || 0,
-        docs_total_uploaded: app.university_document_stats?.uploaded || 0,
-        docs_total_approved: app.university_document_stats?.approved || 0,
-        docs_total_rejected: app.university_document_stats?.rejected || 0,
-        docs_total_under_review: app.university_document_stats?.under_review || 0,
+        docs_total_required: docStats.required,
+        docs_total_uploaded: docStats.uploaded,
+        docs_total_approved: docStats.approved,
+        docs_total_rejected: docStats.rejected,
+        docs_total_under_review: docStats.under_review,
 
-        has_sent_docs_to_university: app.has_sent_docs_to_university || false,
-        sevis_transfer_completed: app.sevis_transfer_completed || false,
-        visa_approved: app.visa_approved || false,
+        has_sent_docs_to_university: mainApp.has_sent_docs_to_university || false,
+        sevis_transfer_completed: mainApp.sevis_transfer_completed || false,
+        visa_approved: mainApp.visa_approved || false,
         documents_uploaded: docsUploaded > 0,
-        source: student.source || app.source || null,
+        source: student.source || mainApp.source || null,
 
-        // Novos campos para suportar etapas de visto e reintegração
         visa_transfer_active: student.visa_transfer_active,
         has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
         has_paid_ds160_package: student.has_paid_ds160_package || false,
         has_paid_i539_cos_package: student.has_paid_i539_cos_package || false,
         most_recent_activity: mostRecentActivity,
-      } as StudentRecord;
+      } as StudentRecord);
     });
 
-    mappedRecords.sort((a: any, b: any) => {
+    groupedRecords.sort((a: any, b: any) => {
       const dateA = a.most_recent_activity || new Date(a.student_created_at);
       const dateB = b.most_recent_activity || new Date(b.student_created_at);
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
 
-    return mappedRecords;
+    return groupedRecords;
   }, [applications, university]);
 
   // Apply filters

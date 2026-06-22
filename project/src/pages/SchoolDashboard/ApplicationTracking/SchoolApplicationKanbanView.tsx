@@ -133,21 +133,21 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
     displayStudents.forEach(student => {
       let placed = false;
 
-      // School kanban gate: once approved, a student only advances past 'review'
-      // if they explicitly confirmed intent to proceed with THIS specific application.
-      // Signal: selected_application_id on user_profiles matches this application's id (app.id).
-      // Without this gate, all approved students (even those considering other universities) would
-      // incorrectly appear in 'Awaiting Application Fee'.
-      const thisApplicationId = student.application_id;
+      // Approved students stay in 'review' (Scholarship Eligibility) until they
+      // commit to a scholarship from THIS university. Commitment is signaled by
+      // EITHER selecting a scholarship (selected_application_id points to one of
+      // this university's apps) OR having paid the application fee. If neither
+      // signal is present, they are still deciding and remain in eligibility.
       const selectedApplicationId = (student as any).selected_application_id as string | null;
-      const studentSelectedThisApplication =
+      const allApps = student.all_applications || [];
+      const selectedThisUniversity =
         !!selectedApplicationId &&
-        selectedApplicationId === thisApplicationId;
-      const studentCommitted = student.is_application_fee_paid || studentSelectedThisApplication;
+        allApps.some((app: any) => app.id === selectedApplicationId);
 
       if (
         student.application_status === 'approved' &&
-        !studentCommitted &&
+        !selectedThisUniversity &&
+        !student.is_application_fee_paid &&
         stageMap.has('review')
       ) {
         stageMap.get('review')!.push(student);
