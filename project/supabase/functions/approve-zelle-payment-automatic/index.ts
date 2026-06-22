@@ -962,9 +962,27 @@ Deno.serve(async (req: Request) => {
         ? batchOrderIdsStr.split(',').filter(Boolean)
         : (translationOrderId ? [translationOrderId] : [])
 
+      // Lookup user_profiles.id for activity logs
+      const { data: zelleUserProfile } = await supabaseClient
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user_id)
+        .maybeSingle();
+
       // Send "Zelle received" email before analysis (fire-and-forget)
       if (orderIds.length > 0) {
         sendZelleReceivedEmail(supabaseClient, orderIds[0], user_id, zelleAmount);
+        // Log: Zelle proof submitted
+        if (zelleUserProfile) {
+          supabaseClient.rpc('log_student_action', {
+            p_student_id: zelleUserProfile.id,
+            p_action_type: 'translation_zelle_submitted',
+            p_action_description: `Zelle proof submitted for translation — order #${orderIds[0].slice(0, 8)}`,
+            p_performed_by: user_id,
+            p_performed_by_type: 'student',
+            p_metadata: { translation_order_id: orderIds[0], translation_order_ids: orderIds, zelle_amount: zelleAmount, batch_count: orderIds.length },
+          }).catch((e: any) => console.error('[approve-zelle] log translation_zelle_submitted failed:', e?.message));
+        }
       }
 
       if (orderIds.length === 0) {
@@ -985,6 +1003,17 @@ Deno.serve(async (req: Request) => {
           } else {
             console.log(`✅ [approve-zelle-payment-automatic] translation_order marcada como paga: ${orderId}`)
             sendPaymentConfirmedEmails(supabaseClient, orderId, 'zelle', supportEmail, zelleAmount || undefined);
+            // Log: payment received
+            if (zelleUserProfile) {
+              supabaseClient.rpc('log_student_action', {
+                p_student_id: zelleUserProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Zelle — order #${orderId.slice(0, 8)}`,
+                p_performed_by: user_id,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: orderId, payment_method: 'zelle', amount: zelleAmount },
+              }).catch((e: any) => console.error('[approve-zelle] log translation_payment_received failed:', e?.message));
+            }
           }
         }
       }

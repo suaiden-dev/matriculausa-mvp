@@ -215,6 +215,25 @@ serve(async (req) => {
 
     console.log(`[send-to-alpha] Success — order ${translation_order_id} → Alpha #${alphaData.projectNumber}`);
 
+    // Activity log: translation_sent_to_alpha
+    (async () => {
+      try {
+        const { data: up } = await adminClient.from('user_profiles').select('id').eq('user_id', order.user_id).maybeSingle();
+        if (up) {
+          await adminClient.rpc('log_student_action', {
+            p_student_id: up.id,
+            p_action_type: 'translation_sent_to_alpha',
+            p_action_description: `Document sent to Alpha Translations — project #${alphaData.projectNumber}`,
+            p_performed_by: order.user_id,
+            p_performed_by_type: 'student',
+            p_metadata: { translation_order_id, alpha_project_number: alphaData.projectNumber, original_filename: fileName },
+          });
+        }
+      } catch (logErr: any) {
+        console.error('[send-to-alpha] log translation_sent_to_alpha failed:', logErr?.message);
+      }
+    })();
+
     // Send "sent to translation" email (fire-and-forget)
     const emailRecipient = studentEmail;
     if (emailRecipient) {

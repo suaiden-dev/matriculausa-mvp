@@ -178,6 +178,52 @@ serve(async (req) => {
       } else {
         synced++;
 
+        // Activity log: status change + resubmit
+        (async () => {
+          try {
+            const { data: up } = await adminClient.from('user_profiles').select('id').eq('user_id', order.user_id).maybeSingle();
+            if (!up) return;
+
+            // Log status update / completion
+            if (newStatus !== order.translation_status) {
+              const isComplete = newStatus === 'Finalizado';
+              await adminClient.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: isComplete ? 'translation_completed' : 'translation_status_updated',
+                p_action_description: `Translation status updated: ${order.translation_status} → ${newStatus}`,
+                p_performed_by: order.user_id,
+                p_performed_by_type: 'student',
+                p_metadata: {
+                  translation_order_id: order.id,
+                  new_status: newStatus,
+                  previous_status: order.translation_status,
+                  alpha_project_number: order.alpha_project_number,
+                  ...(isComplete ? { certified_files_count: mirrored.length, linked_to_document_request: !!order.document_request_id } : {}),
+                },
+              });
+            }
+
+            // Log resubmit (Cenário A or B)
+            if (updates.resubmit_upload_id) {
+              await adminClient.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: 'translation_resubmitted',
+                p_action_description: `Certified document resubmitted to document request`,
+                p_performed_by: order.user_id,
+                p_performed_by_type: 'student',
+                p_metadata: {
+                  translation_order_id: order.id,
+                  document_request_id: order.document_request_id,
+                  resubmit_upload_id: updates.resubmit_upload_id,
+                  scenario: order.document_request_upload_id ? 'A' : 'B',
+                },
+              });
+            }
+          } catch (logErr: any) {
+            console.error(`[sync-alpha-status] log failed for order ${order.id}:`, logErr?.message);
+          }
+        })();
+
         // Send status email if status changed to a notifiable value (deduplicated by last_notified_status)
         const NOTIFIABLE = ['Em Tradução', 'Em Certificação', 'Finalizado'];
         if (NOTIFIABLE.includes(newStatus) && newStatus !== order.last_notified_status) {
