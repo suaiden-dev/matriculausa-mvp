@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 // @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { sendAdminPendingZelleEmail } from "../shared/translation-emails.ts";
 
 // @ts-ignore
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
@@ -238,6 +239,17 @@ Deno.serve(async (req: any) => {
     }
 
     console.log('[create-zelle-payment] Registro com comprovante criado/verificado:', paymentId);
+
+    if (fee_type === 'translation') {
+      const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com';
+      let translationOrderId = metadata.translation_order_id;
+      if (!translationOrderId && metadata.batch_order_ids) {
+        translationOrderId = metadata.batch_order_ids.split(',')[0];
+      }
+      if (translationOrderId) {
+        sendAdminPendingZelleEmail(supabase, translationOrderId, finalUserId, Number(amount), supportEmail);
+      }
+    }
 
     // Enviar webhook para n8n para validação automática (em background)
     try {

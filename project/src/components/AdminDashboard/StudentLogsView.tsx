@@ -79,7 +79,13 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     { value: 'document_request_created', label: 'Document Request Created' },
     { value: 'document_request_uploaded', label: 'Document Request Uploaded' },
     { value: 'newsletter_email_sent', label: 'Newsletter Email Sent' },
-    { value: 'newsletter_email_failed', label: 'Newsletter Email Failed' }
+    { value: 'newsletter_email_failed', label: 'Newsletter Email Failed' },
+    { value: 'translation_payment_received', label: 'Translation Payment' },
+    { value: 'translation_zelle_submitted', label: 'Translation Zelle Proof' },
+    { value: 'translation_sent_to_alpha', label: 'Sent to Alpha' },
+    { value: 'translation_status_updated', label: 'Translation Status Update' },
+    { value: 'translation_completed', label: 'Translation Completed' },
+    { value: 'translation_resubmitted', label: 'Translation Resubmitted' },
   ];
 
   const performerTypeOptions = [
@@ -148,6 +154,11 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
 
     if (type.includes('pending') || desc.includes('pending') || desc.includes('pendente')) {
       return 'text-amber-600';
+    }
+    if (type.startsWith('translation_')) {
+      return type === 'translation_resubmitted' || type === 'translation_completed'
+        ? 'text-indigo-700'
+        : 'text-indigo-500';
     }
     if (type.includes('approval') || type.includes('payment')) {
       return 'text-green-600';

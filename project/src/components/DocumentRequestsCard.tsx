@@ -1842,6 +1842,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
               const isPending = currentGroup.length > 0;
               const isGlobalApproved = !isPending && lastClosedUpload?.status === 'approved';
               const isGlobalRejected = !isPending && lastClosedUpload?.status === 'rejected';
+              const translationUploads = lastClosedGroup
+                ? lastClosedGroup.filter((u: any) => u.needs_translation || u.rejection_reason === 'needs_translation')
+                : [];
               const staged = stagedFiles[req.id] || [];
               const isSubmitting = submitting[req.id] || false;
               const historyGroups = isPending ? closedGroups : closedGroups.slice(0, -1);
@@ -1946,24 +1949,31 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     </div>
                   ) : isGlobalRejected && lastClosedUpload ? (
                     <>
-                      {(lastClosedUpload.needs_translation || lastClosedUpload.rejection_reason === 'needs_translation') ? (
-                        <div className="hidden md:flex mb-4 p-4 bg-amber-50 rounded-2xl border border-amber-200 gap-3 items-start">
-                          <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Languages className="w-4 h-4 text-amber-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-black uppercase tracking-widest text-[9px] text-amber-600 mb-1.5">Translation Required</p>
-                            <p className="text-amber-900 font-semibold text-sm leading-snug">This document needs to be in English</p>
-                            {lastClosedUpload.rejection_reason && lastClosedUpload.rejection_reason !== 'needs_translation' && cleanRejectionNote(lastClosedUpload.rejection_reason) && (
-                              <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">{cleanRejectionNote(lastClosedUpload.rejection_reason)}</p>
-                            )}
-                            {!isSchool && renderTranslationAction(
-                              lastClosedUpload.id,
-                              lastClosedUpload.file_url,
-                              lastClosedUpload.file_url?.split('/').pop()?.split('?')[0],
-                              req.id,
-                            )}
-                          </div>
+                      {translationUploads.length > 0 ? (
+                        /* One row per upload that needs translation */
+                        <div className="hidden md:flex flex-col mb-4 gap-2">
+                          {translationUploads.map((upload: any) => (
+                            <div key={upload.id} className="p-4 bg-amber-50 rounded-2xl border border-amber-200 gap-3 flex items-start">
+                              <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <Languages className="w-4 h-4 text-amber-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-black uppercase tracking-widest text-[9px] text-amber-600 mb-1">Translation Required</p>
+                                <p className="text-amber-900 font-semibold text-sm leading-snug truncate">
+                                  {getFileName(upload.file_url)}
+                                </p>
+                                {upload.rejection_reason && upload.rejection_reason !== 'needs_translation' && cleanRejectionNote(upload.rejection_reason) && (
+                                  <p className="text-xs text-amber-700 mt-1 leading-relaxed">{cleanRejectionNote(upload.rejection_reason)}</p>
+                                )}
+                                {!isSchool && renderTranslationAction(
+                                  upload.id,
+                                  upload.file_url,
+                                  getFileName(upload.file_url),
+                                  req.id,
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <div className="hidden md:flex mb-4 p-4 bg-red-50 rounded-2xl border border-red-100 gap-3 items-start">

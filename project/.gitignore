@@ -23,3 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# AI agent / local test scripts — keep local only
+.agents/
+.claude/
+skills-lock.json
+CLAUDE.md
+test-*.mjs
+scratch/

@@ -190,6 +190,45 @@ function buildAdminNewOrderHtml(data: {
   `);
 }
 
+function buildAdminPendingZelleHtml(data: {
+  studentEmail: string; docName: string; amount: number; orderId: string;
+}): string {
+  return layout(`
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Pending Zelle Verification</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">A student has uploaded a Zelle receipt for a translation order. Please verify it.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
+      <tr><td style="padding:16px 20px;">
+        <table cellpadding="0" cellspacing="0" style="width:100%;">
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Student</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.studentEmail}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Amount Declared</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">US$ ${data.amount.toFixed(2)}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Order ID</td><td style="padding:4px 0;font-size:13px;color:#6b7280;text-align:right;">${data.orderId}</td></tr>
+        </table>
+      </td></tr>
+    </table>
+    ${ctaButton('Review payment', 'https://matriculausa.com/admin/dashboard/payments')}
+  `);
+}
+
+function buildAdminOrderCompletedHtml(data: {
+  studentEmail: string; docName: string; orderId: string;
+}): string {
+  return layout(`
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Translation Order Completed</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">A translation order has been finalized and marked as Completed.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
+      <tr><td style="padding:16px 20px;">
+        <table cellpadding="0" cellspacing="0" style="width:100%;">
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Student</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.studentEmail}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Order ID</td><td style="padding:4px 0;font-size:13px;color:#6b7280;text-align:right;">${data.orderId}</td></tr>
+        </table>
+      </td></tr>
+    </table>
+    ${ctaButton('View in admin dashboard', ADMIN_TRANSLATIONS_URL)}
+  `);
+}
+
 // ─── Low-level send ────────────────────────────────────────────────────────────
 
 function sendEmail(adminClient: any, to: string, subject: string, html: string): void {
@@ -318,11 +357,62 @@ export function sendSentToAlphaEmail(
   })();
 }
 
-const STATUS_LABELS: Record<string, { subject: string; body: string }> = {
-  'Em Análise':      { subject: 'Document received and under review', body: 'Your translation has been received and will begin shortly.' },
-  'Em Tradução':     { subject: 'Your document is being translated', body: 'Our translator has started working on your document.' },
-  'Em Certificação': { subject: 'Document in certification process', body: 'The translation is complete and is being certified.' },
-  'Finalizado':      { subject: 'Your certified translation is ready', body: 'Your translated and certified document is available in your dashboard.' },
+export function sendAdminPendingZelleEmail(
+  adminClient: any,
+  orderId: string,
+  userId: string,
+  amount: number,
+  supportEmail: string,
+): void {
+  (async () => {
+    try {
+      if (!supportEmail) return;
+      const order = await fetchOrderContext(adminClient, orderId);
+      const user = await fetchUserContext(adminClient, userId);
+      sendEmail(adminClient, supportEmail,
+        `Pending Zelle Verification — #${orderId.slice(0, 8)}`,
+        buildAdminPendingZelleHtml({ studentEmail: user.email, docName: order.originalFilename, amount, orderId }),
+      );
+    } catch (err: any) {
+      console.error('[translation-emails] sendAdminPendingZelleEmail failed:', err?.message);
+    }
+  })();
+}
+
+export function sendAdminOrderCompletedEmail(
+  adminClient: any,
+  orderId: string,
+  userId: string,
+  supportEmail: string,
+): void {
+  (async () => {
+    try {
+      if (!supportEmail) return;
+      const order = await fetchOrderContext(adminClient, orderId);
+      const user = await fetchUserContext(adminClient, userId);
+      sendEmail(adminClient, supportEmail,
+        `Translation Order Completed — #${orderId.slice(0, 8)}`,
+        buildAdminOrderCompletedHtml({ studentEmail: user.email, docName: order.originalFilename, orderId }),
+      );
+    } catch (err: any) {
+      console.error('[translation-emails] sendAdminOrderCompletedEmail failed:', err?.message);
+    }
+  })();
+}
+
+const STATUS_LABELS: Record<string, { subject: string; body: string, enStatus?: string }> = {
+  'Em Análise':      { subject: 'Document received and under review', body: 'Your translation has been received and will begin shortly.', enStatus: 'Under Review' },
+  'Em Tradução':     { subject: 'Your document is being translated', body: 'Our translator has started working on your document.', enStatus: 'In Translation' },
+  'Em Certificação': { subject: 'Document in certification process', body: 'The translation is complete and is being certified.', enStatus: 'In Certification' },
+  'Finalizado':      { subject: 'Your certified translation is ready', body: 'Your translated and certified document is available in your dashboard.', enStatus: 'Completed' },
 };
 
-export { STATUS_LABELS, buildDocReadyHtml, buildStatusUpdateHtml, sendEmail, fetchUserContext };
+export { 
+  STATUS_LABELS, 
+  buildDocReadyHtml, 
+  buildStatusUpdateHtml, 
+  sendEmail, 
+  fetchUserContext,
+  sendAdminPendingZelleEmail,
+  sendAdminOrderCompletedEmail
+};

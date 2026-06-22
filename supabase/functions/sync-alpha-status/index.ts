@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { buildDocReadyHtml, buildStatusUpdateHtml, STATUS_LABELS, sendEmail, fetchUserContext } from '../shared/translation-emails.ts';
+import { buildDocReadyHtml, buildStatusUpdateHtml, STATUS_LABELS, sendEmail, fetchUserContext, sendAdminOrderCompletedEmail } from '../shared/translation-emails.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -239,6 +239,10 @@ serve(async (req) => {
                 ? buildDocReadyHtml({ name: user.name, docName })
                 : buildStatusUpdateHtml({ name: user.name, docName, status: newStatus, statusBody: label?.body ?? '' });
               sendEmail(adminClient, user.email, subject, html);
+              if (isComplete) {
+                const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com';
+                sendAdminOrderCompletedEmail(adminClient, order.id, order.user_id, supportEmail);
+              }
               await adminClient.from('translation_orders').update({ last_notified_status: newStatus }).eq('id', order.id);
             } catch (err: any) {
               console.error(`[sync-alpha-status] email failed for order ${order.id}:`, err?.message);

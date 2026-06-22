@@ -1858,6 +1858,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
 
           // 3. Send confirmation email (fire-and-forget)
           sendPaymentConfirmedEmails(supabase, translationOrderId, 'stripe', supportEmail, amountPaid ?? undefined);
+
+          // 4. Activity log
+          try {
+            const { data: up } = await supabase.from('user_profiles').select('id').eq('user_id', finalUserId).single();
+            if (up) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Stripe — order #${translationOrderId.slice(0, 8)}`,
+                p_performed_by: finalUserId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: translationOrderId, payment_method: 'stripe', amount: amountPaid },
+              });
+            }
+          } catch (logErr: any) {
+            console.error('[stripe-webhook] log translation_payment_received failed:', logErr?.message);
+          }
         }
       } catch (translationErr: any) {
         console.error('[stripe-webhook] Error processing translation_fee:', translationErr);
@@ -1917,6 +1934,23 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         if (orderIds.length > 0) {
           const amountPerOrder = metadata?.gross_amount ? parseFloat(metadata.gross_amount) / orderIds.length : undefined;
           sendPaymentConfirmedEmails(supabase, orderIds[0], 'stripe', supportEmail, amountPerOrder);
+
+          // Activity log
+          try {
+            const { data: up } = await supabase.from('user_profiles').select('id').eq('user_id', finalUserId).single();
+            if (up) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation batch payment confirmed via Stripe — ${orderIds.length} order(s)`,
+                p_performed_by: finalUserId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: orderIds[0], translation_order_ids: orderIds, payment_method: 'stripe', batch_count: orderIds.length },
+              });
+            }
+          } catch (logErr: any) {
+            console.error('[stripe-webhook] log translation_payment_received (batch) failed:', logErr?.message);
+          }
         }
       } catch (err: any) {
         console.error('[stripe-webhook] Error processing translation_batch:', err);

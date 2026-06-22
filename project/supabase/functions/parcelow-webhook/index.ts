@@ -1768,6 +1768,19 @@ Deno.serve(async (req: Request) => {
             console.log(`[parcelow-webhook] ✅ Translation order ${translationOrderId} marcada como paga`);
             const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
             sendPaymentConfirmedEmails(supabase, translationOrderId, 'parcelow', supportEmail);
+            // Activity log
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: userProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Parcelow — order #${translationOrderId.slice(0, 8)}`,
+                p_performed_by: userId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: translationOrderId, payment_method: 'parcelow' },
+              });
+            } catch (logErr: any) {
+              console.error('[parcelow-webhook] log translation_payment_received failed:', logErr?.message);
+            }
           }
           break;
         }
@@ -1802,6 +1815,19 @@ Deno.serve(async (req: Request) => {
           if (batchOrderIds.length > 0) {
             const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
             sendPaymentConfirmedEmails(supabase, batchOrderIds[0], 'parcelow', supportEmail);
+            // Activity log
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: userProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation batch payment confirmed via Parcelow — ${batchOrderIds.length} order(s)`,
+                p_performed_by: userId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: batchOrderIds[0], translation_order_ids: batchOrderIds, payment_method: 'parcelow', batch_count: batchOrderIds.length },
+              });
+            } catch (logErr: any) {
+              console.error('[parcelow-webhook] log translation_payment_received (batch) failed:', logErr?.message);
+            }
           }
           break;
         }

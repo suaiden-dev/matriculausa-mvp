@@ -43,6 +43,26 @@ function ctaButton(text: string, url: string): string {
   return `<a href="${url}" style="display:inline-block;background:#1e3a5f;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:600;margin-top:24px;">${text} →</a>`;
 }
 
+function buildAdminOrderCompletedHtml(data: {
+  studentEmail: string; docName: string; orderId: string;
+}): string {
+  const ADMIN_TRANSLATIONS_URL = 'https://matriculausa.com/admin/dashboard/translations';
+  return layout(`
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Translation Order Completed</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">A translation order has been finalized and marked as Completed.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;">
+      <tr><td style="padding:16px 20px;">
+        <table cellpadding="0" cellspacing="0" style="width:100%;">
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Student</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.studentEmail}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Order ID</td><td style="padding:4px 0;font-size:13px;color:#6b7280;text-align:right;">${data.orderId}</td></tr>
+        </table>
+      </td></tr>
+    </table>
+    ${ctaButton('View in admin dashboard', ADMIN_TRANSLATIONS_URL)}
+  `);
+}
+
 export function buildSentToAlphaHtml(data: {
   name: string; docName: string; alphaProjectNumber: string | number;
 }): string {
@@ -93,12 +113,13 @@ export function buildDocReadyHtml(data: {
 export function buildStatusUpdateHtml(data: {
   name: string; docName: string; status: string; statusBody: string;
 }): string {
+  const enStatus = STATUS_LABELS[data.status]?.enStatus || data.status;
   return layout(`
-    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Update: ${data.status}</h2>
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Update: ${enStatus}</h2>
     <p style="margin:0 0 24px;color:#374151;font-size:15px;">Hi${data.name ? ', ' + data.name : ''}! There's an update on your translation status.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 4px;font-size:14px;color:#0369a1;font-weight:600;">${data.status}</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#0369a1;font-weight:600;">${enStatus}</p>
         <p style="margin:0;font-size:13px;color:#0c4a6e;">${data.statusBody}</p>
       </td></tr>
     </table>
@@ -113,11 +134,11 @@ export function buildStatusUpdateHtml(data: {
   `);
 }
 
-export const STATUS_LABELS: Record<string, { subject: string; body: string }> = {
-  'Em Análise':      { subject: 'Document received and under review', body: 'Your translation has been received and will begin shortly.' },
-  'Em Tradução':     { subject: 'Your document is being translated', body: 'Our translator has started working on your document.' },
-  'Em Certificação': { subject: 'Document in certification process', body: 'The translation is complete and is being certified.' },
-  'Finalizado':      { subject: 'Your certified translation is ready', body: 'Your translated and certified document is available in your dashboard.' },
+export const STATUS_LABELS: Record<string, { subject: string; body: string; enStatus: string }> = {
+  'Em Análise':      { subject: 'Document received and under review', body: 'Your translation has been received and will begin shortly.', enStatus: 'Under Review' },
+  'Em Tradução':     { subject: 'Your document is being translated', body: 'Our translator has started working on your document.', enStatus: 'In Translation' },
+  'Em Certificação': { subject: 'Document in certification process', body: 'The translation is complete and is being certified.', enStatus: 'In Certification' },
+  'Finalizado':      { subject: 'Your certified translation is ready', body: 'Your translated and certified document is available in your dashboard.', enStatus: 'Completed' },
 };
 
 export function sendEmail(adminClient: any, to: string, subject: string, html: string): void {
@@ -140,4 +161,25 @@ export async function fetchUserContext(adminClient: any, userId: string): Promis
   } catch {
     return { email: '', name: '' };
   }
+}
+
+export function sendAdminOrderCompletedEmail(
+  adminClient: any,
+  orderId: string,
+  userId: string,
+  supportEmail: string,
+): void {
+  (async () => {
+    try {
+      if (!supportEmail) return;
+      const { data: order } = await adminClient.from('translation_orders').select('original_filename').eq('id', orderId).maybeSingle();
+      const user = await fetchUserContext(adminClient, userId);
+      sendEmail(adminClient, supportEmail,
+        `Translation Order Completed — #${orderId.slice(0, 8)}`,
+        buildAdminOrderCompletedHtml({ studentEmail: user.email, docName: order?.original_filename || 'Document', orderId }),
+      );
+    } catch (err: any) {
+      console.error('[translation-emails] sendAdminOrderCompletedEmail failed:', err?.message);
+    }
+  })();
 }
