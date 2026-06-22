@@ -461,7 +461,8 @@ const QuickRegistration: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const srefCode = params.get('sref');
-    const code = params.get('coupon') || params.get('ref');
+    const promoCode = params.get('coupon');
+    const refCode = params.get('ref');
 
     if (srefCode) {
       // Link de vendedor sem desconto: salvar apenas para rastreamento via userData
@@ -474,16 +475,21 @@ const QuickRegistration: React.FC = () => {
         discountAmount: 0,
         codeType: 'seller',
       });
-    } else if (code) {
-      handleValidateAnyCode(code);
+    } else if (refCode) {
+      setCouponCode(refCode);
+      setHasReferralCode(true);
+      handleValidateCoupon(refCode);
+    }
+    
+    if (promoCode) {
+      handleValidatePromoCode(promoCode);
     }
   }, [location.search, baseFee, supabaseUser]);
 
-  const handleValidateAnyCode = async (code: string) => {
+  const handleValidatePromoCode = async (code: string) => {
     if (!code) return;
     const targetCode = code.trim().toUpperCase();
     
-    // Tenta primeiro validar como Cupom Promocional (Admin)
     const { data: promoResult, error: promoError } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
       p_code: targetCode,
       p_fee_type: 'selection_process',
@@ -491,7 +497,6 @@ const QuickRegistration: React.FC = () => {
     });
 
     if (!promoError && promoResult?.valid) {
-      // Sucesso! É um cupom promocional
       setPromotionalCoupon(targetCode);
       let dAmount = 0;
       if (promoResult.discount_type === 'percentage') {
@@ -509,13 +514,12 @@ const QuickRegistration: React.FC = () => {
         finalAmount: fAmount,
         couponId: promoResult.id
       });
-      return;
+    } else {
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Cupom promocional inválido ou expirado'
+      });
     }
-
-    // Se falhar como promocional, valida como agência/referral
-    setCouponCode(targetCode);
-    setHasReferralCode(true);
-    await validateDiscountCode(targetCode);
   };
 
   const handleValidateCoupon = async (code: string) => {
