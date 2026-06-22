@@ -804,6 +804,31 @@ export async function approveZelleFlow(params: {
     }
   }
 
+  // Mark translation_orders as paid and send confirmation email
+  if (payment.fee_type === 'translation') {
+    const translationOrderId = payment.metadata?.translation_order_id;
+    if (translationOrderId) {
+      try {
+        const { error: tErr } = await supabase.functions.invoke('approve-zelle-payment-automatic', {
+          body: {
+            user_id: payment.user_id,
+            fee_type_global: 'translation',
+            direct_translation_order_id: translationOrderId,
+          },
+        });
+        if (tErr) {
+          console.error('❌ [zelleOrchestrator] Failed to mark translation orders as paid:', tErr);
+        } else {
+          console.log('✅ [zelleOrchestrator] Translation orders marked as paid, confirmation email sent');
+        }
+      } catch (tCatch: any) {
+        console.error('❌ [zelleOrchestrator] Exception approving translation:', tCatch?.message);
+      }
+    } else {
+      console.warn('⚠️ [zelleOrchestrator] translation fee_type but no translation_order_id in metadata:', payment.metadata);
+    }
+  }
+
   // Prepare notification data
   const { data: adminProfile } = await supabase
     .from("user_profiles")
