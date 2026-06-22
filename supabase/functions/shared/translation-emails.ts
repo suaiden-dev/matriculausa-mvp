@@ -2,25 +2,35 @@
 declare const Deno: any;
 
 const DASHBOARD_URL = 'https://matriculausa.com/student/dashboard/translations';
+const LOGO_URL = 'https://matriculausa.com/favicon-branco.png';
 
 function layout(content: string): string {
   return `<!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Matricula USA</title></head>
 <body style="margin:0;padding:0;background:#f5f7fa;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa;padding:32px 0;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <tr><td style="background:#1e3a5f;padding:24px 32px;">
-          <span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Matricula USA</span>
+        <tr><td style="background:#1e3a5f;padding:20px 32px;">
+          <table cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:middle;">
+                <img src="${LOGO_URL}" width="36" height="36" alt="Matricula USA" style="display:block;border:0;border-radius:4px;">
+              </td>
+              <td style="vertical-align:middle;padding-left:12px;">
+                <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Matricula USA</span>
+              </td>
+            </tr>
+          </table>
         </td></tr>
         <tr><td style="padding:32px;">
           ${content}
         </td></tr>
         <tr><td style="background:#f5f7fa;padding:20px 32px;border-top:1px solid #e5e7eb;">
           <p style="margin:0;font-size:12px;color:#6b7280;line-height:1.6;">
-            Você está recebendo este email porque realizou um pedido de tradução no Matricula USA.<br>
-            Dúvidas? Responda este email ou acesse <a href="https://matriculausa.com" style="color:#1e3a5f;">matriculausa.com</a>.
+            You're receiving this email because you placed a translation order with Matricula USA.<br>
+            Questions? Reply to this email or visit <a href="https://matriculausa.com" style="color:#1e3a5f;">matriculausa.com</a>.
           </p>
         </td></tr>
       </table>
@@ -37,23 +47,23 @@ export function buildSentToAlphaHtml(data: {
   name: string; docName: string; alphaProjectNumber: string | number;
 }): string {
   return layout(`
-    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Documento enviado para tradução</h2>
-    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Olá${data.name ? ', ' + data.name : ''}! Seu documento foi enviado para nossa equipe de tradução certificada.</p>
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Document sent for translation</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Hi${data.name ? ', ' + data.name : ''}! Your document has been sent to our certified translation team.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 4px;font-size:14px;color:#0369a1;font-weight:600;">🔄 Tradução em andamento</p>
-        <p style="margin:0;font-size:13px;color:#0c4a6e;">Assim que a tradução certificada estiver concluída, você receberá um email com o documento pronto para download.</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#0369a1;font-weight:600;">🔄 Translation in progress</p>
+        <p style="margin:0;font-size:13px;color:#0c4a6e;">Once your certified translation is complete, you'll receive an email with the document ready to download.</p>
       </td></tr>
     </table>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;margin-top:16px;">
       <tr><td style="padding:12px 20px;">
         <table cellpadding="0" cellspacing="0" style="width:100%;">
-          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Documento</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
-          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Projeto Alpha</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">#${data.alphaProjectNumber}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Alpha Project</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">#${data.alphaProjectNumber}</td></tr>
         </table>
       </td></tr>
     </table>
-    ${ctaButton('Acompanhar status', DASHBOARD_URL)}
+    ${ctaButton('Track status', DASHBOARD_URL)}
   `);
 }
 
@@ -61,22 +71,22 @@ export function buildDocReadyHtml(data: {
   name: string; docName: string;
 }): string {
   return layout(`
-    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Sua tradução certificada está pronta!</h2>
-    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Olá${data.name ? ', ' + data.name : ''}! Ótima notícia — sua tradução certificada foi concluída e está disponível para download.</p>
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Your certified translation is ready!</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Hi${data.name ? ', ' + data.name : ''}! Great news — your certified translation is complete and available for download.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
       <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 4px;font-size:14px;color:#166534;font-weight:600;">✅ Pronto para download</p>
-        <p style="margin:0;font-size:13px;color:#14532d;">Acesse seu painel para baixar o documento traduzido e certificado.</p>
+        <p style="margin:0 0 4px;font-size:14px;color:#166534;font-weight:600;">✅ Ready to download</p>
+        <p style="margin:0;font-size:13px;color:#14532d;">Visit your dashboard to download your translated and certified document.</p>
       </td></tr>
     </table>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;margin-top:16px;">
       <tr><td style="padding:12px 20px;">
         <table cellpadding="0" cellspacing="0" style="width:100%;">
-          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Documento</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
         </table>
       </td></tr>
     </table>
-    ${ctaButton('Baixar documento', DASHBOARD_URL)}
+    ${ctaButton('Download document', DASHBOARD_URL)}
   `);
 }
 
@@ -84,8 +94,8 @@ export function buildStatusUpdateHtml(data: {
   name: string; docName: string; status: string; statusBody: string;
 }): string {
   return layout(`
-    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Atualização: ${data.status}</h2>
-    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Olá${data.name ? ', ' + data.name : ''}! Há uma atualização no status da sua tradução.</p>
+    <h2 style="margin:0 0 8px;color:#1e3a5f;font-size:20px;">Update: ${data.status}</h2>
+    <p style="margin:0 0 24px;color:#374151;font-size:15px;">Hi${data.name ? ', ' + data.name : ''}! There's an update on your translation status.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
       <tr><td style="padding:16px 20px;">
         <p style="margin:0 0 4px;font-size:14px;color:#0369a1;font-weight:600;">${data.status}</p>
@@ -95,19 +105,19 @@ export function buildStatusUpdateHtml(data: {
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#f9fafb;border-radius:6px;border:1px solid #e5e7eb;margin-top:16px;">
       <tr><td style="padding:12px 20px;">
         <table cellpadding="0" cellspacing="0" style="width:100%;">
-          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Documento</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
+          <tr><td style="padding:4px 0;font-size:14px;color:#374151;">Document</td><td style="padding:4px 0;font-size:14px;color:#111827;font-weight:600;text-align:right;">${data.docName}</td></tr>
         </table>
       </td></tr>
     </table>
-    ${ctaButton('Ver andamento', DASHBOARD_URL)}
+    ${ctaButton('View progress', DASHBOARD_URL)}
   `);
 }
 
 export const STATUS_LABELS: Record<string, { subject: string; body: string }> = {
-  'Em Análise':      { subject: 'Documento recebido e em análise', body: 'Sua tradução foi recebida e será iniciada em breve.' },
-  'Em Tradução':     { subject: 'Seu documento está sendo traduzido', body: 'Nosso tradutor já começou a trabalhar no seu documento.' },
-  'Em Certificação': { subject: 'Documento em processo de certificação', body: 'A tradução foi concluída e está em processo de certificação.' },
-  'Finalizado':      { subject: 'Sua tradução certificada está pronta', body: 'O documento traduzido e certificado está disponível no seu painel.' },
+  'Em Análise':      { subject: 'Document received and under review', body: 'Your translation has been received and will begin shortly.' },
+  'Em Tradução':     { subject: 'Your document is being translated', body: 'Our translator has started working on your document.' },
+  'Em Certificação': { subject: 'Document in certification process', body: 'The translation is complete and is being certified.' },
+  'Finalizado':      { subject: 'Your certified translation is ready', body: 'Your translated and certified document is available in your dashboard.' },
 };
 
 export function sendEmail(adminClient: any, to: string, subject: string, html: string): void {

@@ -243,7 +243,7 @@ serve(async (req) => {
           const name = user.name || '';
           const docName = fileName;
           sendEmail(adminClient, emailRecipient,
-            'Seu documento foi enviado para tradução — Matricula USA',
+            'Your document has been sent for translation — Matricula USA',
             buildSentToAlphaHtml({ name, docName, alphaProjectNumber: alphaData.projectNumber }),
           );
         } catch (err: any) {
