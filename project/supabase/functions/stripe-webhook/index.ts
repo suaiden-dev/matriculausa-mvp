@@ -13,6 +13,7 @@ import {
 } from "../shared/environment-detector.ts";
 import { getStripeBalanceTransaction } from "../shared/stripe-utils.ts";
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
+import { sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 // Configurações do MailerSend (REMOVIDAS - usando apenas webhook n8n)
 const supportEmail = Deno.env.get("SUPPORT_EMAIL") ||
@@ -1843,87 +1844,9 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         if (updateErr) {
           console.error('[stripe-webhook] Failed to mark translation order as paid:', updateErr);
         } else {
-          console.log(`[stripe-webhook] Translation order ${translationOrderId} marked as paid`);
+          console.log(`[stripe-webhook] Translation order ${translationOrderId} marked as paid — DB trigger will call send-to-alpha`);
 
-          // 2. Submit to Alpha inline (replicate send-to-alpha logic with service role)
-          const alphaApiKey = Deno.env.get('ALPHA_API_KEY');
-          if (!alphaApiKey) {
-            console.error('[stripe-webhook] ALPHA_API_KEY not set — skipping Alpha submission');
-          } else {
-            // Fetch order details for Alpha submission
-            const { data: order, error: orderErr } = await supabase
-              .from('translation_orders')
-              .select('id, user_id, document_url, original_filename, document_type, source_language, target_language, alpha_project_number')
-              .eq('id', translationOrderId)
-              .single();
-
-            if (orderErr || !order) {
-              console.error('[stripe-webhook] Failed to fetch translation order for Alpha:', orderErr);
-            } else if (order.alpha_project_number) {
-              console.log(`[stripe-webhook] Order already submitted to Alpha (#${order.alpha_project_number}) — skipping`);
-            } else {
-              // Fetch student email for Alpha externalClientId
-              const { data: authUser } = await supabase.auth.admin.getUserById(finalUserId);
-              const studentEmail = authUser?.user?.email;
-
-              if (!studentEmail) {
-                console.error('[stripe-webhook] Could not resolve student email for Alpha');
-              } else {
-                // Download document from Supabase Storage
-                const { data: fileBlob, error: downloadErr } = await supabase.storage
-                  .from('document-attachments')
-                  .download(order.document_url);
-
-                if (downloadErr || !fileBlob) {
-                  console.error('[stripe-webhook] Failed to download document for Alpha:', downloadErr);
-                } else {
-                  const fileName = order.original_filename || order.document_url.split('/').pop() || 'document.pdf';
-
-                  // Build FormData for Alpha API
-                  const formData = new FormData();
-                  formData.append('projectName', order.document_type || 'Documento');
-                  formData.append('sourceLanguage', order.source_language || 'Portuguese');
-                  formData.append('targetLanguage', order.target_language || 'English');
-                  formData.append('externalClientId', studentEmail);
-                  formData.append('isCertified', 'true');
-                  formData.append('isPriority', 'false');
-                  formData.append('files', fileBlob, fileName);
-
-                  const alphaRes = await fetch('https://createprojectexternal-n3gdftgt2a-uc.a.run.app', {
-                    method: 'POST',
-                    headers: { 'x-api-key': alphaApiKey },
-                    body: formData,
-                  });
-
-                  let alphaData: any;
-                  try { alphaData = await alphaRes.json(); } catch { alphaData = {}; }
-
-                  if (!alphaRes.ok || !alphaData.success) {
-                    console.error('[stripe-webhook] Alpha API rejected submission:', alphaData);
-                  } else {
-                    // Save project number from Alpha
-                    const { error: alphaSaveErr } = await supabase
-                      .from('translation_orders')
-                      .update({
-                        alpha_project_number: alphaData.projectNumber,
-                        alpha_project_status: 'Em Análise',
-                        translation_status: 'Em Análise',
-                        alpha_synced_at: new Date().toISOString(),
-                      })
-                      .eq('id', translationOrderId);
-
-                    if (alphaSaveErr) {
-                      console.error('[stripe-webhook] Failed to save Alpha project number:', alphaSaveErr);
-                    } else {
-                      console.log(`[stripe-webhook] ✅ Translation order ${translationOrderId} submitted to Alpha — project #${alphaData.projectNumber}`);
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          // 3. Send student notification
+          // 2. Send student notification
           await supabase.from('student_notifications').insert({
             user_id: finalUserId,
             title: 'Pagamento confirmado — tradução iniciada',
@@ -1932,6 +1855,9 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             link: '/student/dashboard/translations',
             idempotency_key: `translation_payment_${translationOrderId}`,
           });
+
+          // 3. Send confirmation email (fire-and-forget)
+          sendPaymentConfirmedEmails(supabase, translationOrderId, 'stripe', supportEmail, amountPaid ?? undefined);
         }
       } catch (translationErr: any) {
         console.error('[stripe-webhook] Error processing translation_fee:', translationErr);
@@ -1940,7 +1866,67 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       console.error('[stripe-webhook] Missing userId or translationOrderId for translation_fee processing');
     }
   }
-  // ── END TRANSLATION FEE ────────────────────────────────────────────────────
+  // -- END TRANSLATION FEE ----------------------------------------------------
+
+  // -- TRANSLATION BATCH FEE --------------------------------------------------
+  if (paymentType === 'translation_batch') {
+    const finalUserId = metadata?.user_id || userId;
+    const orderIdsStr = metadata?.translation_order_ids || '';
+    const orderIds = orderIdsStr.split(',').filter(Boolean);
+
+    console.log(`[stripe-webhook] Processing translation_batch: ${orderIds.length} orders, user: ${finalUserId}`);
+
+    if (finalUserId && orderIds.length > 0) {
+      try {
+        const amountPaid = metadata?.gross_amount ? parseFloat(metadata.gross_amount) : null;
+        const amountPerOrder = amountPaid && orderIds.length > 0 ? amountPaid / orderIds.length : null;
+
+        for (const orderId of orderIds) {
+          const { error: updateErr } = await supabase
+            .from('translation_orders')
+            .update({
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+              ...(amountPerOrder !== null && { amount_paid: amountPerOrder }),
+            })
+            .eq('id', orderId)
+            .eq('user_id', finalUserId);
+
+          if (updateErr) {
+            console.error(`[stripe-webhook] Failed to mark batch order ${orderId} as paid:`, updateErr);
+          } else {
+            console.log(`[stripe-webhook] Batch translation order ${orderId} marked as paid`);
+          }
+        }
+
+        const batchCount = orderIds.length;
+        const notifMessage = batchCount === 1
+          ? 'Seu pagamento foi confirmado e a traducao foi iniciada. Acompanhe o status em Minhas Traducoes.'
+          : `Seu pagamento foi confirmado e ${batchCount} traducoes foram iniciadas. Acompanhe o status em Minhas Traducoes.`;
+
+        await supabase.from('student_notifications').insert({
+          user_id: finalUserId,
+          title: 'Pagamento confirmado — traducoes iniciadas',
+          message: notifMessage,
+          type: 'translation_payment',
+          link: '/student/dashboard/translations',
+          idempotency_key: `translation_batch_payment_${sessionId}`,
+        });
+
+        // Send confirmation email for first order in batch (fire-and-forget)
+        if (orderIds.length > 0) {
+          const amountPerOrder = metadata?.gross_amount ? parseFloat(metadata.gross_amount) / orderIds.length : undefined;
+          sendPaymentConfirmedEmails(supabase, orderIds[0], 'stripe', supportEmail, amountPerOrder);
+        }
+      } catch (err: any) {
+        console.error('[stripe-webhook] Error processing translation_batch:', err);
+      }
+    } else {
+      console.error('[stripe-webhook] Missing userId or orderIds for translation_batch processing');
+    }
+  }
+  // -- END TRANSLATION BATCH FEE ----------------------------------------------
+
 
   // BLOCO DUPLICADO REMOVIDO - i20_control_fee já é processado nas linhas 1528-1615
   // Este bloco estava causando duplicação de créditos de MatriculaCoins (trigger executado 2x)

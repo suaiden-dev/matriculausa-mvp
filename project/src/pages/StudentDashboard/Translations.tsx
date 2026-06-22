@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Languages, Plus, Clock, Loader2, FileDown, Download, X, RefreshCw, Upload, CheckCircle } from 'lucide-react';
+import { Languages, Plus, Clock, Loader2, FileDown, Download, X, RefreshCw, Upload, CheckCircle, ChevronDown, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { TranslationQuoteModal } from '../../components/TranslationQuoteModal';
@@ -53,10 +53,12 @@ interface ModalState {
   rejectionOrigin?: boolean;
   resumeOrderId?: string;
   resumeAmount?: number;
+  batchUploads?: PendingTranslationUpload[];
 }
 
 function getFileName(url: string): string {
-  const parts = url.split('/');
+  const withoutQuery = url.split('?')[0];
+  const parts = withoutQuery.split('/');
   return decodeURIComponent(parts[parts.length - 1]);
 }
 
@@ -169,33 +171,79 @@ function CertModal({ url, name, onClose }: { url: string; name: string; onClose:
   );
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// ── Badges ────────────────────────────────────────────────────────────────────
 
 const BADGE = 'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200';
 
-// Alpha translation_status raw values: "N/A", "Em Análise", "Rascunho", "Finalizado", "Cancelado"
-function translationLabel(status: string, t: (k: string) => string): string {
+type TxStyle = { dot: string; pill: string; label: string };
+
+function txStyle(status: string, t: (k: string) => string): TxStyle {
   const s = (status || '').toLowerCase().trim();
-  if (s === 'finalizado' || s === 'completed') return t('translationsPage.statusCompleted') || 'Concluído';
-  if (s === 'cancelado' || s === 'cancelled') return t('translationsPage.statusCancelled') || 'Cancelado';
-  if (s === 'n/a' || s === 'em análise' || s === 'em analise' || s === 'rascunho')
-    return t('translationsPage.statusSent') || 'Enviado';
-  if (s) return t('translationsPage.statusInProgress') || 'Em Tradução';
-  return '—';
+  if (s === 'finalizado' || s === 'completed') return {
+    dot: 'bg-green-400',
+    pill: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+    label: t('translationsPage.statusCompleted') || 'Concluído',
+  };
+  if (s === 'cancelado' || s === 'cancelled') return {
+    dot: 'bg-red-400',
+    pill: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+    label: t('translationsPage.statusCancelled') || 'Cancelado',
+  };
+  if (s === 'n/a' || s === 'em análise' || s === 'em analise' || s === 'rascunho') return {
+    dot: 'bg-blue-400',
+    pill: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+    label: t('translationsPage.statusSent') || 'Enviado',
+  };
+  if (s) return {
+    dot: 'bg-purple-400',
+    pill: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
+    label: t('translationsPage.statusInProgress') || 'Em Tradução',
+  };
+  return { dot: 'bg-gray-300', pill: 'bg-gray-100 text-gray-500 ring-1 ring-gray-200', label: '—' };
 }
 
-// ── Payment cell: badge + Stripe retry if needed ──────────────────────────────
+// Pill badge with dot — matches Lush style
+function TxBadge({ order, t }: { order: TranslationOrder; t: (k: string) => string }) {
+  if (order.payment_status !== 'paid') return <span className="text-gray-400 text-xs">—</span>;
+  const { dot, pill, label } = txStyle(order.translation_status, t);
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${pill}`}>
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+      {label}
+    </span>
+  );
+}
 
-function PaymentCell({ order, t, onZelleProof }: {
+// Certified file download button — separate column
+function CertFileBtn({ order, onView }: { order: TranslationOrder; onView: (url: string, name: string) => void }) {
+  if (!order.certified_file_url) return <span className="text-gray-400 text-xs">—</span>;
+  const name = getFileName(order.certified_file_url);
+  return (
+    <button
+      onClick={() => onView(order.certified_file_url!, name)}
+      className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-2.5 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors"
+    >
+      <FileDown className="h-3.5 w-3.5 shrink-0" />
+      Ver arquivo
+    </button>
+  );
+}
+
+// ── Payment cell: badge + retry buttons + cancel ──────────────────────────────
+
+function PaymentCell({ order, t, onZelleProof, onCancelOrder }: {
   order: TranslationOrder;
   t: (k: string) => string;
   onZelleProof?: (orderId: string, amount: number) => void;
+  onCancelOrder?: (orderId: string) => void;
 }) {
   const isPaid = order.payment_status === 'paid';
-  const [loading, setLoading] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [parcelowLoading, setParcelowLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  const handleRetry = async () => {
-    setLoading(true);
+  const handleStripeRetry = async () => {
+    setStripeLoading(true);
     try {
       const baseUrl = window.location.origin;
       const { data, error } = await supabase.functions.invoke('stripe-checkout-translation', {
@@ -209,64 +257,80 @@ function PaymentCell({ order, t, onZelleProof }: {
       window.location.href = data.session_url;
     } catch (e: any) {
       toast.error(e.message || 'Erro ao iniciar pagamento');
-      setLoading(false);
+      setStripeLoading(false);
+    }
+  };
+
+  const handleParcelowRetry = async () => {
+    setParcelowLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parcelow-checkout-translation', {
+        body: { translation_order_id: order.id, amount: order.total_price },
+      });
+      if (error || !data?.checkout_url) throw new Error(error?.message || 'Erro');
+      window.location.href = data.checkout_url;
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao iniciar pagamento');
+      setParcelowLoading(false);
     }
   };
 
   if (isPaid) return <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>;
 
+  if (confirming) {
+    return (
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-medium text-gray-700">Cancelar pedido?</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onCancelOrder?.(order.id)}
+            className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Cancelar
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            className="inline-flex items-center rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            Manter
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const payBtn = 'inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#16304f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const cancelBtn = 'inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors';
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className={BADGE}>{t('translationsPage.unpaid') || 'Não pago'}</span>
+    <div className="flex flex-col gap-2">
+      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+        {t('translationsPage.unpaid') || 'Não pago'}
+      </span>
       {order.payment_method === 'stripe' && (
-        <button
-          onClick={handleRetry}
-          disabled={loading}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e3a5f] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading && <Loader2 className="w-3 h-3 animate-spin" />}
-          {loading ? '…' : t('translationsPage.payWithCard') || 'Pagar com Cartão →'}
+        <button onClick={handleStripeRetry} disabled={stripeLoading} className={payBtn}>
+          {stripeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+          {stripeLoading ? 'Aguarde…' : 'Pagar com cartão'}
         </button>
       )}
       {order.payment_method === 'zelle' && onZelleProof && (
-        <button
-          onClick={() => onZelleProof(order.id, order.total_price)}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1e3a5f] hover:underline"
-        >
+        <button onClick={() => onZelleProof(order.id, order.total_price)} className={payBtn}>
           <Upload className="w-3 h-3" />
-          Enviar Comprovante →
+          Enviar comprovante
         </button>
       )}
-    </div>
-  );
-}
-
-// ── Translation cell: badge + "Ver documento" when file is ready ──────────────
-
-function TranslationCell({
-  order,
-  t,
-  onView,
-}: {
-  order: TranslationOrder;
-  t: (k: string) => string;
-  onView: (url: string, name: string) => void;
-}) {
-  if (order.payment_status !== 'paid') return null;
-
-  const hasCert = !!order.certified_file_url;
-  const certName = hasCert ? getFileName(order.certified_file_url!) : '';
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className={BADGE}>{translationLabel(order.translation_status, t)}</span>
-      {hasCert && (
-        <button
-          onClick={() => onView(order.certified_file_url!, certName)}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 hover:underline"
-        >
-          <FileDown className="w-3 h-3 shrink-0" />
-          {t('translationsPage.viewDocument') || 'Ver documento →'}
+      {order.payment_method === 'parcelow' && (
+        <button onClick={handleParcelowRetry} disabled={parcelowLoading} className={payBtn}>
+          {parcelowLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+          {parcelowLoading ? 'Aguarde…' : 'Continuar pagamento'}
+        </button>
+      )}
+      {onCancelOrder && (
+        <button onClick={() => setConfirming(true)} className={cancelBtn}>
+          <X className="w-3 h-3" />
+          Cancelar pedido
         </button>
       )}
     </div>
@@ -303,7 +367,6 @@ const Translations: React.FC = () => {
   const location = useLocation();
   const [orders, setOrders] = useState<TranslationOrder[]>([]);
   const [pendingUploads, setPendingUploads] = useState<PendingTranslationUpload[]>([]);
-  const [disclaimerAccepted, setDisclaimerAccepted] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [quoteModal, setQuoteModal] = useState<ModalState>({ open: false });
@@ -333,21 +396,10 @@ const Translations: React.FC = () => {
     setPendingUploads((data as PendingTranslationUpload[]) || []);
   }, [user?.id]);
 
-  const fetchProfile = useCallback(async () => {
-    if (!user?.id) return;
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('translation_disclaimer_accepted')
-      .eq('user_id', user.id)
-      .single();
-    setDisclaimerAccepted(data?.translation_disclaimer_accepted ?? false);
-  }, [user?.id]);
-
   useEffect(() => {
     fetchOrders();
     fetchPendingUploads();
-    fetchProfile();
-  }, [fetchOrders, fetchPendingUploads, fetchProfile]);
+  }, [fetchOrders, fetchPendingUploads]);
 
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
@@ -401,40 +453,70 @@ const Translations: React.FC = () => {
     () => pendingUploads.filter((u) => !orderedUploadIds.has(u.id)),
     [pendingUploads, orderedUploadIds]
   );
+
+  const groupedPending = useMemo(() => {
+    const groups: Record<string, { requestId: string; requestTitle: string; uploads: PendingTranslationUpload[] }> = {};
+    const standalone: PendingTranslationUpload[] = [];
+    for (const upload of trulyPendingUploads) {
+      if (upload.document_request_id) {
+        if (!groups[upload.document_request_id]) {
+          groups[upload.document_request_id] = {
+            requestId: upload.document_request_id,
+            requestTitle: upload.document_requests?.title ?? 'Documento',
+            uploads: [],
+          };
+        }
+        groups[upload.document_request_id].uploads.push(upload);
+      } else {
+        standalone.push(upload);
+      }
+    }
+    return { groups: Object.values(groups), standalone };
+  }, [trulyPendingUploads]);
+
   const unpaidOrders = useMemo(() => orders.filter(o => o.payment_status !== 'paid' && !(o.payment_method === 'zelle' && o.payment_reference)), [orders]);
   const paidOrders = useMemo(() => orders.filter(o => o.payment_status === 'paid' || (o.payment_method === 'zelle' && o.payment_reference)), [orders]);
-  const totalPending = trulyPendingUploads.length + unpaidOrders.length;
 
-  const handleDisclaimerAccepted = useCallback(
-    async (dontShowAgain: boolean) => {
-      setDisclaimerAccepted(true);
-      if (dontShowAgain && user?.id) {
-        await supabase
-          .from('user_profiles')
-          .update({ translation_disclaimer_accepted: true })
-          .eq('user_id', user.id);
+  const groupedAllOrders = useMemo(() => {
+    const refMap = new Map<string, TranslationOrder[]>();
+    for (const o of orders) {
+      if (o.payment_reference) {
+        const arr = refMap.get(o.payment_reference) || [];
+        arr.push(o);
+        refMap.set(o.payment_reference, arr);
       }
-    },
-    [user?.id]
-  );
+    }
+    const seen = new Set<string>();
+    const groups: { key: string; orders: TranslationOrder[]; isBatch: boolean }[] = [];
+    for (const o of orders) {
+      if (o.payment_reference) {
+        if (!seen.has(o.payment_reference)) {
+          seen.add(o.payment_reference);
+          const ords = refMap.get(o.payment_reference)!;
+          groups.push({ key: o.payment_reference, orders: ords, isBatch: ords.length > 1 });
+        }
+      } else {
+        groups.push({ key: o.id, orders: [o], isBatch: false });
+      }
+    }
+    return groups;
+  }, [orders]);
 
-  const [stripeRetrying, setStripeRetrying] = useState<string | null>(null);
-  const handleStripeRetry = async (orderId: string) => {
-    setStripeRetrying(orderId);
-    try {
-      const baseUrl = window.location.origin;
-      const { data, error } = await supabase.functions.invoke('stripe-checkout-translation', {
-        body: {
-          translation_order_id: orderId,
-          success_url: `${baseUrl}/student/dashboard/translations?payment=success&order=${orderId}`,
-          cancel_url: `${baseUrl}/student/dashboard/translations?payment=cancelled`,
-        },
-      });
-      if (error || !data?.session_url) throw new Error(error?.message || 'Erro');
-      window.location.href = data.session_url;
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao iniciar pagamento');
-      setStripeRetrying(null);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const toggleBatch = (key: string) => setExpandedBatches(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+  const totalPending = trulyPendingUploads.length;
+
+  const handleCancelOrder = async (orderId: string) => {
+    const { error } = await supabase.from('translation_orders').delete().eq('id', orderId);
+    if (error) {
+      toast.error('Erro ao cancelar pedido');
+    } else {
+      toast.success('Pedido cancelado');
+      fetchOrders();
     }
   };
 
@@ -450,6 +532,15 @@ const Translations: React.FC = () => {
     });
   };
 
+  const openModalForGroup = (group: { requestId: string; uploads: PendingTranslationUpload[] }) => {
+    setQuoteModal({
+      open: true,
+      requestId: group.requestId,
+      rejectionOrigin: true,
+      batchUploads: group.uploads,
+    });
+  };
+
   return (
     <div className="space-y-6 pt-6 sm:pt-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
@@ -460,9 +551,9 @@ const Translations: React.FC = () => {
             <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
               {t('translationsPage.title')}
             </h1>
-            {paidOrders.length > 0 && !loading && (
+            {orders.length > 0 && !loading && (
               <p className="mt-0.5 text-sm text-gray-500">
-                {paidOrders.length} {paidOrders.length === 1 ? 'pedido' : 'pedidos'}
+                {orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'}
               </p>
             )}
           </div>
@@ -489,29 +580,43 @@ const Translations: React.FC = () => {
           </div>
         </div>
 
-        {/* Pending section: uploads awaiting translation + unpaid orders */}
+        {/* Pending section: only rejected uploads that need translation */}
         {totalPending > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden border-l-4 border-l-amber-400 divide-y divide-gray-100">
             <div className="flex items-center gap-2 px-4 py-3">
               <Clock className="w-4 h-4 text-amber-500 shrink-0" />
               <span className="text-sm font-semibold text-gray-700">
                 {totalPending}{' '}
-                {totalPending === 1 ? 'pedido pendente' : 'pedidos pendentes'}
+                {totalPending === 1 ? 'documento para traduzir' : 'documentos para traduzir'}
               </span>
             </div>
 
-            {/* Pending uploads (rejected docs needing translation) */}
-            {trulyPendingUploads.map((upload) => (
+            {/* Pending uploads grouped by document_request — ONE button per group */}
+            {groupedPending.groups.map((group) => (
+              <div key={group.requestId} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{group.requestTitle}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {group.uploads.length} {group.uploads.length === 1 ? 'documento' : 'documentos'} para traduzir
+                  </p>
+                </div>
+                <button
+                  onClick={() => openModalForGroup(group)}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                >
+                  <Languages className="w-3.5 h-3.5" />
+                  Traduzir ({group.uploads.length})
+                </button>
+              </div>
+            ))}
+
+            {/* Standalone uploads (no document_request) */}
+            {groupedPending.standalone.map((upload) => (
               <div key={upload.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {upload.document_requests?.title ?? cleanFileName(upload.file_url)}
+                    {cleanFileName(upload.file_url)}
                   </p>
-                  {upload.document_requests?.title && (
-                    <p className="text-xs text-gray-400 truncate mt-0.5">
-                      {cleanFileName(upload.file_url)}
-                    </p>
-                  )}
                 </div>
                 <button
                   onClick={() => openModalForUpload(upload)}
@@ -522,58 +627,14 @@ const Translations: React.FC = () => {
                 </button>
               </div>
             ))}
-
-            {/* Unpaid orders: started but payment not completed */}
-            {unpaidOrders.map((o) => (
-              <div key={o.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {o.original_filename}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
-                    {' · '}
-                    {fmt(o.total_price)}
-                    {' · '}
-                    {o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'stripe' ? 'Cartão' : o.payment_method}
-                  </p>
-                </div>
-                {o.payment_method === 'zelle' && o.payment_reference ? (
-                  <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
-                    <Clock className="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
-                    {t('payment:zelleWaiting.messages.under_review') || 'Processando Pagamento'}
-                  </span>
-                ) : o.payment_method === 'zelle' && (
-                  <button
-                    onClick={() => setQuoteModal({ open: true, resumeOrderId: o.id, resumeAmount: o.total_price })}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    Enviar comprovante
-                  </button>
-                )}
-                {o.payment_method === 'stripe' && (
-                  <button
-                    onClick={() => handleStripeRetry(o.id)}
-                    disabled={stripeRetrying === o.id}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#16304f] px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50"
-                  >
-                    {stripeRetrying === o.id
-                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      : <Plus className="w-3.5 h-3.5" />}
-                    Pagar
-                  </button>
-                )}
-              </div>
-            ))}
           </div>
         )}
 
-        {/* Orders card — paid orders only */}
+        {/* Orders card */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
           {loading ? (
             <Skeleton />
-          ) : paidOrders.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center px-4">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50">
                 <Languages className="h-7 w-7 text-gray-300" />
@@ -598,124 +659,317 @@ const Translations: React.FC = () => {
                       <th className="px-6 py-3 text-left">Documento</th>
                       <th className="px-6 py-3 text-left">Pagamento</th>
                       <th className="px-6 py-3 text-left">Tradução</th>
+                      <th className="px-6 py-3 text-left">Arquivo</th>
                       <th className="px-6 py-3 text-left">Data</th>
                       <th className="px-6 py-3 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {paidOrders.map((o) => (
-                      <tr key={o.id} className="hover:bg-gray-50/70 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-gray-900 truncate max-w-[220px]">
-                            {o.original_filename}
-                          </p>
-                          <p className="mt-0.5 text-xs text-gray-400">
-                            {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
-                            {' · '}
-                            {o.source_language} → {o.target_language}
-                            {' · '}
-                            {o.page_count}p
-                          </p>
-                          {o.alpha_project_number && (
-                            <p className="mt-1 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1">
-                            {o.payment_status === 'paid' ? (
-                              <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                                <Clock className="w-3 h-3 animate-pulse" />
-                                Processando
-                              </span>
-                            )}
-                            <span className="text-[11px] text-gray-400">
-                              {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <TranslationCell
-                            order={o}
-                            t={t}
-                            onView={(url, name) => setCertModal({ url, name })}
-                          />
-                        </td>
-                        <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
-                          {new Date(o.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          {(() => { const { total, showFee } = displayAmount(o); return (
-                            <>
-                              <p className="font-bold text-gray-900">{fmt(total)}</p>
-                              {showFee
-                                ? <p className="text-[10px] text-gray-400">base {fmt(o.total_price)} + taxas</p>
-                                : <p className="text-[10px] text-gray-400">{o.page_count} × ${o.price_per_page}</p>
-                              }
-                            </>
-                          ); })()}
-                        </td>
-                      </tr>
-                    ))}
+                    {groupedAllOrders.map((group) => {
+                      if (!group.isBatch) {
+                        const o = group.orders[0];
+                        return (
+                          <tr
+                            key={o.id}
+                            className={o.payment_status !== 'paid' ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : 'hover:bg-gray-50/70 transition-colors'}
+                          >
+                            <td className="px-6 py-4">
+                              <p className="font-semibold text-gray-900 truncate max-w-[200px]">{o.original_filename}</p>
+                              <p className="mt-0.5 text-xs text-gray-400">
+                                {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                                {' · '}{o.source_language} → {o.target_language}{' · '}{o.page_count}p
+                              </p>
+                              {o.alpha_project_number && (
+                                <span className="mt-1 inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 tracking-wide">#{o.alpha_project_number}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-1">
+                                <PaymentCell
+                                  order={o}
+                                  t={t}
+                                  onZelleProof={(id, amount) => setQuoteModal({ open: true, resumeOrderId: id, resumeAmount: amount })}
+                                  onCancelOrder={handleCancelOrder}
+                                />
+                                <span className="text-[11px] text-gray-400">
+                                  {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <TxBadge order={o} t={t} />
+                            </td>
+                            <td className="px-6 py-4">
+                              <CertFileBtn order={o} onView={(url, name) => setCertModal({ url, name })} />
+                            </td>
+                            <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                              {new Date(o.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              {(() => { const { total, showFee } = displayAmount(o); return (
+                                <>
+                                  <p className="font-bold text-gray-900">{fmt(total)}</p>
+                                  {showFee ? <p className="text-[10px] text-gray-400">base {fmt(o.total_price)} + taxas</p>
+                                           : <p className="text-[10px] text-gray-400">{o.page_count} × ${o.price_per_page}</p>}
+                                </>
+                              ); })()}
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      // Batch group
+                      const isExpanded = expandedBatches.has(group.key);
+                      const batchTotal = group.orders.reduce((s, o) => s + (o.amount_paid ?? o.total_price), 0);
+                      const payMethod = group.orders[0].payment_method;
+                      const payLabel = payMethod === 'stripe' ? 'Cartão' : payMethod === 'zelle' ? 'Zelle' : payMethod === 'parcelow' ? 'Parcelow' : payMethod;
+                      const finalizedCount = group.orders.filter(o => (o.translation_status || '').toLowerCase() === 'finalizado').length;
+                      const cancelledCount = group.orders.filter(o => (o.translation_status || '').toLowerCase() === 'cancelado').length;
+                      const sentToAlphaCount = group.orders.filter(o => o.alpha_project_number && (o.translation_status || '').toLowerCase() !== 'cancelado').length;
+                      const batchN = group.orders.length;
+
+                      return (
+                        <React.Fragment key={group.key}>
+                          {/* Batch summary row */}
+                          <tr
+                            className="hover:bg-blue-50/30 cursor-pointer transition-colors"
+                            onClick={() => toggleBatch(group.key)}
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                                <div>
+                                  <p className="font-semibold text-gray-900">{group.orders.length} documentos</p>
+                                  <p className="mt-0.5 text-xs text-gray-400">Pagamento único</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-1">
+                                <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>
+                                <span className="text-[11px] text-gray-400">{payLabel}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {finalizedCount === batchN ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-green-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 shrink-0" />
+                                  Todos finalizados
+                                </span>
+                              ) : finalizedCount > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                                  {finalizedCount}/{batchN} finalizados
+                                </span>
+                              ) : cancelledCount === batchN ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-red-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />
+                                  Todos cancelados
+                                </span>
+                              ) : cancelledCount > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-red-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />
+                                  {cancelledCount}/{batchN} cancelados
+                                </span>
+                              ) : sentToAlphaCount === batchN ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+                                  Enviados
+                                </span>
+                              ) : sentToAlphaCount > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-600 ring-1 ring-gray-200">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />
+                                  {sentToAlphaCount}/{batchN} enviados
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs text-gray-400">—</span>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                              {new Date(group.orders[0].created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <p className="font-bold text-gray-900">{fmt(batchTotal)}</p>
+                              <p className="text-[10px] text-gray-400">{group.orders.length} docs</p>
+                            </td>
+                          </tr>
+
+                          {/* Individual rows (expanded) */}
+                          {isExpanded && group.orders.map((o) => (
+                            <tr key={o.id} className="bg-blue-50/20 border-l-2 border-l-blue-200">
+                              <td className="px-6 py-3 pl-14">
+                                <p className="text-sm text-gray-800 truncate max-w-[200px]">{o.original_filename}</p>
+                                <p className="mt-0.5 text-xs text-gray-400">
+                                  {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                                  {' · '}{o.page_count}p
+                                </p>
+                                {o.alpha_project_number && (
+                                  <span className="mt-0.5 inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400">#{o.alpha_project_number}</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-3" />
+                              <td className="px-6 py-3">
+                                <TxBadge order={o} t={t} />
+                              </td>
+                              <td className="px-6 py-3">
+                                <CertFileBtn order={o} onView={(url, name) => setCertModal({ url, name })} />
+                              </td>
+                              <td className="px-6 py-3" />
+                              <td className="px-6 py-3 text-right">
+                                <p className="text-sm text-gray-700">{fmt(o.amount_paid ?? o.total_price)}</p>
+                              </td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile list */}
               <div className="divide-y divide-gray-100 md:hidden">
-                {paidOrders.map((o) => (
-                  <div key={o.id} className="px-4 py-4 space-y-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-gray-900 text-sm truncate">
-                          {o.original_filename}
-                        </p>
-                        <p className="mt-0.5 text-xs text-gray-400">
-                          {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
-                          {' · '}
-                          {o.source_language} → {o.target_language}
-                        </p>
-                        {o.alpha_project_number && (
-                          <p className="mt-0.5 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
+                {groupedAllOrders.map((group) => {
+                  if (!group.isBatch) {
+                    const o = group.orders[0];
+                    return (
+                      <div
+                        key={o.id}
+                        className={`px-4 py-4 space-y-2.5 ${o.payment_status !== 'paid' ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{o.original_filename}</p>
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                              {' · '}{o.source_language} → {o.target_language}
+                            </p>
+                            {o.alpha_project_number && (
+                              <p className="mt-0.5 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="font-bold text-gray-900 text-sm">{fmt(o.amount_paid ?? o.total_price)}</p>
+                            {o.amount_paid && o.amount_paid !== o.total_price
+                              ? <p className="text-[10px] text-gray-400">base {fmt(o.total_price)} + taxas</p>
+                              : <p className="text-[10px] text-gray-400">{o.page_count}p × ${o.price_per_page}</p>}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <PaymentCell
+                            order={o}
+                            t={t}
+                            onZelleProof={(id, amount) => setQuoteModal({ open: true, resumeOrderId: id, resumeAmount: amount })}
+                            onCancelOrder={handleCancelOrder}
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] text-gray-400">
+                              {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
+                            </span>
+                            <TxBadge order={o} t={t} />
+                          </div>
+                        </div>
+                        {o.certified_file_url && (
+                          <CertFileBtn order={o} onView={(url, name) => setCertModal({ url, name })} />
                         )}
+                        <p className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString()}</p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="font-bold text-gray-900 text-sm">
-                          {fmt(o.amount_paid ?? o.total_price)}
-                        </p>
-                        {o.amount_paid && o.amount_paid !== o.total_price ? (
-                          <p className="text-[10px] text-gray-400">base {fmt(o.total_price)} + taxas</p>
-                        ) : (
-                          <p className="text-[10px] text-gray-400">{o.page_count}p × ${o.price_per_page}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex flex-col gap-0.5">
-                        {o.payment_status === 'paid' ? (
+                    );
+                  }
+
+                  // Batch group (mobile)
+                  const isExpanded = expandedBatches.has(group.key);
+                  const batchTotal = group.orders.reduce((s, o) => s + (o.amount_paid ?? o.total_price), 0);
+                  const payMethod = group.orders[0].payment_method;
+                  const payLabel = payMethod === 'stripe' ? 'Cartão' : payMethod === 'zelle' ? 'Zelle' : payMethod === 'parcelow' ? 'Parcelow' : payMethod;
+                  const mFinalizedCount = group.orders.filter(o => (o.translation_status || '').toLowerCase() === 'finalizado').length;
+                  const mCancelledCount = group.orders.filter(o => (o.translation_status || '').toLowerCase() === 'cancelado').length;
+                  const mSentCount = group.orders.filter(o => o.alpha_project_number && (o.translation_status || '').toLowerCase() !== 'cancelado').length;
+                  const mBatchN = group.orders.length;
+
+                  return (
+                    <div key={group.key}>
+                      {/* Batch summary row */}
+                      <div
+                        className="px-4 py-4 space-y-2 cursor-pointer hover:bg-blue-50/30 transition-colors"
+                        onClick={() => toggleBatch(group.key)}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm">{group.orders.length} documentos</p>
+                              <p className="text-xs text-gray-400">Pagamento único</p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="font-bold text-gray-900 text-sm">{fmt(batchTotal)}</p>
+                            <p className="text-[10px] text-gray-400">{group.orders.length} docs</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pl-6">
                           <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                            <Clock className="w-3 h-3 animate-pulse" />
-                            Processando
-                          </span>
-                        )}
-                        <span className="text-[11px] text-gray-400 ml-0.5">
-                          {o.payment_method === 'stripe' ? 'Cartão' : o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'parcelow' ? 'Parcelow' : o.payment_method}
-                        </span>
+                          {mFinalizedCount === mBatchN ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-green-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-green-400 shrink-0" />Todos finalizados
+                            </span>
+                          ) : mFinalizedCount > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />{mFinalizedCount}/{mBatchN} finalizados
+                            </span>
+                          ) : mCancelledCount === mBatchN ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-red-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />Todos cancelados
+                            </span>
+                          ) : mCancelledCount > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-50 text-red-600 ring-1 ring-red-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />{mCancelledCount}/{mBatchN} cancelados
+                            </span>
+                          ) : mSentCount === mBatchN ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />Enviados
+                            </span>
+                          ) : mSentCount > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-600 ring-1 ring-gray-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />{mSentCount}/{mBatchN} enviados
+                            </span>
+                          ) : null}
+                          <span className="text-xs text-gray-400">{new Date(group.orders[0].created_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                      <TranslationCell
-                        order={o}
-                        t={t}
-                        onView={(url, name) => setCertModal({ url, name })}
-                      />
+
+                      {/* Expanded individual items */}
+                      {isExpanded && (
+                        <div className="bg-blue-50/20 border-l-2 border-l-blue-200 divide-y divide-blue-100/50">
+                          {group.orders.map((o) => (
+                            <div key={o.id} className="px-4 py-3 pl-8 space-y-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm text-gray-800 truncate">{o.original_filename}</p>
+                                  <p className="text-xs text-gray-400">
+                                    {o.is_bank_statement ? t('translationQuoteModal.docType_bank_statement') : t(DOC_TYPE_LABELS[o.document_type] || o.document_type)}
+                                    {' · '}{o.page_count}p
+                                    {o.alpha_project_number && <span className="font-mono ml-1">#{o.alpha_project_number}</span>}
+                                  </p>
+                                </div>
+                                <p className="text-sm text-gray-700 shrink-0">{fmt(o.amount_paid ?? o.total_price)}</p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <TxBadge order={o} t={t} />
+                                {o.certified_file_url && (
+                                  <CertFileBtn order={o} onView={(url, name) => setCertModal({ url, name })} />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400">
-                      {new Date(o.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -742,10 +996,9 @@ const Translations: React.FC = () => {
         studentId={user?.id || ''}
         documentRequestUploadId={quoteModal.documentRequestUploadId}
         rejectionOrigin={quoteModal.rejectionOrigin}
-        disclaimerAccepted={disclaimerAccepted}
-        onDisclaimerAccepted={handleDisclaimerAccepted}
         resumeOrderId={quoteModal.resumeOrderId}
         resumeAmount={quoteModal.resumeAmount}
+        batchUploads={quoteModal.batchUploads}
         onClose={() => { setQuoteModal({ open: false }); fetchOrders(); }}
         onOrderCreated={() => {
           setQuoteModal({ open: false });

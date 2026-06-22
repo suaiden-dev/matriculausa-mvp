@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X, Upload, Loader2, AlertCircle, CheckCircle, Copy, Check, Clock } from 'lucide-react';
@@ -46,6 +46,17 @@ function formatBytes(b: number) {
   return `${(b / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function getFileNameFromUrl(url: string): string {
+  const withoutQuery = url.split('?')[0];
+  const parts = withoutQuery.split('/');
+  return decodeURIComponent(parts[parts.length - 1]).replace(/^\d+_/, '');
+}
+
+export interface BatchUpload {
+  id: string;
+  file_url: string;
+}
+
 export interface TranslationQuoteModalProps {
   open: boolean;
   uploadId?: string;
@@ -56,13 +67,13 @@ export interface TranslationQuoteModalProps {
   studentId: string;
   documentRequestUploadId?: string;
   rejectionOrigin?: boolean;
-  disclaimerAccepted?: boolean;
-  onDisclaimerAccepted?: (dontShowAgain: boolean) => void;
   onClose: () => void;
   onOrderCreated: (orderId: string) => void;
   /** Resume an existing Zelle unpaid order — skips configure and goes straight to proof upload */
   resumeOrderId?: string;
   resumeAmount?: number;
+  /** Batch mode: multiple uploads from the same document_request */
+  batchUploads?: BatchUpload[];
 }
 
 export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
@@ -75,12 +86,11 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   studentId,
   documentRequestUploadId,
   rejectionOrigin = false,
-  disclaimerAccepted = true,
-  onDisclaimerAccepted,
   onClose,
   onOrderCreated,
   resumeOrderId,
   resumeAmount,
+  batchUploads,
 }) => {
   const { t } = useTranslation(['dashboard', 'payment']);
   const navigate = useNavigate();
@@ -94,11 +104,11 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const [isBankStatement, setIsBankStatement] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'configure' | 'disclaimer' | 'zelle-payment' | 'zelle-sent'>('configure');
-  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [step, setStep] = useState<'batch-select' | 'configure' | 'zelle-payment' | 'zelle-sent'>('configure');
   const [standaloneFile, setStandaloneFile] = useState<File | null>(null);
   const [zelleFile, setZelleFile] = useState<File | null>(null);
   const [zelleOrderId, setZelleOrderId] = useState<string | null>(null);
+  const [zelleOrderIds, setZelleOrderIds] = useState<string[]>([]);
   const zelleFileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -109,9 +119,29 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     context: string;
   }>>([]);
 
-  const isStandaloneMode = !fileName && !file && !storagePath;
+  const [cpfInput, setCpfInput] = useState('');
+
+  // Batch state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchConfig, setBatchConfig] = useState<Record<string, {
+    docType: DocType;
+    isBankStatement: boolean;
+    pageCount: number;
+  }>>({});
+  const [batchSourceLanguage, setBatchSourceLanguage] = useState(SOURCE_LANGUAGES[0]);
+  const [batchCountingIds, setBatchCountingIds] = useState<Set<string>>(new Set());
+
+  const isBatchMode = !!batchUploads?.length;
+  const isStandaloneMode = !fileName && !file && !storagePath && !isBatchMode;
   const activeFile = standaloneFile || file || null;
   const activeFileName = fileName || standaloneFile?.name || '';
+
+  // Pre-fill CPF from profile
+  useEffect(() => {
+    if (!open || !studentId) return;
+    supabase.from('user_profiles').select('cpf_document').eq('user_id', studentId).single()
+      .then(({ data }) => { if (data?.cpf_document) setCpfInput(data.cpf_document); });
+  }, [open, studentId]);
 
   // Reset on open
   useEffect(() => {
@@ -120,11 +150,64 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     setError(null);
     setFileError('');
     setSelectedMethod(null);
-    setDontShowAgain(false);
     setStandaloneFile(null);
     setZelleFile(null);
     setLinkedRequestId('');
     setIsBankStatement(false);
+    setZelleOrderIds([]);
+
+    if (batchUploads?.length) {
+      setSelectedIds(new Set(batchUploads.map(u => u.id)));
+      const initConfig: Record<string, { docType: DocType; isBankStatement: boolean; pageCount: number }> = {};
+      for (const u of batchUploads) {
+        initConfig[u.id] = { docType: 'certified', isBankStatement: false, pageCount: 1 };
+      }
+      setBatchConfig(initConfig);
+      setBatchSourceLanguage(SOURCE_LANGUAGES[0]);
+      setZelleOrderId(null);
+      setStep('batch-select');
+
+      const counting = new Set(batchUploads.map(u => u.id));
+      setBatchCountingIds(counting);
+
+      for (const u of batchUploads) {
+        supabase.storage.from('document-attachments').createSignedUrl(u.file_url, 3600).then(({ data }) => {
+          if (!data?.signedUrl) {
+            setBatchCountingIds(prev => {
+              const next = new Set(prev);
+              next.delete(u.id);
+              return next;
+            });
+            return;
+          }
+          return countPagesFromUrl(data.signedUrl)
+            .then(n => {
+              setBatchConfig(prev => {
+                if (!prev[u.id]) return prev;
+                return {
+                  ...prev,
+                  [u.id]: {
+                    ...prev[u.id],
+                    pageCount: n
+                  }
+                };
+              });
+            })
+            .catch((err) => {
+              console.error(`[TranslationQuoteModal] Error counting pages for upload ${u.id}:`, err);
+            })
+            .finally(() => {
+              setBatchCountingIds(prev => {
+                const next = new Set(prev);
+                next.delete(u.id);
+                return next;
+              });
+            });
+        });
+      }
+      return;
+    }
+
     if (resumeOrderId) {
       setZelleOrderId(resumeOrderId);
       setStep('zelle-payment');
@@ -143,7 +226,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         return countPagesFromUrl(data.signedUrl).then(n => setPages(n)).catch(() => setPages(1));
       }).finally(() => setCountingPages(false));
     }
-  }, [open, file, storagePath, resumeOrderId]);
+  }, [open, file, storagePath, resumeOrderId, batchUploads]);
 
   // Fetch document requests for the student (only in standalone mode)
   useEffect(() => {
@@ -167,7 +250,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
       const appIds = (apps || []).map((a: any) => a.id);
       const items: Array<{ id: string; title: string; context: string }> = [];
 
-      // Per-application requests
       if (appIds.length > 0) {
         const { data: appReqs } = await supabase
           .from('document_requests')
@@ -182,7 +264,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         });
       }
 
-      // Global requests — filter by student's university + process type (same logic as DocumentRequestsCard)
       const universityIds = [...new Set((apps || []).flatMap((a: any) => {
         const s = Array.isArray(a.scholarships) ? a.scholarships[0] : a.scholarships;
         return s?.university_id ? [s.university_id] : [];
@@ -200,7 +281,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
         (globalReqs || []).forEach((r: any) => {
           const types: string[] = r.applicable_student_types || [];
-          if (types.length === 0) return; // sem tipos definidos = não exibir (mesmo comportamento do DocumentRequestsCard)
+          if (types.length === 0) return;
           if (studentProcessTypes.length > 0) {
             const passes = studentProcessTypes.some((t: string) => types.includes(t) || types.includes('all'));
             if (!passes) return;
@@ -209,7 +290,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         });
       }
 
-      console.log('[TranslationQuoteModal] availableRequests para student_id=%s profile_id=%s', studentId, profile.id, items);
       setAvailableRequests(items);
     };
 
@@ -247,13 +327,129 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const stripeTotal = Math.round(((total + STRIPE_FIXED) / (1 - STRIPE_RATE)) * 100) / 100;
   const stripeFee = Math.round((stripeTotal - total) * 100) / 100;
 
+  // Batch totals
+  const batchTotal = (() => {
+    if (!isBatchMode) return 0;
+    return [...selectedIds].reduce((sum, id) => {
+      const cfg = batchConfig[id];
+      if (!cfg) return sum;
+      const dt = DOC_TYPES.find(d => d.id === cfg.docType)!;
+      return sum + cfg.pageCount * (dt.pricePerPage + (cfg.isBankStatement ? dt.bankSurcharge : 0));
+    }, 0);
+  })();
+  const batchStripeTotal = Math.round(((batchTotal + STRIPE_FIXED) / (1 - STRIPE_RATE)) * 100) / 100;
+  const batchStripeFee = Math.round((batchStripeTotal - batchTotal) * 100) / 100;
+
+  const effectiveAmount = resumeAmount ?? (isBatchMode ? batchTotal : total);
+
+  const isAnySelectedCounting = isBatchMode && [...selectedIds].some(id => batchCountingIds.has(id));
+
+  const cpfValid = selectedMethod !== 'parcelow' || cpfInput.replace(/\D/g, '').length >= 11;
+  const canSubmit = isBatchMode
+    ? (selectedMethod !== null && !submitting && !isAnySelectedCounting && cpfValid)
+    : (selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile) && isBankStatement !== null && cpfValid);
+
+  const saveCpfIfNeeded = async () => {
+    if (selectedMethod !== 'parcelow') return;
+    const clean = cpfInput.replace(/\D/g, '');
+    if (clean.length >= 11) {
+      await supabase.from('user_profiles').update({ cpf_document: cpfInput }).eq('user_id', studentId);
+    }
+  };
+
   const handleConfirm = async () => {
     if (!selectedMethod) return;
-    if (!disclaimerAccepted) { setStep('disclaimer'); return; }
+    await saveCpfIfNeeded();
     await doSubmit();
   };
 
+  const doSubmitBatch = async () => {
+    if (!selectedMethod) return;
+    await saveCpfIfNeeded();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const selected = (batchUploads || []).filter(u => selectedIds.has(u.id));
+      const createdIds: string[] = [];
+
+      for (const upload of selected) {
+        const cfg = batchConfig[upload.id];
+        const dt = DOC_TYPES.find(d => d.id === cfg.docType)!;
+        const ppp = dt.pricePerPage + (cfg.isBankStatement ? dt.bankSurcharge : 0);
+        const orderTotal = cfg.pageCount * ppp;
+
+        const { data, error: insertErr } = await supabase
+          .from('translation_orders')
+          .insert({
+            user_id: studentId,
+            document_request_id: requestId || null,
+            document_request_upload_id: upload.id,
+            rejection_origin: true,
+            document_url: upload.file_url,
+            original_filename: getFileNameFromUrl(upload.file_url),
+            document_type: cfg.docType,
+            original_document_type: cfg.docType,
+            is_bank_statement: cfg.isBankStatement,
+            source_language: batchSourceLanguage,
+            target_language: 'Inglês',
+            page_count: cfg.pageCount,
+            price_per_page: ppp,
+            total_price: orderTotal,
+            status: 'pending',
+            payment_method: selectedMethod,
+            payment_status: 'unpaid',
+            translation_status: 'pending',
+          })
+          .select('id')
+          .single();
+
+        if (insertErr) throw insertErr;
+        createdIds.push(data.id);
+      }
+
+      if (selectedMethod === 'zelle') {
+        setZelleOrderIds(createdIds);
+        setStep('zelle-payment');
+        setSubmitting(false);
+        return;
+      }
+
+      if (selectedMethod === 'stripe') {
+        const baseUrl = window.location.origin;
+        const { data: checkout, error: checkoutErr } = await supabase.functions.invoke(
+          'stripe-checkout-translation-batch',
+          {
+            body: {
+              translation_order_ids: createdIds,
+              success_url: `${baseUrl}/student/dashboard/translations?payment=success`,
+              cancel_url: `${baseUrl}/student/dashboard/translations?payment=cancelled`,
+            },
+          }
+        );
+        if (checkoutErr || !checkout?.session_url) throw new Error(checkoutErr?.message || t('translationQuoteModal.errorFallback'));
+        window.location.href = checkout.session_url;
+        return;
+      }
+
+      if (selectedMethod === 'parcelow') {
+        const { data: checkout, error: checkoutErr } = await supabase.functions.invoke(
+          'parcelow-checkout-translation-batch',
+          { body: { translation_order_ids: createdIds, amount: batchTotal } }
+        );
+        if (checkoutErr || !checkout?.checkout_url) throw new Error(checkoutErr?.message || t('translationQuoteModal.errorFallback'));
+        window.location.href = checkout.checkout_url;
+        return;
+      }
+    } catch (e: any) {
+      setError(e.message || t('translationQuoteModal.errorFallback'));
+      setStep('configure');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const doSubmit = async () => {
+    if (isBatchMode) { await doSubmitBatch(); return; }
     if (!selectedMethod) return;
     setSubmitting(true);
     setError(null);
@@ -363,7 +559,12 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
   const handleZelleBack = async () => {
     if (resumeOrderId) { onClose(); return; }
-    if (zelleOrderId) {
+    if (isBatchMode && zelleOrderIds.length > 0) {
+      for (const id of zelleOrderIds) {
+        await supabase.from('translation_orders').delete().eq('id', id);
+      }
+      setZelleOrderIds([]);
+    } else if (zelleOrderId) {
       await supabase.from('translation_orders').delete().eq('id', zelleOrderId);
     }
     setZelleOrderId(null);
@@ -373,7 +574,8 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   };
 
   const handleZelleSubmit = async () => {
-    if (!zelleFile || !zelleOrderId) return;
+    const effectiveOrderIds = isBatchMode ? zelleOrderIds : (zelleOrderId ? [zelleOrderId] : []);
+    if (!zelleFile || effectiveOrderIds.length === 0) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -387,20 +589,27 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const imageUrl = `${supabaseUrl}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
 
+      const primaryOrderId = effectiveOrderIds[0];
+
       const { error: fnError } = await supabase.functions.invoke('create-zelle-payment', {
         body: {
           fee_type: 'translation',
           amount: effectiveAmount,
           comprovante_url: imageUrl,
-          metadata: { translation_order_id: zelleOrderId },
+          metadata: {
+            translation_order_id: primaryOrderId,
+            ...(effectiveOrderIds.length > 1 && { batch_order_ids: effectiveOrderIds.join(',') }),
+          },
         },
       });
       if (fnError) throw fnError;
 
-      await supabase
-        .from('translation_orders')
-        .update({ payment_reference: imageUrl })
-        .eq('id', zelleOrderId);
+      for (const orderId of effectiveOrderIds) {
+        await supabase
+          .from('translation_orders')
+          .update({ payment_reference: imageUrl })
+          .eq('id', orderId);
+      }
 
       setStep('zelle-sent');
     } catch (e: any) {
@@ -410,25 +619,30 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     }
   };
 
-  const handleDisclaimerAccept = async () => {
-    if (onDisclaimerAccepted) onDisclaimerAccepted(dontShowAgain);
-    await doSubmit();
-  };
-
   const handleClose = async () => {
-    if (step === 'zelle-payment' && zelleOrderId && !resumeOrderId) {
-      try {
-        await supabase.from('translation_orders').delete().eq('id', zelleOrderId);
-      } catch (err) {
-        console.error('Error deleting unpaid order on close:', err);
+    if (step === 'zelle-payment') {
+      if (isBatchMode && zelleOrderIds.length > 0) {
+        try {
+          for (const id of zelleOrderIds) {
+            await supabase.from('translation_orders').delete().eq('id', id);
+          }
+        } catch (err) {
+          console.error('Error deleting batch orders on close:', err);
+        }
+      } else if (zelleOrderId && !resumeOrderId) {
+        try {
+          await supabase.from('translation_orders').delete().eq('id', zelleOrderId);
+        } catch (err) {
+          console.error('Error deleting unpaid order on close:', err);
+        }
       }
     }
     onClose();
   };
 
-  const effectiveAmount = resumeAmount ?? total;
-
-  const canSubmit = selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile) && isBankStatement !== null;
+  const footerAmount = isBatchMode
+    ? (selectedMethod === 'stripe' ? batchStripeTotal : batchTotal)
+    : (selectedMethod === 'stripe' ? stripeTotal : total);
 
   return createPortal(
     <div
@@ -436,19 +650,23 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
       onClick={handleClose}
     >
       <div
-        className="bg-white w-full sm:rounded-2xl sm:max-w-lg max-h-[95dvh] flex flex-col overflow-hidden shadow-2xl rounded-t-2xl"
+        className="bg-white w-full sm:rounded-2xl sm:max-w-4xl max-h-[95dvh] flex flex-col overflow-hidden shadow-2xl rounded-t-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="text-base font-bold text-gray-900">
-              {step === 'zelle-payment' || step === 'zelle-sent'
+              {step === 'batch-select'
+                ? 'Selecionar documentos'
+                : step === 'zelle-payment' || step === 'zelle-sent'
                 ? 'Pagamento via Zelle'
                 : t('translationQuoteModal.title')}
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              {step === 'zelle-payment'
+              {step === 'batch-select'
+                ? 'Configure e selecione os documentos a traduzir'
+                : step === 'zelle-payment'
                 ? 'Envie o comprovante para confirmar sua tradução'
                 : step === 'zelle-sent'
                 ? 'Comprovante recebido!'
@@ -461,39 +679,167 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
         </div>
 
         <div className="overflow-y-auto flex-1">
-          {step === 'disclaimer' ? (
-            <div className="p-5 space-y-5">
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-900 mb-1">{t('translationsPage.disclaimerTitle')}</p>
-                  <p className="text-sm text-amber-800 leading-relaxed">{t('translationsPage.disclaimerBody')}</p>
-                </div>
+          {/* ── BATCH SELECT step ── */}
+          {step === 'batch-select' && (
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-500">Selecione os documentos que deseja traduzir e configure cada um.</p>
+
+              <div className="space-y-2">
+                {(batchUploads || []).map(upload => {
+                  const cfg = batchConfig[upload.id];
+                  const isSelected = selectedIds.has(upload.id);
+                  const dt = cfg ? DOC_TYPES.find(d => d.id === cfg.docType)! : DOC_TYPES[0];
+                  const ppp = cfg ? dt.pricePerPage + (cfg.isBankStatement ? dt.bankSurcharge : 0) : 0;
+                  const price = cfg ? cfg.pageCount * ppp : 0;
+                  const fName = getFileNameFromUrl(upload.file_url);
+
+                  return (
+                    <div
+                      key={upload.id}
+                      className={`rounded-xl border p-4 transition-all duration-200 ${
+                        isSelected 
+                          ? 'border-[#1e3a5f]/20 bg-[#1e3a5f]/[0.02] shadow-sm' 
+                          : 'border-gray-100 bg-white hover:bg-gray-50/50'
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        {/* Left: Checkbox + Filename + Price */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={e => {
+                              const next = new Set(selectedIds);
+                              if (e.target.checked) next.add(upload.id);
+                              else next.delete(upload.id);
+                              setSelectedIds(next);
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-[#1e3a5f] shrink-0 cursor-pointer focus:ring-[#1e3a5f]/20"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-700 truncate" title={fName}>{fName}</p>
+                          </div>
+                          {isSelected && (
+                            <span className="text-sm font-bold text-[#1e3a5f] shrink-0 md:hidden">
+                              ${price.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right: Configs (visible only if selected) */}
+                        {isSelected && cfg && (
+                          <div className="flex flex-wrap items-center gap-4 shrink-0 ml-7 md:ml-0">
+                            {/* Segmented Control for Doc Type */}
+                            <div className="flex p-0.5 rounded-lg bg-gray-100/80 border border-gray-200/30">
+                              {DOC_TYPES.map(d => (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  onClick={() => setBatchConfig(prev => ({ ...prev, [upload.id]: { ...prev[upload.id], docType: d.id } }))}
+                                  className={`py-1 px-2.5 rounded-md text-[11px] font-semibold transition-all ${
+                                    cfg.docType === d.id
+                                      ? 'bg-white text-[#1e3a5f] shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-800'
+                                  }`}
+                                >
+                                  {d.id === 'certified' ? 'Certificada' : 'Juramentada'} (${d.pricePerPage}/pág)
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Extrato? (Pills) */}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-gray-400">Extrato?</span>
+                              <div className="flex p-0.5 rounded-lg bg-gray-100/80 border border-gray-200/30">
+                                <button
+                                  type="button"
+                                  onClick={() => setBatchConfig(prev => ({ ...prev, [upload.id]: { ...prev[upload.id], isBankStatement: true } }))}
+                                  className={`py-0.5 px-2 rounded-md text-[10px] font-bold transition-all ${
+                                    cfg.isBankStatement
+                                      ? 'bg-white text-[#1e3a5f] shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-800'
+                                  }`}
+                                >Sim</button>
+                                <button
+                                  type="button"
+                                  onClick={() => setBatchConfig(prev => ({ ...prev, [upload.id]: { ...prev[upload.id], isBankStatement: false } }))}
+                                  className={`py-0.5 px-2 rounded-md text-[10px] font-bold transition-all ${
+                                    !cfg.isBankStatement
+                                      ? 'bg-white text-[#1e3a5f] shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-800'
+                                  }`}
+                                >Não</button>
+                              </div>
+                            </div>
+
+                            {/* Pages */}
+                            <div className="flex items-center gap-1 min-w-[70px] justify-end">
+                              <span className="text-[11px] text-gray-400">Páginas:</span>
+                              {batchCountingIds.has(upload.id) ? (
+                                <span className="flex items-center gap-0.5 text-[11px] text-gray-400">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  ...
+                                </span>
+                              ) : (
+                                <span className="text-xs font-bold text-gray-700">{cfg.pageCount}</span>
+                              )}
+                            </div>
+
+                            {/* Price (Desktop only) */}
+                            <span className="text-sm font-bold text-[#1e3a5f] shrink-0 min-w-[50px] text-right hidden md:inline">
+                              ${price.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={dontShowAgain}
-                  onChange={e => setDontShowAgain(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-[#1e3a5f]"
-                />
-                <span className="text-sm text-gray-600">{t('translationsPage.disclaimerDontShowAgain')}</span>
-              </label>
-              <div className="flex gap-3">
-                <button onClick={() => setStep('configure')} disabled={submitting} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                  {t('translationsPage.disclaimerBack')}
-                </button>
-                <button onClick={handleDisclaimerAccept} disabled={submitting} className="flex-1 px-4 py-2.5 bg-[#1e3a5f] hover:bg-[#16304f] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {submitting ? t('translationQuoteModal.processing') : t('translationsPage.disclaimerAccept')}
-                </button>
+
+              {/* Source language */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Idioma dos documentos</label>
+                <select
+                  value={batchSourceLanguage}
+                  onChange={e => setBatchSourceLanguage(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f]"
+                >
+                  {SOURCE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+
+              {/* Subtotal */}
+              <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Subtotal</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {selectedIds.size} {selectedIds.size === 1 ? 'documento' : 'documentos'} selecionado{selectedIds.size !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-gray-900">${batchTotal.toFixed(2)}</p>
               </div>
             </div>
-          ) : step === 'configure' ? (
+          )}
+
+          {step === 'configure' ? (
             <div className="p-4 space-y-4">
 
-              {/* File upload zone (standalone) or file info (pre-loaded) */}
-              {isStandaloneMode ? (
+              {/* Batch mode: show compact summary at top */}
+              {isBatchMode && (
+                <div className="flex items-center gap-3 rounded-xl border border-[#1e3a5f]/20 bg-[#1e3a5f]/5 px-4 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#1e3a5f]">
+                      {selectedIds.size} {selectedIds.size === 1 ? 'documento' : 'documentos'} selecionado{selectedIds.size !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Idioma: {batchSourceLanguage}</p>
+                  </div>
+                  <p className="text-xl font-bold text-[#1e3a5f]">${batchTotal.toFixed(2)}</p>
+                </div>
+              )}
+
+              {/* File upload zone (standalone only) */}
+              {!isBatchMode && isStandaloneMode && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
                   <div
@@ -521,23 +867,24 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                     </button>
                   )}
                 </div>
-              ) : (
-                activeFileName && (
-                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{activeFileName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {countingPages
-                          ? <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Contando páginas...</span>
-                          : t('translationQuoteModal.pageDetected', { count: pageCount })}
-                      </p>
-                    </div>
+              )}
+
+              {/* File info (pre-loaded, single mode) */}
+              {!isBatchMode && !isStandaloneMode && activeFileName && (
+                <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{activeFileName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {countingPages
+                        ? <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Contando páginas...</span>
+                        : t('translationQuoteModal.pageDetected', { count: pageCount })}
+                    </p>
                   </div>
-                )
+                </div>
               )}
 
               {/* Page count (standalone, after file selected) */}
-              {isStandaloneMode && standaloneFile && (
+              {!isBatchMode && isStandaloneMode && standaloneFile && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   {countingPages
                     ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Contando páginas...</>
@@ -545,81 +892,85 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               )}
 
-              {/* Document type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentType')}</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {DOC_TYPES.map(d => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setDocType(d.id)}
-                      className={`flex items-center justify-between rounded-xl border-2 px-3 py-2 text-left transition ${
-                        docType === d.id
-                          ? 'border-[#1e3a5f] bg-[#1e3a5f]/5'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <p className={`text-xs font-semibold leading-tight ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>
-                        {d.label}
-                      </p>
-                      <p className={`text-sm font-bold ml-2 shrink-0 ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-600'}`}>
-                        ${d.pricePerPage}<span className="text-[10px] font-normal text-gray-400">/pág</span>
-                      </p>
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2.5">
-                  <p className="text-xs font-medium text-gray-700 mb-1.5">
-                    É um extrato bancário?
-                    <span className="ml-1 text-gray-400 font-normal">
-                      (se sim: +${selectedDocType.bankSurcharge}/pág)
-                    </span>
-                    {isBankStatement === null && (
-                      <span className="ml-1.5 text-red-400 text-[11px]">* obrigatório</span>
-                    )}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsBankStatement(true)}
-                      className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
-                        isBankStatement === true
-                          ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      Sim
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsBankStatement(false)}
-                      className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
-                        isBankStatement === false
-                          ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      Não
-                    </button>
+              {/* Document type (single mode only) */}
+              {!isBatchMode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentType')}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DOC_TYPES.map(d => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => setDocType(d.id)}
+                        className={`flex items-center justify-between rounded-xl border-2 px-3 py-2 text-left transition ${
+                          docType === d.id
+                            ? 'border-[#1e3a5f] bg-[#1e3a5f]/5'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <p className={`text-xs font-semibold leading-tight ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>
+                          {d.label}
+                        </p>
+                        <p className={`text-sm font-bold ml-2 shrink-0 ${docType === d.id ? 'text-[#1e3a5f]' : 'text-gray-600'}`}>
+                          ${d.pricePerPage}<span className="text-[10px] font-normal text-gray-400">/pág</span>
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2.5">
+                    <p className="text-xs font-medium text-gray-700 mb-1.5">
+                      É um extrato bancário?
+                      <span className="ml-1 text-gray-400 font-normal">
+                        (se sim: +${selectedDocType.bankSurcharge}/pág)
+                      </span>
+                      {isBankStatement === null && (
+                        <span className="ml-1.5 text-red-400 text-[11px]">* obrigatório</span>
+                      )}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsBankStatement(true)}
+                        className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
+                          isBankStatement === true
+                            ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        Sim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsBankStatement(false)}
+                        className={`flex-1 py-1.5 rounded-lg border-2 text-sm font-semibold transition ${
+                          isBankStatement === false
+                            ? 'border-[#1e3a5f] bg-[#1e3a5f]/5 text-[#1e3a5f]'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        Não
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Source language */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentLanguage')}</label>
-                <select
-                  value={sourceLanguage}
-                  onChange={e => setSourceLanguage(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f]"
-                >
-                  {SOURCE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
+              {/* Source language (single mode only) */}
+              {!isBatchMode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentLanguage')}</label>
+                  <select
+                    value={sourceLanguage}
+                    onChange={e => setSourceLanguage(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f]"
+                  >
+                    {SOURCE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              )}
 
-              {/* Link to document request (only when not coming from a rejection) */}
-              {!requestId && !documentRequestUploadId && availableRequests.length > 0 && (
+              {/* Link to document request (single standalone only) */}
+              {!isBatchMode && !requestId && !documentRequestUploadId && availableRequests.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Vincular a um pedido de documento
@@ -643,18 +994,20 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               )}
 
-              {/* Price summary */}
-              <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">{t('translationQuoteModal.total')}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{pageCount} pág × ${pricePerPage}</p>
+              {/* Price summary (single mode only) */}
+              {!isBatchMode && (
+                <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{t('translationQuoteModal.total')}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{pageCount} pág × ${pricePerPage}</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {countingPages ? '...' : `$${total.toFixed(2)}`}
+                    </p>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {countingPages ? '...' : `$${total.toFixed(2)}`}
-                  </p>
                 </div>
-              </div>
+              )}
 
               {/* Payment method */}
               <div>
@@ -664,24 +1017,25 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                     {
                       id: 'stripe' as const,
                       label: 'Cartão de crédito / débito',
-                      note: `+$${stripeFee.toFixed(2)} taxa Stripe`,
-                      amount: stripeTotal,
+                      note: `+$${(isBatchMode ? batchStripeFee : stripeFee).toFixed(2)} taxa Stripe`,
+                      amount: isBatchMode ? batchStripeTotal : stripeTotal,
                       Icon: StripeIcon,
                     },
                     {
                       id: 'zelle' as const,
                       label: 'Zelle',
                       note: t('translationQuoteModal.zelleNoFeeNote') || 'Sem taxa',
-                      amount: total,
+                      amount: isBatchMode ? batchTotal : total,
                       Icon: ZelleIcon,
                     },
-                    {
-                      id: 'parcelow' as const,
-                      label: 'Parcelow',
-                      note: t('translationQuoteModal.parcelowInstallmentsNote') || '12× sem juros',
-                      amount: total,
-                      Icon: ParcelowBadge,
-                    },
+                    // Parcelow temporariamente desabilitado — sandbox com problemas
+                    // {
+                    //   id: 'parcelow' as const,
+                    //   label: 'Parcelow',
+                    //   note: t('translationQuoteModal.parcelowInstallmentsNote') || '12× sem juros',
+                    //   amount: isBatchMode ? batchTotal : total,
+                    //   Icon: ParcelowBadge,
+                    // },
                   ] as const).map(m => (
                     <button
                       key={m.id}
@@ -701,7 +1055,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                         <p className="text-[11px] text-gray-400 leading-tight">{m.note}</p>
                       </div>
                       <p className="text-sm font-bold text-gray-900 shrink-0">
-                        {countingPages ? '...' : `$${m.amount.toFixed(2)}`}
+                        {(isBatchMode ? false : countingPages) ? '...' : `$${m.amount.toFixed(2)}`}
                       </p>
                       {selectedMethod === m.id && (
                         <CheckCircle className="w-3.5 h-3.5 text-[#1e3a5f] shrink-0" />
@@ -711,6 +1065,21 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               </div>
 
+              {selectedMethod === 'parcelow' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-gray-700">CPF <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={cpfInput}
+                    onChange={e => setCpfInput(e.target.value)}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f]"
+                  />
+                  <p className="text-[11px] text-gray-400">Necessário para pagamento parcelado</p>
+                </div>
+              )}
+
               {error && (
                 <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -719,9 +1088,10 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               )}
             </div>
           ) : null}
+
+          {/* ── ZELLE PAYMENT step ── */}
           {step === 'zelle-payment' && (
             <div className="p-5 space-y-4">
-              {/* Instruções numeradas */}
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">
                   1 — Realize a transferência do valor para o destinatário informado abaixo.
@@ -732,7 +1102,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </p>
               </div>
 
-              {/* Email + Valor */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-gray-600">Email do Destinatário</p>
@@ -762,7 +1131,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               </div>
 
-              {/* Box importante */}
               <div className="border border-red-400 bg-red-50 rounded-xl px-3 py-2.5">
                 <p className="text-sm font-semibold text-red-700">Importante:</p>
                 <p className="text-sm text-red-700 mt-0.5">
@@ -770,7 +1138,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </p>
               </div>
 
-              {/* Upload */}
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">
                   Comprovante de pagamento <span className="text-red-500">*</span>
@@ -818,6 +1185,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
             </div>
           )}
 
+          {/* ── ZELLE SENT step ── */}
           {step === 'zelle-sent' && (
             <div className="p-6 flex flex-col items-center text-center gap-4 py-10 bg-gradient-to-br from-amber-50/30 to-orange-50/10">
               <div className="relative w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center border border-amber-200 shadow-inner">
@@ -831,7 +1199,6 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                   {t('payment:zelleWaiting.details.under_review') || 'Seu comprovante foi recebido e está em análise. Nossa equipe o revisará em breve.'}
                 </p>
               </div>
-              
               <div className="flex justify-center space-x-1.5 mt-2">
                 <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" />
                 <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:0.2s]" />
@@ -841,9 +1208,32 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footers ── */}
+        {step === 'batch-select' && (
+          <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+            <button
+              onClick={() => setStep('configure')}
+              disabled={selectedIds.size === 0 || isAnySelectedCounting}
+              className="w-full px-4 py-3 bg-[#1e3a5f] hover:bg-[#16304f] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isAnySelectedCounting 
+                ? 'Contando páginas...' 
+                : `Continuar (${selectedIds.size} ${selectedIds.size === 1 ? 'documento' : 'documentos'}) →`}
+            </button>
+          </div>
+        )}
+
         {step === 'configure' && (
           <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+            {isBatchMode && (
+              <button
+                onClick={() => setStep('batch-select')}
+                disabled={submitting}
+                className="w-full mb-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                ← Voltar
+              </button>
+            )}
             <button
               onClick={handleConfirm}
               disabled={!canSubmit}
@@ -853,7 +1243,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               {submitting
                 ? t('translationQuoteModal.processing')
                 : selectedMethod
-                  ? t('translationQuoteModal.orderButton', { total: (selectedMethod === 'stripe' ? stripeTotal : total).toFixed(2) })
+                  ? t('translationQuoteModal.orderButton', { total: footerAmount.toFixed(2) })
                   : 'Selecione um método de pagamento'}
             </button>
           </div>

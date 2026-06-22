@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { buildSentToAlphaHtml, sendEmail, fetchUserContext } from '../shared/translation-emails.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -172,6 +173,7 @@ serve(async (req) => {
     formData.append('externalClientId', studentEmail);
     formData.append('isCertified', isCertified);
     formData.append('isPriority', 'false');
+    formData.append('convertCurrency', 'true'); // BRL → USD (Alpha default)
     formData.append('files', fileBlob, fileName);
 
     // Submit to Alpha Translations
@@ -212,6 +214,24 @@ serve(async (req) => {
     }
 
     console.log(`[send-to-alpha] Success — order ${translation_order_id} → Alpha #${alphaData.projectNumber}`);
+
+    // Send "sent to translation" email (fire-and-forget)
+    const emailRecipient = studentEmail;
+    if (emailRecipient) {
+      (async () => {
+        try {
+          const user = await fetchUserContext(adminClient, order.user_id);
+          const name = user.name || '';
+          const docName = fileName;
+          sendEmail(adminClient, emailRecipient,
+            'Seu documento foi enviado para tradução — Matricula USA',
+            buildSentToAlphaHtml({ name, docName, alphaProjectNumber: alphaData.projectNumber }),
+          );
+        } catch (err: any) {
+          console.error('[send-to-alpha] email failed:', err?.message);
+        }
+      })();
+    }
 
     return new Response(
       JSON.stringify({ success: true, projectNumber: alphaData.projectNumber }),

@@ -6,6 +6,7 @@ import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/b
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
+import { sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 const supabase = createClient(
 // @ts-ignore
@@ -1757,7 +1758,7 @@ Deno.serve(async (req: Request) => {
             .from("translation_orders")
             .update({
               payment_status: "paid",
-              payment_date: new Date().toISOString(),
+              paid_at: new Date().toISOString(),
             })
             .eq("id", translationOrderId);
 
@@ -1765,6 +1766,42 @@ Deno.serve(async (req: Request) => {
             console.error("[parcelow-webhook] ❌ Erro ao atualizar translation_orders:", translationUpdateError);
           } else {
             console.log(`[parcelow-webhook] ✅ Translation order ${translationOrderId} marcada como paga`);
+            const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
+            sendPaymentConfirmedEmails(supabase, translationOrderId, 'parcelow', supportEmail);
+          }
+          break;
+        }
+
+        case "translation_batch": {
+          console.log("[parcelow-webhook] Processing translation_batch...");
+
+          const batchOrderIdsStr = parcelowOrder.metadata?.translation_order_ids || "";
+          const batchOrderIds = batchOrderIdsStr.split(",").filter(Boolean);
+
+          if (!batchOrderIds.length) {
+            console.error("[parcelow-webhook] translation_order_ids not found in metadata");
+            break;
+          }
+
+          for (const batchOrderId of batchOrderIds) {
+            const { error: batchUpdateErr } = await supabase
+              .from("translation_orders")
+              .update({
+                payment_status: "paid",
+                paid_at: new Date().toISOString(),
+              })
+              .eq("id", batchOrderId);
+
+            if (batchUpdateErr) {
+              console.error("[parcelow-webhook] Failed to update translation_order " + batchOrderId, batchUpdateErr);
+            } else {
+              console.log("[parcelow-webhook] Translation order " + batchOrderId + " marked as paid (batch)");
+            }
+          }
+          // Send confirmation email for first order in batch (fire-and-forget)
+          if (batchOrderIds.length > 0) {
+            const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
+            sendPaymentConfirmedEmails(supabase, batchOrderIds[0], 'parcelow', supportEmail);
           }
           break;
         }

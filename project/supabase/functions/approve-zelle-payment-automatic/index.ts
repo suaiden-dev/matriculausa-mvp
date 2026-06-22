@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 // @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan } from "../utils/installmentHelper.ts";
+import { sendZelleReceivedEmail, sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 // @ts-ignore
 declare const Deno: any;
@@ -949,26 +950,42 @@ Deno.serve(async (req: Request) => {
 
       const { data: zp } = await supabaseClient
         .from('zelle_payments')
-        .select('metadata')
+        .select('metadata, amount')
         .eq('id', paymentId)
         .maybeSingle()
 
+      const batchOrderIdsStr = zp?.metadata?.batch_order_ids
       const translationOrderId = zp?.metadata?.translation_order_id
-      if (!translationOrderId) {
-        console.error('❌ [approve-zelle-payment-automatic] translation_order_id não encontrado no metadata')
-      } else {
-        const { error: orderError } = await supabaseClient
-          .from('translation_orders')
-          .update({
-            payment_status: 'paid',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', translationOrderId)
+      const zelleAmount: number = parseFloat(zp?.amount ?? '0') || 0
 
-        if (orderError) {
-          console.error('❌ [approve-zelle-payment-automatic] Erro ao atualizar translation_orders:', orderError)
-        } else {
-          console.log('✅ [approve-zelle-payment-automatic] translation_order marcada como paga:', translationOrderId)
+      const orderIds = batchOrderIdsStr
+        ? batchOrderIdsStr.split(',').filter(Boolean)
+        : (translationOrderId ? [translationOrderId] : [])
+
+      // Send "Zelle received" email before analysis (fire-and-forget)
+      if (orderIds.length > 0) {
+        sendZelleReceivedEmail(supabaseClient, orderIds[0], user_id, zelleAmount);
+      }
+
+      if (orderIds.length === 0) {
+        console.error('❌ [approve-zelle-payment-automatic] Nenhum translation_order_id ou batch_order_ids encontrado no metadata')
+      } else {
+        const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com';
+        for (const orderId of orderIds) {
+          const { error: orderError } = await supabaseClient
+            .from('translation_orders')
+            .update({
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+            })
+            .eq('id', orderId)
+
+          if (orderError) {
+            console.error(`❌ [approve-zelle-payment-automatic] Erro ao atualizar translation_orders para ID ${orderId}:`, orderError)
+          } else {
+            console.log(`✅ [approve-zelle-payment-automatic] translation_order marcada como paga: ${orderId}`)
+            sendPaymentConfirmedEmails(supabaseClient, orderId, 'zelle', supportEmail, zelleAmount || undefined);
+          }
         }
       }
     }
