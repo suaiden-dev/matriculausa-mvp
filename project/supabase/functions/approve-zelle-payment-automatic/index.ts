@@ -76,6 +76,65 @@ Deno.serve(async (req: Request) => {
       throw new Error('Required parameters: user_id, fee_type_global')
     }
 
+    // Direct translation approval path (admin button / zelleOrchestrator) — skip zelle_payments entirely
+    if (direct_translation_order_id && normalizedFeeTypeGlobal === 'translation') {
+      console.log('🔑 [approve-zelle-payment-automatic] Direct translation approval shortcut for order:', direct_translation_order_id)
+
+      const { data: baseOrder } = await supabaseClient
+        .from('translation_orders')
+        .select('id, payment_reference, total_price')
+        .eq('id', direct_translation_order_id)
+        .maybeSingle()
+
+      let orderIds: string[] = []
+      let zelleAmount = 0
+
+      if (baseOrder?.payment_reference) {
+        const { data: siblings } = await supabaseClient
+          .from('translation_orders')
+          .select('id, total_price')
+          .eq('payment_reference', baseOrder.payment_reference)
+          .eq('user_id', user_id)
+          .neq('payment_status', 'paid')
+        orderIds = siblings?.map((x: any) => x.id) ?? [baseOrder.id]
+        zelleAmount = siblings?.reduce((s: number, x: any) => s + Number(x.total_price), 0) ?? Number(baseOrder.total_price)
+      } else if (baseOrder) {
+        orderIds = [baseOrder.id]
+        zelleAmount = Number(baseOrder.total_price)
+      }
+
+      const { data: zelleUserProfile } = await supabaseClient
+        .from('user_profiles').select('id').eq('user_id', user_id).maybeSingle()
+
+      const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com'
+      for (const orderId of orderIds) {
+        const { error: orderError } = await supabaseClient
+          .from('translation_orders')
+          .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+          .eq('id', orderId)
+        if (orderError) {
+          console.error(`❌ [approve-zelle] Direct: failed to mark order ${orderId} as paid:`, orderError)
+        } else {
+          sendPaymentConfirmedEmails(supabaseClient, orderId, 'zelle', supportEmail, zelleAmount || undefined)
+          if (zelleUserProfile) {
+            supabaseClient.rpc('log_student_action', {
+              p_student_id: zelleUserProfile.id,
+              p_action_type: 'translation_payment_received',
+              p_action_description: `Translation payment confirmed via Zelle — order #${orderId.slice(0, 8)}`,
+              p_performed_by: user_id,
+              p_performed_by_type: 'student',
+              p_metadata: { translation_order_id: orderId, payment_method: 'zelle', amount: zelleAmount },
+            }).catch((e: any) => console.error('[approve-zelle] log failed:', e?.message))
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, approved: orderIds.length }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      })
+    }
+
     // 1. Buscar ou criar o pagamento na tabela zelle_payments
     console.log('📝 [approve-zelle-payment-automatic] Buscando pagamento existente...')
     
