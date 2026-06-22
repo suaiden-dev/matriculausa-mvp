@@ -475,10 +475,48 @@ const QuickRegistration: React.FC = () => {
         codeType: 'seller',
       });
     } else if (code) {
-      setCouponCode(code);
-      handleValidateCoupon(code);
+      handleValidateAnyCode(code);
     }
-  }, [location.search]);
+  }, [location.search, baseFee, supabaseUser]);
+
+  const handleValidateAnyCode = async (code: string) => {
+    if (!code) return;
+    const targetCode = code.trim().toUpperCase();
+    
+    // Tenta primeiro validar como Cupom Promocional (Admin)
+    const { data: promoResult, error: promoError } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+      p_code: targetCode,
+      p_fee_type: 'selection_process',
+      p_user_id: supabaseUser?.id || null
+    });
+
+    if (!promoError && promoResult?.valid) {
+      // Sucesso! É um cupom promocional
+      setPromotionalCoupon(targetCode);
+      let dAmount = 0;
+      if (promoResult.discount_type === 'percentage') {
+        dAmount = (baseFee * promoResult.discount_value) / 100;
+      } else {
+        dAmount = promoResult.discount_value;
+      }
+      dAmount = Math.min(dAmount, baseFee);
+      const fAmount = Math.max(0, baseFee - dAmount);
+
+      setPromotionalCouponValidation({
+        isValid: true,
+        message: `Cupom ${targetCode} aplicado! Você economizou $${dAmount.toFixed(2)}`,
+        discountAmount: dAmount,
+        finalAmount: fAmount,
+        couponId: promoResult.id
+      });
+      return;
+    }
+
+    // Se falhar como promocional, valida como agência/referral
+    setCouponCode(targetCode);
+    setHasReferralCode(true);
+    await validateDiscountCode(targetCode);
+  };
 
   const handleValidateCoupon = async (code: string) => {
     if (!code) return;
@@ -655,8 +693,9 @@ const QuickRegistration: React.FC = () => {
     }
   };
 
-  const validatePromotionalCoupon = async () => {
-    if (!promotionalCoupon.trim()) {
+  const validatePromotionalCoupon = async (codeToValidate?: string | React.MouseEvent) => {
+    const actualCode = typeof codeToValidate === 'string' ? codeToValidate : promotionalCoupon;
+    if (!actualCode.trim()) {
       setPromotionalCouponValidation({
         isValid: false,
         message: 'Please enter a coupon code'
@@ -664,7 +703,7 @@ const QuickRegistration: React.FC = () => {
       return;
     }
 
-    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    const normalizedCode = actualCode.trim().toUpperCase();
 
     setIsValidatingPromotionalCoupon(true);
     setPromotionalCouponValidation(null);
