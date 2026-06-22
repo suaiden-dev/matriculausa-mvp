@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Languages, RefreshCw, Download, Search, ExternalLink, CheckCircle,
   Clock, AlertCircle, FileText, RotateCcw, Eye, X, FileDown,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Loader2,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -69,6 +69,30 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
 const TX_NOT_SENT = '__not_sent__';
 const TX_SENT = '__sent__';
 const TX_FIXED = [TX_NOT_SENT, TX_SENT, 'Em Tradução', 'Em Revisão', 'Em Certificação', 'Finalizado', 'Cancelado'];
+
+async function openStorageFile(path: string, download = false) {
+  if (path.startsWith('http')) {
+    if (download) {
+      const a = document.createElement('a');
+      a.href = path;
+      a.download = '';
+      a.click();
+    } else {
+      window.open(path, '_blank');
+    }
+    return;
+  }
+  const { data } = await supabase.storage.from('document-attachments').createSignedUrl(path, 3600);
+  if (!data?.signedUrl) return;
+  if (download) {
+    const a = document.createElement('a');
+    a.href = data.signedUrl;
+    a.download = path.split('/').pop() || 'document';
+    a.click();
+  } else {
+    window.open(data.signedUrl, '_blank');
+  }
+}
 
 function txStateKey(o: TranslationOrder): string {
   if (!o.alpha_project_number) return TX_NOT_SENT;
@@ -251,9 +275,52 @@ const Field: React.FC<{ label: string; value: React.ReactNode }> = ({ label, val
 
 // ─── OrderModal ───────────────────────────────────────────────────────────────
 
-const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void }> = ({ order: o, onClose }) => {
+const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRefresh?: () => void }> = ({ order: o, onClose, onRefresh }) => {
   const [certViewFile, setCertViewFile] = useState<CertFile | null>(null);
+  const [simulating, setSimulating] = useState(false);
+  const [approving, setApproving] = useState(false);
   const txKey = txStateKey(o);
+
+  const handleApproveZelle = async () => {
+    if (!confirm(`Approve Zelle payment for this order?\n\nThis will mark it as paid and send a confirmation email to the student.`)) return;
+    setApproving(true);
+    try {
+      const { error } = await supabase.functions.invoke('approve-zelle-payment-automatic', {
+        body: {
+          user_id: o.user_id,
+          fee_type_global: 'translation',
+          direct_translation_order_id: o.id,
+        },
+      });
+      if (error) throw new Error(error.message);
+      alert('✅ Payment approved. Confirmation email sent to the student.');
+      onRefresh?.();
+      onClose();
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleSimulateFinalization = async () => {
+    if (!confirm('Simular finalização Alpha para este pedido? Isso vai rodar o fluxo completo de mirror + resubmit com o documento original como "traduzido".')) return;
+    setSimulating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('simulate-alpha-finalization', {
+        body: { translation_order_id: o.id },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
+      alert('✅ Simulação concluída! Recarregue a página para ver o resultado.');
+      onRefresh?.();
+      onClose();
+    } catch (e: any) {
+      alert(`Erro: ${e.message}`);
+    } finally {
+      setSimulating(false);
+    }
+  };
   const certFiles: CertFile[] = o.certified_files && Array.isArray(o.certified_files) && o.certified_files.length > 0
     ? o.certified_files
     : o.certified_file_url
@@ -365,8 +432,18 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void }> = (
                       {o.payment_status === 'paid' ? 'Pago' : o.payment_reference ? 'Processando' : 'Pendente'}
                     </span>
                   } />
-                  {o.payment_reference && <Field label="Referência" value={<span className="font-mono text-xs">{o.payment_reference}</span>} />}
+                  {o.payment_reference && <Field label="Referência" value={<span className="font-mono text-xs break-all">{o.payment_reference}</span>} />}
                 </div>
+                {o.payment_method === 'zelle' && o.payment_reference && o.payment_status !== 'paid' && (
+                  <button
+                    onClick={handleApproveZelle}
+                    disabled={approving}
+                    className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {approving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    {approving ? 'Approving…' : 'Approve Zelle Payment'}
+                  </button>
+                )}
               </section>
 
               {/* Documento original */}
@@ -382,14 +459,14 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void }> = (
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <a href={o.document_url} target="_blank" rel="noopener noreferrer"
+                      <button onClick={() => openStorageFile(o.document_url!)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#05294E] px-3 py-2 text-xs font-semibold text-white hover:bg-[#041d38] transition-colors">
                         <ExternalLink className="h-3.5 w-3.5" /> Ver
-                      </a>
-                      <a href={o.document_url} download
+                      </button>
+                      <button onClick={() => openStorageFile(o.document_url!, true)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
                         <Download className="h-3.5 w-3.5" /> Baixar
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -432,6 +509,16 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void }> = (
                       <p className="mt-1.5 text-xs text-gray-500">
                         Status: <span className="font-semibold text-gray-700">{txDisplay(txStateKey(o))}</span>
                       </p>
+                    )}
+                    {o.payment_status === 'paid' && o.document_url && (
+                      <button
+                        onClick={handleSimulateFinalization}
+                        disabled={simulating}
+                        className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-orange-300 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-600 hover:bg-orange-100 transition-colors disabled:opacity-50"
+                      >
+                        {simulating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        {simulating ? 'Simulando...' : 'Simular Finalização (teste)'}
+                      </button>
                     )}
                   </div>
                 )}
@@ -795,7 +882,7 @@ const TranslationsManagement: React.FC = () => {
       )}
 
       {/* Modal */}
-      {modalOrder && <OrderModal order={modalOrder} onClose={() => setModalOrder(null)} />}
+      {modalOrder && <OrderModal order={modalOrder} onClose={() => setModalOrder(null)} onRefresh={fetchOrders} />}
     </div>
   );
 };
