@@ -238,6 +238,7 @@ function PaymentCell({ order, t, onZelleProof, onCancelOrder }: {
   onCancelOrder?: (orderId: string) => void;
 }) {
   const isPaid = order.payment_status === 'paid';
+  const isZellePending = order.payment_method === 'zelle' && !!order.payment_reference && !isPaid;
   const [stripeLoading, setStripeLoading] = useState(false);
   const [parcelowLoading, setParcelowLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -276,6 +277,15 @@ function PaymentCell({ order, t, onZelleProof, onCancelOrder }: {
   };
 
   if (isPaid) return <span className={BADGE}>{t('translationsPage.paid') || 'Pago'}</span>;
+
+  if (isZellePending) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0 animate-pulse" />
+        Awaiting approval
+      </span>
+    );
+  }
 
   if (confirming) {
     return (
@@ -671,7 +681,7 @@ const Translations: React.FC = () => {
                         return (
                           <tr
                             key={o.id}
-                            className={o.payment_status !== 'paid' ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : 'hover:bg-gray-50/70 transition-colors'}
+                            className={o.payment_status !== 'paid' && !(o.payment_method === 'zelle' && o.payment_reference) ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : 'hover:bg-gray-50/70 transition-colors'}
                           >
                             <td className="px-6 py-4">
                               <p className="font-semibold text-gray-900 truncate max-w-[200px]">{o.original_filename}</p>
@@ -838,7 +848,7 @@ const Translations: React.FC = () => {
                     return (
                       <div
                         key={o.id}
-                        className={`px-4 py-4 space-y-2.5 ${o.payment_status !== 'paid' ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : ''}`}
+                        className={`px-4 py-4 space-y-2.5 ${o.payment_status !== 'paid' && !(o.payment_method === 'zelle' && o.payment_reference) ? 'border-l-2 border-l-amber-300 bg-amber-50/20' : ''}`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
