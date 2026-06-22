@@ -150,7 +150,7 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
                             <span className="font-medium">{scholarship?.field_of_study || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Annual Value:</span>{' '}
+                            <span className="text-slate-500">Semester Value:</span>{' '}
                             <span className="font-medium">
                               {(() => {
                                 const v = scholarship?.annual_value_with_scholarship;

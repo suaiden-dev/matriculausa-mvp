@@ -21,6 +21,7 @@ docs/translation-*.md
 .claude/skills/
 skills-lock.json
 CLAUDE.md
+.mcp.json
 
 # Build / temp outputs
 graphify-out/

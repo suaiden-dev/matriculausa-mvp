@@ -382,11 +382,11 @@ const ScholarshipDetail: React.FC = () => {
     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100/60 text-left space-y-4">
       <div>
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block mb-1">
-          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Anual (Sem Bolsa)')}
+          {t('scholarshipsPage.detail.regularAnnualCost', 'Investimento Semestral (Sem Bolsa)')}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-bold text-slate-400 line-through decoration-red-400/80">${formatAmount(scholarship.original_annual_value)}</span>
-          <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+          <span className="text-xs font-medium text-slate-400">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
         </div>
       </div>
 
@@ -396,13 +396,13 @@ const ScholarshipDetail: React.FC = () => {
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-3xl sm:text-4xl font-black text-green-700">${formatAmount(scholarship.annual_value_with_scholarship)}</span>
-          <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/ano')}</span>
+          <span className="text-xs font-bold text-slate-500">{t('scholarshipsPage.detail.perYear', '/semestre')}</span>
         </div>
       </div>
 
       <div>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-700 rounded-lg text-[11px] font-bold uppercase tracking-widest">
-          {t('scholarshipsPage.detail.annualSavingsBadge', { amount: formatAmount(annualSavings), defaultValue: `Economia de $${formatAmount(annualSavings)}/ano` })}
+          {t('scholarshipsPage.detail.annualSavingsBadge', { amount: formatAmount(annualSavings), defaultValue: `Economia de $${formatAmount(annualSavings)}/semestre` })}
         </span>
       </div>
 
@@ -509,55 +509,66 @@ const ScholarshipDetail: React.FC = () => {
       </div>
 
       {/* Pré-Requisitos e Elegibilidade */}
-      {(scholarship.min_gpa || scholarship.min_english_proficiency || scholarship.requirements) && (
-        <div className="p-5 space-y-4">
-          <h4 className="text-xs font-black uppercase tracking-widest text-[#05294E] pb-1">
-            {t('scholarshipsPage.detail.prerequisites', 'Pré-Requisitos e Elegibilidade')}
-          </h4>
+      {(() => {
+        const levelDocs: string[] = [];
+        switch (scholarship.level?.toLowerCase()) {
+          case 'undergraduate': levelDocs.push('High School Diploma'); break;
+          case 'graduate':      levelDocs.push("Bachelor's Diploma"); break;
+          case 'doctorate':     levelDocs.push("Master's Diploma"); break;
+        }
+        levelDocs.push('Proof of Funds');
 
-          <div className="space-y-3 text-sm">
-            {scholarship.min_gpa && (
+        const extraReqs: string[] = Array.isArray(scholarship.requirements)
+          ? scholarship.requirements.filter(Boolean)
+          : scholarship.requirements ? [scholarship.requirements] : [];
+
+        return (
+          <div className="p-5 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#05294E] pb-1">
+              {t('scholarshipsPage.detail.prerequisites', 'Pré-Requisitos e Elegibilidade')}
+            </h4>
+
+            <div className="space-y-3">
+              {/* Documentos obrigatórios derivados do nível acadêmico */}
               <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
-                  {t('scholarshipsPage.detail.minGPA', 'GPA Mínimo Acadêmico')}
-                </span>
-                <span className="font-bold text-slate-700">{Number(scholarship.min_gpa).toFixed(1)} / 4.0</span>
-              </div>
-            )}
-
-            {scholarship.min_english_proficiency && (
-              <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
-                  {t('scholarshipsPage.detail.englishProficiency', 'Proficiência em Inglês')}
-                </span>
-                <span className="font-bold text-slate-700">
-                  {t(`dashboard:profileManagement.form.fields.${scholarship.min_english_proficiency}`, { defaultValue: scholarship.min_english_proficiency })}
-                </span>
-              </div>
-            )}
-
-            {scholarship.requirements && (
-              <div className="pt-2 border-t border-slate-100">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                  {t('scholarshipsPage.detail.academicRequirements', 'Exigências Acadêmicas')}
+                  {t('scholarshipsPage.detail.requiredDocuments', 'Required Documents')}
                 </span>
-                <ul className="space-y-2 text-xs text-slate-600 font-medium">
-                  {Array.isArray(scholarship.requirements) ? (
-                    scholarship.requirements.map((req: string, idx: number) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {levelDocs.map((doc) => (
+                    <span
+                      key={doc}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-bold rounded-lg"
+                    >
+                      {doc}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium mt-2 leading-relaxed">
+                  Proof of Funds: min. <strong className="text-slate-500">$22,000 USD</strong> + <strong className="text-slate-500">$5,000 USD</strong> por dependente.
+                </p>
+              </div>
+
+              {/* Requisitos adicionais cadastrados na bolsa */}
+              {extraReqs.length > 0 && (
+                <div className="pt-3 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                    {t('scholarshipsPage.detail.academicRequirements', 'Requisitos')}
+                  </span>
+                  <ul className="space-y-2 text-xs text-slate-600 font-medium">
+                    {extraReqs.map((req: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-1.5">
                         <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-1.5 flex-shrink-0" />
                         <span>{req}</span>
                       </li>
-                    ))
-                  ) : (
-                    <li className="whitespace-pre-line leading-relaxed">{scholarship.requirements}</li>
-                  )}
-                </ul>
-              </div>
-            )}
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 
@@ -1089,14 +1100,14 @@ const ScholarshipDetail: React.FC = () => {
                         {/* Left Side: Original Cost & Savings Badge */}
                         <div className="flex flex-col text-left">
                           <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
-                            {t('scholarshipsPage.detail.annualCost', 'Investimento Anual')}
+                            {t('scholarshipsPage.detail.annualCost', 'Investimento Semestral')}
                           </span>
                           <span className="text-sm font-bold text-slate-400 line-through leading-tight">
                             ${formatAmount(rec.original_annual_value)}
                           </span>
                           {recAnnualSavings > 0 && (
                             <span className="inline-flex items-center w-fit text-[10px] font-black text-green-700 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-xl mt-2 uppercase tracking-wider">
-                              -{t('scholarshipsPage.detail.annualSavings', 'Economia Anual').split(' ')[0]} ${formatAmount(recAnnualSavings)}
+                              -{t('scholarshipsPage.detail.annualSavings', 'Economia Semestral').split(' ')[0]} ${formatAmount(recAnnualSavings)}
                             </span>
                           )}
                         </div>
@@ -1111,7 +1122,7 @@ const ScholarshipDetail: React.FC = () => {
                               ${formatAmount(rec.annual_value_with_scholarship)}
                             </span>
                             <span className="text-xs font-bold text-slate-500 ml-0.5">
-                              {t('scholarshipsPage.detail.perYear', '/ano')}
+                              {t('scholarshipsPage.detail.perYear', '/semestre')}
                             </span>
                           </div>
                         </div>

@@ -157,7 +157,7 @@ const ScholarshipInfoDisplay: React.FC<ScholarshipInfoDisplayProps> = ({ scholar
                 
                 {scholarship.annual_value_with_scholarship && (
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-xs text-slate-600">Annual Value</span>
+                    <span className="text-xs text-slate-600">Semester Value</span>
                     <span className="text-sm font-medium text-slate-700">
                       {formatCurrency(scholarship.annual_value_with_scholarship)}
                     </span>

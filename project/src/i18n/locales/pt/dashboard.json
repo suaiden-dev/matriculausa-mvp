@@ -296,8 +296,8 @@
         "studyMode": "Modalidade do Curso",
         "workAuthorization": "Autorização de Trabalho",
         "financialOverview": "Visão Geral Financeira",
-        "originalPrice": "Preço Original por ano:",
-        "withScholarship": "Com Bolsa por ano:",
+        "originalPrice": "Preço Original por semestre:",
+        "withScholarship": "Com Bolsa por semestre:",
         "perCredit": "Por Crédito:",
         "level": "Nível",
         "deadline": "Prazo",
@@ -572,9 +572,9 @@
       },
       "rejectionReason": "Motivo:",
       "scholarshipDetails": {
-        "annualScholarshipValue": "Valor Anual da Bolsa",
+        "annualScholarshipValue": "Valor Semestral da Bolsa",
         "applicationDate": "Data da Aplicação",
-        "annualValue": "Valor anual",
+        "annualValue": "Valor semestral",
         "appliedOn": "Aplicado em"
       },
       "rejectedApplication": {
@@ -588,7 +588,7 @@
       },
       "general": {
         "value": "Valor",
-        "annualValue": "Valor Anual",
+        "annualValue": "Valor Semestral",
         "accessYourApplication": "Acesse Sua Candidatura"
       }
     },
@@ -963,11 +963,11 @@
         "view": "Visualizar",
         "download": "Baixar",
         "finance": {
-          "originalAnnualCost": "Investimento Anual Original",
+          "originalAnnualCost": "Investimento Semestral Original",
           "withExclusiveScholarship": "Com Bolsa Exclusiva",
-          "perYear": "/ano",
+          "perYear": "/semestre",
           "perCredit": "Por Crédito",
-          "guaranteedAnnualSavings": "Economia Anual Garantida",
+          "guaranteedAnnualSavings": "Economia Semestral Garantida",
           "financialSummary": "Resumo Financeiro"
         },
         "institution": {

@@ -457,7 +457,7 @@ const AdminScholarshipEdit: React.FC = () => {
     if (
       formData.original_annual_value && isNaN(Number(formData.original_annual_value))
     ) {
-      setError('Only numbers are allowed in Original Annual Value');
+      setError('Only numbers are allowed in Original Semester Value');
       setLoading(false);
       return;
     }
@@ -471,7 +471,7 @@ const AdminScholarshipEdit: React.FC = () => {
     if (
       formData.annual_value_with_scholarship && isNaN(Number(formData.annual_value_with_scholarship))
     ) {
-      setError('Only numbers are allowed in Annual Value With Scholarship');
+      setError('Only numbers are allowed in Semester Value With Scholarship');
       setLoading(false);
       return;
     }
@@ -934,7 +934,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Original Annual Value (USD)
+                    Original Semester Value (USD)
                   </label>
                   <input
                     type="number"
@@ -1001,7 +1001,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Annual Value With Scholarship (USD)
+                    Semester Value With Scholarship (USD)
                   </label>
                   <input
                     type="number"

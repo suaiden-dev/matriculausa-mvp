@@ -1806,7 +1806,7 @@ const SelectionProcess: React.FC = () => {
                                 <div className="flex items-start space-x-3">
                                   <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                                   <div className="flex-1">
-                                    <dt className="text-sm font-medium text-slate-600">Annual Value</dt>
+                                    <dt className="text-sm font-medium text-slate-600">Semester Value</dt>
                                     <dd className="text-2xl font-bold text-[#05294E]">
                                       ${Number(selectedStudent.scholarships.annual_value_with_scholarship ?? 0).toLocaleString()}
                                     </dd>

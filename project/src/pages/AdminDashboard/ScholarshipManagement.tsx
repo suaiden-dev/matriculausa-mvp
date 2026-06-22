@@ -716,7 +716,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <div className="flex flex-col gap-4 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">Annual Value With Scholarship</p>
+                        <p className="text-sm font-medium text-slate-500 mb-1">Semester Value With Scholarship</p>
                         <p className="text-2xl font-bold text-green-600">
                           {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
                         </p>

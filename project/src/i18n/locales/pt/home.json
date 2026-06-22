@@ -408,6 +408,10 @@
       "q12": {
         "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
         "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
+      },
+      "q13": {
+        "question": "Preciso comprovar que tenho fundos para estudar?",
+        "answer": "Sim. Antes de terminar seu processo você deve enviar um extrato bancário (bank statement) comprovando ter pelo menos US$ 22.000 disponíveis."
       }
     },
     "mockups": {
@@ -416,9 +420,9 @@
       "selectedCount": "4 / 4 Selecionados",
       "undergraduate": "Graduação",
       "graduate": "Mestrado",
-      "year": "ano",
+      "year": "semestre",
       "exclusive": "Exclusiva",
-      "originalTuition": "Anuidade Original",
+      "originalTuition": "Semestralidade Original",
       "withScholarship": "Com Bolsa de Estudo",
       "guaranteedDiscount": "Desconto Garantido",
       "approved": "Aprovado",
@@ -430,6 +434,7 @@
       "academicTranscripts": "Histórico Escolar",
       "underReview": "Em Análise",
       "financialStatement": "Comprovante Financeiro",
+      "financialStatementMin": "Mín. US$ 22.000",
       "uploading": "Enviando...",
       "officeAdmissions": "Escritório de Admissões",
       "congratulations": "Parabéns!",

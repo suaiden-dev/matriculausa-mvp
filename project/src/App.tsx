@@ -14,7 +14,6 @@ import Scholarships from './pages/Scholarships';
 import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
-import ProcessoDetalhado from './pages/ProcessoDetalhado';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
 import ScholarshipFeeSuccess from './pages/StudentDashboard/ScholarshipFeeSuccess';
@@ -79,6 +78,8 @@ const SellerAcceptInvite = React.lazy(() => import('./pages/SellerAcceptInvite')
 const AgencyTermsAndConditions = React.lazy(() => import('./pages/AgencyTermsAndConditions'));
 const AffiliateTermsAndConditions = React.lazy(() => import('./pages/AffiliateTermsAndConditions'));
 const BioPage = React.lazy(() => import('./pages/Bio'));
+const MissaoCalifornia = React.lazy(() => import('./pages/initial/MissaoCalifornia'));
+const CaliforniaDreams = React.lazy(() => import('./pages/initial/CaliforniaDreams'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -152,8 +153,10 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/processo-detalhado" element={<ProcessoDetalhado />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
+          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
+          <Route path="/initial/california-mission" element={<MissaoCalifornia />} />
+          <Route path="/initial/california-dreams" element={<CaliforniaDreams />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/onboarding" element={<StudentOnboarding />} />

@@ -26,7 +26,7 @@ interface Question {
 const preQualificationQuestions: Record<QuestionId, Question> = {
   lead_name: {
     id: 'lead_name',
-    title: 'Descubra as bolsas feitas para você',
+    title: 'Descubra se você é elegível a uma bolsa nos EUA',
     type: 'lead_capture'
   },
   lead_contact: {
@@ -563,7 +563,7 @@ const PreQualificationLanding: React.FC = () => {
                     </h1>
                     <p className="text-slate-500 text-base md:text-lg leading-relaxed">
                       {currentStep === 'lead_name' 
-                        ? 'Responda algumas perguntas e veja quais oportunidades combinam com o seu perfil, de forma rápida e segura.' 
+                        ? 'Milhares de estudantes brasileiros são elegíveis e nem sabem. Faça o teste agora e descubra o seu perfil!' 
                         : 'Para facilitar nossa comunicação e garantir que você receba todos os detalhes dos seus resultados, precisamos apenas do seu contato.'}
                     </p>
                   </div>
