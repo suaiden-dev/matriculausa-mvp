@@ -21,9 +21,7 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
     (app: any) => app.is_application_fee_paid || app.status === 'approved' || app.status === 'enrolled'
   );
 
-  if (!student.scholarship_title && !approvedApplication) {
-    return null;
-  }
+  const hasSelection = !!student.scholarship_title || !!approvedApplication;
 
   const scholarship = approvedApplication?.scholarships
     ? (Array.isArray(approvedApplication.scholarships) ? approvedApplication.scholarships[0] : approvedApplication.scholarships)
@@ -38,7 +36,7 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
           <Award className="w-6 h-6 mr-3" />
           Selected Scholarship
         </h2>
-        {scholarshipId && (
+        {hasSelection && scholarshipId && (
           <button
             onClick={() => navigate(`/admin/dashboard/scholarships/view/${scholarshipId}`)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors"
@@ -48,41 +46,53 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
           </button>
         )}
       </div>
-      <div className="p-6 space-y-3">
-        <div>
-          <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-          <div className="flex items-center gap-2 mt-1">
-            <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
-            {student.source === 'migma' && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
-                Migma
-              </span>
-            )}
+      {hasSelection ? (
+        <div className="p-6 space-y-3">
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+            <div className="flex items-center gap-2 mt-1">
+              <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
+              {student.source === 'migma' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                  Migma
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">University</dt>
+            <dd className="text-lg font-semibold text-slate-900 flex items-center">
+              <Building className="w-4 h-4 mr-1" />
+              {student.university_name}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Course</dt>
+            <dd className="text-base font-semibold text-slate-900">
+              {scholarship?.field_of_study || 'N/A'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Semester Value (with Scholarship)</dt>
+            <dd className="text-base font-semibold text-slate-900">
+              {(() => {
+                const v = scholarship?.annual_value_with_scholarship;
+                return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+              })()}
+            </dd>
           </div>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-600">University</dt>
-          <dd className="text-lg font-semibold text-slate-900 flex items-center">
-            <Building className="w-4 h-4 mr-1" />
-            {student.university_name}
-          </dd>
+      ) : (
+        <div className="p-6">
+          <div className="text-center py-4">
+            <div className="mx-auto w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+              <Award className="w-5 h-5 text-slate-400" />
+            </div>
+            <p className="text-sm font-medium text-slate-500">No scholarship selected yet</p>
+            <p className="text-xs text-slate-400 mt-1">The student hasn't confirmed which scholarship they want to proceed with.</p>
+          </div>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-600">Course</dt>
-          <dd className="text-base font-semibold text-slate-900">
-            {scholarship?.field_of_study || 'N/A'}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-600">Semester Value (with Scholarship)</dt>
-          <dd className="text-base font-semibold text-slate-900">
-            {(() => {
-              const v = scholarship?.annual_value_with_scholarship;
-              return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
-            })()}
-          </dd>
-        </div>
-      </div>
+      )}
     </div>
   );
 }, (prevProps, nextProps) => {

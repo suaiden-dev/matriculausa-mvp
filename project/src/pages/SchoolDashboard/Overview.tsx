@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -80,7 +80,7 @@ const Overview: React.FC = () => {
             acceptance_letter_url,
             is_application_fee_paid,
             student_id,
-            user_profiles!student_id(full_name, email),
+            user_profiles!student_id(full_name, email, selected_application_id, is_dropped),
             scholarships!inner(id, title, university_id)
           `)
           .in('scholarships.university_id', universityIds)
@@ -119,85 +119,121 @@ const Overview: React.FC = () => {
           }
         }
 
-        // 4. Map & consolidate pending items per application
+        // 4. Group applications by student, then consolidate pending items per student
+        const studentAppsMap = new Map<string, { student: any; apps: any[] }>();
+        (activeApps || []).forEach((app: any) => {
+          const studentId = app.student_id;
+          if (!studentId) return;
+          if (!studentAppsMap.has(studentId)) {
+            studentAppsMap.set(studentId, { student: app.user_profiles, apps: [] });
+          }
+          studentAppsMap.get(studentId)!.apps.push(app);
+        });
+
         const consolidatedActions: any[] = [];
 
-        (activeApps || []).forEach((app: any) => {
-          const studentName = app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown Student';
-          const scholarshipTitle = app.scholarships?.title || 'Scholarship Opportunity';
+        studentAppsMap.forEach(({ student, apps }) => {
+          if (student?.is_dropped) return;
 
-          // Action: Eligibility Review
-          if (app.status === 'pending' || app.status === 'under_review') {
+          const selectedAppId = student?.selected_application_id;
+          if (selectedAppId) {
+            const choseThisUniversity = apps.some((a: any) => a.id === selectedAppId);
+            if (!choseThisUniversity) return;
+            apps = apps.filter((a: any) => a.id === selectedAppId);
+          }
+          const studentName = student?.full_name || student?.email || 'Unknown Student';
+          // Pick main application (enrolled > fee paid > approved > first)
+          const mainApp =
+            apps.find((a: any) => a.status === 'enrolled') ||
+            apps.find((a: any) => a.is_application_fee_paid) ||
+            apps.find((a: any) => a.status === 'approved') ||
+            apps[0];
+          const scholarshipTitle = apps.length > 1
+            ? `${mainApp.scholarships?.title || 'Scholarship'} (+${apps.length - 1})`
+            : (mainApp.scholarships?.title || 'Scholarship Opportunity');
+
+          // Action: Eligibility Review (once per student if any app is pending/under_review)
+          const pendingApps = apps.filter((a: any) => a.status === 'pending' || a.status === 'under_review');
+          if (pendingApps.length > 0) {
             consolidatedActions.push({
-              id: `review_${app.id}`,
-              applicationId: app.id,
+              id: `review_${mainApp.id}`,
+              applicationId: mainApp.id,
               studentName,
               scholarshipTitle,
               type: 'eligibility',
               label: 'Eligibility Review',
-              description: 'Awaiting scholarship eligibility evaluation.',
-              date: app.created_at
+              description: pendingApps.length > 1
+                ? `${pendingApps.length} scholarships awaiting eligibility evaluation.`
+                : 'Awaiting scholarship eligibility evaluation.',
+              date: pendingApps[0].created_at
             });
           }
 
-          // Action: Basic Documents Review
-          const docs = Array.isArray(app.documents) ? app.documents : [];
-          const basicDocsUnderReview = docs.filter((d: any) => d.status === 'under_review');
-          if (basicDocsUnderReview.length > 0) {
+          // Action: Basic Documents Review (aggregate across all apps)
+          const totalBasicDocsUnderReview = apps.reduce((count: number, a: any) => {
+            const docs = Array.isArray(a.documents) ? a.documents : [];
+            return count + docs.filter((d: any) => d.status === 'under_review').length;
+          }, 0);
+          if (totalBasicDocsUnderReview > 0) {
             consolidatedActions.push({
-              id: `basic_docs_${app.id}`,
-              applicationId: app.id,
+              id: `basic_docs_${mainApp.id}`,
+              applicationId: mainApp.id,
               studentName,
               scholarshipTitle,
               type: 'basic_docs',
               label: 'Basic Docs Approval',
-              description: `${basicDocsUnderReview.length} basic document(s) pending approval.`,
-              date: basicDocsUnderReview[0].uploaded_at || app.created_at
+              description: `${totalBasicDocsUnderReview} basic document(s) pending approval.`,
+              date: mainApp.created_at
             });
           }
 
-          // Action: Additional Documents Review (from requested uploads)
-          const specificUploads = pendingUploads.filter(up => up.document_requests?.scholarship_application_id === app.id);
-          if (specificUploads.length > 0) {
+          // Action: Additional Documents Review (aggregate across all apps)
+          const totalSpecificUploads = apps.reduce((count: number, a: any) => {
+            return count + pendingUploads.filter(up => up.document_requests?.scholarship_application_id === a.id).length;
+          }, 0);
+          if (totalSpecificUploads > 0) {
             consolidatedActions.push({
-              id: `additional_docs_${app.id}`,
-              applicationId: app.id,
+              id: `additional_docs_${mainApp.id}`,
+              applicationId: mainApp.id,
               studentName,
               scholarshipTitle,
               type: 'additional_docs',
               label: 'Requested Docs Approval',
-              description: `${specificUploads.length} requested document(s) pending approval.`,
-              date: specificUploads[0].uploaded_at || app.created_at
+              description: `${totalSpecificUploads} requested document(s) pending approval.`,
+              date: mainApp.created_at
             });
           }
 
-          // Action: Acceptance Letter Upload
-          const needsAcceptanceLetter = app.is_application_fee_paid && 
-                                        (!app.acceptance_letter_url || app.acceptance_letter_status !== 'sent');
-          if (needsAcceptanceLetter && app.status === 'approved') {
+          // Action: Acceptance Letter Upload (once per student, from main approved app)
+          const approvedApp = apps.find((a: any) =>
+            a.status === 'approved' && a.is_application_fee_paid &&
+            (!a.acceptance_letter_url || a.acceptance_letter_status !== 'sent')
+          );
+          if (approvedApp) {
             consolidatedActions.push({
-              id: `acceptance_letter_${app.id}`,
-              applicationId: app.id,
+              id: `acceptance_letter_${approvedApp.id}`,
+              applicationId: approvedApp.id,
               studentName,
               scholarshipTitle,
               type: 'acceptance_letter',
               label: 'Acceptance Letter Pending',
               description: 'Awaiting upload & sending of Acceptance Letter.',
-              date: app.created_at
+              date: approvedApp.created_at
             });
           }
 
-          // Action: Transfer Form Approval
-          if (app.transfer_form_status === 'sent') {
+          // Action: Transfer Form Approval (once per student)
+          const transferApp = apps.find((a: any) => a.transfer_form_status === 'sent');
+          if (transferApp) {
             consolidatedActions.push({
-              id: `transfer_form_${app.id}`,
-              applicationId: app.id,
+              id: `transfer_form_${transferApp.id}`,
+              applicationId: transferApp.id,
               studentName,
               scholarshipTitle,
               type: 'transfer_form',
               label: 'Transfer Form Approval',
               description: 'Student submitted signed Transfer Form.',
-              date: app.created_at
+              date: transferApp.created_at
             });
           }
         });
@@ -347,12 +383,35 @@ const Overview: React.FC = () => {
   };
 
 
+  // Group applications by student for the Applications Received panel
+  const groupedStudentApplications = useMemo(() => {
+    const studentMap = new Map<string, { student: any; apps: any[]; mainApp: any }>();
+    applications.forEach((app: any) => {
+      const studentId = app.user_profiles?.id || app.student_id;
+      if (!studentId) return;
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, { student: app.user_profiles, apps: [], mainApp: app });
+      }
+      const entry = studentMap.get(studentId)!;
+      entry.apps.push(app);
+      // Pick main app by priority
+      const main = entry.mainApp;
+      if (
+        app.status === 'enrolled' ||
+        (app.is_application_fee_paid && !main.is_application_fee_paid) ||
+        (app.status === 'approved' && main.status !== 'enrolled' && !main.is_application_fee_paid)
+      ) {
+        entry.mainApp = app;
+      }
+    });
+    return Array.from(studentMap.values());
+  }, [applications]);
+
   const renderApplicationsPanel = () => {
-    // Calculate pagination
-    const totalPages = Math.ceil(applications.length / itemsPerPage);
+    const totalPages = Math.ceil(groupedStudentApplications.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentApplications = applications.slice(startIndex, endIndex);
+    const currentStudents = groupedStudentApplications.slice(startIndex, endIndex);
 
     return (
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mt-6 sm:mt-8 lg:mt-10">
@@ -361,31 +420,38 @@ const Overview: React.FC = () => {
           <p className="text-slate-500 text-xs sm:text-sm">Track all student applications for your scholarships</p>
         </div>
         <div className="p-4 sm:p-5 lg:p-6">
-          {applications.length === 0 ? (
+          {groupedStudentApplications.length === 0 ? (
             <div className="text-slate-500 text-center py-6 sm:py-8 text-sm sm:text-base">No applications received yet.</div>
           ) : (
             <>
               {/* Mobile Card View */}
               <div className="block sm:hidden space-y-3">
-                {currentApplications.map((app) => (
-                  <div key={app.id} className="bg-slate-50 rounded-lg p-4 space-y-2">
+                {currentStudents.map(({ student, apps, mainApp }) => (
+                  <div key={student?.id || mainApp.id} className="bg-slate-50 rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-slate-900 text-sm truncate">
-                        {app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown'}
+                        {student?.full_name || student?.email || 'Unknown'}
                       </h4>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        mainApp.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        mainApp.status === 'rejected' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {app.status}
+                        {mainApp.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{app.scholarships?.field_of_study || '-'}</p>
-                    <p className="text-xs text-slate-400 truncate italic">{app.scholarships?.title || '-'}</p>
+                    <p className="text-xs text-slate-500 truncate">{mainApp.scholarships?.field_of_study || '-'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-slate-400 truncate italic">{mainApp.scholarships?.title || '-'}</p>
+                      {apps.length > 1 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                          +{apps.length - 1}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex justify-end">
-                      <Link 
-                        to={`/school/dashboard/student/${app.id}`} 
+                      <Link
+                        to={`/school/dashboard/student/${mainApp.id}`}
                         className="text-blue-600 hover:text-blue-700 font-medium text-xs"
                       >
                         View Details
@@ -408,35 +474,40 @@ const Overview: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {currentApplications.map((app) => (
-                      <tr key={app.id} className="hover:bg-slate-50">
+                    {currentStudents.map(({ student, apps, mainApp }) => (
+                      <tr key={student?.id || mainApp.id} className="hover:bg-slate-50">
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
                           <div className="max-w-xs truncate">
-                            {app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown'}
+                            {student?.full_name || student?.email || 'Unknown'}
                           </div>
                         </td>
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
                           <div className="max-w-xs truncate font-medium">
-                            {app.scholarships?.field_of_study || '-'}
+                            {mainApp.scholarships?.field_of_study || '-'}
                           </div>
                         </td>
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
-                          <div className="max-w-xs truncate text-slate-500">
-                            {app.scholarships?.title || '-'}
+                          <div className="max-w-xs flex items-center gap-1.5">
+                            <span className="truncate text-slate-500">{mainApp.scholarships?.title || '-'}</span>
+                            {apps.length > 1 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 flex-shrink-0">
+                                +{apps.length - 1}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
                           <span className={`inline-flex items-center px-2 py-1 lg:px-2.5 lg:py-0.5 rounded-full text-xs font-medium ${
-                            app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            mainApp.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            mainApp.status === 'rejected' ? 'bg-red-100 text-red-800' :
                             'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {app.status}
+                            {mainApp.status}
                           </span>
                         </td>
                         <td className="px-3 lg:px-4 py-2 text-xs lg:text-sm">
-                          <Link 
-                            to={`/school/dashboard/student/${app.id}`} 
+                          <Link
+                            to={`/school/dashboard/student/${mainApp.id}`}
                             className="text-blue-600 hover:text-blue-700 font-medium"
                           >
                             View
@@ -447,12 +518,12 @@ const Overview: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-4 sm:mt-6 gap-3">
                   <p className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
-                    Showing {startIndex + 1} to {Math.min(endIndex, applications.length)} of {applications.length} applications
+                    Showing {startIndex + 1} to {Math.min(endIndex, groupedStudentApplications.length)} of {groupedStudentApplications.length} students
                   </p>
                   <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                     <button
@@ -504,149 +575,251 @@ const Overview: React.FC = () => {
     );
   };
 
-  const renderPendingActionsPanel = () => {
-    const formatDate = (dateString: string) => {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
+  const eligibilityActions = useMemo(() => pendingActions.filter(a => a.type === 'eligibility'), [pendingActions]);
+  const documentActions = useMemo(() => pendingActions.filter(a => a.type === 'basic_docs' || a.type === 'additional_docs'), [pendingActions]);
+  const enrollmentActions = useMemo(() => pendingActions.filter(a => a.type === 'acceptance_letter' || a.type === 'transfer_form'), [pendingActions]);
 
-    const getBadgeStyle = (type: string) => {
-      switch (type) {
-        case 'eligibility':
-          return 'bg-amber-50 text-amber-700 border-amber-200';
-        case 'basic_docs':
-        case 'additional_docs':
-          return 'bg-blue-50 text-blue-700 border-blue-200';
-        case 'acceptance_letter':
-          return 'bg-green-50 text-green-700 border-green-200';
-        case 'transfer_form':
-          return 'bg-purple-50 text-purple-700 border-purple-200';
-        default:
-          return 'bg-slate-50 text-slate-700 border-slate-200';
-      }
-    };
+  const formatActionDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
-    const getIcon = (type: string) => {
-      switch (type) {
-        case 'eligibility':
-          return <Award className="h-3 w-3 text-amber-600 mr-1" />;
-        case 'basic_docs':
-        case 'additional_docs':
-          return <FileText className="h-3 w-3 text-blue-600 mr-1" />;
-        case 'acceptance_letter':
-          return <Mail className="h-3 w-3 text-green-600 mr-1" />;
-        case 'transfer_form':
-          return <RefreshCw className="h-3 w-3 text-purple-600 mr-1" />;
-        default:
-          return <Clock className="h-3 w-3 text-slate-600 mr-1" />;
-      }
-    };
+  const getBadgeStyle = (type: string) => {
+    switch (type) {
+      case 'eligibility':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'basic_docs':
+      case 'additional_docs':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'acceptance_letter':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'transfer_form':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-slate-50 text-slate-700 border-slate-200';
+    }
+  };
 
-    return (
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Clock className="h-6 w-6 text-indigo-600" />
-            </div>
-            <div className="flex flex-col items-center sm:items-start">
-              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">Pending Actions & Approvals</h3>
-                {pendingActions.length > 0 && (
-                  <span className="bg-indigo-100 text-indigo-700 font-bold text-xs px-2.5 py-0.5 rounded-full">
-                    {pendingActions.length}
-                  </span>
-                )}
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'eligibility':
+        return <Award className="h-3 w-3 text-amber-600 mr-1" />;
+      case 'basic_docs':
+      case 'additional_docs':
+        return <FileText className="h-3 w-3 text-blue-600 mr-1" />;
+      case 'acceptance_letter':
+        return <Mail className="h-3 w-3 text-green-600 mr-1" />;
+      case 'transfer_form':
+        return <RefreshCw className="h-3 w-3 text-purple-600 mr-1" />;
+      default:
+        return <Clock className="h-3 w-3 text-slate-600 mr-1" />;
+    }
+  };
+
+  const getActionLink = (action: any) => {
+    const base = `/school/dashboard/student/${action.applicationId}`;
+    switch (action.type) {
+      case 'eligibility':
+        return `${base}?tab=details&section=document_review`;
+      case 'basic_docs':
+      case 'additional_docs':
+        return `${base}?tab=documents`;
+      case 'acceptance_letter':
+        return `${base}?tab=documents&section=acceptance_letter`;
+      case 'transfer_form':
+        return `${base}?tab=documents&section=transfer_form`;
+      default:
+        return base;
+    }
+  };
+
+  const renderActionItems = (actions: any[], hoverColor: string) => (
+    <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+      {actions.map((action) => (
+        <div key={action.id} className={`p-3 sm:p-4 border border-slate-100 rounded-xl ${hoverColor} transition-all group`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors flex-shrink-0">
+                <User className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <p className="text-xs sm:text-sm text-slate-500">Tasks requiring your university's review or action</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                    {action.studentName}
+                  </h4>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border ${getBadgeStyle(action.type)}`}>
+                    {getActionIcon(action.type)}
+                    <span className="ml-1">{action.label}</span>
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 truncate mb-1">
+                  {action.scholarshipTitle}
+                </p>
+                <p className="text-[10px] sm:text-xs text-slate-400">
+                  {action.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-50">
+              <div className="text-[10px] sm:text-xs text-slate-400 text-right">
+                <span>{formatActionDate(action.date)}</span>
+              </div>
+              <Link
+                to={getActionLink(action)}
+                className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center group-hover:translate-x-0.5 duration-200"
+              >
+                Review
+                <ExternalLink className="h-3 w-3 ml-1.5" />
+              </Link>
             </div>
           </div>
-          <Link
-            to="/school/dashboard/application-tracking"
-            className="text-xs sm:text-sm font-bold text-[#05294E] hover:text-blue-700 flex items-center"
-          >
-            Tracking Pipeline
-            <ArrowUpRight className="h-4 w-4 ml-1" />
-          </Link>
         </div>
+      ))}
+    </div>
+  );
 
-        <div className="p-4 sm:p-5 lg:p-6">
-          {loadingActions ? (
-            <div className="space-y-3 sm:space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse flex items-center justify-between p-3 sm:p-4 border border-slate-100 rounded-xl">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-200 rounded-full"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 w-24 sm:w-32 bg-slate-200 rounded"></div>
-                      <div className="h-3 w-32 sm:w-48 bg-slate-200 rounded"></div>
-                    </div>
-                  </div>
-                  <div className="w-16 h-8 bg-slate-200 rounded"></div>
-                </div>
-              ))}
+  const renderPanelSkeleton = () => (
+    <div className="space-y-3">
+      {[1, 2].map((i) => (
+        <div key={i} className="animate-pulse flex items-center justify-between p-3 sm:p-4 border border-slate-100 rounded-xl">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-200 rounded-full"></div>
+            <div className="space-y-2">
+              <div className="h-4 w-24 sm:w-32 bg-slate-200 rounded"></div>
+              <div className="h-3 w-32 sm:w-48 bg-slate-200 rounded"></div>
             </div>
-          ) : pendingActions.length === 0 ? (
-            <div className="text-center py-6 sm:py-8 lg:py-12">
-              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100">
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-              <h3 className="text-slate-900 font-bold text-base sm:text-lg mb-1">All Caught Up!</h3>
-              <p className="text-slate-500 text-xs sm:text-sm">There are no pending student items requiring your university's attention right now.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-              {pendingActions.map((action) => (
-                <div key={action.id} className="p-3 sm:p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/10 transition-all group">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors flex-shrink-0">
-                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                            {action.studentName}
-                          </h4>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border ${getBadgeStyle(action.type)}`}>
-                            {getIcon(action.type)}
-                            <span className="ml-1">{action.label}</span>
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 truncate mb-1">
-                          {action.scholarshipTitle}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-slate-400">
-                          {action.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-50">
-                      <div className="text-[10px] sm:text-xs text-slate-400 text-right">
-                        <span>{formatDate(action.date)}</span>
-                      </div>
-                      <Link
-                        to={`/school/dashboard/student/${action.applicationId}`}
-                        className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center group-hover:translate-x-0.5 duration-200"
-                      >
-                        Review
-                        <ExternalLink className="h-3 w-3 ml-1.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="w-16 h-8 bg-slate-200 rounded"></div>
         </div>
+      ))}
+    </div>
+  );
+
+  const renderEmptyState = (message: string) => (
+    <div className="text-center py-6 sm:py-8">
+      <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-100">
+        <CheckCircle className="h-6 w-6 text-green-500" />
       </div>
-    );
-  };
+      <h3 className="text-slate-900 font-bold text-sm sm:text-base mb-1">All Caught Up!</h3>
+      <p className="text-slate-500 text-xs sm:text-sm">{message}</p>
+    </div>
+  );
+
+  const renderEligibilityReviewsPanel = () => (
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Award className="h-6 w-6 text-amber-600" />
+          </div>
+          <div className="flex flex-col items-center sm:items-start">
+            <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Eligibility Reviews</h3>
+              {eligibilityActions.length > 0 && (
+                <span className="bg-amber-100 text-amber-700 font-bold text-xs px-2.5 py-0.5 rounded-full">
+                  {eligibilityActions.length}
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">Applications awaiting eligibility evaluation</p>
+          </div>
+        </div>
+        <Link
+          to="/school/dashboard/application-tracking"
+          className="text-xs sm:text-sm font-bold text-[#05294E] hover:text-blue-700 flex items-center"
+        >
+          Tracking Pipeline
+          <ArrowUpRight className="h-4 w-4 ml-1" />
+        </Link>
+      </div>
+      <div className="p-4 sm:p-5 lg:p-6">
+        {loadingActions ? renderPanelSkeleton() :
+          eligibilityActions.length === 0
+            ? renderEmptyState('No applications pending eligibility review.')
+            : renderActionItems(eligibilityActions, 'hover:border-amber-100 hover:bg-amber-50/10')
+        }
+      </div>
+    </div>
+  );
+
+  const renderPendingDocumentsPanel = () => (
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FileText className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="flex flex-col items-center sm:items-start">
+            <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Pending Documents</h3>
+              {documentActions.length > 0 && (
+                <span className="bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-0.5 rounded-full">
+                  {documentActions.length}
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">Student documents awaiting your approval</p>
+          </div>
+        </div>
+        <Link
+          to="/school/dashboard/application-tracking"
+          className="text-xs sm:text-sm font-bold text-[#05294E] hover:text-blue-700 flex items-center"
+        >
+          Tracking Pipeline
+          <ArrowUpRight className="h-4 w-4 ml-1" />
+        </Link>
+      </div>
+      <div className="p-4 sm:p-5 lg:p-6">
+        {loadingActions ? renderPanelSkeleton() :
+          documentActions.length === 0
+            ? renderEmptyState('No documents pending approval.')
+            : renderActionItems(documentActions, 'hover:border-blue-100 hover:bg-blue-50/10')
+        }
+      </div>
+    </div>
+  );
+
+  const renderEnrollmentActionsPanel = () => (
+    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Mail className="h-6 w-6 text-green-600" />
+          </div>
+          <div className="flex flex-col items-center sm:items-start">
+            <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">Enrollment Actions</h3>
+              {enrollmentActions.length > 0 && (
+                <span className="bg-green-100 text-green-700 font-bold text-xs px-2.5 py-0.5 rounded-full">
+                  {enrollmentActions.length}
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">Acceptance letters & transfer forms pending action</p>
+          </div>
+        </div>
+        <Link
+          to="/school/dashboard/application-tracking"
+          className="text-xs sm:text-sm font-bold text-[#05294E] hover:text-blue-700 flex items-center"
+        >
+          Tracking Pipeline
+          <ArrowUpRight className="h-4 w-4 ml-1" />
+        </Link>
+      </div>
+      <div className="p-4 sm:p-5 lg:p-6">
+        {loadingActions ? renderPanelSkeleton() :
+          enrollmentActions.length === 0
+            ? renderEmptyState('No enrollment actions pending.')
+            : renderActionItems(enrollmentActions, 'hover:border-green-100 hover:bg-green-50/10')
+        }
+      </div>
+    </div>
+  );
 
   return (
     <ProfileCompletionGuard 
@@ -731,7 +904,13 @@ const Overview: React.FC = () => {
       </div>
 
 
-        {renderPendingActionsPanel()}        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+        {renderEligibilityReviewsPanel()}
+
+        {renderPendingDocumentsPanel()}
+
+        {renderEnrollmentActionsPanel()}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Profile Status */}
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 lg:p-6 text-center sm:text-left">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4">Profile Status</h3>
