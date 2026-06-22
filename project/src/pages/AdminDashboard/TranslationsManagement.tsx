@@ -510,7 +510,7 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
                         Status: <span className="font-semibold text-gray-700">{txDisplay(txStateKey(o))}</span>
                       </p>
                     )}
-                    {o.payment_status === 'paid' && o.document_url && (
+                    {(import.meta.env.DEV || window.location.hostname === 'localhost') && o.payment_status === 'paid' && o.document_url && (
                       <button
                         onClick={handleSimulateFinalization}
                         disabled={simulating}
