@@ -62,6 +62,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/newsletter')) return 'newsletter';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/financial-analytics')) return 'financial-analytics';
+    if (path.includes('/reports')) return 'reports';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -106,6 +107,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
+    { id: 'reports', label: 'Relatórios', icon: BarChart3, path: '/admin/dashboard/reports', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'coupons', label: 'Coupons', icon: Tag, path: '/admin/dashboard/coupons', badge: null },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, path: '/admin/dashboard/newsletter', badge: null },
@@ -257,6 +259,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Users'}
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
+                  {activeTab === 'reports' && 'Relatórios e Análises'}
                   {activeTab === 'financial-analytics' && 'Financial Analytics'}
                   {activeTab === 'coupons' && 'Coupon Management'}
                   {activeTab === 'newsletter' && 'Newsletter Management'}
@@ -271,6 +274,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Manage student and user accounts'}
                   {activeTab === 'scholarships' && 'Manage scholarship programs'}
                   {activeTab === 'payments' && 'Payment processing and management'}
+                  {activeTab === 'reports' && 'Relatórios gerais, métricas de funil, parceiros e bolsas'}
                   {activeTab === 'financial-analytics' && 'Financial reports and analytics'}
                   {activeTab === 'coupons' && 'Manage promotional coupons'}
                   {activeTab === 'newsletter' && 'Manage newsletter campaigns and user preferences'}
