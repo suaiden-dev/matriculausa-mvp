@@ -28,7 +28,8 @@ const SchoolApplicationTableView: React.FC<SchoolApplicationTableViewProps> = ({
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
     const selectedAppId = (student as any).selected_application_id;
-    const isChoseAnother = !!selectedAppId && selectedAppId !== student.application_id;
+    const allApps = (student as any).all_applications || [];
+    const isChoseAnother = !!selectedAppId && selectedAppId !== student.application_id && !allApps.some((app: any) => app.id === selectedAppId);
 
     if (isChoseAnother) {
       return (

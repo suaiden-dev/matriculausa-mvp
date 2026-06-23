@@ -66,8 +66,9 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
   const droppedStudents = useMemo(() => {
     return students.filter(s => {
       const selectedAppId = (s as any).selected_application_id;
-      const choseAnother = !!selectedAppId && selectedAppId !== s.application_id;
-      return s.is_dropped || s.status === 'rejected' || choseAnother;
+      const allApps = s.all_applications || [];
+      const choseAnotherUniversity = !!selectedAppId && selectedAppId !== s.application_id && !allApps.some((app: any) => app.id === selectedAppId);
+      return s.is_dropped || s.status === 'rejected' || choseAnotherUniversity;
     });
   }, [students]);
 
@@ -75,8 +76,9 @@ const SchoolApplicationKanbanView: React.FC<SchoolApplicationKanbanViewProps> = 
   const displayStudents = useMemo(() => {
     return students.filter(s => {
       const selectedAppId = (s as any).selected_application_id;
-      const choseAnother = !!selectedAppId && selectedAppId !== s.application_id;
-      return !s.is_dropped && s.status !== 'rejected' && !choseAnother;
+      const allApps = s.all_applications || [];
+      const choseAnotherUniversity = !!selectedAppId && selectedAppId !== s.application_id && !allApps.some((app: any) => app.id === selectedAppId);
+      return !s.is_dropped && s.status !== 'rejected' && !choseAnotherUniversity;
     });
   }, [students]);
 
