@@ -37,7 +37,7 @@ interface DetailsTabProps {
   realPaidAmounts: Record<string, number>;
   loadingPaidAmounts: Record<string, boolean>;
   installmentPlans: Record<string, InstallmentPlan | null>;
-  hasOverride: boolean;
+  hasOverride: (feeType: string) => boolean;
   formatFeeAmount: (feeType: string) => string;
   getFeeAmount: (feeType: string) => number;
   // Document review

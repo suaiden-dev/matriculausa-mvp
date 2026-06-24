@@ -9,7 +9,8 @@ import {
   LogOut,
   Gift,
   Bell,
-  MessageSquare
+  MessageSquare,
+  Languages
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -135,6 +136,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
     if (path.includes('/rewards')) return 'rewards';
     if (path.includes('/chat')) return 'chat';
     if (path.includes('/profile')) return 'profile';
+    if (path.includes('/translations')) return 'translations';
     if (path.includes('/manual-review')) return 'cart';
     if (path.includes('/documents-and-scholarship-choice')) return 'cart';
     return 'overview';
@@ -173,6 +175,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
     // { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
     { id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' },
+    { id: 'translations', label: t('studentDashboard.sidebar.translations'), icon: Languages, path: '/student/dashboard/translations' },
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
@@ -191,7 +194,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
     // Em modo restrito, garantimos que os itens essenciais continuem visíveis.
     // O questionário e o guia de onboarding estão dentro da Visão Geral, 
     // portanto 'overview' NÃO deve ser escondido.
-    const allowedIds = ['overview', 'applications', 'chat', 'profile', 'rewards'];
+    const allowedIds = ['overview', 'applications', 'chat', 'profile', 'rewards', 'translations'];
     displayedSidebarItems = allSidebarItems.filter(item => allowedIds.includes(item.id));
   }
 

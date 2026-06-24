@@ -31,6 +31,7 @@ import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
+import Translations from './Translations';
 
 const StudentDashboard: React.FC = () => {
   const queryClient = useQueryClient();
@@ -99,6 +100,7 @@ const StudentDashboard: React.FC = () => {
         <Route path="manual-review" element={<ManualReview />} />
         <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
         <Route path="identity-verification" element={<IdentityVerification />} />
+        <Route path="translations" element={<Translations />} />
       </Routes>
 
       {referralResult && (

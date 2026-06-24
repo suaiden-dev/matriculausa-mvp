@@ -12,7 +12,7 @@ interface DocumentsViewProps {
   onDownloadDocument: (doc: any) => void;
   onUploadDocument?: (requestId: string, file: File) => void;
   onApproveDocument?: (uploadId: string) => void;
-  onRejectDocument?: (uploadId: string, reason: string) => void;
+  onRejectDocument?: (uploadId: string, reason: string, needsTranslation?: boolean) => void;
   onEditTemplate?: (requestId: string, currentTemplate: string | null) => void;
   onDeleteDocumentRequest?: (requestId: string) => void;
   isAdmin?: boolean;
@@ -58,6 +58,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectNeedsTranslation, setRejectNeedsTranslation] = useState<boolean | null>(null);
 
   // Estados para modal de confirmação de exclusão
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
@@ -67,17 +68,21 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const handleRejectClick = (uploadId: string) => {
     setPendingRejectUploadId(uploadId);
     setRejectReason('');
+    setRejectNeedsTranslation(null);
     setShowRejectModal(true);
   };
 
   // Função para confirmar rejeição
   const handleConfirmReject = () => {
-    if (pendingRejectUploadId && onRejectDocument && rejectReason.trim()) {
-      onRejectDocument(pendingRejectUploadId, rejectReason.trim());
-      setShowRejectModal(false);
-      setPendingRejectUploadId(null);
-      setRejectReason('');
-    }
+    if (!pendingRejectUploadId || !onRejectDocument) return;
+    if (rejectNeedsTranslation === null) return;
+    if (rejectNeedsTranslation === false && !rejectReason.trim()) return;
+    const customText = rejectReason.trim();
+    onRejectDocument(pendingRejectUploadId, customText, rejectNeedsTranslation === true);
+    setShowRejectModal(false);
+    setPendingRejectUploadId(null);
+    setRejectReason('');
+    setRejectNeedsTranslation(null);
   };
 
   // Função para cancelar rejeição
@@ -85,6 +90,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     setShowRejectModal(false);
     setPendingRejectUploadId(null);
     setRejectReason('');
+    setRejectNeedsTranslation(null);
   };
 
   // Funções para modal de confirmação de exclusão
@@ -193,7 +199,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             document_request_uploads (
               *,
               reviewed_by,
-              reviewed_at
+              reviewed_at,
+              translation_orders (
+                payment_status,
+                translation_status
+              )
             )
           `)
           .eq('is_global', true);
@@ -685,11 +695,19 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     </svg>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                       <p className="font-medium text-slate-900 break-words">{filename}</p>
                                       {upload.is_admin_upload && (
                                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
                                           Admin
+                                        </span>
+                                      )}
+                                      {upload.source === 'translation_resubmit' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                          </svg>
+                                          Translated &amp; Resubmitted
                                         </span>
                                       )}
                                     </div>
@@ -984,6 +1002,42 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               publicUrl
                             );
 
+                            // Notificar Migma que a acceptance letter foi emitida/substituída
+                            try {
+                              const migmaUrl = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL;
+                              const migmaSecret = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET;
+                              const migmaAnonKey = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY;
+                              if (migmaUrl && migmaSecret && studentId) {
+                                // Buscar dados do aluno
+                                const { data: userData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                if (userData?.email) {
+                                  const migmaRes = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${migmaAnonKey}`,
+                                      'x-migma-webhook-secret': migmaSecret,
+                                    },
+                                    body: JSON.stringify({
+                                      student_email: userData.email,
+                                      acceptance_letter_url: publicUrl,
+                                    }),
+                                  });
+                                  if (!migmaRes.ok) {
+                                    console.warn('[Migma] receive-matriculausa-letter failed:', migmaRes.status, await migmaRes.text());
+                                  } else {
+                                    console.log('[Migma] Acceptance letter notified successfully');
+                                  }
+                                }
+                              }
+                            } catch (migmaError) {
+                              console.warn('[Migma] Acceptance letter notification failed (non-critical):', migmaError);
+                            }
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -1143,6 +1197,42 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
                             queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
 
+                            // Notificar Migma que a acceptance letter foi emitida/enviada
+                            try {
+                              const migmaUrl = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL;
+                              const migmaSecret = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET;
+                              const migmaAnonKey = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY;
+                              if (migmaUrl && migmaSecret && studentId) {
+                                // Buscar dados do aluno
+                                const { data: userData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                if (userData?.email) {
+                                  const migmaRes = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${migmaAnonKey}`,
+                                      'x-migma-webhook-secret': migmaSecret,
+                                    },
+                                    body: JSON.stringify({
+                                      student_email: userData.email,
+                                      acceptance_letter_url: publicUrl,
+                                    }),
+                                  });
+                                  if (!migmaRes.ok) {
+                                    console.warn('[Migma] receive-matriculausa-letter failed:', migmaRes.status, await migmaRes.text());
+                                  } else {
+                                    console.log('[Migma] Acceptance letter notified successfully');
+                                  }
+                                }
+                              }
+                            } catch (migmaError) {
+                              console.warn('[Migma] Acceptance letter notification failed (non-critical):', migmaError);
+                            }
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -1270,12 +1360,47 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
             <h3 className="text-lg font-bold text-[#05294E] mb-3">Reject Document</h3>
             <p className="text-sm text-slate-600 mb-4">Please provide a reason for rejecting this document. The student will be able to submit a new document after rejection.</p>
+
+            {/* Rejection type — required */}
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Rejection type <span className="text-red-400 ml-1 normal-case font-normal">* required</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectNeedsTranslation(false)}
+                  className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                    rejectNeedsTranslation === false
+                      ? 'border-red-500 bg-red-50 text-red-800'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-red-300 hover:bg-red-50/40'
+                  }`}
+                >
+                  <p className="text-sm font-bold leading-tight">Incorrect document</p>
+                  <p className="text-xs leading-tight opacity-70">The document itself is wrong</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRejectNeedsTranslation(true)}
+                  className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                    rejectNeedsTranslation === true
+                      ? 'border-amber-400 bg-amber-50 text-amber-800'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-300 hover:bg-amber-50/40'
+                  }`}
+                >
+                  <p className="text-sm font-bold leading-tight">Needs translation</p>
+                  <p className="text-xs leading-tight opacity-70">Doc is correct, must be in English</p>
+                </button>
+              </div>
+            </div>
+
             <textarea
               className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 min-h-[120px]"
               placeholder="Enter reason for rejection..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
+
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={handleCancelReject}
@@ -1285,7 +1410,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               </button>
               <button
                 onClick={handleConfirmReject}
-                disabled={!rejectReason.trim()}
+                disabled={rejectNeedsTranslation === null || (rejectNeedsTranslation === false && !rejectReason.trim())}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
               >
                 Reject Document

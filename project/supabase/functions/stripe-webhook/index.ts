@@ -13,6 +13,7 @@ import {
 } from "../shared/environment-detector.ts";
 import { getStripeBalanceTransaction } from "../shared/stripe-utils.ts";
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
+import { sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 // Configurações do MailerSend (REMOVIDAS - usando apenas webhook n8n)
 const supportEmail = Deno.env.get("SUPPORT_EMAIL") ||
@@ -1815,6 +1816,152 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       console.error(`[stripe-webhook] No userId found for ${paymentType} processing.`);
     }
   }
+
+  // ── TRANSLATION FEE ────────────────────────────────────────────────────────
+  if (paymentType === 'translation_fee') {
+    const finalUserId = metadata?.user_id || metadata?.student_id || userId;
+    const translationOrderId = metadata?.translation_order_id;
+
+    console.log(`[stripe-webhook] Processing translation_fee — order: ${translationOrderId}, user: ${finalUserId}`);
+
+    if (finalUserId && translationOrderId) {
+      try {
+        // 1. Mark order as paid
+        const amountPaid = metadata?.gross_amount
+          ? parseFloat(metadata.gross_amount)
+          : null;
+
+        const { error: updateErr } = await supabase
+          .from('translation_orders')
+          .update({
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+            ...(amountPaid !== null && { amount_paid: amountPaid }),
+          })
+          .eq('id', translationOrderId)
+          .eq('user_id', finalUserId);
+
+        if (updateErr) {
+          console.error('[stripe-webhook] Failed to mark translation order as paid:', updateErr);
+        } else {
+          console.log(`[stripe-webhook] Translation order ${translationOrderId} marked as paid — DB trigger will call send-to-alpha`);
+
+          // 2. Send student notification
+          await supabase.from('student_notifications').insert({
+            user_id: finalUserId,
+            title: 'Pagamento confirmado — tradução iniciada',
+            message: 'Seu pagamento foi confirmado e a tradução foi iniciada. Acompanhe o status em Minhas Traduções.',
+            type: 'translation_payment',
+            link: '/student/dashboard/translations',
+            idempotency_key: `translation_payment_${translationOrderId}`,
+          });
+
+          // 3. Send confirmation email (fire-and-forget)
+          sendPaymentConfirmedEmails(supabase, translationOrderId, 'stripe', supportEmail, amountPaid ?? undefined);
+
+          // 4. Activity log
+          try {
+            const { data: up } = await supabase.from('user_profiles').select('id').eq('user_id', finalUserId).single();
+            if (up) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Stripe — order #${translationOrderId.slice(0, 8)}`,
+                p_performed_by: finalUserId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: translationOrderId, payment_method: 'stripe', amount: amountPaid },
+              });
+            }
+          } catch (logErr: any) {
+            console.error('[stripe-webhook] log translation_payment_received failed:', logErr?.message);
+          }
+        }
+      } catch (translationErr: any) {
+        console.error('[stripe-webhook] Error processing translation_fee:', translationErr);
+      }
+    } else {
+      console.error('[stripe-webhook] Missing userId or translationOrderId for translation_fee processing');
+    }
+  }
+  // -- END TRANSLATION FEE ----------------------------------------------------
+
+  // -- TRANSLATION BATCH FEE --------------------------------------------------
+  if (paymentType === 'translation_batch') {
+    const finalUserId = metadata?.user_id || userId;
+    const orderIdsStr = metadata?.translation_order_ids || '';
+    const orderIds = orderIdsStr.split(',').filter(Boolean);
+
+    console.log(`[stripe-webhook] Processing translation_batch: ${orderIds.length} orders, user: ${finalUserId}`);
+
+    if (finalUserId && orderIds.length > 0) {
+      try {
+        const amountPaid = metadata?.gross_amount ? parseFloat(metadata.gross_amount) : null;
+        const amountPerOrder = amountPaid && orderIds.length > 0 ? amountPaid / orderIds.length : null;
+
+        for (const orderId of orderIds) {
+          const { error: updateErr } = await supabase
+            .from('translation_orders')
+            .update({
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+              ...(amountPerOrder !== null && { amount_paid: amountPerOrder }),
+            })
+            .eq('id', orderId)
+            .eq('user_id', finalUserId);
+
+          if (updateErr) {
+            console.error(`[stripe-webhook] Failed to mark batch order ${orderId} as paid:`, updateErr);
+          } else {
+            console.log(`[stripe-webhook] Batch translation order ${orderId} marked as paid`);
+          }
+        }
+
+        const batchCount = orderIds.length;
+        const notifMessage = batchCount === 1
+          ? 'Seu pagamento foi confirmado e a traducao foi iniciada. Acompanhe o status em Minhas Traducoes.'
+          : `Seu pagamento foi confirmado e ${batchCount} traducoes foram iniciadas. Acompanhe o status em Minhas Traducoes.`;
+
+        await supabase.from('student_notifications').insert({
+          user_id: finalUserId,
+          title: 'Pagamento confirmado — traducoes iniciadas',
+          message: notifMessage,
+          type: 'translation_payment',
+          link: '/student/dashboard/translations',
+          idempotency_key: `translation_batch_payment_${sessionId}`,
+        });
+
+        // Send confirmation email for first order in batch (fire-and-forget)
+        if (orderIds.length > 0) {
+          const amountPerOrder = metadata?.gross_amount ? parseFloat(metadata.gross_amount) / orderIds.length : undefined;
+          sendPaymentConfirmedEmails(supabase, orderIds[0], 'stripe', supportEmail, amountPerOrder);
+
+          // Activity log
+          try {
+            const { data: up } = await supabase.from('user_profiles').select('id').eq('user_id', finalUserId).single();
+            if (up) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: up.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation batch payment confirmed via Stripe — ${orderIds.length} order(s)`,
+                p_performed_by: finalUserId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: orderIds[0], translation_order_ids: orderIds, payment_method: 'stripe', batch_count: orderIds.length },
+              });
+            }
+          } catch (logErr: any) {
+            console.error('[stripe-webhook] log translation_payment_received (batch) failed:', logErr?.message);
+          }
+        }
+      } catch (err: any) {
+        console.error('[stripe-webhook] Error processing translation_batch:', err);
+      }
+    } else {
+      console.error('[stripe-webhook] Missing userId or orderIds for translation_batch processing');
+    }
+  }
+  // -- END TRANSLATION BATCH FEE ----------------------------------------------
+
+
   // BLOCO DUPLICADO REMOVIDO - i20_control_fee já é processado nas linhas 1528-1615
   // Este bloco estava causando duplicação de créditos de MatriculaCoins (trigger executado 2x)
 

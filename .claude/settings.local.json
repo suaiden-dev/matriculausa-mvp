@@ -99,7 +99,18 @@
       "Bash(command -v rtk)",
       "WebSearch",
       "Bash(rtk grep:*)",
-      "Bash(python3 -c:*)"
+      "Bash(python3 -c:*)",
+      "PowerShell(ls \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\\\\supabase\\\\functions\\\\\")",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__get_project_url",
+      "Bash(python *)",
+      "Bash(git merge *)",
+      "Bash(npx md-to-pdf *)"
     ]
   }
 }

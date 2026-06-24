@@ -37,7 +37,7 @@ const StudentDetails: React.FC = () => {
     documentRequests, setDocumentRequests,
     studentDocuments, setStudentDocuments,
     transferForm, setTransferForm,
-    transferFormUploads, setTransferFormUploads,
+    transferFormUploads,
     studentRecord,
     installmentPlans,
     realPaidAmounts, loadingPaidAmounts,

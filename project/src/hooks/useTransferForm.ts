@@ -23,6 +23,33 @@ export const useTransferForm = (
     return fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
   };
 
+  // Notifica a Migma sobre atualização de transfer form/acceptance letter
+  const notifyMigmaTransferForm = async (payload: {
+    student_email: string;
+    transfer_form_url?: string;
+    transfer_form_admin_status?: 'approved' | 'rejected';
+    transfer_form_rejection_reason?: string;
+  }) => {
+    const migmaUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
+    const migmaSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
+    if (!migmaUrl || !migmaSecret) return;
+    const migmaAnonKey = import.meta.env.VITE_MIGMA_SUPABASE_ANON_KEY;
+    const response = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${migmaAnonKey}`,
+        'x-migma-webhook-secret': migmaSecret,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      console.warn('[Migma] receive-matriculausa-letter failed:', response.status, await response.text());
+    } else {
+      console.log('[Migma] receive-matriculausa-letter notified successfully');
+    }
+  };
+
   // Função para encontrar aplicação transfer
   const getTransferApplication = useCallback(() => {
     const transferApps = student?.all_applications?.filter((app: any) => 
@@ -223,6 +250,13 @@ export const useTransferForm = (
           } else {
             console.warn(`⚠️ [Transfer Form] Erro ao enviar email de ${isReplacement ? 'atualização' : 'envio'}:`, webhookResponse.status);
           }
+
+          // Notificar Migma que o transfer form foi enviado
+          try {
+            await notifyMigmaTransferForm({ student_email: studentProfile.email, transfer_form_url: publicUrl });
+          } catch (migmaError) {
+            console.warn('[Migma] Transfer form upload notification failed (non-critical):', migmaError);
+          }
         }
 
         // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
@@ -320,17 +354,17 @@ export const useTransferForm = (
               } else {
                 console.log(`✅ [Transfer Form] Notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'} criada com sucesso!`, data);
               }
-            } catch (insertException) {
+            } catch (insertException: any) {
               console.error('💥 [Transfer Form] Exceção durante inserção:', insertException);
               console.error('💥 [Transfer Form] Stack trace:', insertException.stack);
               console.error('💥 [Transfer Form] Exception tipo:', typeof insertException);
               console.error('💥 [Transfer Form] Exception toString:', insertException.toString());
             }
-            } catch (profileException) {
+            } catch (profileException: any) {
               console.error('💥 [Transfer Form] Exceção durante busca do profile:', profileException);
               console.error('💥 [Transfer Form] Stack trace:', profileException.stack);
             }
-          } catch (notificationError) {
+          } catch (notificationError: any) {
             console.error(`❌ [Transfer Form] Erro ao enviar notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notificationError);
             console.error('❌ [Transfer Form] Stack trace completo:', notificationError.stack);
           }
@@ -444,12 +478,19 @@ export const useTransferForm = (
           } else {
             console.warn('⚠️ [Transfer Form] Erro ao enviar email de aprovação:', webhookResponse.status);
           }
+
+          // Notificar Migma que o transfer form foi aprovado
+          try {
+            await notifyMigmaTransferForm({ student_email: studentProfile.email, transfer_form_admin_status: 'approved' });
+          } catch (migmaError) {
+            console.warn('[Migma] Transfer form approval notification failed (non-critical):', migmaError);
+          }
         }
 
         // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
         if (student?.user_id) {
           console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
-          
+
           try {
             // Buscar o user_profiles.id correto
             const { data: profileData, error: profileError } = await supabase
@@ -457,12 +498,12 @@ export const useTransferForm = (
               .select('id, user_id')
               .eq('user_id', student.user_id)
               .single();
-              
+
             if (profileError) {
               console.error('❌ [Transfer Form Approval] Erro ao buscar profile:', profileError);
               return;
             }
-            
+
             const transferApp = getTransferApplication();
             const notificationData = {
               student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
@@ -588,12 +629,23 @@ export const useTransferForm = (
           } else {
             console.warn('⚠️ [Transfer Form] Erro ao enviar email de rejeição:', webhookResponse.status);
           }
+
+          // Notificar Migma que o transfer form foi rejeitado
+          try {
+            await notifyMigmaTransferForm({
+              student_email: studentProfile.email,
+              transfer_form_admin_status: 'rejected',
+              transfer_form_rejection_reason: reason,
+            });
+          } catch (migmaError) {
+            console.warn('[Migma] Transfer form rejection notification failed (non-critical):', migmaError);
+          }
         }
 
         // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
         if (student?.user_id) {
           console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
-          
+
           try {
             // Buscar o user_profiles.id correto
             const { data: profileData, error: profileError } = await supabase
@@ -601,12 +653,12 @@ export const useTransferForm = (
               .select('id, user_id')
               .eq('user_id', student.user_id)
               .single();
-              
+
             if (profileError) {
               console.error('❌ [Transfer Form Rejection] Erro ao buscar profile:', profileError);
               return;
             }
-            
+
             const transferApp = getTransferApplication();
             const notificationData = {
               student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id

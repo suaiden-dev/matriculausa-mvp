@@ -12,22 +12,10 @@ function resolveSignedUrl(fileUrl: string, bucketHint?: string): { bucket: strin
   let bucket = bucketHint || 'student-documents';
   let path = fileUrl;
 
+  // All full HTTP URLs (public buckets, already-signed, external) can be fetched directly.
+  // Only relative paths (private bucket objects) need a signed URL.
   if (fileUrl.startsWith('http')) {
-    const isSupabasePublic = fileUrl.includes('/storage/v1/object/public/');
-    const isSupabaseSigned = fileUrl.includes('/storage/v1/object/sign/') || fileUrl.includes('token=');
-
-    if (!isSupabasePublic || isSupabaseSigned) {
-      return null; // External or already signed — fetch directly
-    }
-
-    if (isSupabasePublic) {
-      const parts = fileUrl.split('/storage/v1/object/public/');
-      if (parts.length > 1) {
-        const pathParts = parts[1].split('/');
-        bucket = pathParts[0];
-        path = pathParts.slice(1).join('/');
-      }
-    }
+    return null;
   }
 
   if (path.includes('transfer-forms') || path.startsWith('uploads/')) {

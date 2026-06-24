@@ -111,7 +111,8 @@ const UniversityDetails: React.FC = () => {
     description: '',
     attachment: null as File | null,
     applicable_student_types: [] as string[],
-    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[]
+    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[],
+    requires_english: false,
   });
 
   // Estado para edição de document request
@@ -120,7 +121,8 @@ const UniversityDetails: React.FC = () => {
     description: '',
     attachment: null as File | null,
     applicable_student_types: [] as string[],
-    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[]
+    applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[],
+    requires_english: false,
   });
 
   const STUDENT_TYPE_OPTIONS = [
@@ -369,6 +371,7 @@ const UniversityDetails: React.FC = () => {
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types,
         applicable_scholarship_levels: newRequest.applicable_scholarship_levels,
+        requires_english: newRequest.requires_english,
         attachment_url
       };
 
@@ -405,7 +408,8 @@ const UniversityDetails: React.FC = () => {
         description: '',
         attachment: null,
         applicable_student_types: [],
-        applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate']
+        applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'],
+        requires_english: false,
       });
       fetchDocumentRequests(); // Recarregar lista
 
@@ -449,7 +453,8 @@ const UniversityDetails: React.FC = () => {
           description: editRequest.description,
           attachment_url,
           applicable_student_types: editRequest.applicable_student_types,
-          applicable_scholarship_levels: editRequest.applicable_scholarship_levels
+          applicable_scholarship_levels: editRequest.applicable_scholarship_levels,
+          requires_english: editRequest.requires_english,
         })
         .eq('id', editingRequest.id);
 
@@ -461,7 +466,7 @@ const UniversityDetails: React.FC = () => {
 
       setShowEditRequestModal(false);
       setEditingRequest(null);
-      setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
+      setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'], requires_english: false });
       fetchDocumentRequests(); // Recarregar lista
 
     } catch (e: any) {
@@ -527,7 +532,8 @@ const UniversityDetails: React.FC = () => {
       applicable_student_types: sanitizedTypes,
       applicable_scholarship_levels: request.applicable_scholarship_levels?.length
         ? request.applicable_scholarship_levels
-        : ['undergraduate', 'graduate', 'doctorate']
+        : ['undergraduate', 'graduate', 'doctorate'],
+      requires_english: (request as any).requires_english ?? false,
     });
     setShowEditRequestModal(true);
   };
@@ -1158,6 +1164,22 @@ const UniversityDetails: React.FC = () => {
               </div>
               
               <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={newRequest.requires_english}
+                    onChange={e => setNewRequest(r => ({ ...r, requires_english: e.target.checked }))}
+                    disabled={creating}
+                    className="w-4 h-4 accent-amber-500 rounded"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">
+                    This document must be in English
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1 ml-6">Students will see a warning when uploading this document.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Attachment</label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
@@ -1177,7 +1199,7 @@ const UniversityDetails: React.FC = () => {
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Applicable Student Types <span className="text-red-500">*</span>
@@ -1324,6 +1346,22 @@ const UniversityDetails: React.FC = () => {
               </div>
               
               <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={editRequest.requires_english}
+                    onChange={e => setEditRequest(r => ({ ...r, requires_english: e.target.checked }))}
+                    disabled={editing}
+                    className="w-4 h-4 accent-amber-500 rounded"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">
+                    This document must be in English
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1 ml-6">Students will see a warning when uploading this document.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Template Attachment</label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
@@ -1451,7 +1489,7 @@ const UniversityDetails: React.FC = () => {
                 onClick={() => {
                   setShowEditRequestModal(false);
                   setEditingRequest(null);
-                  setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
+                  setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'], requires_english: false });
                 }} 
                 disabled={editing}
               >

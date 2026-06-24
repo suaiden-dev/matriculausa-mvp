@@ -134,7 +134,8 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
       'scholarship_fee': 'Scholarship Fee',
       'i-20_control_fee': 'I-20 Control Fee',
       'ds160_package': 'Control Fee',
-      'i539_cos_package': 'Control Fee'
+      'i539_cos_package': 'Control Fee',
+      'translation': 'Translation Service'
     };
     return types[feeType] || feeType;
   };

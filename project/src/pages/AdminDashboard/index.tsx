@@ -27,6 +27,7 @@ const FeaturedScholarshipsManagement = lazy(() => import('./FeaturedScholarships
 const AdminTransferManagement = lazy(() => import('./AdminTransferManagement'));
 const AutoTransferSettings = lazy(() => import('./AutoTransferSettings'));
 const FinancialAnalytics = lazy(() => import('./FinancialAnalytics'));
+const ReportsView = lazy(() => import('./Reports/ReportsView'));
 const TermsManagement = lazy(() => import('./TermsManagement'));
 const CouponManagement = lazy(() => import('./CouponManagement'));
 const NewsletterManagement = lazy(() => import('./NewsletterManagement'));
@@ -36,6 +37,7 @@ const ReferralAffiliatesManagement = lazy(() => import('./ReferralAffiliatesMana
 const AffiliateDetails = lazy(() => import('./AffiliateDetails'));
 const AdminStudentDetailsRefactored = lazy(() => import('./AdminStudentDetails.refactored'));
 const SystemSettings = lazy(() => import('./SystemSettings'));
+const TranslationsManagement = lazy(() => import('./TranslationsManagement'));
 
 import { AdminContentSkeleton } from '../../components/AdminDashboardSkeleton';
 
@@ -636,6 +638,7 @@ const AdminDashboard: React.FC = () => {
             <Route path="universities/:universityId" element={<UniversityDetails />} />
             <Route path="users" element={<UsersHub />} />
             <Route path="payments" element={<PaymentManagement />} />
+            <Route path="translations" element={<TranslationsManagement />} />
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
             <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
@@ -660,6 +663,7 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/transfer-management" element={<AdminTransferManagement />} />
                 <Route path="/transfer-settings" element={<AutoTransferSettings />} />
                 <Route path="/financial-analytics" element={<FinancialAnalytics />} />
+                {/* <Route path="/reports" element={<ReportsView />} /> */}
                 <Route path="/coupons" element={<CouponManagement />} />
                 <Route path="/newsletter" element={<NewsletterManagement />} />
                 <Route path="/terms" element={<TermsManagement />} />

@@ -15,6 +15,7 @@ interface DocumentRequest {
   created_by?: string;
   applicable_student_types?: string[];
   applicable_scholarship_levels?: string[];
+  requires_english?: boolean;
 }
 
 interface UniversityGlobalDocumentRequestsProps {
@@ -62,17 +63,18 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
     { value: 'doctorate',     label: 'Doctorate' },
     { value: 'all',           label: 'All Levels' },
   ];
-  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: [] as string[], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[] });
+  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: [] as string[], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] as string[], requires_english: false });
   const [creating, setCreating] = useState(false);
   // Edição
   const [editingRequest, setEditingRequest] = useState<DocumentRequest | null>(null);
-  const [editForm, setEditForm] = useState<{ title: string; description: string; attachment: File | null; applicable_student_types: string[]; applicable_scholarship_levels: string[]; status: 'open' | 'closed' }>({
+  const [editForm, setEditForm] = useState<{ title: string; description: string; attachment: File | null; applicable_student_types: string[]; applicable_scholarship_levels: string[]; status: 'open' | 'closed'; requires_english: boolean }>({
     title: '',
     description: '',
     attachment: null,
     applicable_student_types: [],
     applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'],
     status: 'open',
+    requires_english: false,
   });
 
   // Verificar se a universidade está aprovada
@@ -111,6 +113,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
         ? request.applicable_scholarship_levels
         : ['undergraduate', 'graduate', 'doctorate'],
       status: (request.status as 'open' | 'closed') || 'open',
+      requires_english: request.requires_english ?? false,
     });
   };
 
@@ -173,6 +176,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types,
         applicable_scholarship_levels: newRequest.applicable_scholarship_levels,
+        requires_english: newRequest.requires_english,
         attachment_url
       };
       console.log('[DEBUG] Enviando para Edge Function create-document-request (global)', payload);
@@ -199,7 +203,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
         return;
       }
       setShowNewModal(false);
-      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: [], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'] });
+      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: [], applicable_scholarship_levels: ['undergraduate', 'graduate', 'doctorate'], requires_english: false });
       // Recarregar lista
       const { data: updated, error: fetchError } = await supabase
         .from('document_requests')
@@ -645,6 +649,21 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
               </div>
               {/* Removido campo de due date */}
               <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={newRequest.requires_english}
+                    onChange={e => setNewRequest(r => ({ ...r, requires_english: e.target.checked }))}
+                    disabled={creating}
+                    className="w-4 h-4 accent-amber-500 rounded"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">
+                    This document must be in English
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1 ml-6">Students will see a warning when uploading this document.</p>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="global-attachment">Attachment</label>
                 <div className="flex items-center gap-3">
                   <label htmlFor="global-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
@@ -861,6 +880,21 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                 </div>
               </div>
               <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={editForm.requires_english}
+                    onChange={e => setEditForm(r => ({ ...r, requires_english: e.target.checked }))}
+                    disabled={creating}
+                    className="w-4 h-4 accent-amber-500 rounded"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">
+                    This document must be in English
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 mt-1 ml-6">Students will see a warning when uploading this document.</p>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-status">Status</label>
                 <select
                   id="edit-status"
@@ -923,6 +957,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                       description: editForm.description,
                       applicable_student_types: editForm.applicable_student_types,
                       applicable_scholarship_levels: editForm.applicable_scholarship_levels,
+                      requires_english: editForm.requires_english,
                       attachment_url,
                       status: editForm.status,
                     };

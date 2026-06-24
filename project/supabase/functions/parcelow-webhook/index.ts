@@ -6,6 +6,7 @@ import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/b
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan, buildLegacyProfileMirror } from "../utils/installmentHelper.ts";
+import { sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 const supabase = createClient(
 // @ts-ignore
@@ -1742,6 +1743,94 @@ Deno.serve(async (req: Request) => {
             );
           }
           break;
+
+        case "translation": {
+          console.log("[parcelow-webhook] 🔄 Processando translation...");
+
+          const translationOrderId = parcelowOrder.metadata?.translation_order_id;
+
+          if (!translationOrderId) {
+            console.error("[parcelow-webhook] ❌ translation_order_id não encontrado no metadata");
+            break;
+          }
+
+          const { error: translationUpdateError } = await supabase
+            .from("translation_orders")
+            .update({
+              payment_status: "paid",
+              paid_at: new Date().toISOString(),
+            })
+            .eq("id", translationOrderId);
+
+          if (translationUpdateError) {
+            console.error("[parcelow-webhook] ❌ Erro ao atualizar translation_orders:", translationUpdateError);
+          } else {
+            console.log(`[parcelow-webhook] ✅ Translation order ${translationOrderId} marcada como paga`);
+            const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
+            sendPaymentConfirmedEmails(supabase, translationOrderId, 'parcelow', supportEmail);
+            // Activity log
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: userProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Parcelow — order #${translationOrderId.slice(0, 8)}`,
+                p_performed_by: userId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: translationOrderId, payment_method: 'parcelow' },
+              });
+            } catch (logErr: any) {
+              console.error('[parcelow-webhook] log translation_payment_received failed:', logErr?.message);
+            }
+          }
+          break;
+        }
+
+        case "translation_batch": {
+          console.log("[parcelow-webhook] Processing translation_batch...");
+
+          const batchOrderIdsStr = parcelowOrder.metadata?.translation_order_ids || "";
+          const batchOrderIds = batchOrderIdsStr.split(",").filter(Boolean);
+
+          if (!batchOrderIds.length) {
+            console.error("[parcelow-webhook] translation_order_ids not found in metadata");
+            break;
+          }
+
+          for (const batchOrderId of batchOrderIds) {
+            const { error: batchUpdateErr } = await supabase
+              .from("translation_orders")
+              .update({
+                payment_status: "paid",
+                paid_at: new Date().toISOString(),
+              })
+              .eq("id", batchOrderId);
+
+            if (batchUpdateErr) {
+              console.error("[parcelow-webhook] Failed to update translation_order " + batchOrderId, batchUpdateErr);
+            } else {
+              console.log("[parcelow-webhook] Translation order " + batchOrderId + " marked as paid (batch)");
+            }
+          }
+          // Send confirmation email for first order in batch (fire-and-forget)
+          if (batchOrderIds.length > 0) {
+            const supportEmail = Deno.env.get("SUPPORT_EMAIL") || "support@matriculausa.com";
+            sendPaymentConfirmedEmails(supabase, batchOrderIds[0], 'parcelow', supportEmail);
+            // Activity log
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: userProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation batch payment confirmed via Parcelow — ${batchOrderIds.length} order(s)`,
+                p_performed_by: userId,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: batchOrderIds[0], translation_order_ids: batchOrderIds, payment_method: 'parcelow', batch_count: batchOrderIds.length },
+              });
+            } catch (logErr: any) {
+              console.error('[parcelow-webhook] log translation_payment_received (batch) failed:', logErr?.message);
+            }
+          }
+          break;
+        }
 
         default:
           console.warn(
