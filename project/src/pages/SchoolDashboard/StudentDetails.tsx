@@ -1966,6 +1966,34 @@ const StudentDetails: React.FC = () => {
           } catch (e) {
             console.error('Error sending in-app student notification:', e);
           }
+
+          // Notificar Migma que a acceptance letter foi emitida
+          try {
+            const migmaUrl = import.meta.env.VITE_MIGMA_FUNCTIONS_URL;
+            const migmaSecret = import.meta.env.VITE_MIGMA_WEBHOOK_SECRET;
+            const migmaAnonKey = import.meta.env.VITE_MIGMA_SUPABASE_ANON_KEY;
+            if (migmaUrl && migmaSecret) {
+              const migmaRes = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${migmaAnonKey}`,
+                  'x-migma-webhook-secret': migmaSecret,
+                },
+                body: JSON.stringify({
+                  student_email: userData.email,
+                  acceptance_letter_url: publicUrl,
+                }),
+              });
+              if (!migmaRes.ok) {
+                console.warn('[Migma] receive-matriculausa-letter failed:', migmaRes.status, await migmaRes.text());
+              } else {
+                console.log('[Migma] Acceptance letter notified successfully');
+              }
+            }
+          } catch (migmaError) {
+            console.warn('[Migma] Acceptance letter notification failed (non-critical):', migmaError);
+          }
         }
       } catch (notificationError) {
         console.error('Error sending acceptance notification:', notificationError);
