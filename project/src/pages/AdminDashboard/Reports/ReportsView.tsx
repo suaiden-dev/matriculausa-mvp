@@ -113,25 +113,25 @@ export default function ReportsView() {
       });
     };
 
-    // ---- Aba 1: Alunos ----
-    const wsAlunos = wb.addWorksheet('Alunos');
+    // ---- Sheet 1: Students ----
+    const wsAlunos = wb.addWorksheet('Students');
     wsAlunos.columns = [
-      { header: 'Aluno', key: 'nome', width: 32 },
+      { header: 'Student', key: 'nome', width: 32 },
       { header: 'Email', key: 'email', width: 36 },
-      { header: 'Parceiro / Agência', key: 'parceiro', width: 24 },
-      { header: 'Universidade', key: 'universidade', width: 28 },
-      { header: 'Bolsa', key: 'bolsa', width: 28 },
-      { header: 'Estágio Atual', key: 'estagio', width: 24 },
-      { header: 'Data Inscrição', key: 'data', width: 16 },
-      { header: 'Selection Fee', key: 'selFeePago', width: 14 },
-      { header: 'App Fee Pago?', key: 'appFeePago', width: 14 },
+      { header: 'Partner / Agency', key: 'parceiro', width: 24 },
+      { header: 'University', key: 'universidade', width: 28 },
+      { header: 'Scholarship', key: 'bolsa', width: 28 },
+      { header: 'Current Stage', key: 'estagio', width: 24 },
+      { header: 'Enrollment Date', key: 'data', width: 16 },
+      { header: 'Selection Fee Paid?', key: 'selFeePago', width: 18 },
+      { header: 'App Fee Paid?', key: 'appFeePago', width: 14 },
       { header: 'App Fee (USD)', key: 'appFee', width: 15 },
-      { header: 'Placement Fee Pago?', key: 'placFeePago', width: 18 },
+      { header: 'Placement Fee Paid?', key: 'placFeePago', width: 18 },
       { header: 'Placement Fee (USD)', key: 'placFee', width: 18 },
-      { header: 'Scholarship Fee Pago?', key: 'scholFeePago', width: 20 },
+      { header: 'Scholarship Fee Paid?', key: 'scholFeePago', width: 20 },
       { header: 'Scholarship Fee (USD)', key: 'scholFee', width: 20 },
-      { header: 'Total Pago (USD)', key: 'totalPago', width: 16 },
-      { header: 'Total Pendente (USD)', key: 'totalPendente', width: 18 },
+      { header: 'Total Paid (USD)', key: 'totalPago', width: 16 },
+      { header: 'Total Pending (USD)', key: 'totalPendente', width: 18 },
     ];
     styleHeader(wsAlunos);
 
@@ -157,17 +157,17 @@ export default function ReportsView() {
       wsAlunos.addRow({
         nome: s.student_name,
         email: s.student_email,
-        parceiro: (s as any).source === 'migma' ? 'Migma' : (s.agency_name || 'Direct / Sem Agência'),
+        parceiro: (s as any).source === 'migma' ? 'Migma' : (s.agency_name || 'Direct / No Agency'),
         universidade: s.university_name || 'N/A',
         bolsa: s.scholarship_title || 'N/A',
         estagio: s.currentStageLabel,
         data: s.applied_at ? new Date(s.applied_at) : null,
-        selFeePago: s.has_paid_selection_process_fee ? 'Sim' : 'Não',
-        appFeePago: s.is_application_fee_paid ? 'Sim' : 'Não',
+        selFeePago: s.has_paid_selection_process_fee ? 'Yes' : 'No',
+        appFeePago: s.is_application_fee_paid ? 'Yes' : 'No',
         appFee: s.is_application_fee_paid ? (s.application_fee_amount || 0) : 0,
-        placFeePago: isMigma ? 'Via Migma' : s.is_placement_fee_paid ? 'Sim' : 'Não',
+        placFeePago: isMigma ? 'Via Migma' : s.is_placement_fee_paid ? 'Yes' : 'No',
         placFee: s.is_placement_fee_paid ? (s.placement_fee_amount || 0) : 0,
-        scholFeePago: isMigma ? 'Via Migma' : s.is_scholarship_fee_paid ? 'Sim' : 'Não',
+        scholFeePago: isMigma ? 'Via Migma' : s.is_scholarship_fee_paid ? 'Yes' : 'No',
         scholFee: s.is_scholarship_fee_paid ? (s.scholarship_fee_amount || 0) : 0,
         totalPago: paidFees,
         totalPendente: pending,
@@ -191,13 +191,13 @@ export default function ReportsView() {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
     });
 
-    // ---- Helper para abas de distribuição ----
+    // ---- Helper for distribution sheets ----
     const addDistSheet = (name: string, col1Label: string, rows: Array<{ label: string; qty: number; pct: number }>) => {
       const ws = wb.addWorksheet(name);
       ws.columns = [
         { header: col1Label, key: 'label', width: 36 },
-        { header: 'Qtd. Alunos', key: 'qty', width: 14 },
-        { header: '% do Total', key: 'pct', width: 12 },
+        { header: '# Students', key: 'qty', width: 14 },
+        { header: '% of Total', key: 'pct', width: 12 },
       ];
       styleHeader(ws);
       rows.forEach(r => ws.addRow({ label: r.label, qty: r.qty, pct: r.pct / 100 }));
@@ -206,25 +206,25 @@ export default function ReportsView() {
       ws.getColumn('pct').alignment = { horizontal: 'center' };
     };
 
-    addDistSheet('Por Parceiro', 'Parceiro / Agência',
+    addDistSheet('By Partner', 'Partner / Agency',
       partnerChart.map(p => ({ label: p.name, qty: p.value, pct: p.percentage ?? 0 })));
 
-    addDistSheet('Por Estágio', 'Estágio do Funil',
+    addDistSheet('By Stage', 'Funnel Stage',
       stageChart.map(e => ({ label: e.name, qty: e.value, pct: e.percentage ?? 0 })));
 
-    // ---- Aba 4: Por Bolsa (com receita calculada inline) ----
+    // ---- Sheet 4: By Scholarship ----
     const scholarshipRevenue = new Map<string, number>();
     filteredStudents.forEach(s => {
       if (s.scholarship_title && s.is_application_fee_paid) {
         scholarshipRevenue.set(s.scholarship_title, (scholarshipRevenue.get(s.scholarship_title) || 0) + (s.application_fee_amount || 0));
       }
     });
-    const wsBolsas = wb.addWorksheet('Por Bolsa');
+    const wsBolsas = wb.addWorksheet('By Scholarship');
     wsBolsas.columns = [
-      { header: 'Bolsa', key: 'bolsa', width: 36 },
-      { header: 'Qtd. Alunos', key: 'qty', width: 14 },
-      { header: '% do Total', key: 'pct', width: 12 },
-      { header: 'App Fees Arrecadados (USD)', key: 'receita', width: 24 },
+      { header: 'Scholarship', key: 'bolsa', width: 36 },
+      { header: '# Students', key: 'qty', width: 14 },
+      { header: '% of Total', key: 'pct', width: 12 },
+      { header: 'App Fees Collected (USD)', key: 'receita', width: 24 },
     ];
     styleHeader(wsBolsas);
     scholarshipChart.forEach(b => {
@@ -235,7 +235,7 @@ export default function ReportsView() {
     wsBolsas.getColumn('pct').alignment = { horizontal: 'center' };
     wsBolsas.getColumn('receita').numFmt = '"$"#,##0.00';
 
-    addDistSheet('Por Universidade', 'Universidade',
+    addDistSheet('By University', 'University',
       universityChart.map(u => ({ label: u.name, qty: u.value, pct: u.percentage ?? 0 })));
 
     // ---- Download ----
@@ -244,7 +244,7 @@ export default function ReportsView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Relatorio_MatriculaUSA_${format(new Date(), 'yyyyMMdd')}.xlsx`;
+    a.download = `Report_MatriculaUSA_${format(new Date(), 'yyyyMMdd')}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -256,15 +256,15 @@ export default function ReportsView() {
     // Header
     doc.setFontSize(18);
     doc.setTextColor(5, 41, 78);
-    doc.text('Relatório Matrícula USA', 14, 18);
+    doc.text('Matrícula USA Report', 14, 18);
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Gerado em ${dateStr}  •  Total de Alunos: ${totals.count}  •  App Fees: $${totals.applicationFees.toLocaleString('pt-BR')}  •  Placement Fees: $${totals.placementFees.toLocaleString('pt-BR')}`, 14, 26);
+    doc.text(`Generated on ${dateStr}  •  Total Students: ${totals.count}  •  App Fees: $${totals.applicationFees.toLocaleString('en-US')}  •  Placement Fees: $${totals.placementFees.toLocaleString('en-US')}`, 14, 26);
 
     // Main table — all students, no limit
     autoTable(doc, {
       startY: 32,
-      head: [['Aluno', 'Parceiro', 'Universidade', 'Estágio Atual', 'Taxas Pagas', 'Taxas Pendentes']],
+      head: [['Student', 'Partner', 'University', 'Current Stage', 'Fees Paid', 'Pending Fees']],
       body: filteredStudents.map(s => {
         const isMigmaPdf = (s as any).source === 'migma';
         const paidNames: string[] = [];
@@ -301,7 +301,7 @@ export default function ReportsView() {
       margin: { left: 14, right: 14 },
     });
 
-    doc.save(`Relatorio_MatriculaUSA_${format(new Date(), 'yyyyMMdd')}.pdf`);
+    doc.save(`Report_MatriculaUSA_${format(new Date(), 'yyyyMMdd')}.pdf`);
   };
 
   return (
@@ -319,84 +319,84 @@ export default function ReportsView() {
           <span className={`w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${filters.showTestUsers ? 'bg-amber-400' : 'bg-slate-300'}`}>
             <span className={`w-3 h-3 bg-white rounded-full shadow transition-transform ${filters.showTestUsers ? 'translate-x-4' : 'translate-x-0'}`} />
           </span>
-          {isStale ? 'Atualizando...' : filters.showTestUsers ? 'Usuários de teste visíveis' : 'Ocultar usuários de teste'}
+          {isStale ? 'Updating...' : filters.showTestUsers ? 'Test users visible' : 'Hide test users'}
         </button>
         <div className="flex flex-wrap gap-3">
           <button onClick={handleExportPDF} className="flex items-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
             <FileText className="w-4 h-4 mr-2" />
-            Exportar PDF
+            Export PDF
           </button>
           <button onClick={handleExportExcel} className="flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041d38] transition shadow-md">
             <Download className="w-4 h-4 mr-2" />
-            Exportar Excel
+            Export Excel
           </button>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wider">Filtros</h3>
+        <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wider">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Data De</label>
-            <input 
-              type="date" 
+            <label className="block text-xs font-medium text-slate-500 mb-1">From Date</label>
+            <input
+              type="date"
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.dateFrom}
               onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Data Até</label>
-            <input 
-              type="date" 
+            <label className="block text-xs font-medium text-slate-500 mb-1">To Date</label>
+            <input
+              type="date"
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.dateTo}
               onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Parceiro (Agência)</label>
-            <select 
+            <label className="block text-xs font-medium text-slate-500 mb-1">Partner (Agency)</label>
+            <select
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.partner}
               onChange={e => setFilters(f => ({ ...f, partner: e.target.value }))}
             >
-              <option value="all">Todos os Parceiros</option>
-              <option value="direct">Direct (Sem Agência)</option>
+              <option value="all">All Partners</option>
+              <option value="direct">Direct (No Agency)</option>
               {filterOptions.partners.map((p: any) => <option key={p} value={p}>{p === 'migma' ? 'Migma' : p}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Estágio do Funil</label>
-            <select 
+            <label className="block text-xs font-medium text-slate-500 mb-1">Funnel Stage</label>
+            <select
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.stage}
               onChange={e => setFilters(f => ({ ...f, stage: e.target.value }))}
             >
-              <option value="all">Todos os Estágios</option>
+              <option value="all">All Stages</option>
               {filterOptions.stages.map((s: any) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Universidade</label>
-            <select 
+            <label className="block text-xs font-medium text-slate-500 mb-1">University</label>
+            <select
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.university}
               onChange={e => setFilters(f => ({ ...f, university: e.target.value }))}
             >
-              <option value="all">Todas</option>
+              <option value="all">All</option>
               {filterOptions.universities.map((u: any) => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Bolsa</label>
-            <select 
+            <label className="block text-xs font-medium text-slate-500 mb-1">Scholarship</label>
+            <select
               className="w-full text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               value={filters.scholarship}
               onChange={e => setFilters(f => ({ ...f, scholarship: e.target.value }))}
             >
-              <option value="all">Todas</option>
+              <option value="all">All</option>
               {filterOptions.scholarships.map((s: any) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
@@ -406,15 +406,15 @@ export default function ReportsView() {
       {/* Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-sm font-medium text-slate-500">Total de Alunos</p>
+          <p className="text-sm font-medium text-slate-500">Total Students</p>
           <p className="text-3xl font-bold text-slate-800">{totals.count}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-sm font-medium text-slate-500">App Fees Pagos</p>
+          <p className="text-sm font-medium text-slate-500">App Fees Paid</p>
           <p className="text-3xl font-bold text-green-600">${totals.applicationFees.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-sm font-medium text-slate-500">Placement Fees Pagos</p>
+          <p className="text-sm font-medium text-slate-500">Placement Fees Paid</p>
           <p className="text-3xl font-bold text-blue-600">${totals.placementFees.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
       </div>
@@ -423,11 +423,11 @@ export default function ReportsView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Stage Chart */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-md font-bold text-slate-800 mb-1">Onde estão seus alunos agora?</h3>
-          <p className="text-xs text-slate-400 mb-4">Distribuição por coluna do Kanban — veja onde o processo está concentrado</p>
+          <h3 className="text-md font-bold text-slate-800 mb-1">Where are your students now?</h3>
+          <p className="text-xs text-slate-400 mb-4">Distribution by Kanban column — see where the pipeline is concentrated</p>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {stageChart.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-8">Nenhum dado disponível</p>
+              <p className="text-sm text-slate-400 text-center py-8">No data available</p>
             )}
             {stageChart.map((stage, index) => (
               <div key={stage.name}>
@@ -453,11 +453,11 @@ export default function ReportsView() {
 
         {/* Partner Chart */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-md font-bold text-slate-800 mb-1">Alunos por Parceiro/Agência</h3>
-          <p className="text-xs text-slate-400 mb-4">Ranking de origem dos alunos no funil</p>
+          <h3 className="text-md font-bold text-slate-800 mb-1">Students by Partner / Agency</h3>
+          <p className="text-xs text-slate-400 mb-4">Student origin ranking in the pipeline</p>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {partnerChart.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-8">Nenhum dado disponível</p>
+              <p className="text-sm text-slate-400 text-center py-8">No data available</p>
             )}
             {partnerChart.map((partner, index) => (
               <div key={partner.name}>
@@ -483,11 +483,11 @@ export default function ReportsView() {
 
         {/* Scholarship Chart */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-md font-bold text-slate-800 mb-1">Top Bolsas Escolhidas</h3>
-          <p className="text-xs text-slate-400 mb-4">Bolsas mais selecionadas pelos alunos no funil</p>
+          <h3 className="text-md font-bold text-slate-800 mb-1">Top Scholarships Selected</h3>
+          <p className="text-xs text-slate-400 mb-4">Most selected scholarships in the pipeline</p>
           <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
             {scholarshipChart.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-8">Nenhum dado disponível</p>
+              <p className="text-sm text-slate-400 text-center py-8">No data available</p>
             )}
             {scholarshipChart.slice(0, 15).map((item, index) => (
               <div key={`${item.name}-${index}`}>
@@ -516,11 +516,11 @@ export default function ReportsView() {
 
         {/* University Chart */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-md font-bold text-slate-800 mb-1">Alunos por Universidade</h3>
-          <p className="text-xs text-slate-400 mb-4">Distribuição dos alunos por instituição parceira</p>
+          <h3 className="text-md font-bold text-slate-800 mb-1">Students by University</h3>
+          <p className="text-xs text-slate-400 mb-4">Student distribution by partner institution</p>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {universityChart.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-8">Nenhum dado disponível</p>
+              <p className="text-sm text-slate-400 text-center py-8">No data available</p>
             )}
             {universityChart.map((uni, index) => (
               <div key={uni.name}>
@@ -548,19 +548,19 @@ export default function ReportsView() {
       {/* Data Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-          <h3 className="font-bold text-slate-800">Detalhes dos Alunos</h3>
-          <span className="text-sm text-slate-500">Mostrando {filteredStudents.length} resultados</span>
+          <h3 className="font-bold text-slate-800">Student Details</h3>
+          <span className="text-sm text-slate-500">Showing {filteredStudents.length} results</span>
         </div>
         <div className="overflow-x-auto max-h-96">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-600 uppercase bg-slate-100 sticky top-0 z-10 shadow-sm">
               <tr>
-                <th className="px-6 py-3">Aluno</th>
-                <th className="px-6 py-3">Parceiro</th>
-                <th className="px-6 py-3">Universidade</th>
-                <th className="px-6 py-3">Estágio Atual</th>
-                <th className="px-6 py-3">Taxas Pagas</th>
-                <th className="px-6 py-3">Taxas Pendentes</th>
+                <th className="px-6 py-3">Student</th>
+                <th className="px-6 py-3">Partner</th>
+                <th className="px-6 py-3">University</th>
+                <th className="px-6 py-3">Current Stage</th>
+                <th className="px-6 py-3">Fees Paid</th>
+                <th className="px-6 py-3">Pending Fees</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -605,7 +605,7 @@ export default function ReportsView() {
               {filteredStudents.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                    Nenhum aluno encontrado com os filtros atuais.
+                    No students found with the current filters.
                   </td>
                 </tr>
               )}

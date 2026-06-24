@@ -162,7 +162,7 @@ export function useReportsData() {
 
       stagesMap.set(s.currentStageShort, (stagesMap.get(s.currentStageShort) || 0) + 1);
 
-      const partnerName = (s as any).source === 'migma' ? 'Migma' : (s.agency_name || 'Direct / Sem Agência');
+      const partnerName = (s as any).source === 'migma' ? 'Migma' : (s.agency_name || 'Direct / No Agency');
       partnersMap.set(partnerName, (partnersMap.get(partnerName) || 0) + 1);
 
       if (s.scholarship_title) {
