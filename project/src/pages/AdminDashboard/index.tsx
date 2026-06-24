@@ -663,7 +663,7 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/transfer-management" element={<AdminTransferManagement />} />
                 <Route path="/transfer-settings" element={<AutoTransferSettings />} />
                 <Route path="/financial-analytics" element={<FinancialAnalytics />} />
-                {/* <Route path="/reports" element={<ReportsView />} /> */}
+                <Route path="reports" element={<ReportsView />} />
                 <Route path="/coupons" element={<CouponManagement />} />
                 <Route path="/newsletter" element={<NewsletterManagement />} />
                 <Route path="/terms" element={<TermsManagement />} />
