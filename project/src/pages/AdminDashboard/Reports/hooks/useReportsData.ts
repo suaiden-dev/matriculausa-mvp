@@ -35,8 +35,9 @@ export function useReportsData() {
       stageChart: [],
       partnerChart: [],
       scholarshipChart: [],
+      scholarshipValueChart: [],
       universityChart: [],
-      totals: { count: 0, applicationFees: 0, placementFees: 0, scholarshipFees: 0 }
+      totals: { count: 0, applicationFees: 0, placementFees: 0, scholarshipFees: 0, totalScholarshipValue: 0 }
     };
 
     // Filter students
@@ -86,45 +87,42 @@ export function useReportsData() {
     const stagesMap = new Map<string, number>();
     const partnersMap = new Map<string, number>();
     const scholarshipsMap = new Map<string, number>();
+    const scholarshipValueMap = new Map<string, number>(); // scholarship_title → total $ value
     const universitiesMap = new Map<string, number>();
 
     let totalAppFees = 0;
     let totalPlaceFees = 0;
     let totalScholFees = 0;
+    let totalScholarshipValue = 0;
 
     finalStudents.forEach(s => {
-      // Fees paid
       if (s.is_application_fee_paid) totalAppFees += (s.application_fee_amount || 0);
       if (s.is_placement_fee_paid) totalPlaceFees += (s.placement_fee_amount || 0);
       if (s.is_scholarship_fee_paid) totalScholFees += (s.scholarship_fee_amount || 0);
+      totalScholarshipValue += (s.scholarship_fee_amount || 0);
 
-      // Stage
       stagesMap.set(s.currentStageShort, (stagesMap.get(s.currentStageShort) || 0) + 1);
 
-      // Partner
       const partnerName = s.agency_name || 'Direct / Sem Agência';
       partnersMap.set(partnerName, (partnersMap.get(partnerName) || 0) + 1);
 
-      // Scholarship
       if (s.scholarship_title) {
         scholarshipsMap.set(s.scholarship_title, (scholarshipsMap.get(s.scholarship_title) || 0) + 1);
+        scholarshipValueMap.set(
+          s.scholarship_title,
+          (scholarshipValueMap.get(s.scholarship_title) || 0) + (s.scholarship_fee_amount || 0)
+        );
       }
 
-      // University
       if (s.university_name) {
         universitiesMap.set(s.university_name, (universitiesMap.get(s.university_name) || 0) + 1);
       }
     });
 
-    const formatChartData = (map: Map<string, number>, total: number): ChartData[] => {
-      return Array.from(map.entries())
-        .map(([name, value]) => ({
-          name,
-          value,
-          percentage: total > 0 ? (value / total) * 100 : 0
-        }))
+    const formatChartData = (map: Map<string, number>, total: number): ChartData[] =>
+      Array.from(map.entries())
+        .map(([name, value]) => ({ name, value, percentage: total > 0 ? (value / total) * 100 : 0 }))
         .sort((a, b) => b.value - a.value);
-    };
 
     const totalCount = finalStudents.length;
 
@@ -133,12 +131,14 @@ export function useReportsData() {
       stageChart: formatChartData(stagesMap, totalCount),
       partnerChart: formatChartData(partnersMap, totalCount),
       scholarshipChart: formatChartData(scholarshipsMap, totalCount),
+      scholarshipValueChart: formatChartData(scholarshipValueMap, totalScholarshipValue),
       universityChart: formatChartData(universitiesMap, totalCount),
       totals: {
         count: totalCount,
         applicationFees: totalAppFees,
         placementFees: totalPlaceFees,
-        scholarshipFees: totalScholFees
+        scholarshipFees: totalScholFees,
+        totalScholarshipValue
       }
     };
   }, [students, filters]);

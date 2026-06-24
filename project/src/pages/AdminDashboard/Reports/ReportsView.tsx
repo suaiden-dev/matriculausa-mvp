@@ -21,6 +21,7 @@ export default function ReportsView() {
     stageChart,
     partnerChart,
     scholarshipChart,
+    scholarshipValueChart,
     universityChart,
     totals,
     filterOptions
@@ -30,32 +31,70 @@ export default function ReportsView() {
   if (error) return <div className="p-8 text-center text-red-500">Failed to load reports.</div>;
 
   const handleExportExcel = () => {
-    const dataToExport = filteredStudents.map(s => ({
-      'Aluno': s.student_name,
-      'Email': s.student_email,
-      'Parceiro/Agência': s.agency_name || 'Direct / Sem Agência',
-      'Universidade': s.university_name || 'N/A',
-      'Bolsa': s.scholarship_title || 'N/A',
-      'Estágio Atual': s.currentStageLabel,
-      'Data de Inscrição': s.applied_at ? format(new Date(s.applied_at), 'dd/MM/yyyy') : 'N/A',
-      'App Fee Pago?': s.is_application_fee_paid ? 'Sim' : 'Não',
-      'App Fee (USD)': s.application_fee_amount || 0,
-      'Placement Fee Pago?': s.is_placement_fee_paid ? 'Sim' : 'Não',
-      'Placement Fee (USD)': s.placement_fee_amount || 0,
-      'Scholarship Fee Pago?': s.is_scholarship_fee_paid ? 'Sim' : 'Não',
-      'Scholarship Fee (USD)': s.scholarship_fee_amount || 0,
-      'Taxas Pendentes (Estimativa USD)': (() => {
-        let pending = 0;
-        if (!s.is_application_fee_paid && s.application_fee_amount) pending += s.application_fee_amount;
-        if (s.placement_fee_flow && !s.is_placement_fee_paid && s.placement_fee_amount) pending += s.placement_fee_amount;
-        if (!s.placement_fee_flow && !s.is_scholarship_fee_paid && s.scholarship_fee_amount) pending += s.scholarship_fee_amount;
-        return pending;
-      })()
+    // Aba 1: Detalhes dos alunos
+    const alunosData = filteredStudents.map(s => {
+      const paidFees =
+        (s.is_application_fee_paid ? (s.application_fee_amount || 0) : 0) +
+        (s.is_placement_fee_paid ? (s.placement_fee_amount || 0) : 0) +
+        (s.is_scholarship_fee_paid ? (s.scholarship_fee_amount || 0) : 0);
+      let pending = 0;
+      if (!s.is_application_fee_paid && s.application_fee_amount) pending += s.application_fee_amount;
+      if (s.placement_fee_flow && !s.is_placement_fee_paid && s.placement_fee_amount) pending += s.placement_fee_amount;
+      if (!s.placement_fee_flow && !s.is_scholarship_fee_paid && s.scholarship_fee_amount) pending += s.scholarship_fee_amount;
+      return {
+        'Aluno': s.student_name,
+        'Email': s.student_email,
+        'Parceiro / Agência': s.agency_name || 'Direct / Sem Agência',
+        'Universidade': s.university_name || 'N/A',
+        'Bolsa': s.scholarship_title || 'N/A',
+        'Estágio Atual': s.currentStageLabel,
+        'Data de Inscrição': s.applied_at ? format(new Date(s.applied_at), 'dd/MM/yyyy') : 'N/A',
+        'App Fee Pago?': s.is_application_fee_paid ? 'Sim' : 'Não',
+        'App Fee (USD)': s.application_fee_amount || 0,
+        'Placement Fee Pago?': s.is_placement_fee_paid ? 'Sim' : 'Não',
+        'Placement Fee (USD)': s.placement_fee_amount || 0,
+        'Scholarship Fee Pago?': s.is_scholarship_fee_paid ? 'Sim' : 'Não',
+        'Scholarship Fee (USD)': s.scholarship_fee_amount || 0,
+        'Total Taxas Pagas (USD)': paidFees,
+        'Total Taxas Pendentes (USD)': pending,
+      };
+    });
+
+    // Aba 2: Distribuição por parceiro
+    const parceirosData = partnerChart.map(p => ({
+      'Parceiro / Agência': p.name,
+      'Qtd Alunos': p.value,
+      '% do Total': `${p.percentage?.toFixed(1)}%`,
     }));
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    // Aba 3: Distribuição por estágio
+    const estagiosData = stageChart.map(e => ({
+      'Estágio': e.name,
+      'Qtd Alunos': e.value,
+      '% do Total': `${e.percentage?.toFixed(1)}%`,
+    }));
+
+    // Aba 4: Distribuição por bolsa
+    const bolsasData = scholarshipChart.map((b, i) => ({
+      'Bolsa': b.name,
+      'Qtd Alunos': b.value,
+      '% do Total': `${b.percentage?.toFixed(1)}%`,
+      'Valor Total Arrecadado (USD)': scholarshipValueChart[i]?.value || 0,
+    }));
+
+    // Aba 5: Distribuição por universidade
+    const universidadesData = universityChart.map(u => ({
+      'Universidade': u.name,
+      'Qtd Alunos': u.value,
+      '% do Total': `${u.percentage?.toFixed(1)}%`,
+    }));
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Alunos");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(alunosData), 'Alunos');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(parceirosData), 'Por Parceiro');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(estagiosData), 'Por Estágio');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bolsasData), 'Por Bolsa');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(universidadesData), 'Por Universidade');
     XLSX.writeFile(wb, `Relatorio_MatriculaUSA_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
 
@@ -193,22 +232,26 @@ export default function ReportsView() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <p className="text-sm font-medium text-slate-500">Total de Alunos</p>
           <p className="text-3xl font-bold text-slate-800">{totals.count}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <p className="text-sm font-medium text-slate-500">App Fees Pagos (USD)</p>
-          <p className="text-3xl font-bold text-green-600">${totals.applicationFees}</p>
+          <p className="text-sm font-medium text-slate-500">App Fees Pagos</p>
+          <p className="text-3xl font-bold text-green-600">${totals.applicationFees.toLocaleString()}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <p className="text-sm font-medium text-slate-500">Placement Fees Pagos</p>
-          <p className="text-3xl font-bold text-blue-600">${totals.placementFees}</p>
+          <p className="text-3xl font-bold text-blue-600">${totals.placementFees.toLocaleString()}</p>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
           <p className="text-sm font-medium text-slate-500">Scholarship Fees Pagos</p>
-          <p className="text-3xl font-bold text-purple-600">${totals.scholarshipFees}</p>
+          <p className="text-3xl font-bold text-purple-600">${totals.scholarshipFees.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <p className="text-sm font-medium text-slate-500">Valor Total das Bolsas</p>
+          <p className="text-3xl font-bold text-amber-600">${totals.totalScholarshipValue.toLocaleString()}</p>
         </div>
       </div>
 
@@ -266,6 +309,23 @@ export default function ReportsView() {
                 <YAxis />
                 <RechartsTooltip formatter={(value: number) => [`${value} Alunos`, 'Total']} />
                 <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Scholarship Value Chart */}
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+          <h3 className="text-md font-bold text-slate-800 mb-1">Valor das Bolsas (USD)</h3>
+          <p className="text-xs text-slate-400 mb-5">Valor total arrecadado por tipo de bolsa</p>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={scholarshipValueChart.slice(0, 10)}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={80} />
+                <YAxis tickFormatter={(v) => `$${v}`} />
+                <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Total USD']} />
+                <Bar dataKey="value" fill="#F59E0B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
