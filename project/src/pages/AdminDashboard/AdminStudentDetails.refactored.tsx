@@ -4430,7 +4430,6 @@ const AdminStudentDetails: React.FC = () => {
               handleRejectTransferFormUpload={handleRejectTransferFormUpload}
               handleViewDocument={handleOnViewDocument}
               handleDownloadDocument={handleDownloadDocument}
-              handleMarkTransferProofViewed={handleMarkTransferProofViewed}
             />
           )}
 
