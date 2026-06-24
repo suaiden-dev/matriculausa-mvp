@@ -1119,7 +1119,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   <Sparkles className="h-4 w-4 text-purple-600" />
                   <span>Show only students who used BLACK coupon</span>
                 </label>
-              </div>
+              </div> */}
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1132,7 +1132,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   <GraduationCap className="h-4 w-4 text-blue-600" />
                   <span>Show Current Students Scholarship</span>
                 </label>
-              </div> */}
+              </div>
             </div>
             <button
               onClick={clearSavedFilters}

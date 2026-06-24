@@ -1,6 +1,7 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useEnvironment } from '../../hooks/useEnvironment';
 import { UniversityProvider } from '../../context/UniversityContext';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
 import Overview from './Overview';
@@ -36,6 +37,7 @@ import PaymentDashboard from './PaymentDashboard';
 
 export const SchoolDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { isProduction } = useEnvironment();
 
   return (
     <div className="bg-slate-50">
@@ -69,7 +71,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="payment-dashboard" element={<PaymentDashboard />} />
 
             <Route path="matricula-rewards" element={<UniversityRewardsDashboard />} />
-            <Route path="whatsapp" element={<WhatsAppConnection />} />
+            <Route path="whatsapp" element={isProduction ? <Navigate to="/school/dashboard" replace /> : <WhatsAppConnection />} />
           </Routes>
         </SchoolDashboardLayout>
       </UniversityProvider>
