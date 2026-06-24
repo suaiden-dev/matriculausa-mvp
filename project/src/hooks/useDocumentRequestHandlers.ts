@@ -416,7 +416,7 @@ export const useDocumentRequestHandlers = (
   }, [userId, logAction, studentId, student, setDocumentRequests, onSuccess]);
 
   // Handler para rejeitar documento
-  const handleRejectDocumentRequest = useCallback(async (uploadId: string, reason: string) => {
+  const handleRejectDocumentRequest = useCallback(async (uploadId: string, reason: string, needsTranslation?: boolean) => {
     setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: true }));
     try {
       // Buscar informações do upload antes de atualizar
@@ -450,7 +450,8 @@ export const useDocumentRequestHandlers = (
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
           reviewed_by: userId,
-          rejection_reason: reason
+          rejection_reason: reason,
+          needs_translation: (needsTranslation || reason === 'needs_translation') ? true : null
         })
         .eq('id', uploadId);
 

@@ -76,7 +76,8 @@ export const useDocumentRequestsOptimized = (
         'created_at',
         'updated_at',
         'template_url',
-        'attachment_url'
+        'attachment_url',
+        'requires_english'
       ].join(',');
 
       const promises: Promise<any>[] = [];

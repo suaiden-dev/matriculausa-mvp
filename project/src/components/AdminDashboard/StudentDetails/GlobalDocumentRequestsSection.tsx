@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, FileText, CheckCircle, XCircle, Clock, Download, EyeOff, Eye, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import { Globe, FileText, CheckCircle, XCircle, Clock, Download, EyeOff, Eye, ChevronDown, ChevronUp, Plus, X, AlertTriangle, RefreshCw, ExternalLink, Languages } from 'lucide-react';
 import AdminUploadAttachmentModal from './AdminUploadAttachmentModal';
 
 interface GlobalDocumentRequestsSectionProps {
@@ -7,7 +7,7 @@ interface GlobalDocumentRequestsSectionProps {
   studentUserId: string;
   isAdmin?: boolean;
   onApproveDocument?: (uploadId: string) => void;
-  onRejectDocument?: (uploadId: string, reason: string) => void;
+  onRejectDocument?: (uploadId: string, reason: string, needsTranslation?: boolean) => void;
   onHideDocumentRequest?: (requestId: string) => void;
   onRestoreDocumentRequest?: (requestId: string) => void;
   onUploadGlobalAttachment?: (title: string, file: File) => Promise<void>;
@@ -48,6 +48,46 @@ function formatDate(iso: string) {
 
 import { groupUploadsBySubmission, getFileName, getUploadDisplayName } from '../../../utils/documentUploadUtils';
 
+function getTranslationBadge(upload: any) {
+  if (!upload.needs_translation) return null;
+  const order = Array.isArray(upload.translation_orders) ? upload.translation_orders[0] : null;
+  if (order?.translation_status === 'completed' || order?.translation_status === 'Finalizado') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700 border border-green-200">
+        <Languages className="h-2.5 w-2.5" />
+        Translated
+      </span>
+    );
+  }
+  if (order?.payment_status === 'paid') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
+        <Languages className="h-2.5 w-2.5" />
+        Being Translated
+      </span>
+    );
+  }
+  if (order?.payment_status === 'unpaid') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-700 border border-amber-200">
+        <Languages className="h-2.5 w-2.5" />
+        Awaiting Payment
+      </span>
+    );
+  }
+  return null;
+}
+
+function getSourceBadge(upload: any) {
+  if (upload.source !== 'translation_resubmit') return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+      <Languages className="h-2.5 w-2.5" />
+      Translated &amp; Resubmitted
+    </span>
+  );
+}
+
 const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps> = ({
   globalRequests = [],
   studentUserId,
@@ -66,6 +106,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
 }) => {
   const [rejectModalUploadId, setRejectModalUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectNeedsTranslation, setRejectNeedsTranslation] = useState<boolean | null>(null);
   const [hideRequestId, setHideRequestId] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
@@ -80,11 +121,14 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
   };
 
   const handleConfirmReject = () => {
-    if (rejectModalUploadId && onRejectDocument && rejectReason.trim()) {
-      onRejectDocument(rejectModalUploadId, rejectReason.trim());
-      setRejectModalUploadId(null);
-      setRejectReason('');
-    }
+    if (!rejectModalUploadId || !onRejectDocument) return;
+    if (rejectNeedsTranslation === null) return;
+    if (rejectNeedsTranslation === false && !rejectReason.trim()) return;
+    const customText = rejectReason.trim();
+    onRejectDocument(rejectModalUploadId, customText, rejectNeedsTranslation === true);
+    setRejectModalUploadId(null);
+    setRejectReason('');
+    setRejectNeedsTranslation(null);
   };
 
   const handleConfirmHide = () => {
@@ -307,6 +351,9 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                           {cfg.label}
                                         </span>
 
+                                        {getTranslationBadge(upload)}
+                                        {getSourceBadge(upload)}
+
                                         {upload.file_url && (
                                           <button
                                             onClick={() => onViewDocument?.({
@@ -379,6 +426,8 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                             <Icon className="h-4 w-4" />
                                             {cfg.label}
                                           </span>
+                                          {getTranslationBadge(upload)}
+                                        {getSourceBadge(upload)}
                                           {upload.file_url && (
                                             <button
                                               onClick={() => onViewDocument?.({
@@ -414,10 +463,18 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                     );
                                   })}
 
-                                  {activeUpload?.rejection_reason && (
-                                    <div className="w-full mt-2 p-4 bg-red-50 border border-red-200 rounded-lg">
-                                      <p className="text-xs font-semibold text-red-800 uppercase mb-1">Rejection Reason</p>
-                                      <p className="text-sm text-red-900">{activeUpload.rejection_reason}</p>
+                                  {(activeUpload?.rejection_reason || activeUpload?.needs_translation) && (
+                                    <div className="w-full mt-2 p-4 bg-red-50 border border-red-200 rounded-lg space-y-2">
+                                      <p className="text-xs font-semibold text-red-800 uppercase">Rejection Reason</p>
+                                      {activeUpload.rejection_reason && activeUpload.rejection_reason !== 'needs_translation' && (
+                                        <p className="text-sm text-red-900">{activeUpload.rejection_reason}</p>
+                                      )}
+                                      {(activeUpload.needs_translation || activeUpload.rejection_reason === 'needs_translation') && (
+                                        <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                                          <Languages className="w-3.5 h-3.5 flex-shrink-0" />
+                                          Needs Translation — document must be in English
+                                        </p>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -464,10 +521,20 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                             <span className="text-xs text-slate-400">{formatDate(lastUpload.uploaded_at)}</span>
                                           </div>
 
-                                          {lastUpload.rejection_reason && (
-                                            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 mb-2">
-                                              <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
-                                            </p>
+                                          {(lastUpload.rejection_reason || lastUpload.needs_translation) && (
+                                            <div className="space-y-1 mb-2">
+                                              {lastUpload.rejection_reason && lastUpload.rejection_reason !== 'needs_translation' && (
+                                                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+                                                  <span className="font-semibold">Motivo: </span>{lastUpload.rejection_reason}
+                                                </p>
+                                              )}
+                                              {(lastUpload.needs_translation || lastUpload.rejection_reason === 'needs_translation') && (
+                                                <p className="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                                                  <Languages className="w-3 h-3 flex-shrink-0" />
+                                                  Needs Translation
+                                                </p>
+                                              )}
+                                            </div>
                                           )}
 
                                           <div className="space-y-1">
@@ -575,7 +642,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 <h3 className="text-lg font-bold">Reject Document</h3>
               </div>
               <button
-                onClick={() => { setRejectModalUploadId(null); setRejectReason(''); }}
+                onClick={() => { setRejectModalUploadId(null); setRejectReason(''); setRejectNeedsTranslation(null); }}
                 className="text-white/70 hover:text-white transition-colors p-1"
               >
                 <X className="w-5 h-5" />
@@ -595,6 +662,39 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                 </div>
               </div>
 
+              {/* Tipo de rejeição — obrigatório */}
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  Rejection type <span className="text-red-400 ml-1 normal-case font-normal">* required</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRejectNeedsTranslation(false)}
+                    className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                      rejectNeedsTranslation === false
+                        ? 'border-red-500 bg-red-50 text-red-800'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-red-300 hover:bg-red-50/40'
+                    }`}
+                  >
+                    <p className="text-sm font-bold leading-tight">Incorrect document</p>
+                    <p className="text-xs leading-tight opacity-70">The document itself is wrong</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRejectNeedsTranslation(true)}
+                    className={`flex flex-col items-start gap-1 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                      rejectNeedsTranslation === true
+                        ? 'border-amber-400 bg-amber-50 text-amber-800'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-amber-300 hover:bg-amber-50/40'
+                    }`}
+                  >
+                    <p className="text-sm font-bold leading-tight">Needs translation</p>
+                    <p className="text-xs leading-tight opacity-70">Doc is correct, must be in English</p>
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Justification</label>
                 <textarea
@@ -608,14 +708,14 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
 
               <div className="flex items-center space-x-3 pt-2">
                 <button
-                  onClick={() => { setRejectModalUploadId(null); setRejectReason(''); }}
+                  onClick={() => { setRejectModalUploadId(null); setRejectReason(''); setRejectNeedsTranslation(null); }}
                   className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmReject}
-                  disabled={!rejectReason.trim()}
+                  disabled={rejectNeedsTranslation === null || (rejectNeedsTranslation === false && !rejectReason.trim())}
                   className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   Confirm Reject

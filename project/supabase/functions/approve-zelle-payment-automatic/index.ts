@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 // @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 import { resolveInstallmentNumber, recordInstallmentPayment, linkPaymentToPlan } from "../utils/installmentHelper.ts";
+import { sendZelleReceivedEmail, sendPaymentConfirmedEmails } from "../shared/translation-emails.ts";
 
 // @ts-ignore
 declare const Deno: any;
@@ -31,7 +32,7 @@ Deno.serve(async (req: Request) => {
     )
 
     // Parse request body
-    const { user_id, fee_type_global, temp_payment_id, scholarship_ids } = await req.json()
+    const { user_id, fee_type_global, temp_payment_id, scholarship_ids, direct_translation_order_id } = await req.json()
 
     // Função para mapear fee_type_global para valores aceitos pela constraint
     // Constraint aceita: 'selection_process', 'i20_control_fee', 'application_fee', 'scholarship_fee'
@@ -73,6 +74,65 @@ Deno.serve(async (req: Request) => {
     // Validar parâmetros obrigatórios
     if (!user_id || !fee_type_global) {
       throw new Error('Required parameters: user_id, fee_type_global')
+    }
+
+    // Direct translation approval path (admin button / zelleOrchestrator) — skip zelle_payments entirely
+    if (direct_translation_order_id && normalizedFeeTypeGlobal === 'translation') {
+      console.log('🔑 [approve-zelle-payment-automatic] Direct translation approval shortcut for order:', direct_translation_order_id)
+
+      const { data: baseOrder } = await supabaseClient
+        .from('translation_orders')
+        .select('id, payment_reference, total_price')
+        .eq('id', direct_translation_order_id)
+        .maybeSingle()
+
+      let orderIds: string[] = []
+      let zelleAmount = 0
+
+      if (baseOrder?.payment_reference) {
+        const { data: siblings } = await supabaseClient
+          .from('translation_orders')
+          .select('id, total_price')
+          .eq('payment_reference', baseOrder.payment_reference)
+          .eq('user_id', user_id)
+          .neq('payment_status', 'paid')
+        orderIds = siblings?.map((x: any) => x.id) ?? [baseOrder.id]
+        zelleAmount = siblings?.reduce((s: number, x: any) => s + Number(x.total_price), 0) ?? Number(baseOrder.total_price)
+      } else if (baseOrder) {
+        orderIds = [baseOrder.id]
+        zelleAmount = Number(baseOrder.total_price)
+      }
+
+      const { data: zelleUserProfile } = await supabaseClient
+        .from('user_profiles').select('id').eq('user_id', user_id).maybeSingle()
+
+      const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com'
+      for (const orderId of orderIds) {
+        const { error: orderError } = await supabaseClient
+          .from('translation_orders')
+          .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+          .eq('id', orderId)
+        if (orderError) {
+          console.error(`❌ [approve-zelle] Direct: failed to mark order ${orderId} as paid:`, orderError)
+        } else {
+          sendPaymentConfirmedEmails(supabaseClient, orderId, 'zelle', supportEmail, zelleAmount || undefined)
+          if (zelleUserProfile) {
+            supabaseClient.rpc('log_student_action', {
+              p_student_id: zelleUserProfile.id,
+              p_action_type: 'translation_payment_received',
+              p_action_description: `Translation payment confirmed via Zelle — order #${orderId.slice(0, 8)}`,
+              p_performed_by: user_id,
+              p_performed_by_type: 'student',
+              p_metadata: { translation_order_id: orderId, payment_method: 'zelle', amount: zelleAmount },
+            }).catch((e: any) => console.error('[approve-zelle] log failed:', e?.message))
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, approved: orderIds.length }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      })
     }
 
     // 1. Buscar ou criar o pagamento na tabela zelle_payments
@@ -938,6 +998,107 @@ Deno.serve(async (req: Request) => {
             }
           } catch (notificationError) {
             console.error(`❌ [approve-zelle-payment-automatic] Erro ao notificar universidade sobre ${normalizedFeeTypeGlobal}:`, notificationError);
+          }
+        }
+      }
+    }
+
+    // Translation payment approval
+    if (normalizedFeeTypeGlobal === 'translation') {
+      console.log('🌐 [approve-zelle-payment-automatic] Atualizando translation_orders...')
+
+      let orderIds: string[] = []
+      let zelleAmount = 0
+
+      if (direct_translation_order_id) {
+        // Admin direct approval path — no zelle_payments record needed
+        console.log(`🔑 [approve-zelle-payment-automatic] Admin direct approval for order ${direct_translation_order_id}`)
+        const { data: baseOrder } = await supabaseClient
+          .from('translation_orders')
+          .select('id, payment_reference, total_price')
+          .eq('id', direct_translation_order_id)
+          .maybeSingle()
+
+        if (baseOrder?.payment_reference) {
+          // Find all sibling orders sharing the same proof (batch support)
+          const { data: siblings } = await supabaseClient
+            .from('translation_orders')
+            .select('id, total_price')
+            .eq('payment_reference', baseOrder.payment_reference)
+            .eq('user_id', user_id)
+            .neq('payment_status', 'paid')
+          orderIds = siblings?.map((x: any) => x.id) ?? [baseOrder.id]
+          zelleAmount = siblings?.reduce((s: number, x: any) => s + Number(x.total_price), 0) ?? Number(baseOrder.total_price)
+        } else if (baseOrder) {
+          orderIds = [baseOrder.id]
+          zelleAmount = Number(baseOrder.total_price)
+        }
+      } else {
+        const { data: zp } = await supabaseClient
+          .from('zelle_payments')
+          .select('metadata, amount')
+          .eq('id', paymentId)
+          .maybeSingle()
+
+        const batchOrderIdsStr = zp?.metadata?.batch_order_ids
+        const translationOrderId = zp?.metadata?.translation_order_id
+        zelleAmount = parseFloat(zp?.amount ?? '0') || 0
+        orderIds = batchOrderIdsStr
+          ? batchOrderIdsStr.split(',').filter(Boolean)
+          : (translationOrderId ? [translationOrderId] : [])
+      }
+
+      // Lookup user_profiles.id for activity logs
+      const { data: zelleUserProfile } = await supabaseClient
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user_id)
+        .maybeSingle();
+
+      // Send "Zelle received" email only for student-initiated flow (not admin direct approval)
+      if (!direct_translation_order_id && orderIds.length > 0) {
+        sendZelleReceivedEmail(supabaseClient, orderIds[0], user_id, zelleAmount);
+        if (zelleUserProfile) {
+          supabaseClient.rpc('log_student_action', {
+            p_student_id: zelleUserProfile.id,
+            p_action_type: 'translation_zelle_submitted',
+            p_action_description: `Zelle proof submitted for translation — order #${orderIds[0].slice(0, 8)}`,
+            p_performed_by: user_id,
+            p_performed_by_type: 'student',
+            p_metadata: { translation_order_id: orderIds[0], translation_order_ids: orderIds, zelle_amount: zelleAmount, batch_count: orderIds.length },
+          }).catch((e: any) => console.error('[approve-zelle] log translation_zelle_submitted failed:', e?.message));
+        }
+      }
+
+      if (orderIds.length === 0) {
+        console.error('❌ [approve-zelle-payment-automatic] Nenhum translation_order_id encontrado')
+      } else {
+        const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com';
+        for (const orderId of orderIds) {
+          const { error: orderError } = await supabaseClient
+            .from('translation_orders')
+            .update({
+              payment_status: 'paid',
+              paid_at: new Date().toISOString(),
+            })
+            .eq('id', orderId)
+
+          if (orderError) {
+            console.error(`❌ [approve-zelle-payment-automatic] Erro ao atualizar translation_orders para ID ${orderId}:`, orderError)
+          } else {
+            console.log(`✅ [approve-zelle-payment-automatic] translation_order marcada como paga: ${orderId}`)
+            sendPaymentConfirmedEmails(supabaseClient, orderId, 'zelle', supportEmail, zelleAmount || undefined);
+            // Log: payment received
+            if (zelleUserProfile) {
+              supabaseClient.rpc('log_student_action', {
+                p_student_id: zelleUserProfile.id,
+                p_action_type: 'translation_payment_received',
+                p_action_description: `Translation payment confirmed via Zelle — order #${orderId.slice(0, 8)}`,
+                p_performed_by: user_id,
+                p_performed_by_type: 'student',
+                p_metadata: { translation_order_id: orderId, payment_method: 'zelle', amount: zelleAmount },
+              }).catch((e: any) => console.error('[approve-zelle] log translation_payment_received failed:', e?.message));
+            }
           }
         }
       }

@@ -31,7 +31,9 @@
       "Bash(date /t)",
       "Bash(grep -n \"get_admin_student_full_details\\\\|get_admin_student_secondary\" supabase/migrations/*.sql)",
       "Bash(grep -rn \"bbb9711f\\\\|user_id.*students\\\\|students.*user_id\\\\|/students/\\\\${.*user\" src/pages/AdminDashboard/UserManagement.tsx)",
-      "Bash(rtk npx:*)"
+      "Bash(rtk npx:*)",
+      "Bash(curl *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('action_link','ERROR'\\)\\)\")"
     ]
   }
 }
