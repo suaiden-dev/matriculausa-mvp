@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, Eye } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 interface TransferFormSectionProps {
   student: any;
@@ -14,7 +14,6 @@ interface TransferFormSectionProps {
   handleRejectTransferFormUpload: (uploadId: string, reason: string) => Promise<void>;
   handleViewDocument: (doc: any) => void;
   handleDownloadDocument: (doc: any) => void;
-  handleMarkTransferProofViewed: (applicationId: string) => Promise<boolean>;
 }
 
 export const TransferFormSection: React.FC<TransferFormSectionProps> = React.memo(({
@@ -30,7 +29,6 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
   handleRejectTransferFormUpload,
   handleViewDocument,
   handleDownloadDocument,
-  handleMarkTransferProofViewed
 }) => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
@@ -77,7 +75,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                       {transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'}
                     </p>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
-                      {transferApp.transfer_form_status === 'sent' ? 'Sent' : 'Available'}
+                      Available
                     </span>
                   </div>
                   <p className="text-sm text-slate-500 break-words">
@@ -191,60 +189,6 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                   </div>
                 </div>
               )}
-
-              {/* Comprovante de envio para escola atual */}
-              <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-6">
-                <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Comprovante de Envio para Escola Atual
-                </h4>
-
-                {transferApp.transfer_proof_to_school_url ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-sm text-slate-700 font-medium">Enviado pelo aluno</span>
-                      {transferApp.transfer_proof_to_school_at && (
-                        <span className="text-sm text-slate-500">
-                          {new Date(transferApp.transfer_proof_to_school_at).toLocaleDateString('pt-BR', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                          })}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => handleViewDocument({
-                          file_url: transferApp.transfer_proof_to_school_url,
-                          filename: transferApp.transfer_proof_to_school_url.split('/').pop() || 'comprovante'
-                        })}
-                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Visualizar Comprovante
-                      </button>
-
-                    </div>
-                  </div>
-                ) : transferApp.transfer_proof_to_school_status === 'confirmed' ? (
-                  <p className="text-sm text-amber-700 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Aluno confirmou que enviou — aguardando upload do comprovante
-                  </p>
-                ) : (
-                  <p className="text-sm text-slate-500 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Aguardando confirmação do aluno
-                  </p>
-                )}
-              </div>
 
 
             </div>

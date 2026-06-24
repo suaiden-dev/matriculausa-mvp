@@ -101,7 +101,8 @@
       "Bash(rtk grep:*)",
       "Bash(python3 -c:*)",
       "mcp__supabase__get_project_url",
-      "mcp__supabase__list_edge_functions"
+      "mcp__supabase__list_edge_functions",
+      "Bash(npx md-to-pdf *)"
     ]
   }
 }
