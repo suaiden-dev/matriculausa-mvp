@@ -206,18 +206,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
-    {
-      id: 'ai-solutions',
-      label: 'AI Solutions',
-      icon: Brain,
-      path: '/school/dashboard/ai-solutions',
-      badge: null,
-      dropdown: [
-        // FASE 1 DESATIVAÇÃO: Inbox de email (IA Microsoft/Gmail) removido do menu
-        // { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/email', badge: null },
-        { id: 'whatsapp', label: 'WhatsApp AI', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
-      ]
-    }
+    { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null }
   ];
   
   // Filtrar itens do sidebar baseado no ambiente

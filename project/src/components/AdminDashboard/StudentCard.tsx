@@ -447,7 +447,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
             <h3 className="text-sm font-semibold text-gray-900 truncate" title={`${student.student_name} · ${student.student_email}`}>
               {student.student_name}
             </h3>
-            {student.source === 'migma' && (
+            {student.source === 'migma' && userRole !== 'school' && userRole !== 'school_manager' && userRole !== 'university' && (
               <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
                 Migma
               </span>

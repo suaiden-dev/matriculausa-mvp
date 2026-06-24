@@ -7,8 +7,10 @@ import SchoolApplicationKanbanView from './SchoolApplicationKanbanView';
 import SchoolApplicationTableView from './SchoolApplicationTableView';
 import { StudentRecord } from '../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import ProfileCompletionGuard from '../../../components/ProfileCompletionGuard';
-import { Search, LayoutGrid, Table } from 'lucide-react';
+import { Search, LayoutGrid, Table, GraduationCap } from 'lucide-react';
 import { Scholarship } from '../../../types';
+
+const HIDDEN_SCHOLARSHIPS = ['Current Students Scholarship'];
 
 const SchoolApplicationTrackingView: React.FC = () => {
   const { applications, university, refreshData } = useUniversity();
@@ -17,6 +19,8 @@ const SchoolApplicationTrackingView: React.FC = () => {
   const [selectedScholarship, setSelectedScholarship] = useState<string>(
     searchParams.get('scholarship') || ''
   );
+  const [selectedProcessType, setSelectedProcessType] = useState<string>('');
+  const [showCurrentStudents, setShowCurrentStudents] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>(() => {
     const urlView = searchParams.get('view') as 'kanban' | 'table' | null;
     if (urlView === 'kanban' || urlView === 'table') {
@@ -184,8 +188,16 @@ const SchoolApplicationTrackingView: React.FC = () => {
   const filteredStudents = useMemo(() => {
     let filtered = studentRecords;
 
+    if (!showCurrentStudents) {
+      filtered = filtered.filter((s) => !s.scholarship_title || !HIDDEN_SCHOLARSHIPS.includes(s.scholarship_title));
+    }
+
     if (selectedScholarship) {
       filtered = filtered.filter((s) => s.scholarship_id === selectedScholarship);
+    }
+
+    if (selectedProcessType) {
+      filtered = filtered.filter((s) => s.student_process_type === selectedProcessType);
     }
 
     if (searchTerm) {
@@ -197,7 +209,7 @@ const SchoolApplicationTrackingView: React.FC = () => {
     }
 
     return filtered;
-  }, [studentRecords, selectedScholarship, searchTerm]);
+  }, [studentRecords, selectedScholarship, selectedProcessType, searchTerm, showCurrentStudents]);
 
   // Unread messages
   const { getUnreadCount } = useStudentUnreadMessages();
@@ -273,6 +285,32 @@ const SchoolApplicationTrackingView: React.FC = () => {
                     <option key={s.id} value={s.id}>{s.title}</option>
                   ))}
                 </select>
+
+                <select
+                  value={selectedProcessType}
+                  onChange={(e) => setSelectedProcessType(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] bg-white"
+                >
+                  <option value="">All Process Types</option>
+                  <option value="initial">Initial (F-1)</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="change_of_status">Change of Status</option>
+                  <option value="reinstatement">Reinstatement</option>
+                </select>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="showCurrentStudents"
+                    checked={showCurrentStudents}
+                    onChange={(e) => setShowCurrentStudents(e.target.checked)}
+                    className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                  />
+                  <label htmlFor="showCurrentStudents" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                    <GraduationCap className="h-4 w-4 text-blue-600" />
+                    <span>Show Current Students Scholarship</span>
+                  </label>
+                </div>
               </div>
 
             </div>

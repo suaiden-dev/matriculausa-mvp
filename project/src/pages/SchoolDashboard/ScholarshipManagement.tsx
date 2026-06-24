@@ -48,6 +48,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
   }, []);
 
   const filteredScholarships = scholarships.filter(scholarship => {
+    if (scholarship.title?.includes('(Migma)')) return false;
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && scholarship.is_active) ||
@@ -297,7 +298,6 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
                         </div>
 
                         <div className="ml-4 flex-shrink-0">
-                          {/* Menu Três Pontinhos */}
                           <div className="relative">
                             <button
                               onClick={(e) => {
@@ -309,7 +309,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({ isTabbed 
                             >
                               <MoreVertical className="w-5 h-5" />
                             </button>
-                            
+
                             {activeDropdownId === scholarship.id && (
                               <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
                                 <button
