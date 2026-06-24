@@ -74,17 +74,22 @@ export function groupUploadsBySubmission(uploads: UploadRecord[]): GroupedSubmis
 
 /**
  * Extracts a human-readable filename from a Supabase storage path or URL.
- * Strips the leading timestamp prefix (e.g. "1779164388763_" or "1779164388763-")
- * and URL-decodes the result.
+ * Strips query strings (?token=...), leading/trailing timestamp prefixes, and URL-decodes.
  */
+export function getUploadDisplayName(upload: { file_url?: string; filename?: string | null }): string {
+  if (upload.filename) return upload.filename;
+  return upload.file_url ? getFileName(upload.file_url) : 'Student response file';
+}
+
 export function getFileName(fileUrl: string): string {
-  const segment = fileUrl.split('/').pop() || fileUrl;
-  const withoutTimestamp = segment
-    .replace(/^\d{10,}_/, '')
-    .replace(/^\d{10,}-/, '');
+  const withoutQuery = fileUrl.split('?')[0];
+  const segment = withoutQuery.split('/').pop() || withoutQuery;
+  const clean = segment
+    .replace(/^\d{10,}[_-]/, '')       // leading timestamp: 1779164388763_name.jpg
+    .replace(/[_-]\d{10,}(\.[^.]+)$/, '$1'); // trailing timestamp: name_1779164388763.jpg
   try {
-    return decodeURIComponent(withoutTimestamp);
+    return decodeURIComponent(clean);
   } catch {
-    return withoutTimestamp;
+    return clean;
   }
 }

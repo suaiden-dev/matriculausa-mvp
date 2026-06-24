@@ -984,6 +984,42 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               publicUrl
                             );
 
+                            // Notificar Migma que a acceptance letter foi emitida/substituída
+                            try {
+                              const migmaUrl = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL;
+                              const migmaSecret = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET;
+                              const migmaAnonKey = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY;
+                              if (migmaUrl && migmaSecret && studentId) {
+                                // Buscar dados do aluno
+                                const { data: userData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                if (userData?.email) {
+                                  const migmaRes = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${migmaAnonKey}`,
+                                      'x-migma-webhook-secret': migmaSecret,
+                                    },
+                                    body: JSON.stringify({
+                                      student_email: userData.email,
+                                      acceptance_letter_url: publicUrl,
+                                    }),
+                                  });
+                                  if (!migmaRes.ok) {
+                                    console.warn('[Migma] receive-matriculausa-letter failed:', migmaRes.status, await migmaRes.text());
+                                  } else {
+                                    console.log('[Migma] Acceptance letter notified successfully');
+                                  }
+                                }
+                              }
+                            } catch (migmaError) {
+                              console.warn('[Migma] Acceptance letter notification failed (non-critical):', migmaError);
+                            }
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -1142,6 +1178,42 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             }) : prev);
 
                             queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+
+                            // Notificar Migma que a acceptance letter foi emitida/enviada
+                            try {
+                              const migmaUrl = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL;
+                              const migmaSecret = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET;
+                              const migmaAnonKey = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY;
+                              if (migmaUrl && migmaSecret && studentId) {
+                                // Buscar dados do aluno
+                                const { data: userData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                if (userData?.email) {
+                                  const migmaRes = await fetch(`${migmaUrl}/receive-matriculausa-letter`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${migmaAnonKey}`,
+                                      'x-migma-webhook-secret': migmaSecret,
+                                    },
+                                    body: JSON.stringify({
+                                      student_email: userData.email,
+                                      acceptance_letter_url: publicUrl,
+                                    }),
+                                  });
+                                  if (!migmaRes.ok) {
+                                    console.warn('[Migma] receive-matriculausa-letter failed:', migmaRes.status, await migmaRes.text());
+                                  } else {
+                                    console.log('[Migma] Acceptance letter notified successfully');
+                                  }
+                                }
+                              }
+                            } catch (migmaError) {
+                              console.warn('[Migma] Acceptance letter notification failed (non-critical):', migmaError);
+                            }
 
                             try {
                               const { data: { session } } = await supabase.auth.getSession();

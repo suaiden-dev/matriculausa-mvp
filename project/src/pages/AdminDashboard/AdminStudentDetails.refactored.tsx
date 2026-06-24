@@ -66,6 +66,7 @@ import { TransferFormSection } from '../../components/AdminDashboard/StudentDeta
 import { CosI20Section } from '../../components/AdminDashboard/StudentDetails/CosI20Section';
 import { NewRequestModal } from '../../components/AdminDashboard/StudentDetails/NewRequestModal';
 
+
 // Tabs já existentes
 const DocumentsView = lazy(() => import('../../components/EnhancedStudentTracking/DocumentsView'));
 import GlobalDocumentRequestsSection from '../../components/AdminDashboard/StudentDetails/GlobalDocumentRequestsSection';
@@ -4434,6 +4435,7 @@ const AdminStudentDetails: React.FC = () => {
           )}
 
           {/* Versão antiga removida - Transfer Form agora usa o componente TransferFormSection */}
+
 
           {/* Global Document Requests — seção dedicada */}
           <div id="global-documents">
