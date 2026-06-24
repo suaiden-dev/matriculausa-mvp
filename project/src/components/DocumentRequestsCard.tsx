@@ -23,7 +23,7 @@ import {
   Languages
 } from 'lucide-react';
 
-import { groupUploadsBySubmission, getFileName } from '../utils/documentUploadUtils';
+import { groupUploadsBySubmission, getFileName, getUploadDisplayName } from '../utils/documentUploadUtils';
 import { TranslationQuoteModal } from './TranslationQuoteModal';
 
 interface DocumentRequest {
@@ -1894,7 +1894,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                  <Clock className="w-4 h-4 text-white" />}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                                <p className="font-semibold text-sm text-slate-800 truncate">{getUploadDisplayName(upload)}</p>
                                 <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
                                   isUploadApproved ? 'text-emerald-600' :
                                   isUploadRejected ? 'text-red-600' : 'text-blue-600'
@@ -2154,7 +2154,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                     <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
                                       <div className="flex items-center gap-1.5 min-w-0">
                                         <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                                        <span className="text-xs text-slate-600 truncate">{getFileName(upload.file_url)}</span>
+                                        <span className="text-xs text-slate-600 truncate">{getUploadDisplayName(upload)}</span>
                                       </div>
                                       {upload.file_url && (
                                         <button
@@ -2235,7 +2235,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                <Clock className="w-4 h-4 text-white" />}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-sm text-slate-800 truncate">{getFileName(upload.file_url)}</p>
+                              <p className="font-semibold text-sm text-slate-800 truncate">{getUploadDisplayName(upload)}</p>
                               <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${
                                 isUploadApproved ? 'text-emerald-600' :
                                 isUploadRejected ? 'text-red-600' : 'text-blue-600'
@@ -2493,7 +2493,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                                   <div key={upload.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-100">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                                      <span className="text-xs text-slate-600 truncate">{getFileName(upload.file_url)}</span>
+                                      <span className="text-xs text-slate-600 truncate">{getUploadDisplayName(upload)}</span>
                                     </div>
                                     {upload.file_url && (
                                       <button

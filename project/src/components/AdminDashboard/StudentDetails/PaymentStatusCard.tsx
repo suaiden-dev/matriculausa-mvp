@@ -104,7 +104,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     if (currentOverrides?.placement_fee != null) return Number(currentOverrides.placement_fee);
     if ((student as any).placement_fee_amount) return Number((student as any).placement_fee_amount);
     const apps = student.all_applications || [];
-    const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
+    const selectedId = (student as any).selected_application_id;
+    const app = (selectedId && apps.find((a: any) => a.id === selectedId)) ||
+                apps.find((a: any) => a.status === 'enrolled') ||
+                apps.find((a: any) => a.status === 'approved');
     const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
     if (sch?.placement_fee_amount) return Number(sch.placement_fee_amount);
     return getFeeAmount('placement_fee');
@@ -790,19 +793,21 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             if (currentOverrides?.placement_fee != null) {
                               return Number(currentOverrides.placement_fee);
                             }
-                            
+
                             // Try direct value from student object first (common in Seller Dashboard)
                             if ((student as any).placement_fee_amount) {
                               return Number((student as any).placement_fee_amount);
                             }
 
                             const apps = student.all_applications || [];
-                            const app = apps.find((a: any) => a.status === 'enrolled') ||
+                            const selectedId = (student as any).selected_application_id;
+                            const app = (selectedId && apps.find((a: any) => a.id === selectedId)) ||
+                                        apps.find((a: any) => a.status === 'enrolled') ||
                                         apps.find((a: any) => a.status === 'approved');
                             const sch = app?.scholarships
                               ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships)
                               : null;
-                            
+
                             if (sch?.placement_fee_amount) {
                               return Number(sch.placement_fee_amount);
                             }
@@ -947,7 +952,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           if (!plan) return null;
                           // Only show when the fee amount is actually derivable from scholarship data
                           const apps = student.all_applications || [];
-                          const app = apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
+                          const selId = (student as any).selected_application_id;
+                          const app = (selId && apps.find((a: any) => a.id === selId)) || apps.find((a: any) => a.status === 'enrolled') || apps.find((a: any) => a.status === 'approved');
                           const sch = app?.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
                           const feeKnown = currentOverrides?.placement_fee != null || (student as any).placement_fee_amount || sch?.placement_fee_amount || sch?.annual_value_with_scholarship;
                           if (!feeKnown) return null;

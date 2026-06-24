@@ -27,6 +27,7 @@ const FeaturedScholarshipsManagement = lazy(() => import('./FeaturedScholarships
 const AdminTransferManagement = lazy(() => import('./AdminTransferManagement'));
 const AutoTransferSettings = lazy(() => import('./AutoTransferSettings'));
 const FinancialAnalytics = lazy(() => import('./FinancialAnalytics'));
+const ReportsView = lazy(() => import('./Reports/ReportsView'));
 const TermsManagement = lazy(() => import('./TermsManagement'));
 const CouponManagement = lazy(() => import('./CouponManagement'));
 const NewsletterManagement = lazy(() => import('./NewsletterManagement'));
@@ -662,6 +663,7 @@ const AdminDashboard: React.FC = () => {
                 <Route path="/transfer-management" element={<AdminTransferManagement />} />
                 <Route path="/transfer-settings" element={<AutoTransferSettings />} />
                 <Route path="/financial-analytics" element={<FinancialAnalytics />} />
+                {/* <Route path="/reports" element={<ReportsView />} /> */}
                 <Route path="/coupons" element={<CouponManagement />} />
                 <Route path="/newsletter" element={<NewsletterManagement />} />
                 <Route path="/terms" element={<TermsManagement />} />

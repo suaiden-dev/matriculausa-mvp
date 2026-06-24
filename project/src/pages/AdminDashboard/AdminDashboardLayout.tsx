@@ -64,6 +64,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/newsletter')) return 'newsletter';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/financial-analytics')) return 'financial-analytics';
+    if (path.includes('/reports')) return 'reports';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -260,6 +261,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Users'}
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
+                  {activeTab === 'reports' && 'Relatórios e Análises'}
                   {activeTab === 'financial-analytics' && 'Financial Analytics'}
                   {activeTab === 'coupons' && 'Coupon Management'}
                   {activeTab === 'newsletter' && 'Newsletter Management'}
@@ -274,6 +276,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Manage student and user accounts'}
                   {activeTab === 'scholarships' && 'Manage scholarship programs'}
                   {activeTab === 'payments' && 'Payment processing and management'}
+                  {activeTab === 'reports' && 'Relatórios gerais, métricas de funil, parceiros e bolsas'}
                   {activeTab === 'financial-analytics' && 'Financial reports and analytics'}
                   {activeTab === 'coupons' && 'Manage promotional coupons'}
                   {activeTab === 'newsletter' && 'Manage newsletter campaigns and user preferences'}

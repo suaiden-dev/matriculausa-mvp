@@ -109,7 +109,8 @@
       "mcp__supabase__list_edge_functions",
       "mcp__supabase__get_project_url",
       "Bash(python *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(npx md-to-pdf *)"
     ]
   }
 }

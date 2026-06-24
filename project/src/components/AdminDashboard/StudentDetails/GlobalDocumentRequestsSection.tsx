@@ -46,7 +46,7 @@ function formatDate(iso: string) {
   }
 }
 
-import { groupUploadsBySubmission, getFileName } from '../../../utils/documentUploadUtils';
+import { groupUploadsBySubmission, getFileName, getUploadDisplayName } from '../../../utils/documentUploadUtils';
 
 function getTranslationBadge(upload: any) {
   if (!upload.needs_translation) return null;
@@ -337,7 +337,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                         </div>
                                         <div className="flex-1 min-w-0">
                                           <p className="font-medium text-slate-900 break-all">
-                                            {upload.file_url ? getFileName(upload.file_url) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
+                                            {upload.file_url ? getUploadDisplayName(upload) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
                                           </p>
                                           <p className="text-sm text-slate-500">
                                             Submitted on {new Date(upload.uploaded_at).toLocaleDateString()}
@@ -405,7 +405,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                               <p className="font-medium text-slate-900 break-all">
-                                                {upload.file_url ? getFileName(upload.file_url) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
+                                                {upload.file_url ? getUploadDisplayName(upload) : (upload.is_admin_upload ? 'Uploaded by Admin' : 'Student response file')}
                                               </p>
                                               {upload.is_admin_upload && (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200">
@@ -544,7 +544,7 @@ const GlobalDocumentRequestsSection: React.FC<GlobalDocumentRequestsSectionProps
                                                   <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                                                   <div className="flex flex-col min-w-0">
                                                     <span className="text-xs text-slate-700 font-medium truncate">
-                                                      {upload.file_url ? getFileName(upload.file_url) : `Arquivo ${fileIdx + 1}`}
+                                                      {upload.file_url ? getUploadDisplayName(upload) : `Arquivo ${fileIdx + 1}`}
                                                     </span>
                                                     <span className="text-[10px] text-slate-400">
                                                       {upload.is_admin_upload ? 'Enviado pelo admin' : 'Enviado pelo aluno'} · {formatDate(upload.uploaded_at)}
