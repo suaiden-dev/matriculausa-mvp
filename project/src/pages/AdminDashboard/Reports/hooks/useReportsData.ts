@@ -1,6 +1,13 @@
-import { useMemo, useState } from 'react';
-import { useStudentsQuery, StudentRecord } from '../../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
-import { getCurrentStage, APPLICATION_FLOW_STAGES } from '../../../../utils/applicationFlowStages';
+import { useDeferredValue, useMemo, useState } from 'react';
+import {
+  useStudentsQuery,
+  useStudentDocsStats,
+  StudentRecord,
+} from '../../../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
+import {
+  APPLICATION_FLOW_STAGES,
+  getStepStatus,
+} from '../../../../utils/applicationFlowStages';
 
 export interface ReportFilters {
   dateFrom: string;
@@ -9,17 +16,43 @@ export interface ReportFilters {
   scholarship: string;
   university: string;
   partner: string;
+  showTestUsers: boolean;
 }
 
 export interface ChartData {
   name: string;
   value: number;
   percentage?: number;
+  subtitle?: string;
+}
+
+const HIDDEN_STAGES = new Set(['scholarship_fee']);
+const visibleStages = APPLICATION_FLOW_STAGES.filter(s => !HIDDEN_STAGES.has(s.key));
+
+function getKanbanStage(student: StudentRecord): string {
+  const isTransferPendingSevis =
+    student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+
+  if (student.application_status === 'enrolled' && !isTransferPendingSevis) {
+    return 'enrollment';
+  }
+
+  for (const stageDef of visibleStages) {
+    if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') continue;
+    if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) continue;
+
+    const status = getStepStatus(student as any, stageDef.key);
+    if (status === 'skipped') continue;
+    if (status !== 'completed') return stageDef.key;
+  }
+
+  return 'enrollment';
 }
 
 export function useReportsData() {
   const { data: students, isLoading, error } = useStudentsQuery();
-  
+  const { data: docsStatsMap, isLoading: docsLoading } = useStudentDocsStats(students ?? []);
+
   const [filters, setFilters] = useState<ReportFilters>({
     dateFrom: '',
     dateTo: '',
@@ -27,75 +60,101 @@ export function useReportsData() {
     scholarship: 'all',
     university: 'all',
     partner: 'all',
+    showTestUsers: false,
   });
 
+  // Step 1: merge doc stats — runs only when raw data changes
+  const studentsWithDocs = useMemo(() => {
+    if (!students) return [];
+    if (!docsStatsMap) return students;
+    return students.map(s => {
+      const stats = docsStatsMap.get(s.student_id);
+      return stats ? { ...s, ...stats } : s;
+    });
+  }, [students, docsStatsMap]);
+
+  // Defer filters so UI stays responsive — expensive recomputation runs as low-priority task
+  const deferredFilters = useDeferredValue(filters);
+
+  // Step 2: compute kanban stage for ALL students — expensive, runs only when data changes
+  // Filters are NOT a dependency here — this is the key optimization
+  const allStudentsWithStage = useMemo(() => {
+    return studentsWithDocs
+      .filter(s =>
+        !(s as any).is_dropped &&
+        (s.has_paid_selection_process_fee || s.application_status === 'enrolled' || (s as any).source === 'migma')
+      )
+      .map(s => {
+        const stageKey = getKanbanStage(s as StudentRecord);
+        const stageDef = APPLICATION_FLOW_STAGES.find(def => def.key === stageKey);
+        return {
+          ...s,
+          currentStageKey: stageKey,
+          currentStageLabel: stageDef?.label || 'Unknown',
+          currentStageShort: stageDef?.shortLabel || 'Unknown',
+        };
+      });
+  }, [studentsWithDocs]);
+
+  // Step 3: apply filters + aggregate — cheap, runs on every filter change
   const processedData = useMemo(() => {
-    if (!students) return {
-      filteredStudents: [],
-      stageChart: [],
-      partnerChart: [],
-      scholarshipChart: [],
-      scholarshipValueChart: [],
-      universityChart: [],
+    const nullState = {
+      filteredStudents: [] as typeof allStudentsWithStage,
+      stageChart: [] as ChartData[],
+      partnerChart: [] as ChartData[],
+      scholarshipChart: [] as ChartData[],
+      universityChart: [] as ChartData[],
       totals: { count: 0, applicationFees: 0, placementFees: 0, scholarshipFees: 0, totalScholarshipValue: 0 }
     };
 
-    // Filter students
-    let filtered = students.filter(student => !student.student_email.includes('@uorak.com')); // Remove tests
+    if (!allStudentsWithStage.length) return nullState;
 
-    if (filters.dateFrom) {
-      filtered = filtered.filter(s => new Date(s.student_created_at) >= new Date(filters.dateFrom));
+    const isTest = (email: string) => !deferredFilters.showTestUsers && email.includes('@uorak.com');
+
+    let filtered = allStudentsWithStage.filter(s => !isTest(s.student_email));
+
+    if (deferredFilters.dateFrom) {
+      filtered = filtered.filter(s => new Date(s.student_created_at) >= new Date(deferredFilters.dateFrom));
     }
-    if (filters.dateTo) {
-      const dateTo = new Date(filters.dateTo);
+    if (deferredFilters.dateTo) {
+      const dateTo = new Date(deferredFilters.dateTo);
       dateTo.setHours(23, 59, 59, 999);
       filtered = filtered.filter(s => new Date(s.student_created_at) <= dateTo);
     }
-    if (filters.scholarship && filters.scholarship !== 'all') {
-      filtered = filtered.filter(s => s.scholarship_title === filters.scholarship);
+    if (deferredFilters.scholarship && deferredFilters.scholarship !== 'all') {
+      filtered = filtered.filter(s => s.scholarship_title === deferredFilters.scholarship);
     }
-    if (filters.university && filters.university !== 'all') {
-      filtered = filtered.filter(s => s.university_name === filters.university);
+    if (deferredFilters.university && deferredFilters.university !== 'all') {
+      filtered = filtered.filter(s => s.university_name === deferredFilters.university);
     }
-    if (filters.partner && filters.partner !== 'all') {
-      if (filters.partner === 'direct') {
-        filtered = filtered.filter(s => !s.agency_name);
+    if (deferredFilters.partner && deferredFilters.partner !== 'all') {
+      if (deferredFilters.partner === 'direct') {
+        filtered = filtered.filter(s => !s.agency_name && (s as any).source !== 'migma');
+      } else if (deferredFilters.partner === 'migma') {
+        filtered = filtered.filter(s => (s as any).source === 'migma');
       } else {
-        filtered = filtered.filter(s => s.agency_name === filters.partner);
+        filtered = filtered.filter(s => s.agency_name === deferredFilters.partner);
       }
     }
-
-    // Attach stage info for table and further filtering
-    const studentsWithStage = filtered.map(s => {
-      const { stage } = getCurrentStage(s);
-      const stageDef = APPLICATION_FLOW_STAGES.find(def => def.key === stage);
-      return {
-        ...s,
-        currentStageKey: stage,
-        currentStageLabel: stageDef?.label || 'Unknown',
-        currentStageShort: stageDef?.shortLabel || 'Unknown'
-      };
-    });
-
-    // Filter by stage if requested
-    let finalStudents = studentsWithStage;
-    if (filters.stage && filters.stage !== 'all') {
-      finalStudents = studentsWithStage.filter(s => s.currentStageKey === filters.stage);
+    if (deferredFilters.stage && deferredFilters.stage !== 'all') {
+      filtered = filtered.filter(s => s.currentStageKey === deferredFilters.stage);
     }
 
     // Aggregations
     const stagesMap = new Map<string, number>();
     const partnersMap = new Map<string, number>();
-    const scholarshipsMap = new Map<string, number>();
-    const scholarshipValueMap = new Map<string, number>(); // scholarship_title → total $ value
+    const scholarshipsMap = new Map<string, { name: string; subtitle: string; count: number }>();
     const universitiesMap = new Map<string, number>();
+
+    visibleStages.forEach(stage => stagesMap.set(stage.shortLabel, 0));
+    stagesMap.set('Admitted', 0);
 
     let totalAppFees = 0;
     let totalPlaceFees = 0;
     let totalScholFees = 0;
     let totalScholarshipValue = 0;
 
-    finalStudents.forEach(s => {
+    filtered.forEach(s => {
       if (s.is_application_fee_paid) totalAppFees += (s.application_fee_amount || 0);
       if (s.is_placement_fee_paid) totalPlaceFees += (s.placement_fee_amount || 0);
       if (s.is_scholarship_fee_paid) totalScholFees += (s.scholarship_fee_amount || 0);
@@ -103,15 +162,18 @@ export function useReportsData() {
 
       stagesMap.set(s.currentStageShort, (stagesMap.get(s.currentStageShort) || 0) + 1);
 
-      const partnerName = s.agency_name || 'Direct / Sem Agência';
+      const partnerName = (s as any).source === 'migma' ? 'Migma' : (s.agency_name || 'Direct / Sem Agência');
       partnersMap.set(partnerName, (partnersMap.get(partnerName) || 0) + 1);
 
       if (s.scholarship_title) {
-        scholarshipsMap.set(s.scholarship_title, (scholarshipsMap.get(s.scholarship_title) || 0) + 1);
-        scholarshipValueMap.set(
-          s.scholarship_title,
-          (scholarshipValueMap.get(s.scholarship_title) || 0) + (s.scholarship_fee_amount || 0)
-        );
+        const schlKey = `${s.scholarship_title}||${s.university_name || ''}`;
+        const existing = scholarshipsMap.get(schlKey);
+        const subtitleParts = [s.university_name, (s as any).course_name].filter(Boolean);
+        scholarshipsMap.set(schlKey, {
+          name: s.scholarship_title,
+          subtitle: subtitleParts.join(' • '),
+          count: (existing?.count || 0) + 1,
+        });
       }
 
       if (s.university_name) {
@@ -119,19 +181,30 @@ export function useReportsData() {
       }
     });
 
+    const totalCount = filtered.length;
+
     const formatChartData = (map: Map<string, number>, total: number): ChartData[] =>
       Array.from(map.entries())
         .map(([name, value]) => ({ name, value, percentage: total > 0 ? (value / total) * 100 : 0 }))
         .sort((a, b) => b.value - a.value);
 
-    const totalCount = finalStudents.length;
+    const stageChartData: ChartData[] = Array.from(stagesMap.entries())
+      .map(([name, value]) => ({ name, value, percentage: totalCount > 0 ? (value / totalCount) * 100 : 0 }));
+
+    const scholarshipChart: ChartData[] = Array.from(scholarshipsMap.entries())
+      .map(([, { name, subtitle, count }]) => ({
+        name,
+        subtitle,
+        value: count,
+        percentage: totalCount > 0 ? (count / totalCount) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
 
     return {
-      filteredStudents: finalStudents,
-      stageChart: formatChartData(stagesMap, totalCount),
+      filteredStudents: filtered,
+      stageChart: stageChartData,
       partnerChart: formatChartData(partnersMap, totalCount),
-      scholarshipChart: formatChartData(scholarshipsMap, totalCount),
-      scholarshipValueChart: formatChartData(scholarshipValueMap, totalScholarshipValue),
+      scholarshipChart,
       universityChart: formatChartData(universitiesMap, totalCount),
       totals: {
         count: totalCount,
@@ -141,23 +214,27 @@ export function useReportsData() {
         totalScholarshipValue
       }
     };
-  }, [students, filters]);
+  }, [allStudentsWithStage, deferredFilters]);
 
-  // Options for filters (unique values from all non-filtered students)
+  // Filter options — computed from all students (ignore active filters except showTestUsers)
   const filterOptions = useMemo(() => {
-    if (!students) return { stages: [], scholarships: [], universities: [], partners: [] };
-    const noTestStudents = students.filter(student => !student.student_email.includes('@uorak.com'));
-    
+    const isTest = (email: string) => !deferredFilters.showTestUsers && email.includes('@uorak.com');
+    const active = allStudentsWithStage.filter(s => !isTest(s.student_email));
+
     return {
-      stages: APPLICATION_FLOW_STAGES.map(s => ({ value: s.key, label: s.label })),
-      scholarships: Array.from(new Set(noTestStudents.map(s => s.scholarship_title).filter(Boolean))),
-      universities: Array.from(new Set(noTestStudents.map(s => s.university_name).filter(Boolean))),
-      partners: Array.from(new Set(noTestStudents.map(s => s.agency_name).filter(Boolean)))
+      stages: visibleStages.map(s => ({ value: s.key, label: s.label })),
+      scholarships: Array.from(new Set(active.map(s => s.scholarship_title).filter(Boolean))),
+      universities: Array.from(new Set(active.map(s => s.university_name).filter(Boolean))),
+      partners: [
+        ...(active.some(s => (s as any).source === 'migma') ? ['migma'] : []),
+        ...Array.from(new Set(active.map(s => s.agency_name).filter(Boolean)))
+      ]
     };
-  }, [students]);
+  }, [allStudentsWithStage, deferredFilters.showTestUsers]);
 
   return {
-    isLoading,
+    isLoading: isLoading || docsLoading,
+    isStale: filters !== deferredFilters, // true enquanto reprocessamento está pendente
     error,
     filters,
     setFilters,

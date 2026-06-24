@@ -494,9 +494,9 @@ export function useStudentsQuery() {
 
       return formattedData;
     },
-    staleTime: 30 * 1000, // 30 segundos - dados dinâmicos
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 }
@@ -1030,9 +1030,8 @@ export function useStudentDocsStats(students: StudentRecord[]) {
       return result;
     },
     enabled: students.length > 0,
-    staleTime: 15 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
