@@ -776,6 +776,38 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
         );
       })()}
 
+      {/* Control Fee (DS-160 / I-539) Installment Info */}
+      {student.package_fee_installment && (() => {
+        const pkg = student.package_fee_installment!;
+        const dueDate = pkg.last_payment_date
+          ? new Date(new Date(pkg.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000)
+          : null;
+        const isOverdue = dueDate ? dueDate < new Date() : false;
+        const installmentAmt = computeInstallmentAmounts(pkg.total_amount, pkg.total_installments)[pkg.installments_paid];
+        const pendingBalance = pkg.total_amount - pkg.amount_paid;
+        const label = 'Control Fee';
+        return (
+          <div className={`mt-2 mb-2 p-2 rounded-lg text-[11px] font-medium flex flex-col gap-1 ${isOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold flex items-center gap-1">
+                <AlertCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isOverdue ? 'text-red-500' : 'text-amber-500'}`} />
+                {label} — Installment {pkg.installments_paid + 1} of {pkg.total_installments}
+              </span>
+              <span className="font-bold">${installmentAmt != null ? installmentAmt.toFixed(2) : pendingBalance.toFixed(2)}</span>
+            </div>
+            <div className={`flex items-center justify-between text-[10px] ${isOverdue ? 'text-red-700' : 'text-amber-700'}`}>
+              <span>Total remaining: ${pendingBalance.toFixed(2)}</span>
+              {dueDate && (
+                <div className="flex items-center gap-1 font-semibold">
+                  <Clock className={`w-3 h-3 flex-shrink-0 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                  <span>{isOverdue ? 'Overdue: ' : 'Due: '}{dueDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Footer with badges */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
         <div className="flex items-center gap-1 text-xs text-gray-500">

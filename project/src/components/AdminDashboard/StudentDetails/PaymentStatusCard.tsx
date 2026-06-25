@@ -1430,11 +1430,23 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         <div className="w-full">
                           {isPartial ? (
                             <div className="flex flex-col gap-2.5 w-full">
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                                <span className="text-sm font-semibold text-amber-700">
-                                  {installmentsPaid}/{activePlan.total_installments} Paid
-                                </span>
+                              <div className="flex items-center justify-between w-full gap-4">
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                  <span className="text-sm font-semibold text-amber-700">
+                                    {installmentsPaid}/{activePlan.total_installments} Paid
+                                  </span>
+                                </div>
+                                {activePlan.last_payment_date && (() => {
+                                  const dueDate = new Date(new Date(activePlan.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000);
+                                  const isOverdue = dueDate < new Date();
+                                  return (
+                                    <div className={`text-xs px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${isOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+                                      <Clock className={`w-3.5 h-3.5 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                                      <span>{isOverdue ? 'Overdue: ' : 'Due: '}<span className={`font-bold ${isOverdue ? 'text-red-900' : 'text-amber-900'}`}>{dueDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
                                 Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('i539_cos_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>
@@ -1586,11 +1598,23 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         <div className="w-full">
                           {isPartial ? (
                             <div className="flex flex-col gap-2.5 w-full">
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                                <span className="text-sm font-semibold text-amber-700">
-                                  {installmentsPaid}/{activePlan.total_installments} Paid
-                                </span>
+                              <div className="flex items-center justify-between w-full gap-4">
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                  <span className="text-sm font-semibold text-amber-700">
+                                    {installmentsPaid}/{activePlan.total_installments} Paid
+                                  </span>
+                                </div>
+                                {activePlan.last_payment_date && (() => {
+                                  const dueDate = new Date(new Date(activePlan.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000);
+                                  const isOverdue = dueDate < new Date();
+                                  return (
+                                    <div className={`text-xs px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${isOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+                                      <Clock className={`w-3.5 h-3.5 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                                      <span>{isOverdue ? 'Overdue: ' : 'Due: '}<span className={`font-bold ${isOverdue ? 'text-red-900' : 'text-amber-900'}`}>{dueDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
                                 Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('ds160_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>
@@ -1742,11 +1766,23 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         <div className="w-full">
                           {isPartial ? (
                             <div className="flex flex-col gap-2.5 w-full">
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                                <span className="text-sm font-semibold text-amber-700">
-                                  {installmentsPaid}/{activePlan.total_installments} Paid
-                                </span>
+                              <div className="flex items-center justify-between w-full gap-4">
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                                  <span className="text-sm font-semibold text-amber-700">
+                                    {installmentsPaid}/{activePlan.total_installments} Paid
+                                  </span>
+                                </div>
+                                {activePlan.last_payment_date && (() => {
+                                  const dueDate = new Date(new Date(activePlan.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000);
+                                  const isOverdue = dueDate < new Date();
+                                  return (
+                                    <div className={`text-xs px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${isOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+                                      <Clock className={`w-3.5 h-3.5 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                                      <span>{isOverdue ? 'Overdue: ' : 'Due: '}<span className={`font-bold ${isOverdue ? 'text-red-900' : 'text-amber-900'}`}>{dueDate.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
                                 Installment {installmentsPaid + 1} of {activePlan.total_installments} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('i539_cos_package'), activePlan.total_installments)[installmentsPaid]?.toFixed(0)}</span>

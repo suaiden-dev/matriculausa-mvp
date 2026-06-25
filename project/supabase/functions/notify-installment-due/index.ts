@@ -18,6 +18,20 @@ interface StudentRecord {
   placement_fee_due_date: string;
 }
 
+interface PackageFeeRecord {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  fee_type: 'ds160_package' | 'i539_cos_package';
+  pending_balance: number;
+  next_due_date: string;
+}
+
+const PACKAGE_FEE_LABELS: Record<string, string> = {
+  ds160_package: 'Control Fee',
+  i539_cos_package: 'I-539 COS Package Fee',
+};
+
 /**
  * Returns how many full days remain until the installment due date (UTC).
  * Returns 0 if due today, negative if already overdue.
@@ -42,6 +56,8 @@ function formatDate(dateStr: string): string {
     timeZone: 'UTC',
   });
 }
+
+// ─── Placement Fee (existing) ────────────────────────────────────────────────
 
 function buildStudentSubject(daysUntilDue: number): string {
   if (daysUntilDue < 0) {
@@ -73,6 +89,70 @@ function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): st
     urgencyLine = `Your installment is due in <strong>${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}</strong> (${formattedDate}).`;
   }
 
+  return buildInstallmentEmailHtml({
+    studentName,
+    feeLabel: 'Placement Fee',
+    urgencyLine,
+    formattedAmount,
+    formattedDate,
+    siteUrl,
+  });
+}
+
+// ─── Package Fees (ds160 / i539) ────────────────────────────────────────────
+
+function buildPackageSubject(daysUntilDue: number, feeType: string): string {
+  const label = PACKAGE_FEE_LABELS[feeType] ?? 'Fee';
+  if (daysUntilDue < 0) {
+    return `⚠️ IMPORTANT: Your ${label} installment is overdue`;
+  }
+  const map: Record<number, string> = {
+    20: `⏰ Reminder: Your ${label} installment is due in 20 days`,
+    13: `⏰ Reminder: Your ${label} installment is due in 13 days`,
+    6:  `⚠️ Urgent: Your ${label} installment is due in 6 days`,
+    0:  `🔴 Final Notice: Your ${label} installment is due TODAY`,
+  };
+  return map[daysUntilDue] ?? `Installment Reminder — Matrícula USA`;
+}
+
+function buildPackageEmailHtml(record: PackageFeeRecord, daysUntilDue: number): string {
+  const feeLabel = PACKAGE_FEE_LABELS[record.fee_type] ?? 'Fee';
+  const formattedAmount = formatCurrency(record.pending_balance);
+  const formattedDate = formatDate(record.next_due_date);
+  const studentName = record.full_name ?? 'Student';
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://matriculausa.com';
+
+  let urgencyLine = '';
+  if (daysUntilDue < 0) {
+    const daysOverdue = -daysUntilDue;
+    urgencyLine = `Your installment is overdue by <strong>${daysOverdue} day${daysOverdue > 1 ? 's' : ''}</strong> (due on ${formattedDate}). Please settle the payment to avoid delays in your academic process.`;
+  } else if (daysUntilDue === 0) {
+    urgencyLine = 'Your installment is due <strong>today</strong>. Please submit payment to avoid delays in your academic process.';
+  } else {
+    urgencyLine = `Your installment is due in <strong>${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}</strong> (${formattedDate}).`;
+  }
+
+  return buildInstallmentEmailHtml({
+    studentName,
+    feeLabel,
+    urgencyLine,
+    formattedAmount,
+    formattedDate,
+    siteUrl,
+  });
+}
+
+// ─── Shared email template ───────────────────────────────────────────────────
+
+function buildInstallmentEmailHtml(params: {
+  studentName: string;
+  feeLabel: string;
+  urgencyLine: string;
+  formattedAmount: string;
+  formattedDate: string;
+  siteUrl: string;
+}): string {
+  const { studentName, feeLabel, urgencyLine, formattedAmount, formattedDate, siteUrl } = params;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,9 +182,9 @@ function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): st
     <div class="content">
       <p>Hello, <strong>${studentName}</strong>,</p>
       <p>${urgencyLine}</p>
-      <p>To maintain access to your dashboard and ensure the release of your final documents, please make the payment for the pending installment via <strong>Zelle</strong> through your student dashboard:</p>
+      <p>To ensure the continuity of your academic process, please make the payment for the pending <strong>${feeLabel}</strong> installment via <strong>Zelle</strong> through your student dashboard:</p>
       <div class="amount-box">
-        <div style="font-size: 14px; color: #78350f; margin-bottom: 4px;">Installment Amount</div>
+        <div style="font-size: 14px; color: #78350f; margin-bottom: 4px;">Installment Amount — ${feeLabel}</div>
         <div class="amount">${formattedAmount}</div>
         <div class="due-date">Due Date: ${formattedDate}</div>
       </div>
@@ -129,16 +209,26 @@ function buildStudentEmailHtml(student: StudentRecord, daysUntilDue: number): st
 </html>`;
 }
 
-function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]): string {
+// ─── Team alert ──────────────────────────────────────────────────────────────
+
+interface TeamAlertStudent {
+  full_name: string | null;
+  email: string | null;
+  pending_amount: number;
+  fee_label: string;
+}
+
+function buildTeamEmailHtml(memberName: string, dueTodayStudents: TeamAlertStudent[]): string {
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',
   });
 
-  const rows = overdueStudents.map((s) => {
-    const amount = formatCurrency(Number(s.placement_fee_pending_balance ?? 0));
+  const rows = dueTodayStudents.map((s) => {
+    const amount = formatCurrency(s.pending_amount);
     return `<tr>
       <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0;">${s.full_name ?? '—'}</td>
       <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0;">${s.email ?? '—'}</td>
+      <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0;">${s.fee_label}</td>
       <td style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #b91c1c;">${amount}</td>
     </tr>`;
   }).join('');
@@ -168,12 +258,13 @@ function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]
     </div>
     <div class="content">
       <p>Hello, <strong>${memberName}</strong>,</p>
-      <p>The following students have a <strong>Placement Fee installment due today</strong> and have not completed their payment yet:</p>
+      <p>The following students have an installment due today and have not completed their payment yet:</p>
       <table>
         <thead>
           <tr>
             <th>Student Name</th>
             <th>Email</th>
+            <th>Fee Type</th>
             <th>Pending Amount</th>
           </tr>
         </thead>
@@ -189,6 +280,8 @@ function buildTeamEmailHtml(memberName: string, overdueStudents: StudentRecord[]
 </html>`;
 }
 
+// ─── Main handler ────────────────────────────────────────────────────────────
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -199,13 +292,10 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];            // 'YYYY-MM-DD'
-
     console.log(`[notify-installment-due] Running checker...`);
 
-    // 1. Fetch students with active installment, valid due date, and pending balance
+    // ── 1. Placement Fee (legacy: columns on user_profiles) ──────────────────
+
     const { data: students, error: studentsError } = await adminClient
       .from('user_profiles')
       .select('id, user_id, full_name, email, placement_fee_pending_balance, placement_fee_due_date')
@@ -214,7 +304,7 @@ Deno.serve(async (req: Request) => {
       .gt('placement_fee_pending_balance', 0);
 
     if (studentsError) {
-      console.error('[notify-installment-due] Error fetching students:', studentsError.message);
+      console.error('[notify-installment-due] Error fetching placement fee students:', studentsError.message);
       return new Response(JSON.stringify({ error: studentsError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -222,24 +312,23 @@ Deno.serve(async (req: Request) => {
     }
 
     const eligibleStudents = (students ?? []) as StudentRecord[];
-    console.log(`[notify-installment-due] ${eligibleStudents.length} student(s) in window`);
+    console.log(`[notify-installment-due] ${eligibleStudents.length} placement fee student(s) in window`);
 
-    const overdueToday: StudentRecord[] = [];
-    let notifiedStudents = 0;
+    const dueTodayStudents: TeamAlertStudent[] = [];
+    let notifiedPlacement = 0;
+    let notifiedPackage = 0;
 
-    // 2. For each student, check if today matches a reminder milestone
     for (const student of eligibleStudents) {
       if (!student.email || !student.placement_fee_due_date) continue;
 
       const daysUntilDue = diffInDays(student.placement_fee_due_date);
-      console.log(`[notify-installment-due] ${student.email}: ${daysUntilDue}d until due`);
+      console.log(`[notify-installment-due] placement ${student.email}: ${daysUntilDue}d until due`);
 
       const isUpcomingReminder = REMINDER_DAYS.includes(daysUntilDue);
       const isOverdueReminder = daysUntilDue < 0;
 
       if (!isUpcomingReminder && !isOverdueReminder) continue;
 
-      // Send async reminder to student (fire-and-forget, same pattern as invite-seller)
       adminClient.functions.invoke('send-email', {
         body: {
           to: student.email,
@@ -248,10 +337,10 @@ Deno.serve(async (req: Request) => {
         },
       }).then(({ error: emailError }: { error: any }) => {
         if (emailError) {
-          console.error(`[notify-installment-due] Failed to send reminder to ${student.email}:`, emailError);
+          console.error(`[notify-installment-due] Failed to send to ${student.email}:`, emailError);
         } else {
           const label = daysUntilDue < 0 ? `overdue ${-daysUntilDue}d` : `${daysUntilDue}d`;
-          console.log(`[notify-installment-due] Reminder (${label}) sent to ${student.email}`);
+          console.log(`[notify-installment-due] Placement reminder (${label}) sent to ${student.email}`);
 
           const description = daysUntilDue < 0
             ? `Installment reminder sent — overdue by ${-daysUntilDue} day(s) (due: ${formatDate(student.placement_fee_due_date)})`
@@ -266,6 +355,7 @@ Deno.serve(async (req: Request) => {
             p_performed_by: student.user_id,
             p_performed_by_type: 'system',
             p_metadata: {
+              fee_type: 'placement_fee',
               days_until_due: daysUntilDue,
               amount_pending: student.placement_fee_pending_balance,
               due_date: student.placement_fee_due_date,
@@ -273,23 +363,164 @@ Deno.serve(async (req: Request) => {
               overdue: daysUntilDue < 0,
             },
           }).catch((logErr: any) => {
-            console.error(`[notify-installment-due] Failed to log activity for ${student.email}:`, logErr);
+            console.error(`[notify-installment-due] Failed to log for ${student.email}:`, logErr);
           });
         }
       }).catch((e: any) => {
-        console.error(`[notify-installment-due] Unexpected error sending to ${student.email}:`, e);
+        console.error(`[notify-installment-due] Unexpected error for ${student.email}:`, e);
       });
 
-      notifiedStudents++;
+      notifiedPlacement++;
 
       if (daysUntilDue === 0) {
-        overdueToday.push(student);
+        dueTodayStudents.push({
+          full_name: student.full_name,
+          email: student.email,
+          pending_amount: Number(student.placement_fee_pending_balance ?? 0),
+          fee_label: 'Placement Fee',
+        });
       }
     }
 
-    // 3. If any student is overdue today, alert every post_sales team member
+    // ── 2. Package Fees: ds160_package and i539_cos_package ──────────────────
+
+    const { data: rawPlans, error: plansError } = await adminClient
+      .from('fee_installment_plans')
+      .select(`
+        id,
+        user_id,
+        fee_type,
+        total_amount,
+        amount_paid,
+        individual_fee_payments(payment_date)
+      `)
+      .in('fee_type', ['ds160_package', 'i539_cos_package'])
+      .eq('status', 'active')
+      .gt('amount_paid', 0);
+
+    if (plansError) {
+      console.error('[notify-installment-due] Error fetching package fee plans:', plansError.message);
+    } else {
+      const planList = rawPlans ?? [];
+      console.log(`[notify-installment-due] ${planList.length} active package fee plan(s) found`);
+
+      // Fetch user profiles for all user_ids
+      const userIds = [...new Set(planList.map((p: any) => p.user_id as string))];
+      let profileMap: Record<string, { full_name: string | null; email: string | null; id: string }> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await adminClient
+          .from('user_profiles')
+          .select('id, user_id, full_name, email')
+          .in('user_id', userIds);
+
+        profileMap = Object.fromEntries(
+          (profiles ?? []).map((p: any) => [p.user_id, p])
+        );
+      }
+
+      // Build PackageFeeRecord[]
+      const packageFeeRecords: PackageFeeRecord[] = [];
+      for (const plan of planList as any[]) {
+        const pendingBalance = Number(plan.total_amount) - Number(plan.amount_paid);
+        if (pendingBalance <= 0) continue;
+
+        const payments = (plan.individual_fee_payments ?? []) as { payment_date: string }[];
+        if (payments.length === 0) continue;
+
+        const lastPaymentTs = Math.max(...payments.map(p => new Date(p.payment_date).getTime()));
+        const nextDueDate = new Date(lastPaymentTs + 30 * 24 * 60 * 60 * 1000)
+          .toISOString().split('T')[0];
+
+        const profile = profileMap[plan.user_id];
+        if (!profile?.email) continue;
+
+        packageFeeRecords.push({
+          user_id: plan.user_id,
+          full_name: profile.full_name,
+          email: profile.email,
+          fee_type: plan.fee_type as 'ds160_package' | 'i539_cos_package',
+          pending_balance: pendingBalance,
+          next_due_date: nextDueDate,
+        });
+      }
+
+      console.log(`[notify-installment-due] ${packageFeeRecords.length} package fee record(s) eligible for notification`);
+
+      for (const record of packageFeeRecords) {
+        const daysUntilDue = diffInDays(record.next_due_date);
+        console.log(`[notify-installment-due] ${record.fee_type} ${record.email}: ${daysUntilDue}d until due`);
+
+        const isUpcomingReminder = REMINDER_DAYS.includes(daysUntilDue);
+        const isOverdueReminder = daysUntilDue < 0;
+
+        if (!isUpcomingReminder && !isOverdueReminder) continue;
+
+        const profile = profileMap[record.user_id];
+        const studentProfileId = profile?.id;
+
+        adminClient.functions.invoke('send-email', {
+          body: {
+            to: record.email,
+            subject: buildPackageSubject(daysUntilDue, record.fee_type),
+            html: buildPackageEmailHtml(record, daysUntilDue),
+          },
+        }).then(({ error: emailError }: { error: any }) => {
+          if (emailError) {
+            console.error(`[notify-installment-due] Failed to send package reminder to ${record.email}:`, emailError);
+          } else {
+            const label = daysUntilDue < 0 ? `overdue ${-daysUntilDue}d` : `${daysUntilDue}d`;
+            const feeLabel = PACKAGE_FEE_LABELS[record.fee_type] ?? record.fee_type;
+            console.log(`[notify-installment-due] ${feeLabel} reminder (${label}) sent to ${record.email}`);
+
+            if (studentProfileId) {
+              const description = daysUntilDue < 0
+                ? `${feeLabel} installment reminder sent — overdue by ${-daysUntilDue} day(s) (due: ${formatDate(record.next_due_date)})`
+                : daysUntilDue === 0
+                  ? `${feeLabel} installment reminder sent — due TODAY (${formatDate(record.next_due_date)})`
+                  : `${feeLabel} installment reminder sent — due in ${daysUntilDue} day(s) (${formatDate(record.next_due_date)})`;
+
+              adminClient.rpc('log_student_action', {
+                p_student_id: studentProfileId,
+                p_action_type: 'installment_reminder_sent',
+                p_action_description: description,
+                p_performed_by: record.user_id,
+                p_performed_by_type: 'system',
+                p_metadata: {
+                  fee_type: record.fee_type,
+                  days_until_due: daysUntilDue,
+                  amount_pending: record.pending_balance,
+                  due_date: record.next_due_date,
+                  email_sent_to: record.email,
+                  overdue: daysUntilDue < 0,
+                },
+              }).catch((logErr: any) => {
+                console.error(`[notify-installment-due] Failed to log for ${record.email}:`, logErr);
+              });
+            }
+          }
+        }).catch((e: any) => {
+          console.error(`[notify-installment-due] Unexpected error for ${record.email}:`, e);
+        });
+
+        notifiedPackage++;
+
+        if (daysUntilDue === 0) {
+          dueTodayStudents.push({
+            full_name: record.full_name,
+            email: record.email,
+            pending_amount: record.pending_balance,
+            fee_label: PACKAGE_FEE_LABELS[record.fee_type] ?? record.fee_type,
+          });
+        }
+      }
+
+    }
+
+    // ── 3. Team alert for all fees due today ─────────────────────────────────
+
     let teamNotified = 0;
-    if (overdueToday.length > 0) {
+    if (dueTodayStudents.length > 0) {
       const { data: team, error: teamError } = await adminClient
         .from('user_profiles')
         .select('email, full_name')
@@ -305,8 +536,8 @@ Deno.serve(async (req: Request) => {
           adminClient.functions.invoke('send-email', {
             body: {
               to: member.email,
-              subject: `🔴 [Matrícula USA] ${overdueToday.length} student(s) with installment due today`,
-              html: buildTeamEmailHtml(member.full_name ?? 'Post-Sales Team', overdueToday),
+              subject: `🔴 [Matrícula USA] ${dueTodayStudents.length} student(s) with installment due today`,
+              html: buildTeamEmailHtml(member.full_name ?? 'Post-Sales Team', dueTodayStudents),
             },
           }).then(({ error: emailError }: { error: any }) => {
             if (emailError) {
@@ -325,9 +556,10 @@ Deno.serve(async (req: Request) => {
 
     const summary = {
       success: true,
-      notified_students: notifiedStudents,
+      notified_placement: notifiedPlacement,
+      notified_package_fees: notifiedPackage,
       team_notified: teamNotified,
-      overdue_today: overdueToday.length,
+      due_today_count: dueTodayStudents.length,
       processed_at: new Date().toISOString(),
     };
 

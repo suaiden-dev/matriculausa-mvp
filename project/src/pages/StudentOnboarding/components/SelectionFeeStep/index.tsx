@@ -30,11 +30,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     hasSellerReferralCode, hasAffiliateCode, hasZellePendingSelectionFee, hasPaid,
     isBlocked, pendingPayment, rejectedPayment, paymentBlockedLoading, refetchPaymentStatus,
     activeDiscount,
-    handleCheckout, handleCheckboxChange, handleTermsClick,
+    handleCheckout, handleFreeCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
     setError,
     payerInfo, setPayerInfo,
   } = state;
+
+  const isFree = computedBasePrice <= 0;
 
   const paymentMethods = [
     { id: 'stripe' as const, name: t('selectionFeeStep.main.methods.stripe'), description: t('selectionFeeStep.main.processingFees.card'), icon: StripeIcon },
@@ -194,6 +196,38 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   hideHeader={true}
                 />
               </div>
+            </div>
+          ) : isFree ? (
+            /* Free checkout — cupom de 100% */
+            <div className="space-y-6 relative z-10">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-2 px-2 gap-2 sm:gap-4">
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight w-full sm:w-auto text-left">{t('selectionFeeStep.main.selectMethod')}</h3>
+                <div className="text-right flex-shrink-0 self-end sm:self-auto">
+                  <div className="flex flex-col items-end">
+                    <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{originalFormattedAmount}</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-0.5">Total</span>
+                      <div className="text-2xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
+                    </div>
+                    <div className="inline-flex items-center mt-1.5 opacity-90">
+                      <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
+                      <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
+                        {promotionalCouponValidation?.isValid
+                          ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
+                          : t('selectionFeeStep.main.discountApplied')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleFreeCheckout}
+                disabled={loading || !termsAccepted}
+                className="w-full bg-emerald-600 text-white py-4 px-8 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-95"
+              >
+                {loading ? '…' : t('selectionFeeStep.paid.continue')}
+              </button>
             </div>
           ) : (
             /* Payment method list */
