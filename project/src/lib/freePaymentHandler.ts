@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { recordIndividualFeePayment, FeeType } from './paymentRecorder';
 
 export type FreeFeeType =
+  | 'selection_process'
   | 'application_fee'
   | 'placement_fee'
   | 'reinstatement_package'
@@ -20,6 +21,7 @@ interface ApplyFreePaymentParams {
 }
 
 const feeTypeToRecorderType: Record<FreeFeeType, FeeType> = {
+  selection_process: 'selection_process',
   application_fee: 'application',
   placement_fee: 'placement',
   reinstatement_package: 'reinstatement_fee',
@@ -29,6 +31,7 @@ const feeTypeToRecorderType: Record<FreeFeeType, FeeType> = {
 };
 
 const feeTypeToProfileColumn: Record<FreeFeeType, string> = {
+  selection_process: 'has_paid_selection_process_fee',
   application_fee: 'is_application_fee_paid',
   placement_fee: 'is_placement_fee_paid',
   reinstatement_package: 'has_paid_reinstatement_package',
@@ -40,6 +43,7 @@ const feeTypeToProfileColumn: Record<FreeFeeType, string> = {
 // Columns on user_profiles that store the payment method for each fee type.
 // application_fee uses scholarship_applications.application_fee_payment_method instead.
 const feeTypeToPaymentMethodColumn: Partial<Record<FreeFeeType, string>> = {
+  selection_process: 'selection_process_fee_payment_method',
   placement_fee: 'placement_fee_payment_method',
   reinstatement_package: 'reinstatement_package_payment_method',
   i20_control_fee: 'i20_control_fee_payment_method',
