@@ -44,7 +44,7 @@ type CertFile = { name: string; url: string };
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  stripe: 'Cartão',
+  stripe: 'Card',
   zelle: 'Zelle',
   parcelow: 'Parcelow',
 };
@@ -103,13 +103,13 @@ function txStateKey(o: TranslationOrder): string {
 }
 
 const TX_LABELS: Record<string, string> = {
-  [TX_NOT_SENT]: 'Não enviado',
-  [TX_SENT]: 'Enviado',
-  'Em Tradução': 'Em Tradução',
-  'Em Revisão': 'Em Revisão',
-  'Em Certificação': 'Em Certificação',
-  'Finalizado': 'Concluído',
-  'Cancelado': 'Cancelado',
+  [TX_NOT_SENT]: 'Not Sent',
+  [TX_SENT]: 'Sent',
+  'Em Tradução': 'In Translation',
+  'Em Revisão': 'Under Review',
+  'Em Certificação': 'Under Certification',
+  'Finalizado': 'Completed',
+  'Cancelado': 'Canceled',
 };
 
 function txDisplay(key: string) {
@@ -152,13 +152,13 @@ function certMsRemaining(o: TranslationOrder): number {
   return new Date(base).getTime() + 60 * 24 * 60 * 60 * 1000 - Date.now();
 }
 function formatCertCountdown(ms: number): string {
-  if (ms <= 0) return 'Expirado';
+  if (ms <= 0) return 'Expired';
   const days = Math.floor(ms / 86400000);
   const hours = Math.floor((ms % 86400000) / 3600000);
   const parts = [];
   if (days > 0) parts.push(`${days}d`);
   parts.push(`${hours}h`);
-  return parts.join(' ') + ' restantes';
+  return parts.join(' ') + ' remaining';
 }
 
 function certFileType(name: string): 'pdf' | 'image' | 'other' {
@@ -183,8 +183,8 @@ async function downloadCertFile(url: string, name: string) {
 
 function exportCsv(rows: TranslationOrder[]) {
   const headers = [
-    'Aluno', 'Email', 'Arquivo', 'Tipo', 'Idiomas', 'Páginas', 'Valor (USD)',
-    'Método', 'Status Pagamento', 'Alpha #', 'Status Tradução', 'Data', 'ID',
+    'Student', 'Email', 'File', 'Type', 'Languages', 'Pages', 'Amount (USD)',
+    'Method', 'Payment Status', 'Alpha #', 'Translation Status', 'Date', 'ID',
   ];
   function esc(v: unknown) { return `"${String(v ?? '').replace(/"/g, '""')}"`; }
   const lines = rows.map((r) => [
@@ -211,7 +211,7 @@ const CertCountdown: React.FC<{ order: TranslationOrder }> = ({ order }) => {
     const id = setInterval(() => setMs(certMsRemaining(order)), 60000);
     return () => clearInterval(id);
   }, [order.certified_at, order.created_at]);
-  if (ms <= 0) return <p className="mt-1 text-[10px] font-medium text-red-500">Link expirado</p>;
+  if (ms <= 0) return <p className="mt-1 text-[10px] font-medium text-red-500">Link Expired</p>;
   const days = Math.floor(ms / 86400000);
   const color = days <= 7 ? 'text-red-500' : days <= 14 ? 'text-amber-500' : 'text-green-600';
   return <p className={`mt-1 text-[10px] font-medium ${color}`}>{formatCertCountdown(ms)}</p>;
@@ -254,7 +254,7 @@ const CertModal: React.FC<{ file: CertFile; onClose: () => void }> = ({ file, on
           {kind === 'other' && (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
               <FileDown className="h-10 w-10 text-gray-300" />
-              <p className="text-sm text-gray-500">Preview não disponível para este tipo de arquivo.</p>
+              <p className="text-sm text-gray-500">Preview not available for this file type.</p>
             </div>
           )}
         </div>
@@ -365,20 +365,20 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
 
               {/* Informações do documento */}
               <section className="pb-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Informações do Documento</h3>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Document Information</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Idiomas" value={`${o.source_language} → ${o.target_language}`} />
-                  <Field label="Páginas" value={o.page_count} />
-                  <Field label="Tipo" value={o.document_type} />
-                  <Field label="Valor" value={`$${Number(o.total_price).toFixed(2)}`} />
+                  <Field label="Languages" value={`${o.source_language} → ${o.target_language}`} />
+                  <Field label="Pages" value={o.page_count} />
+                  <Field label="Type" value={o.document_type} />
+                  <Field label="Amount" value={`$${Number(o.total_price).toFixed(2)}`} />
                 </div>
               </section>
 
               {/* Aluno */}
               <section className="py-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Aluno</h3>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Student</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Nome" value={o.student_name} />
+                  <Field label="Name" value={o.student_name} />
                   <Field label="Email" value={o.student_email} />
                   <Field label="User ID" value={<span className="font-mono text-xs text-gray-500">{o.user_id.slice(0, 16)}…</span>} />
                 </div>
@@ -388,21 +388,21 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
               <section className="py-5">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Timeline</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Criado em" value={formatDateFull(o.created_at)} />
+                  <Field label="Created on" value={formatDateFull(o.created_at)} />
                   {o.alpha_project_number && <Field label="Alpha #" value={`#${o.alpha_project_number}`} />}
-                  {o.alpha_synced_at && <Field label="Última sync" value={formatDateFull(o.alpha_synced_at)} />}
-                  {o.certified_at && <Field label="Certificado em" value={formatDateFull(o.certified_at)} />}
+                  {o.alpha_synced_at && <Field label="Last sync" value={formatDateFull(o.alpha_synced_at)} />}
+                  {o.certified_at && <Field label="Certified on" value={formatDateFull(o.certified_at)} />}
                   {o.resubmit_upload_id && (
-                    <Field label="Resubmetido" value={
+                    <Field label="Resubmitted" value={
                       <span className="inline-flex items-center gap-1 text-teal-600 font-semibold text-xs">
-                        <RotateCcw className="h-3 w-3" /> Auto-resubmetido
+                        <RotateCcw className="h-3 w-3" /> Auto-resubmitted
                       </span>
                     } />
                   )}
                 </div>
                 {o.alpha_project_number && (
                   <div className="mt-3">
-                    <Field label="Status Alpha" value={
+                    <Field label="Alpha Status" value={
                       txKey !== TX_NOT_SENT ? (
                         <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium mt-0.5 ${txBadgeClass(txKey) ?? 'bg-blue-50 text-blue-700'}`}>
                           {txDisplay(txKey)}
@@ -419,20 +419,20 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
 
               {/* Pagamento */}
               <section className="pb-5 sm:pt-0">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Pagamento</h3>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Payment</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Valor" value={`$${Number(o.total_price).toFixed(2)}`} />
-                  <Field label="Método" value={
+                  <Field label="Amount" value={`$${Number(o.total_price).toFixed(2)}`} />
+                  <Field label="Method" value={
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_METHOD_COLORS[o.payment_method ?? ''] ?? 'bg-gray-100 text-gray-600'}`}>
                       {paymentMethodLabel(o.payment_method)}
                     </span>
                   } />
                   <Field label="Status" value={
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_STATUS_COLORS[o.payment_status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {o.payment_status === 'paid' ? 'Pago' : o.payment_reference ? 'Processando' : 'Pendente'}
+                      {o.payment_status === 'paid' ? 'Paid' : o.payment_reference ? 'Processing' : 'Pending'}
                     </span>
                   } />
-                  {o.payment_reference && <Field label="Referência" value={<span className="font-mono text-xs break-all">{o.payment_reference}</span>} />}
+                  {o.payment_reference && <Field label="Reference" value={<span className="font-mono text-xs break-all">{o.payment_reference}</span>} />}
                 </div>
                 {o.payment_method === 'zelle' && o.payment_reference && o.payment_status !== 'paid' && (
                   <button
@@ -448,35 +448,35 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
 
               {/* Documento original */}
               <section className="py-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Documento Original</h3>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Original Document</h3>
                 {o.document_url ? (
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                     <div className="flex items-center gap-3">
                       <FileText className="h-8 w-8 shrink-0 text-red-400" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-800">{o.original_filename ?? 'documento'}</p>
+                        <p className="truncate text-sm font-medium text-gray-800">{o.original_filename ?? 'document'}</p>
                         <p className="text-xs text-gray-400">{o.document_type}</p>
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
                       <button onClick={() => openStorageFile(o.document_url!)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#05294E] px-3 py-2 text-xs font-semibold text-white hover:bg-[#041d38] transition-colors">
-                        <ExternalLink className="h-3.5 w-3.5" /> Ver
+                        <ExternalLink className="h-3.5 w-3.5" /> View
                       </button>
                       <button onClick={() => openStorageFile(o.document_url!, true)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-                        <Download className="h-3.5 w-3.5" /> Baixar
+                        <Download className="h-3.5 w-3.5" /> Download
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400">Documento não disponível.</p>
+                  <p className="text-sm text-gray-400">Document not available.</p>
                 )}
               </section>
 
               {/* Documentos traduzidos */}
               <section className="py-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Documentos Traduzidos</h3>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Translated Documents</h3>
                 {certFiles.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {certFiles.map((f, i) => (
@@ -485,18 +485,18 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
                           <FileDown className="h-7 w-7 shrink-0 text-green-600" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-gray-800">{f.name}</p>
-                            <p className="text-xs text-gray-400">Traduzido pela Alpha Translations</p>
+                            <p className="text-xs text-gray-400">Translated by Alpha Translations</p>
                             <CertCountdown order={o} />
                           </div>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => setCertViewFile(f)}
                             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 transition-colors">
-                            <Eye className="h-3.5 w-3.5" /> Visualizar
+                            <Eye className="h-3.5 w-3.5" /> Preview
                           </button>
                           <button onClick={() => downloadCertFile(f.url, f.name)}
                             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-white px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors">
-                            <Download className="h-3.5 w-3.5" /> Baixar
+                            <Download className="h-3.5 w-3.5" /> Download
                           </button>
                         </div>
                       </div>
@@ -504,7 +504,7 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
                   </div>
                 ) : (
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                    <p className="text-sm text-gray-400">Nenhum documento traduzido ainda.</p>
+                    <p className="text-sm text-gray-400">No translated documents yet.</p>
                     {o.alpha_project_number && (
                       <p className="mt-1.5 text-xs text-gray-500">
                         Status: <span className="font-semibold text-gray-700">{txDisplay(txStateKey(o))}</span>
@@ -517,7 +517,7 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
                         className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-orange-300 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-600 hover:bg-orange-100 transition-colors disabled:opacity-50"
                       >
                         {simulating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                        {simulating ? 'Simulando...' : 'Simular Finalização (teste)'}
+                        {simulating ? 'Simulating...' : 'Simulate Finalization (test)'}
                       </button>
                     )}
                   </div>
@@ -575,11 +575,15 @@ const TranslationsManagement: React.FC = () => {
       const profileMap: Record<string, { full_name: string; email: string }> = {};
       for (const p of profiles || []) profileMap[p.user_id] = p;
 
-      setOrders(ordersData.map((o: any) => ({
+      const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('localhost');
+
+      const mapped = ordersData.map((o: any) => ({
         ...o,
         student_name: profileMap[o.user_id]?.full_name || '—',
         student_email: profileMap[o.user_id]?.email || '—',
-      })));
+      }));
+
+      setOrders(isProduction ? mapped.filter((o: any) => !o.student_email.includes('uorak.com')) : mapped);
     } catch (err: any) {
       console.error('Error fetching translations:', err);
     } finally {
@@ -656,10 +660,10 @@ const TranslationsManagement: React.FC = () => {
   const totalRevenue = filtered.filter((o) => o.payment_status === 'paid').reduce((s, o) => s + Number(o.total_price), 0);
 
   const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: 'all', label: 'Todas', count: totalAll },
-    { id: 'in_progress', label: 'Em Andamento', count: totalInProgress },
-    { id: 'finalized', label: 'Finalizadas', count: totalFinalized },
-    { id: 'awaiting_payment', label: 'Aguard. Pagamento', count: totalAwaiting },
+    { id: 'all', label: 'All', count: totalAll },
+    { id: 'in_progress', label: 'In Progress', count: totalInProgress },
+    { id: 'finalized', label: 'Finalized', count: totalFinalized },
+    { id: 'awaiting_payment', label: 'Awaiting Payment', count: totalAwaiting },
   ];
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -672,9 +676,9 @@ const TranslationsManagement: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-gray-900 sm:text-2xl flex items-center gap-2">
             <Languages className="h-5 w-5 text-[#05294E]" />
-            Gerenciar Traduções
+            Manage Translations
           </h1>
-          <p className="mt-1 text-sm text-gray-500">Acompanhe pedidos, status Alpha e documentos traduzidos.</p>
+          <p className="mt-1 text-sm text-gray-500">Track orders, Alpha status, and translated documents.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -683,7 +687,7 @@ const TranslationsManagement: React.FC = () => {
             className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{syncing ? 'Sincronizando…' : 'Sincronizar com Alpha'}</span>
+            <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync with Alpha'}</span>
           </button>
           <button
             onClick={() => exportCsv(filtered)}
@@ -691,17 +695,17 @@ const TranslationsManagement: React.FC = () => {
             className="flex items-center gap-2 rounded-xl bg-[#05294E] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#041d38] disabled:opacity-40 disabled:cursor-not-allowed sm:px-4"
           >
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Exportar CSV</span>
+            <span className="hidden sm:inline">Export CSV</span>
           </button>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total de Pedidos" value={totalAll} icon={<FileText className="h-5 w-5 text-slate-500" />} color="bg-slate-50 border-slate-200" />
-        <StatCard label="Em Andamento" value={totalInProgress} icon={<Clock className="h-5 w-5 text-blue-500" />} color="bg-blue-50 border-blue-200" />
-        <StatCard label="Finalizadas" value={totalFinalized} icon={<CheckCircle className="h-5 w-5 text-green-500" />} color="bg-green-50 border-green-200" />
-        <StatCard label="Aguard. Pagamento" value={totalAwaiting} icon={<AlertCircle className="h-5 w-5 text-amber-500" />} color="bg-amber-50 border-amber-200" />
+        <StatCard label="Total Orders" value={totalAll} icon={<FileText className="h-5 w-5 text-slate-500" />} color="bg-slate-50 border-slate-200" />
+        <StatCard label="In Progress" value={totalInProgress} icon={<Clock className="h-5 w-5 text-blue-500" />} color="bg-blue-50 border-blue-200" />
+        <StatCard label="Finalized" value={totalFinalized} icon={<CheckCircle className="h-5 w-5 text-green-500" />} color="bg-green-50 border-green-200" />
+        <StatCard label="Awaiting Payment" value={totalAwaiting} icon={<AlertCircle className="h-5 w-5 text-amber-500" />} color="bg-amber-50 border-amber-200" />
       </div>
 
       {/* Tab bar */}
@@ -728,7 +732,7 @@ const TranslationsManagement: React.FC = () => {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar aluno, arquivo, #Alpha…"
+            placeholder="Search student, file, #Alpha…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-[#05294E] focus:ring-2 focus:ring-[#05294E]/10"
@@ -738,45 +742,45 @@ const TranslationsManagement: React.FC = () => {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {/* Translation status */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status Tradução</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Translation Status</label>
             <select value={txFilter} onChange={(e) => setTxFilter(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#05294E]">
               {txOptions.map((s) => (
-                <option key={s} value={s}>{s === 'all' ? 'Todos' : txDisplay(s)}</option>
+                <option key={s} value={s}>{s === 'all' ? 'All' : txDisplay(s)}</option>
               ))}
             </select>
           </div>
           {/* Payment status */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Status Pagamento</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Payment Status</label>
             <select value={payStatusFilter} onChange={(e) => setPayStatusFilter(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#05294E]">
-              <option value="all">Todos</option>
-              <option value="paid">Pago</option>
-              <option value="unpaid">Pendente</option>
-              <option value="processing">Processando</option>
+              <option value="all">All</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Pending</option>
+              <option value="processing">Processing</option>
             </select>
           </div>
           {/* Payment method */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Método</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Method</label>
             <select value={payMethodFilter} onChange={(e) => setPayMethodFilter(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#05294E]">
-              <option value="all">Todos</option>
-              <option value="stripe">Cartão</option>
+              <option value="all">All</option>
+              <option value="stripe">Card</option>
               <option value="zelle">Zelle</option>
               <option value="parcelow">Parcelow</option>
             </select>
           </div>
           {/* Date from */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">De</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">From</label>
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#05294E]" />
           </div>
           {/* Date to */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Até</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">To</label>
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
               className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#05294E]" />
           </div>
@@ -787,7 +791,7 @@ const TranslationsManagement: React.FC = () => {
             onClick={() => { setTxFilter('all'); setPayStatusFilter('all'); setPayMethodFilter('all'); setDateFrom(''); setDateTo(''); }}
             className="flex items-center gap-1 self-start text-xs text-gray-400 hover:text-red-500 transition-colors"
           >
-            <X className="h-3.5 w-3.5" /> Limpar filtros ({activeFilterCount})
+            <X className="h-3.5 w-3.5" /> Clear filters ({activeFilterCount})
           </button>
         )}
       </div>
@@ -795,10 +799,10 @@ const TranslationsManagement: React.FC = () => {
       {/* Summary line */}
       {!loading && (
         <div className="flex items-center gap-3 text-xs text-gray-400 px-1">
-          <span>Exibindo {filtered.length} de {orders.length} pedido{orders.length !== 1 ? 's' : ''}</span>
+          <span>Showing {filtered.length} of {orders.length} order{orders.length !== 1 ? 's' : ''}</span>
           {totalRevenue > 0 && (
             <span className="font-semibold text-green-600">
-              Total recebido: ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              Total received: ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           )}
         </div>
@@ -808,13 +812,13 @@ const TranslationsManagement: React.FC = () => {
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         {/* Header row */}
         <div className="hidden grid-cols-[1.2fr_1.4fr_0.8fr_0.8fr_1fr_1fr_0.8fr_0.4fr] gap-3 border-b border-gray-100 bg-gray-50/60 px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400 lg:grid">
-          <span>Aluno</span>
-          <span>Documento</span>
-          <span>Idiomas</span>
+          <span>Student</span>
+          <span>Document</span>
+          <span>Languages</span>
           <span>Alpha</span>
-          <span>Status Tradução</span>
-          <span>Pagamento</span>
-          <span>Data</span>
+          <span>Translation Status</span>
+          <span>Payment</span>
+          <span>Date</span>
           <span></span>
         </div>
 
@@ -830,7 +834,7 @@ const TranslationsManagement: React.FC = () => {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Languages className="h-12 w-12 text-gray-200" />
-            <p className="mt-3 text-sm text-gray-400">Nenhuma tradução encontrada.</p>
+            <p className="mt-3 text-sm text-gray-400">No translations found.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -845,7 +849,7 @@ const TranslationsManagement: React.FC = () => {
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-3 px-1">
           <p className="text-xs text-gray-400">
-            Página {safePage} de {totalPages} · {filtered.length} pedidos
+            Page {safePage} of {totalPages} · {filtered.length} orders
           </p>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(1)} disabled={safePage === 1}
@@ -924,14 +928,14 @@ const OrderGridRow: React.FC<{ order: TranslationOrder; onOpen: () => void }> = 
               {paymentMethodLabel(o.payment_method)}
             </span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_STATUS_COLORS[o.payment_status] ?? 'bg-gray-100 text-gray-600'}`}>
-              {o.payment_status === 'paid' ? 'Pago' : 'Pendente'}
+              {o.payment_status === 'paid' ? 'Paid' : 'Pending'}
             </span>
             {txKey !== TX_NOT_SENT && badgeClass && (
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}>{txDisplay(txKey)}</span>
             )}
             {certFiles.length > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                <FileDown className="h-3 w-3" /> Certificado
+                <FileDown className="h-3 w-3" /> Certified
               </span>
             )}
           </div>
@@ -974,7 +978,7 @@ const OrderGridRow: React.FC<{ order: TranslationOrder; onOpen: () => void }> = 
         {/* Status Tradução */}
         <div className="flex flex-col gap-1 items-start">
           {txKey === TX_NOT_SENT ? (
-            <span className="text-xs text-gray-400">Não enviado</span>
+            <span className="text-xs text-gray-400">Not Sent</span>
           ) : (
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass ?? 'bg-blue-50 text-blue-700'}`}>
               {txDisplay(txKey)}
@@ -982,12 +986,12 @@ const OrderGridRow: React.FC<{ order: TranslationOrder; onOpen: () => void }> = 
           )}
           {certFiles.length > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-              <FileDown className="h-3 w-3 shrink-0" /> Certificado
+              <FileDown className="h-3 w-3 shrink-0" /> Certified
             </span>
           )}
           {o.resubmit_upload_id && (
             <span className="inline-flex items-center gap-1 text-[10px] text-teal-600 font-semibold">
-              <RotateCcw className="h-3 w-3" /> Auto-resubmetido
+              <RotateCcw className="h-3 w-3" /> Auto-resubmitted
             </span>
           )}
         </div>
@@ -995,7 +999,7 @@ const OrderGridRow: React.FC<{ order: TranslationOrder; onOpen: () => void }> = 
         {/* Pagamento */}
         <div className="flex flex-col gap-1 items-start">
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PAYMENT_STATUS_COLORS[o.payment_status] ?? 'bg-gray-100 text-gray-600'}`}>
-            {o.payment_status === 'paid' ? 'Pago' : o.payment_reference ? 'Processando' : 'Pendente'}
+            {o.payment_status === 'paid' ? 'Paid' : o.payment_reference ? 'Processing' : 'Pending'}
           </span>
           <span className="text-xs text-gray-400">{paymentMethodLabel(o.payment_method)} · ${Number(o.total_price).toFixed(2)}</span>
         </div>
