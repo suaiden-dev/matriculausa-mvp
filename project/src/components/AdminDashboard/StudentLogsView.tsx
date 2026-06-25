@@ -80,6 +80,7 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     { value: 'document_request_uploaded', label: 'Document Request Uploaded' },
     { value: 'newsletter_email_sent', label: 'Newsletter Email Sent' },
     { value: 'newsletter_email_failed', label: 'Newsletter Email Failed' },
+    { value: 'installment_reminder_sent', label: 'Installment Reminder Sent' },
     { value: 'translation_payment_received', label: 'Translation Payment' },
     { value: 'translation_zelle_submitted', label: 'Translation Zelle Proof' },
     { value: 'translation_sent_to_alpha', label: 'Sent to Alpha' },
@@ -165,6 +166,9 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     }
     if (type.includes('rejection') || type.includes('rejected')) {
       return 'text-red-600';
+    }
+    if (type === 'installment_reminder_sent') {
+      return 'text-amber-600';
     }
     if (type.includes('upload') || type.includes('created') || type === 'newsletter_email_sent') {
       return 'text-blue-600';

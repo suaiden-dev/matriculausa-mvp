@@ -160,6 +160,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
+  const [placementFeeFilter, setPlacementFeeFilter] = useState<'all' | 'overdue' | 'due_soon' | 'overdue_or_soon'>('all');
 
   // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
@@ -186,6 +187,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       showCurrentStudents,
       processTypeFilter,
       sourceFilter,
+      placementFeeFilter,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -210,6 +212,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
         setProcessTypeFilter(filters.processTypeFilter || 'all');
+        setPlacementFeeFilter(filters.placementFeeFilter || 'all');
         setSourceFilter(filters.sourceFilter || 'all');
         setCurrentPage(filters.currentPage || 1);
       }
@@ -634,7 +637,22 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       (sourceFilter === 'migma' && student.source === 'migma') ||
       (sourceFilter === 'direct' && (!student.source || student.source !== 'migma'));
 
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType && matchesSource;
+    const matchesPlacementFee = (() => {
+      if (placementFeeFilter === 'all') return true;
+      if (!student.placement_fee_installment_enabled || (student.placement_fee_pending_balance ?? 0) <= 0) return false;
+      if (!student.placement_fee_due_date) return false;
+      const due = new Date(student.placement_fee_due_date);
+      const now = new Date();
+      const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const isOverdue = due < now;
+      const isDueSoon = !isOverdue && due <= in7Days;
+      if (placementFeeFilter === 'overdue') return isOverdue;
+      if (placementFeeFilter === 'due_soon') return isDueSoon;
+      if (placementFeeFilter === 'overdue_or_soon') return isOverdue || isDueSoon;
+      return true;
+    })();
+
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType && matchesSource && matchesPlacementFee;
 
     return finalResult;
   });
@@ -1107,6 +1125,19 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   Show only students who paid Selection Process Fee
                 </label>
               </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Placement Fee:</label>
+                <select
+                  value={placementFeeFilter}
+                  onChange={(e) => setPlacementFeeFilter(e.target.value as any)}
+                  className={`text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#05294E] ${placementFeeFilter !== 'all' ? 'border-red-400 bg-red-50 text-red-800 font-medium' : 'border-gray-300 text-gray-700'}`}
+                >
+                  <option value="all">All</option>
+                  <option value="overdue">🔴 Overdue</option>
+                  <option value="due_soon">🟠 Due in 7 days</option>
+                  <option value="overdue_or_soon">⚠️ Overdue or due soon</option>
+                </select>
+              </div>
               {/* <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1161,6 +1192,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
           students={filteredStudents}
           getUnreadCount={getUnreadCount}
           getGlobalUnreadCount={getGlobalUnreadCount}
+          hideEmptyColumns={placementFeeFilter !== 'all'}
         />
       ) : (
         /* Applications List - Table View */

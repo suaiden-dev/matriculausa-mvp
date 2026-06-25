@@ -10,6 +10,7 @@ const corsHeaders = {
 const REMINDER_DAYS = [20, 13, 6, 0];
 
 interface StudentRecord {
+  id: string;
   user_id: string;
   full_name: string | null;
   email: string | null;
@@ -207,7 +208,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch students with active installment, valid due date, and pending balance
     const { data: students, error: studentsError } = await adminClient
       .from('user_profiles')
-      .select('user_id, full_name, email, placement_fee_pending_balance, placement_fee_due_date')
+      .select('id, user_id, full_name, email, placement_fee_pending_balance, placement_fee_due_date')
       .eq('placement_fee_installment_enabled', true)
       .not('placement_fee_due_date', 'is', null)
       .gt('placement_fee_pending_balance', 0);
@@ -251,6 +252,29 @@ Deno.serve(async (req: Request) => {
         } else {
           const label = daysUntilDue < 0 ? `overdue ${-daysUntilDue}d` : `${daysUntilDue}d`;
           console.log(`[notify-installment-due] Reminder (${label}) sent to ${student.email}`);
+
+          const description = daysUntilDue < 0
+            ? `Installment reminder sent — overdue by ${-daysUntilDue} day(s) (due: ${formatDate(student.placement_fee_due_date)})`
+            : daysUntilDue === 0
+              ? `Installment reminder sent — due TODAY (${formatDate(student.placement_fee_due_date)})`
+              : `Installment reminder sent — due in ${daysUntilDue} day(s) (${formatDate(student.placement_fee_due_date)})`;
+
+          adminClient.rpc('log_student_action', {
+            p_student_id: student.id,
+            p_action_type: 'installment_reminder_sent',
+            p_action_description: description,
+            p_performed_by: student.user_id,
+            p_performed_by_type: 'system',
+            p_metadata: {
+              days_until_due: daysUntilDue,
+              amount_pending: student.placement_fee_pending_balance,
+              due_date: student.placement_fee_due_date,
+              email_sent_to: student.email,
+              overdue: daysUntilDue < 0,
+            },
+          }).catch((logErr: any) => {
+            console.error(`[notify-installment-due] Failed to log activity for ${student.email}:`, logErr);
+          });
         }
       }).catch((e: any) => {
         console.error(`[notify-installment-due] Unexpected error sending to ${student.email}:`, e);

@@ -17,12 +17,14 @@ interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
   getUnreadCount: (studentId: string) => number;
   getGlobalUnreadCount: (studentId: string) => number;
+  hideEmptyColumns?: boolean;
 }
 
 const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({
   students,
   getUnreadCount,
   getGlobalUnreadCount,
+  hideEmptyColumns = false,
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -208,26 +210,29 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       <div ref={boardRef} onScroll={handleScroll} className="flex-1 overflow-x-auto overflow-y-hidden pb-6">
         <div className="flex gap-4 h-full min-w-max">
           {/* Coluna especial: Registered (primeiro) */}
-          <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
-            <KanbanColumn
-              stage={{
-                key: 'registered' as ApplicationFlowStageKey,
-                label: 'Registered',
-                shortLabel: 'Registered',
-                icon: UserPlus,
-                description: 'Students registered but haven\'t paid the Selection Process Fee yet',
-                team: 'Closer',
-                actor: 'student',
-              } as any}
-              students={registeredStudents}
-              onStudentClick={handleStudentClick}
-              getUnreadCount={getStudentTotalUnread}
-              showDebtTag={true}
-            />
-          </div>
+          {(!hideEmptyColumns || registeredStudents.length > 0) && (
+            <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
+              <KanbanColumn
+                stage={{
+                  key: 'registered' as ApplicationFlowStageKey,
+                  label: 'Registered',
+                  shortLabel: 'Registered',
+                  icon: UserPlus,
+                  description: 'Students registered but haven\'t paid the Selection Process Fee yet',
+                  team: 'Closer',
+                  actor: 'student',
+                } as any}
+                students={registeredStudents}
+                onStudentClick={handleStudentClick}
+                getUnreadCount={getStudentTotalUnread}
+                showDebtTag={true}
+              />
+            </div>
+          )}
 
           {visibleStages.map(stage => {
             const studentsInStage = studentsByStage.get(stage.key) || [];
+            if (hideEmptyColumns && studentsInStage.length === 0) return null;
 
             return (
               <div
@@ -248,24 +253,26 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
           })}
 
           {/* Coluna especial: Dropped */}
-          <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
-            <KanbanColumn
-              stage={{
-                key: 'dropped' as ApplicationFlowStageKey,
-                label: 'Dropped',
-                shortLabel: 'Dropped',
-                icon: UserX,
-                description: 'Students who dropped out of the process',
-                team: 'Admin',
-                actor: 'admin',
-              } as any}
-              students={droppedStudents}
-              onStudentClick={handleStudentClick}
-              getUnreadCount={getStudentTotalUnread}
-              isDropped
-              showDebtTag={true}
-            />
-          </div>
+          {(!hideEmptyColumns || droppedStudents.length > 0) && (
+            <div className="flex-shrink-0 w-80" style={{ height: 'calc(100vh - 280px)' }}>
+              <KanbanColumn
+                stage={{
+                  key: 'dropped' as ApplicationFlowStageKey,
+                  label: 'Dropped',
+                  shortLabel: 'Dropped',
+                  icon: UserX,
+                  description: 'Students who dropped out of the process',
+                  team: 'Admin',
+                  actor: 'admin',
+                } as any}
+                students={droppedStudents}
+                onStudentClick={handleStudentClick}
+                getUnreadCount={getStudentTotalUnread}
+                isDropped
+                showDebtTag={true}
+              />
+            </div>
+          )}
         </div>
       </div>
 

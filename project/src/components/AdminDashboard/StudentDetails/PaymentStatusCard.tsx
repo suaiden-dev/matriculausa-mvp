@@ -865,15 +865,19 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                     {installmentPlans?.['placement_fee']?.installments_paid ?? 1}/{installmentPlans?.['placement_fee']?.total_installments ?? 2} Paid
                                   </span>
                                 </div>
-                                {student.placement_fee_due_date && (
-                                  <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>Due: <span className="font-bold text-amber-900">{new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
-                                  </div>
-                                )}
+                                {student.placement_fee_due_date && (() => {
+                                  const dueDateOverdue = new Date(student.placement_fee_due_date) < new Date();
+                                  return (
+                                    <div className={`text-xs px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-1.5 ${dueDateOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+                                      <Clock className={`w-3.5 h-3.5 ${dueDateOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                                      <span>{dueDateOverdue ? 'Overdue: ' : 'Due: '}<span className={`font-bold ${dueDateOverdue ? 'text-red-900' : 'text-amber-900'}`}>{new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span></span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full">
-                                Installment {(installmentPlans?.['placement_fee']?.installments_paid ?? 1) + 1} of {installmentPlans?.['placement_fee']?.total_installments ?? 2} pending: <span className="font-bold">${pendingBalance.toFixed(0)}</span>
+                              <div className="text-xs bg-amber-50 border border-amber-200/60 text-amber-800 px-3 py-2 rounded-lg font-medium leading-relaxed w-full flex flex-col gap-1">
+                                <span>Installment {(installmentPlans?.['placement_fee']?.installments_paid ?? 1) + 1} of {installmentPlans?.['placement_fee']?.total_installments ?? 2} pending: <span className="font-bold">${computeInstallmentAmounts(getFeeTotalAmount('placement_fee'), installmentPlans?.['placement_fee']?.total_installments ?? 2)[(installmentPlans?.['placement_fee']?.installments_paid ?? 1)]?.toFixed(2) ?? pendingBalance.toFixed(2)}</span></span>
+                                <span className="text-[10px] text-amber-700">Total remaining: <span className="font-semibold">${pendingBalance.toFixed(2)}</span></span>
                               </div>
                             </div>
                           ) : (
