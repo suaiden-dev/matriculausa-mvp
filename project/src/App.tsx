@@ -153,8 +153,7 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
-          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
+          <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
           <Route path="/initial/california-mission" element={<MissaoCalifornia />} />
           <Route path="/initial/california-dreams" element={<CaliforniaDreams />} />
           {/* Student Routes */}

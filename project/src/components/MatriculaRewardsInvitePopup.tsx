@@ -70,7 +70,7 @@ const MatriculaRewardsInvitePopup: React.FC<
         <div className="-mt-4 bg-white rounded-t-2xl px-6 pt-6 pb-8">
           {isOnboarding ? (
             <>
-              <p className="text-slate-600 text-sm text-center mb-5">
+              <p className="text-slate-600 text-base text-center mb-5">
                 Indique amigos para estudar nos EUA e ganhe{" "}
                 <span className="font-semibold text-slate-800">
                   100 MatriculaCoins
