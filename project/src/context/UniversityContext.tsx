@@ -69,8 +69,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
 
         if (scholarshipsError) throw scholarshipsError;
 
-        // Filtrar bolsas Migma — não devem aparecer no dashboard da universidade
-        const filteredScholarships = (scholarshipsData || []).filter(s => !s.title?.includes('(Migma)'));
+        const filteredScholarships = scholarshipsData || [];
 
         // Load application counts for all scholarships in a single query (otimizado)
         const scholarshipIds = filteredScholarships.map(s => s.id);

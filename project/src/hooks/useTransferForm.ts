@@ -354,17 +354,17 @@ export const useTransferForm = (
               } else {
                 console.log(`✅ [Transfer Form] Notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'} criada com sucesso!`, data);
               }
-            } catch (insertException) {
+            } catch (insertException: any) {
               console.error('💥 [Transfer Form] Exceção durante inserção:', insertException);
               console.error('💥 [Transfer Form] Stack trace:', insertException.stack);
               console.error('💥 [Transfer Form] Exception tipo:', typeof insertException);
               console.error('💥 [Transfer Form] Exception toString:', insertException.toString());
             }
-            } catch (profileException) {
+            } catch (profileException: any) {
               console.error('💥 [Transfer Form] Exceção durante busca do profile:', profileException);
               console.error('💥 [Transfer Form] Stack trace:', profileException.stack);
             }
-          } catch (notificationError) {
+          } catch (notificationError: any) {
             console.error(`❌ [Transfer Form] Erro ao enviar notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notificationError);
             console.error('❌ [Transfer Form] Stack trace completo:', notificationError.stack);
           }
