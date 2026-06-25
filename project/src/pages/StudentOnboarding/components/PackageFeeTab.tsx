@@ -336,23 +336,23 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                           : 'Total Amount'}
                       </span>
                       {couponValidation?.isValid && couponValidation.finalAmount !== undefined ? (
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-2">
                           {/* Preço original riscado */}
-                          <div className="flex items-start opacity-40">
-                            <span className="text-xl mt-1 mr-1 text-slate-400">$</span>
-                            <span className="line-through text-slate-500">{amount.toLocaleString('en-US')}</span>
-                            <span className="text-sm mt-auto mb-2 ml-2 text-slate-400 uppercase tracking-widest">USD</span>
+                          <div className="flex items-center gap-1 opacity-50">
+                            <span className="text-lg text-slate-400">$</span>
+                            <span className="text-2xl font-black line-through text-slate-500">
+                              {amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-xs text-slate-400 uppercase tracking-widest">USD</span>
                           </div>
                           {/* Preço com desconto */}
-                          <div className="flex items-start text-emerald-600">
-                            <span className="text-2xl mt-2 mr-1">$</span>
-                            {couponValidation.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className="text-sm mt-auto mb-3 ml-2 uppercase tracking-widest">USD</span>
+                          <div className="flex items-baseline gap-1 text-emerald-600">
+                            <span className="text-3xl font-black">$</span>
+                            <span className="text-5xl md:text-7xl font-black tracking-tighter">
+                              {couponValidation.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-sm uppercase tracking-widest">USD</span>
                           </div>
-                          {/* Badge de desconto */}
-                          <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-                            -{couponValidation.discountAmount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD de desconto
-                          </span>
                         </div>
                       ) : (
                         <div className="flex items-start">

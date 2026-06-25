@@ -374,6 +374,16 @@ const AdminStudentDetails: React.FC = () => {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para reinstatement_package - calculando valor esperado`);
       }
 
+      // DS-160 / Control Fee Package
+      if (realPaidAmounts.ds160_package !== undefined && realPaidAmounts.ds160_package > 0) {
+        normalized.ds160_package = realPaidAmounts.ds160_package;
+      }
+
+      // I-539 COS Package
+      if (realPaidAmounts.i539_cos_package !== undefined && realPaidAmounts.i539_cos_package > 0) {
+        normalized.i539_cos_package = realPaidAmounts.i539_cos_package;
+      }
+
       return normalized;
     },
     []
