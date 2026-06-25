@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Bell, Clock, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,6 +8,7 @@ import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 import LanguageSelector from '../../components/LanguageSelector';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
@@ -125,6 +127,55 @@ const StudentOnboarding: React.FC = () => {
   });
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showRewardsInterstitial, setShowRewardsInterstitial] = useState(false);
+  const pendingAdvanceFnRef = React.useRef<(() => void) | null>(null);
+  const rewardsShownInSessionRef = React.useRef(false);
+
+  const triggerRewardsInterstitial = (advanceFn: () => void) => {
+    rewardsShownInSessionRef.current = true;
+    pendingAdvanceFnRef.current = advanceFn;
+    setShowRewardsInterstitial(true);
+    if (user?.id && !userProfile?.rewards_popup_shown_at) {
+      supabase.from('user_profiles')
+        .update({ rewards_popup_shown_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    }
+  };
+
+  const handleOnboardingRewardsAccept = () => {
+    localStorage.setItem('rewards_invite_popup_dismissed_at', String(Date.now() + 365 * 24 * 60 * 60 * 1000));
+    setShowRewardsInterstitial(false);
+    pendingAdvanceFnRef.current = null;
+    if (user?.id) {
+      supabase.from('user_profiles')
+        .update({ rewards_popup_accepted_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    }
+    navigate('/student/dashboard/applications');
+  };
+
+  const handleOnboardingRewardsClose = () => {
+    setShowRewardsInterstitial(false);
+    pendingAdvanceFnRef.current?.();
+    pendingAdvanceFnRef.current = null;
+  };
+
+  // Show rewards popup for students already at placement_fee/scholarship_fee (app fee already paid)
+  useEffect(() => {
+    const isFeeStep = state.currentStep === 'placement_fee' || state.currentStep === 'scholarship_fee';
+    if (!isFeeStep) return;
+    if (!userProfile?.is_application_fee_paid) return;
+    if (rewardsShownInSessionRef.current) return;
+
+    const dismissedAt = localStorage.getItem('rewards_invite_popup_dismissed_at');
+    if (dismissedAt) {
+      const daysSince = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSince < 7) return;
+    }
+
+    const timer = setTimeout(() => triggerRewardsInterstitial(() => {}), 600);
+    return () => clearTimeout(timer);
+  }, [state.currentStep, userProfile?.is_application_fee_paid]);
 
   // O estado do progresso agora contém se o usuário é do novo fluxo
   // Prioriza o valor do perfil (banco) sobre o estado local se o perfil já estiver carregado
@@ -434,7 +485,7 @@ const StudentOnboarding: React.FC = () => {
                 // Ao pagar a taxa de aplicação, vai para a placement_fee ou scholarship_fee
                 const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
                 console.log(`[Onboarding] 🚀 Pagamento confirmado via Parcelow. Indo para: ${nextFeeStep}`);
-                goToStep(nextFeeStep);
+                triggerRewardsInterstitial(() => goToStep(nextFeeStep));
               } else if (currentStepParam === 'scholarship_fee' || currentStepParam === 'placement_fee') {
                 // Ao pagar as taxas finais, vai para a listagem ou corrige fluxo
                 if (isNewFlowUserRef.current && currentStepParam === 'scholarship_fee') {
@@ -550,7 +601,11 @@ const StudentOnboarding: React.FC = () => {
                   }
 
                   console.log(`[Onboarding] 💳 Pagamento de ${stepParam} confirmado. Progredindo para: ${nextStep}`);
-                  goToStep(nextStep);
+                  if (stepParam === 'payment') {
+                    triggerRewardsInterstitial(() => goToStep(nextStep));
+                  } else {
+                    goToStep(nextStep);
+                  }
                 } else {
                   // Fallback para limpar a URL se for o último passo
                   const newParams = new URLSearchParams(searchParams);
@@ -674,7 +729,7 @@ const StudentOnboarding: React.FC = () => {
         case 'documents_upload':
           return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
         case 'payment':
-          return <PaymentStep onNext={handleNext} onBack={handleBack} />;
+          return <PaymentStep onNext={() => triggerRewardsInterstitial(() => handleNext())} onBack={handleBack} />;
         case 'scholarship_fee':
           return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
         case 'placement_fee':
@@ -856,6 +911,13 @@ const StudentOnboarding: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* MatriculaRewards interstitial — shown after application fee payment */}
+      <MatriculaRewardsInvitePopup
+        isOpen={showRewardsInterstitial}
+        onAccept={handleOnboardingRewardsAccept}
+        onClose={handleOnboardingRewardsClose}
+      />
 
       {/* Notifications Modal - for mobile */}
       <NotificationsModal

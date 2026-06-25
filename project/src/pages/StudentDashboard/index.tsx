@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
 
@@ -25,6 +26,7 @@ import ApplicationFeePage from './ApplicationFeePage';
 import MatriculaRewards from './MatriculaRewards';
 import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
+import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
@@ -33,10 +35,14 @@ import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
 import Translations from './Translations';
 
+const REWARDS_POPUP_KEY = 'rewards_invite_popup_dismissed_at';
+const REWARDS_POPUP_SUPPRESS_DAYS = 7;
+
 const StudentDashboard: React.FC = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { fetchCart } = useCartStore();
+  const navigate = useNavigate();
 
   // Referral Code System
   const {
@@ -46,6 +52,7 @@ const StudentDashboard: React.FC = () => {
   } = useReferralCode();
   const [showCongratulationsModal, setShowCongratulationsModal] = React.useState(false);
   const [referralResult, setReferralResult] = React.useState<any>(null);
+  const [showRewardsPopup, setShowRewardsPopup] = React.useState(false);
 
   // Setup cache invalidation listener — invalida queries do React Query automaticamente
   useEffect(() => {
@@ -59,6 +66,42 @@ const StudentDashboard: React.FC = () => {
       fetchCart(user.id);
     }
   }, [user?.id, fetchCart]);
+
+  // MatriculaRewards invite popup — show to students who paid app fee but haven't seen it recently
+  useEffect(() => {
+    if (!userProfile?.is_application_fee_paid) return;
+
+    const dismissedAt = localStorage.getItem(REWARDS_POPUP_KEY);
+    if (dismissedAt) {
+      const daysSince = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSince < REWARDS_POPUP_SUPPRESS_DAYS) return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowRewardsPopup(true);
+      if (user?.id && !userProfile?.rewards_popup_shown_at) {
+        supabase.from('user_profiles')
+          .update({ rewards_popup_shown_at: new Date().toISOString() })
+          .eq('user_id', user.id);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [userProfile?.is_application_fee_paid, user?.id, userProfile?.rewards_popup_shown_at]);
+
+  const handleRewardsPopupClose = () => {
+    localStorage.setItem(REWARDS_POPUP_KEY, String(Date.now()));
+    setShowRewardsPopup(false);
+  };
+
+  const handleRewardsPopupAccept = () => {
+    setShowRewardsPopup(false);
+    if (user?.id) {
+      supabase.from('user_profiles')
+        .update({ rewards_popup_accepted_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    }
+    navigate('/student/dashboard/rewards');
+  };
 
   // Aplicar código de referência da URL automaticamente
   useEffect(() => {
@@ -111,6 +154,13 @@ const StudentDashboard: React.FC = () => {
           affiliateCode={referralResult.affiliate_code || 'N/A'}
         />
       )}
+
+      <MatriculaRewardsInvitePopup
+        isOpen={showRewardsPopup}
+        onClose={handleRewardsPopupClose}
+        onAccept={handleRewardsPopupAccept}
+        variant="dashboard"
+      />
     </StudentDashboardLayout>
   );
 };
