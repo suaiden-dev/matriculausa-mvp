@@ -1192,6 +1192,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
           students={filteredStudents}
           getUnreadCount={getUnreadCount}
           getGlobalUnreadCount={getGlobalUnreadCount}
+          hideEmptyColumns={placementFeeFilter !== 'all'}
         />
       ) : (
         /* Applications List - Table View */
