@@ -235,7 +235,7 @@ Deno.serve(async (req: Request) => {
       console.log(`[notify-installment-due] ${student.email}: ${daysUntilDue}d until due`);
 
       const isUpcomingReminder = REMINDER_DAYS.includes(daysUntilDue);
-      const isOverdueReminder = daysUntilDue < 0 && (-daysUntilDue) % 7 === 0;
+      const isOverdueReminder = daysUntilDue < 0;
 
       if (!isUpcomingReminder && !isOverdueReminder) continue;
 
