@@ -14,7 +14,8 @@ import {
   BookOpen,
   Sparkles,
   LayoutGrid,
-  Table
+  Table,
+  Download
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
@@ -26,6 +27,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 import StudentApplicationsKanbanView from './StudentApplicationsKanbanView';
 
@@ -59,7 +61,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
 
   // Estados para geração em massa de documentos
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
 
   // Listener para capturar o scroll da window
@@ -157,6 +158,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [processTypeFilter, setProcessTypeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [hideUorakUsers, setHideUorakUsers] = useState(isProductionHost);
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
@@ -186,6 +188,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       showCurrentStudents,
       processTypeFilter,
       sourceFilter,
+      hideUorakUsers,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -211,6 +214,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setShowCurrentStudents(filters.showCurrentStudents || false);
         setProcessTypeFilter(filters.processTypeFilter || 'all');
         setSourceFilter(filters.sourceFilter || 'all');
+        setHideUorakUsers(typeof filters.hideUorakUsers === 'boolean' ? filters.hideUorakUsers : isProductionHost);
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -236,6 +240,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     setShowCurrentStudents(false);
     setProcessTypeFilter('all');
     setSourceFilter('all');
+    setHideUorakUsers(isProductionHost);
     setCurrentPage(1);
   };
 
@@ -330,6 +335,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     showCurrentStudents,
     processTypeFilter,
     sourceFilter,
+    hideUorakUsers,
     currentPage
   ]);
 
@@ -350,24 +356,22 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectAll) {
+    if (allFilteredStudentsSelected) {
       setSelectedStudents(new Set());
     } else {
-      const ids = currentStudents.map(s => s.student_id);
+      const ids = filteredStudents.map(s => s.student_id);
       setSelectedStudents(new Set(ids));
     }
-    setSelectAll(!selectAll);
   };
 
   const handleClearSelection = () => {
     setSelectedStudents(new Set());
-    setSelectAll(false);
   };
 
   const handleBulkGenerateDocuments = async () => {
     setIsGeneratingDocuments(true);
 
-    const selectedRecords = currentStudents.filter(s =>
+    const selectedRecords = filteredStudents.filter(s =>
       selectedStudents.has(s.student_id)
     );
 
@@ -411,8 +415,57 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
 
       // Limpar seleção
       setSelectedStudents(new Set());
-      setSelectAll(false);
     }
+  };
+
+  const handleExportExcel = () => {
+    const selectedRecords = filteredStudents.filter(student =>
+      selectedStudents.has(student.student_id)
+    );
+    const studentsToExport = selectedRecords.length > 0 ? selectedRecords : filteredStudents;
+
+    if (studentsToExport.length === 0) {
+      toast.error('No students to export');
+      return;
+    }
+
+    const dataToExport = studentsToExport.map(student => ({
+      'Student Name': student.student_name,
+      'Email': student.student_email,
+      'Phone': student.student_phone || '',
+      'User ID': student.user_id,
+      'Student ID': student.student_id,
+      'Source': student.source === 'migma' ? 'MIGMA' : 'MatriculaUSA',
+      'Agency': student.agency_name || '',
+      'Agency Email': student.agency_email || '',
+      'Process Type': student.student_process_type || '',
+      'Current Stage': getStudentStageLabel(student),
+      'Application Status': student.status || student.application_status || '',
+      'Scholarship': student.scholarship_title || '',
+      'University': student.university_name || '',
+      'Course': student.course_name || '',
+      'Applied At': student.applied_at ? dayjs(student.applied_at).format('YYYY-MM-DD') : '',
+      'Registered At': student.student_created_at ? dayjs(student.student_created_at).format('YYYY-MM-DD') : '',
+      'Selection Fee Paid': student.has_paid_selection_process_fee ? 'Yes' : 'No',
+      'Application Fee Paid': student.is_application_fee_paid ? 'Yes' : 'No',
+      'Application Fee Amount': student.application_fee_amount || 0,
+      'Placement Fee Flow': student.placement_fee_flow ? 'Yes' : 'No',
+      'Placement Fee Paid': student.is_placement_fee_paid ? 'Yes' : 'No',
+      'Placement Fee Amount': student.placement_fee_amount || 0,
+      'Scholarship Fee Paid': student.is_scholarship_fee_paid ? 'Yes' : 'No',
+      'Scholarship Fee Amount': student.scholarship_fee_amount || 0,
+      'I-20 Fee Paid': student.has_paid_i20_control_fee ? 'Yes' : 'No',
+      'Acceptance Letter Status': student.acceptance_letter_status || '',
+      'Transfer Form Status': student.transfer_form_status || '',
+      'Enrolled': (student.status === 'enrolled' || student.application_status === 'enrolled') ? 'Yes' : 'No',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+    XLSX.writeFile(workbook, `admin-users-export-${dayjs().format('YYYY-MM-DD')}.xlsx`);
+
+    toast.success(`Exported ${studentsToExport.length} student${studentsToExport.length !== 1 ? 's' : ''}`);
   };
 
   const getStepStatus = (student: StudentRecord, step: string) => {
@@ -457,6 +510,52 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     }
   };
 
+  const stageRank: Record<string, number> = {
+    selection_fee: 1,
+    application: 2,
+    review: 3,
+    app_fee: 4,
+    scholarship_fee: 5,
+    i20_fee: 6,
+    acceptance: 7,
+    enrollment: 8,
+  };
+
+  const getStudentStageRank = (student: StudentRecord) => {
+    const isMigma = student.source === 'migma';
+    const currentStatus = student.status || student.application_status;
+    const acceptanceLetterSent = !!student.acceptance_letter_status &&
+      ['sent', 'signed', 'approved'].includes(student.acceptance_letter_status);
+
+    if (currentStatus === 'enrolled') return stageRank.enrollment;
+    if (acceptanceLetterSent) return stageRank.acceptance;
+    if (!student.placement_fee_flow && student.has_paid_i20_control_fee) return stageRank.i20_fee;
+    if (student.placement_fee_flow && (!!student.is_placement_fee_paid || isMigma)) return stageRank.scholarship_fee;
+    if (!student.placement_fee_flow && student.is_scholarship_fee_paid) return stageRank.scholarship_fee;
+    if (student.is_application_fee_paid) return stageRank.app_fee;
+    if (['under_review', 'approved', 'rejected'].includes(currentStatus || '')) return stageRank.review;
+    if ((student.total_applications || 0) > 0) return stageRank.application;
+    if (student.has_paid_selection_process_fee || isMigma) return stageRank.selection_fee;
+
+    return 0;
+  };
+
+  const getStudentStageLabel = (student: StudentRecord) => {
+    const rank = getStudentStageRank(student);
+    const labels: Record<number, string> = {
+      [stageRank.selection_fee]: 'Selection Fee',
+      [stageRank.application]: 'Application',
+      [stageRank.review]: 'Review',
+      [stageRank.app_fee]: 'App Fee',
+      [stageRank.scholarship_fee]: student.placement_fee_flow ? 'Placement Fee' : 'Scholarship Fee',
+      [stageRank.i20_fee]: 'I-20 Fee',
+      [stageRank.acceptance]: 'Acceptance',
+      [stageRank.enrollment]: 'Enrollment',
+    };
+
+    return labels[rank] || 'Not Started';
+  };
+
   const filteredStudents = students.filter((student: StudentRecord) => {
 
 
@@ -465,8 +564,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       return false;
     }
 
-    // Em produção, ocultar usuários de teste com email contendo "uorak"
-    if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
+    // Ocultar usuários de teste com email contendo "uorak" quando o filtro estiver ativo.
+    if (hideUorakUsers && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
     }
 
@@ -506,64 +605,9 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       }
     }
 
-    // Filtro por etapa do processo (baseado no Application Flow)
-    const matchesStage = stageFilter === 'all' || (() => {
-      let result = false;
-      const isMigma = student.source === 'migma';
-      switch (stageFilter) {
-        case 'selection_fee':
-          // Estudantes que pagaram a Selection Process Fee mas ainda não fizeram aplicações
-          result = (student.has_paid_selection_process_fee || isMigma) && (student.total_applications || 0) === 0;
-          break;
-        case 'application':
-          // Estudantes que fizeram aplicações mas ainda não foram aprovados
-          result = (student.total_applications || 0) > 0 &&
-            student.status !== 'approved' &&
-            student.status !== 'enrolled' &&
-            !student.is_application_fee_paid;
-          break;
-        case 'review':
-          // Estudantes com aplicações aprovadas mas ainda não pagaram application fee
-          result = student.status === 'approved' && !student.is_application_fee_paid;
-          break;
-        case 'app_fee':
-          // Application fee paga mas ainda não pagaram scholarship fee
-          result = student.is_application_fee_paid && !student.is_scholarship_fee_paid;
-          break;
-        case 'scholarship_fee':
-          if (student.placement_fee_flow) {
-            // Placement fee paga mas ainda não tem acceptance letter
-            result = (!!student.is_placement_fee_paid || isMigma) && !student.acceptance_letter_status;
-          } else {
-            // Scholarship fee paga mas ainda não pagaram I-20 fee
-            result = student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee;
-          }
-          break;
-        case 'i20_fee':
-          if (student.placement_fee_flow) {
-            result = false; // Este stage não existe no novo fluxo
-          } else {
-            // I-20 Control Fee paga mas ainda não tem acceptance letter
-            result = student.has_paid_i20_control_fee && !student.acceptance_letter_status;
-          }
-          break;
-        case 'acceptance':
-          // Carta de aceitação enviada/assinada/aprovada mas ainda não matriculado
-          result = !!student.acceptance_letter_status &&
-            (student.acceptance_letter_status === 'sent' ||
-              student.acceptance_letter_status === 'signed' ||
-              student.acceptance_letter_status === 'approved') &&
-            student.status !== 'enrolled';
-          break;
-        case 'enrollment':
-          // Matriculado
-          result = student.status === 'enrolled';
-          break;
-        default:
-          result = true;
-      }
-      return result;
-    })();
+    // Filtro por etapa do processo: etapa selecionada ou posterior.
+    const matchesStage = stageFilter === 'all' ||
+      getStudentStageRank(student) >= (stageRank[stageFilter] || 0);
 
     // Filtro por bolsa
     const matchesScholarship = scholarshipFilter === 'all' ||
@@ -643,6 +687,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+  const allFilteredStudentsSelected = filteredStudents.length > 0 &&
+    filteredStudents.every(student => selectedStudents.has(student.student_id));
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
     const allSteps = [
@@ -812,6 +858,15 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
             <span className="text-sm text-gray-500">
               {filteredStudents.length} students found
             </span>
+            <button
+              onClick={handleExportExcel}
+              disabled={filteredStudents.length === 0}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-[#05294E] text-white rounded-lg hover:bg-[#041d38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={selectedStudents.size > 0 ? 'Export selected students to Excel' : 'Export filtered students to Excel'}
+            >
+              <Download className="w-4 h-4" />
+              Export Excel
+            </button>
             <RefreshButton
               onClick={handleRefresh}
               isRefreshing={isRefreshing}
@@ -1077,17 +1132,31 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
             </div>
 
             {/* Filtro por Source (MIGMA) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
-              <select
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
-              >
-                <option value="all">All Sources</option>
-                <option value="migma">MIGMA</option>
-                <option value="direct">MatriculaUSA</option>
-              </select>
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                  <select
+                    value={sourceFilter}
+                    onChange={(e) => setSourceFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+                  >
+                    <option value="all">All Sources</option>
+                    <option value="migma">MIGMA</option>
+                    <option value="direct">MatriculaUSA</option>
+                  </select>
+                </div>
+                <label htmlFor="hideUorakUsers" className="flex items-center gap-2 h-10 px-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    id="hideUorakUsers"
+                    checked={hideUorakUsers}
+                    onChange={(e) => setHideUorakUsers(e.target.checked)}
+                    className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                  />
+                  <span>Hide uorak</span>
+                </label>
+              </div>
             </div>
 
           </div>
@@ -1172,8 +1241,10 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
-                      checked={selectAll}
+                      checked={allFilteredStudentsSelected}
                       onChange={handleSelectAll}
+                      disabled={filteredStudents.length === 0}
+                      title="Select all filtered students"
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>

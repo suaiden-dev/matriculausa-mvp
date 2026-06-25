@@ -7,6 +7,7 @@ export interface StudentRecord {
   user_id: string;
   student_name: string;
   student_email: string;
+  student_phone?: string | null;
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
@@ -105,6 +106,7 @@ export function useStudentsQuery() {
             user_id,
             full_name,
             email,
+            phone,
             created_at,
             updated_at,
             has_paid_selection_process_fee,
@@ -386,6 +388,7 @@ export function useStudentsQuery() {
           user_id: student.user_id,
           student_name: student.full_name || "N/A",
           student_email: student.email || "N/A",
+          student_phone: student.phone || null,
           student_created_at: student.created_at,
           has_paid_selection_process_fee:
             student.has_paid_selection_process_fee || false,
