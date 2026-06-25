@@ -197,5 +197,9 @@ export function buildLegacyProfileMirror(
     placement_fee_pending_balance: isFullyPaid ? 0 : remainingAmount,
     // Keep installment_enabled = true until fully paid (for backward compat reads)
     placement_fee_installment_enabled: !isFullyPaid,
+    // Set due date 30 days from payment when balance remains; clear when fully paid
+    placement_fee_due_date: isFullyPaid
+      ? null
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   };
 }

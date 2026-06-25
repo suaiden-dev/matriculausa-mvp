@@ -2,6 +2,7 @@ import React from 'react';
 import { Building, GraduationCap, Calendar, AlertCircle, UserX, RotateCcw, Camera, FileText, CheckCircle, XCircle, Clock, Send, RefreshCw, Shield } from 'lucide-react';
 import { StudentRecord } from './hooks/useStudentApplicationsQueries';
 import { ApplicationFlowStageKey, APPLICATION_FLOW_STAGES } from '../../utils/applicationFlowStages';
+import { computeInstallmentAmounts } from '../../config/installmentConfig';
 
 import { toast } from 'react-hot-toast';
 import { useDropStudentMutation, useMarkSentDocsToUniversityMutation, useMarkSevisCompletedMutation, useMarkVisaApprovedMutation, useSkipTransferFormMutation } from './hooks/useStudentApplicationsQueries';
@@ -740,23 +741,40 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           Mark visa as approved
         </button>
       )}      {/* Placement Fee Installment Info */}
-      {student.placement_fee_installment_enabled && (student.placement_fee_pending_balance ?? 0) > 0 && (
-        <div className="mt-2 mb-2 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[11px] font-medium text-amber-800 flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-              Installment {student.placement_fee_installment_number + 1} pending
-            </span>
-            <span className="font-bold">${student.placement_fee_pending_balance}</span>
-          </div>
-          {student.placement_fee_due_date && (
-            <div className="flex items-center gap-1 text-amber-900 mt-0.5 font-semibold">
-              <Clock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-              <span>Due: {new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+      {student.placement_fee_installment_enabled && (student.placement_fee_pending_balance ?? 0) > 0 && (() => {
+        const installmentsPaid = student.placement_fee_installment_number ?? 0;
+        const totalInstallments = student.placement_fee_total_installments ?? 2;
+        const totalAmt = student.fee_override_placement_fee != null
+          ? Number(student.fee_override_placement_fee)
+          : student.placement_fee_amount
+            ? Number(student.placement_fee_amount)
+            : (student.system_type === 'simplified' ? 550 : 1200);
+        const installmentAmt = computeInstallmentAmounts(totalAmt, totalInstallments)[installmentsPaid];
+        const pendingBalance = Number(student.placement_fee_pending_balance ?? 0);
+        const isOverdue = student.placement_fee_due_date
+          ? new Date(student.placement_fee_due_date) < new Date()
+          : false;
+        return (
+          <div className={`mt-2 mb-2 p-2 rounded-lg text-[11px] font-medium flex flex-col gap-1 ${isOverdue ? 'bg-red-50 border border-red-200/60 text-red-800' : 'bg-amber-50 border border-amber-200/60 text-amber-800'}`}>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold flex items-center gap-1">
+                <AlertCircle className={`w-3.5 h-3.5 flex-shrink-0 ${isOverdue ? 'text-red-500' : 'text-amber-500'}`} />
+                Installment {installmentsPaid + 1} of {totalInstallments} pending
+              </span>
+              <span className="font-bold">${installmentAmt != null ? installmentAmt.toFixed(2) : pendingBalance.toFixed(2)}</span>
             </div>
-          )}
-        </div>
-      )}
+            <div className={`flex items-center justify-between text-[10px] ${isOverdue ? 'text-red-700' : 'text-amber-700'}`}>
+              <span>Total remaining: ${pendingBalance.toFixed(2)}</span>
+              {student.placement_fee_due_date && (
+                <div className="flex items-center gap-1 font-semibold">
+                  <Clock className={`w-3 h-3 flex-shrink-0 ${isOverdue ? 'text-red-600' : 'text-amber-600'}`} />
+                  <span>{isOverdue ? 'Overdue: ' : 'Due: '}{new Date(student.placement_fee_due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Footer with badges */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">

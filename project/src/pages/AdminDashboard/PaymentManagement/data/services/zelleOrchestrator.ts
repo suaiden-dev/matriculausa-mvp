@@ -1617,9 +1617,8 @@ export async function approvePartialZelleFlow(params: {
     zellePaymentId: payment.id,
   });
 
-  if (paymentRecord.success && paymentRecord.recordId) {
-    await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "placement", paymentRecord.recordId);
-  }
+  // Note: the DB trigger trg_after_insert_placement_payment handles
+  // fee_installment_plans update and installment_plan_id linking automatically.
 
   // 4. Log da ação
   await supabase.rpc("log_student_action", {
@@ -1717,9 +1716,8 @@ export async function approveSecondInstallmentFlow(params: {
     zellePaymentId: payment.id,
   });
 
-  if (paymentRecord.success && paymentRecord.recordId) {
-    await handleInstallmentPlanAssociation(supabase, payment.user_id, payment.amount, "placement", paymentRecord.recordId);
-  }
+  // Note: the DB trigger trg_after_insert_placement_payment handles
+  // fee_installment_plans update and installment_plan_id linking automatically.
 
   // 4. Billing
   await supabase.rpc("register_payment_billing", {
