@@ -9,6 +9,7 @@ import { UnreadMessagesProvider } from './contexts/UnreadMessagesContext';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
 import Home from './pages/Home';
+import ModalEmbaixadorPreview from './pages/DevPreview/ModalEmbaixadorPreview';
 import About from './pages/About';
 import Scholarships from './pages/Scholarships';
 import Universities from './pages/Universities';
@@ -229,6 +230,9 @@ const AppContent = () => {
 
           {/* Bio Links Tree Route */}
           <Route path="/bio" element={<BioPage />} />
+
+          {/* Dev Previews */}
+          <Route path="/dev/modal-embaixador" element={<ModalEmbaixadorPreview />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />

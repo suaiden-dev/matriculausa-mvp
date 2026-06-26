@@ -28,6 +28,7 @@ import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
 import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 import { useReferralCode } from '../../hooks/useReferralCode';
+import { useStudentApplicationsQuery } from '../../hooks/useStudentDashboardQueries';
 import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
@@ -43,6 +44,14 @@ const StudentDashboard: React.FC = () => {
   const { user, userProfile } = useAuth();
   const { fetchCart } = useCartStore();
   const navigate = useNavigate();
+
+  // Dados da universidade/curso para o popup de embaixador
+  const { data: applications } = useStudentApplicationsQuery(userProfile?.id);
+  const selectedApp = applications?.find(
+    app => app.id === userProfile?.selected_application_id
+  ) || applications?.[0];
+  const ambassadorUniversityName = (selectedApp as any)?.scholarships?.universities?.name as string | undefined;
+  const ambassadorCourseName = (selectedApp as any)?.scholarships?.field_of_study as string | undefined;
 
   // Referral Code System
   const {
@@ -160,6 +169,8 @@ const StudentDashboard: React.FC = () => {
         onClose={handleRewardsPopupClose}
         onAccept={handleRewardsPopupAccept}
         variant="dashboard"
+        universityName={ambassadorUniversityName}
+        courseName={ambassadorCourseName}
       />
     </StudentDashboardLayout>
   );

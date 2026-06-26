@@ -32,6 +32,13 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
 
   const currentStepIndex = STEPS.findIndex(s => s.key === resolvedStep);
   const totalSteps = STEPS.length;
+  const isLimbo = currentStepIndex === -1;
+
+  // When in limbo, progress = last completed step index + 1
+  const lastCompletedIndex = isLimbo
+    ? STEPS.reduce((acc, s, i) => (completedSteps.includes(s.key) ? i : acc), -1)
+    : currentStepIndex;
+  const progressPct = ((lastCompletedIndex + 1) / totalSteps) * 100;
 
   return (
     <div className="w-full mb-6 sm:mb-8 bg-white border border-gray-100 rounded-3xl p-4 md:p-6 shadow-xl">
@@ -39,11 +46,12 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
       <div className="w-full bg-gray-100 rounded-full h-2 mb-4 overflow-hidden border border-gray-100">
         <div
           className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
+          style={{ width: `${progressPct}%` }}
         />
       </div>
 
-      {/* Step labels - simplified for mobile */}
+      {/* Step labels — hidden in limbo */}
+      {!isLimbo && (
       <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-6 px-1">
         <span className="font-bold tracking-widest uppercase">
           {t('registration:studentOnboarding.stepper.step')} {currentStepIndex + 1} {t('registration:studentOnboarding.stepper.of')} {totalSteps}
@@ -52,6 +60,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
           {STEPS[currentStepIndex]?.label || t('registration:studentOnboarding.stepper.initiating')}
         </span>
       </div>
+      )}
 
       {/* Desktop: Show all steps */}
       <div className="hidden lg:flex items-start justify-between mt-4 relative">
@@ -60,8 +69,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
 
         {STEPS.map((step, index) => {
           const isCompleted = completedSteps.includes(step.key);
-          const isCurrent = step.key === resolvedStep;
-          const isPast = index < currentStepIndex;
+          const isCurrent = !isLimbo && step.key === resolvedStep;
+          const isPast = index < (isLimbo ? lastCompletedIndex + 1 : currentStepIndex);
 
           return (
             <div

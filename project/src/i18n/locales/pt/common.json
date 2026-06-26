@@ -404,5 +404,24 @@
     "site": "Site Oficial",
     "quiz": "Saiba se você é elegível a bolsas de estudo nos EUA",
     "copyright": "© {{year}} Matrícula USA. Todos os direitos reservados."
+  },
+  "ambassador": "EMBAIXADOR",
+  "ambassadorStep": {
+    "congrats": "Parabéns!",
+    "selected": "Você foi selecionado.",
+    "participates": "{{university}} participa do Programa de Embaixadores",
+    "inviteIntro": "Você acaba de ser convidado para fazer parte do ",
+    "programName": "Programa de Embaixadores do Matrícula USA!",
+    "courseHook": "Seu curso de {{course}} chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.",
+    "profileHook": "Seu perfil chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.",
+    "benefitsTitle": "Como Embaixador, você poderá receber benefícios exclusivos, como:",
+    "benefit1": "Descontos de até 100% na sua tuition na {{university}}.",
+    "benefit1Generic": "Descontos de até 100% na sua tuition em universidades participantes.",
+    "benefit2": "Recompensas por criação de conteúdo aprovado pela nossa equipe.",
+    "benefit3": "Bonificações por indicações de novos estudantes.",
+    "benefit4": "Acesso a campanhas, novidades e oportunidades especiais.",
+    "timer": "Leva menos de 2 minutos para ativar sua participação.",
+    "cta": "Quero ser um Embaixador",
+    "skip": "Talvez depois"
   }
 }
