@@ -51,6 +51,7 @@ const StudentDashboard: React.FC = () => {
     app => app.id === userProfile?.selected_application_id
   ) || applications?.[0];
   const ambassadorUniversityName = (selectedApp as any)?.scholarships?.universities?.name as string | undefined;
+  const ambassadorUniversityLogo = (selectedApp as any)?.scholarships?.universities?.logo_url as string | undefined;
   const ambassadorCourseName = (selectedApp as any)?.scholarships?.field_of_study as string | undefined;
 
   // Referral Code System
@@ -170,6 +171,7 @@ const StudentDashboard: React.FC = () => {
         onAccept={handleRewardsPopupAccept}
         variant="dashboard"
         universityName={ambassadorUniversityName}
+        universityLogo={ambassadorUniversityLogo}
         courseName={ambassadorCourseName}
       />
     </StudentDashboardLayout>

@@ -9,6 +9,7 @@ interface MatriculaRewardsInvitePopupProps {
   onAccept: () => void;
   variant?: "onboarding" | "dashboard";
   universityName?: string;
+  universityLogo?: string;
   courseName?: string;
 }
 
@@ -114,6 +115,7 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
   onClose,
   onAccept,
   universityName,
+  universityLogo,
   courseName,
 }) => {
   const { t } = useTranslation("common");
@@ -208,10 +210,14 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
               </div>
 
               {universityName && (
-                <div className="flex items-center gap-2 mb-3 rounded-lg px-3 py-2" style={{ background: "#EEF3FF", border: "1px solid #2B5CC4" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2B5CC4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
+                <div className="flex items-center gap-3 mb-3 rounded-xl px-3 py-2" style={{ background: "#EEF3FF", border: "1px solid #2B5CC4", display: "inline-flex", alignSelf: "flex-start" }}>
+                  {universityLogo ? (
+                    <img src={universityLogo} alt={universityName} style={{ height: 28, width: "auto", maxWidth: 72, objectFit: "contain", borderRadius: 4 }} />
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2B5CC4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#1B2E6B" }}>
                     <strong>{universityName}</strong> participa do Programa de Embaixadores
                   </span>
@@ -226,10 +232,7 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
                 </strong>
               </p>
               <p className="m-0 leading-relaxed" style={{ fontSize: 15, color: "#1B2E6B" }}>
-                {courseName
-                  ? <>Seu curso de <strong>{courseName}</strong> chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.</>
-                  : <>Seu perfil chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.</>
-                }
+                Seu perfil chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.
               </p>
             </div>
 
@@ -329,10 +332,14 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
             <div className="flex-1 h-px rounded" style={{ background: "#E3E6EB" }} />
           </div>
           {universityName && (
-            <div className="flex items-center gap-2 mb-3 rounded-lg px-3 py-2" style={{ background: "#EEF3FF", border: "1px solid #2B5CC4" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2B5CC4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
+            <div className="flex items-center gap-3 mb-3 rounded-xl px-3 py-2" style={{ background: "#EEF3FF", border: "1px solid #2B5CC4", display: "inline-flex", alignSelf: "flex-start" }}>
+              {universityLogo ? (
+                <img src={universityLogo} alt={universityName} style={{ height: 24, width: "auto", maxWidth: 60, objectFit: "contain", borderRadius: 4 }} />
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2B5CC4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
               <span style={{ fontSize: 11, fontWeight: 600, color: "#1B2E6B" }}>
                 <strong>{universityName}</strong> participa do Programa de Embaixadores
               </span>
@@ -346,10 +353,7 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
             </strong>
           </p>
           <p className="m-0 leading-relaxed" style={{ fontSize: 13, color: "#1B2E6B" }}>
-            {courseName
-              ? <>Seu curso de <strong>{courseName}</strong> chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.</>
-              : <>Seu perfil chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.</>
-            }
+            Seu perfil chamou nossa atenção, e acreditamos que você pode inspirar outros estudantes que também sonham em estudar nos Estados Unidos.
           </p>
         </div>
 
