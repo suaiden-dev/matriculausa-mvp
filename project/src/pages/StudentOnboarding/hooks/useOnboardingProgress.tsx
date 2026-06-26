@@ -238,7 +238,7 @@ export const useOnboardingProgress = () => {
       else if (!processTypeSelected) maxAllowedStep = 'process_type';
       else if (!documentsUploaded && !documentsApproved) maxAllowedStep = 'documents_upload'; 
       else if (!applicationFeePaid) maxAllowedStep = 'payment';
-      else if (!freshProfile.rewards_popup_shown_at) maxAllowedStep = 'ambassador_program';
+      else if (!freshProfile.rewards_popup_shown_at && !placementFeePaid && !scholarshipFeePaid && !reinstatementFeePaid) maxAllowedStep = 'ambassador_program';
       else if (isNewFlowUser && !placementFeePaid) maxAllowedStep = 'placement_fee';
       else if (!isNewFlowUser && !scholarshipFeePaid && freshProfile.student_process_type !== 'resident' && !isTransferInactive) maxAllowedStep = 'scholarship_fee';
       else if (isTransferInactive && !reinstatementFeePaid) maxAllowedStep = 'reinstatement_fee';
