@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import type { Application, UserProfile, Scholarship } from '../types';
+import { getFileName } from '../utils/documentUploadUtils';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
@@ -154,7 +155,7 @@ export const useSchoolDocumentActions = (params: UseSchoolDocumentActionsParams)
               email_aluno: userData.email,
               nome_aluno: application?.user_profiles.full_name,
               email_universidade: user?.email,
-              o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
+              o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url ? getFileName(uploadData.file_url) : 'file'}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
             }),
           }).catch(console.error);
         }
@@ -186,7 +187,7 @@ export const useSchoolDocumentActions = (params: UseSchoolDocumentActionsParams)
           .then(j => supabase.rpc('log_student_action', {
             p_student_id: studentProfileId,
             p_action_type: 'document_approval',
-            p_action_description: `University approved document request upload: ${uploadData.file_url?.split('/').pop() || 'file'} (${uploadData.document_requests?.title || 'Request'})`,
+            p_action_description: `University approved document request upload: ${uploadData.file_url ? getFileName(uploadData.file_url) : 'file'} (${uploadData.document_requests?.title || 'Request'})`,
             p_performed_by: performedBy,
             p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: { upload_id: documentId, request_id: uploadData.document_requests?.id || null, request_title: uploadData.document_requests?.title || null, ip: j?.ip }
@@ -488,7 +489,7 @@ export const useSchoolDocumentActions = (params: UseSchoolDocumentActionsParams)
           .then(j => supabase.rpc('log_student_action', {
             p_student_id: studentProfileId,
             p_action_type: 'document_rejection',
-            p_action_description: `University rejected document request upload: ${uploadData.file_url?.split('/').pop() || 'file'} (${uploadData.document_requests?.title || 'Request'})`,
+            p_action_description: `University rejected document request upload: ${uploadData.file_url ? getFileName(uploadData.file_url) : 'file'} (${uploadData.document_requests?.title || 'Request'})`,
             p_performed_by: performedBy,
             p_performed_by_type: user?.role === 'school_manager' ? 'school_manager' : 'university',
             p_metadata: { upload_id: documentId, request_id: uploadData.document_requests?.id || null, request_title: uploadData.document_requests?.title || null, rejection_reason: reason, ip: j?.ip }
@@ -508,7 +509,7 @@ export const useSchoolDocumentActions = (params: UseSchoolDocumentActionsParams)
               email_aluno: userData.email,
               nome_aluno: application?.user_profiles.full_name,
               email_universidade: user?.email,
-              o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+              o_que_enviar: `Your document <strong>${uploadData.file_url ? getFileName(uploadData.file_url) : 'file'}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
             }),
           }).catch(console.error);
         }

@@ -28,6 +28,8 @@ interface TranslationOrder {
   created_at: string;
   certified_file_url?: string | null;
   document_request_upload_id?: string | null;
+  document_request_id?: string | null;
+  document_request_title?: string | null;
   amount_paid?: number | null;
   is_bank_statement?: boolean | null;
   alpha_project_number?: number | null;
@@ -189,15 +191,20 @@ function txStyle(status: string, t: (k: string) => string): TxStyle {
     pill: 'bg-red-50 text-red-700 ring-1 ring-red-200',
     label: t('translationsPage.statusCancelled') || 'Cancelado',
   };
-  if (s === 'n/a' || s === 'em análise' || s === 'em analise' || s === 'rascunho') return {
+  if (s === 'em certificação' || s === 'em certificacao') return {
+    dot: 'bg-amber-400',
+    pill: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+    label: 'Em Certificação',
+  };
+  if (s === 'em tradução' || s === 'em traducao') return {
+    dot: 'bg-purple-400',
+    pill: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
+    label: 'Em Tradução',
+  };
+  if (s) return {
     dot: 'bg-blue-400',
     pill: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
     label: t('translationsPage.statusSent') || 'Enviado',
-  };
-  if (s) return {
-    dot: 'bg-purple-400',
-    pill: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
-    label: t('translationsPage.statusInProgress') || 'Em Tradução',
   };
   return { dot: 'bg-gray-300', pill: 'bg-gray-100 text-gray-500 ring-1 ring-gray-200', label: '—' };
 }
@@ -387,11 +394,14 @@ const Translations: React.FC = () => {
     const { data } = await supabase
       .from('translation_orders')
       .select(
-        'id,original_filename,document_type,is_bank_statement,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,amount_paid,alpha_project_number,payment_reference'
+        'id,original_filename,document_type,is_bank_statement,source_language,target_language,page_count,price_per_page,total_price,payment_method,payment_status,translation_status,created_at,certified_file_url,document_request_upload_id,document_request_id,amount_paid,alpha_project_number,payment_reference,document_requests(title)'
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
-    setOrders(data || []);
+    setOrders((data || []).map((o: any) => ({
+      ...o,
+      document_request_title: (o.document_requests as any)?.title ?? null,
+    })));
     setLoading(false);
   }, [user?.id]);
 
@@ -484,6 +494,11 @@ const Translations: React.FC = () => {
     return { groups: Object.values(groups), standalone };
   }, [trulyPendingUploads]);
 
+  const allPendingUploads = useMemo(() => [
+    ...groupedPending.groups.flatMap(g => g.uploads.map(u => ({ ...u, document_request_id: g.requestId }))),
+    ...groupedPending.standalone,
+  ], [groupedPending]);
+
   const unpaidOrders = useMemo(() => orders.filter(o => o.payment_status !== 'paid' && !(o.payment_method === 'zelle' && o.payment_reference)), [orders]);
   const paidOrders = useMemo(() => orders.filter(o => o.payment_status === 'paid' || (o.payment_method === 'zelle' && o.payment_reference)), [orders]);
 
@@ -551,6 +566,18 @@ const Translations: React.FC = () => {
     });
   };
 
+  const openModalForAll = () => {
+    setQuoteModal({
+      open: true,
+      rejectionOrigin: true,
+      batchUploads: allPendingUploads.map(u => ({
+        id: u.id,
+        file_url: u.file_url,
+        document_request_id: u.document_request_id || undefined,
+      })),
+    });
+  };
+
   return (
     <div className="space-y-6 pt-6 sm:pt-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
@@ -593,12 +620,23 @@ const Translations: React.FC = () => {
         {/* Pending section: only rejected uploads that need translation */}
         {totalPending > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden border-l-4 border-l-amber-400 divide-y divide-gray-100">
-            <div className="flex items-center gap-2 px-4 py-3">
-              <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-              <span className="text-sm font-semibold text-gray-700">
-                {totalPending}{' '}
-                {totalPending === 1 ? 'documento para traduzir' : 'documentos para traduzir'}
-              </span>
+            <div className="flex items-center justify-between gap-2 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="text-sm font-semibold text-gray-700">
+                  {totalPending}{' '}
+                  {totalPending === 1 ? 'documento para traduzir' : 'documentos para traduzir'}
+                </span>
+              </div>
+              {allPendingUploads.length > 1 && (
+                <button
+                  onClick={openModalForAll}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                >
+                  <Languages className="w-3.5 h-3.5" />
+                  Traduzir Todas ({allPendingUploads.length})
+                </button>
+              )}
             </div>
 
             {/* Pending uploads grouped by document_request — ONE button per group */}
@@ -691,6 +729,11 @@ const Translations: React.FC = () => {
                               </p>
                               {o.alpha_project_number && (
                                 <span className="mt-1 inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 tracking-wide">#{o.alpha_project_number}</span>
+                              )}
+                              {o.document_request_title && (
+                                <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-blue-100 truncate max-w-[200px]">
+                                  📄 {o.document_request_title}
+                                </span>
                               )}
                             </td>
                             <td className="px-6 py-4">
@@ -859,6 +902,11 @@ const Translations: React.FC = () => {
                             </p>
                             {o.alpha_project_number && (
                               <p className="mt-0.5 text-[10px] font-mono text-gray-300">#{o.alpha_project_number}</p>
+                            )}
+                            {o.document_request_title && (
+                              <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-blue-100">
+                                📄 {o.document_request_title}
+                              </span>
                             )}
                           </div>
                           <div className="shrink-0 text-right">
