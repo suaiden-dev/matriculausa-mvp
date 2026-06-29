@@ -435,7 +435,7 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
           </button>
 
           <a
-            href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}?text=Ol%C3%A1%2C%20tenho%20d%C3%BAvidas%20sobre%20o%20Programa%20de%20Embaixadores%20do%20Matr%C3%ADcula%20USA`}
+            href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}?text=Hi%2C%20I%27d%20like%20to%20learn%20more%20about%20the%20Matricula%20USA%20Ambassador%20Program`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full mt-3 flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
