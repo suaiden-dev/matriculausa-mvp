@@ -110,7 +110,11 @@ const StudentDashboard: React.FC = () => {
         .update({ rewards_popup_accepted_at: new Date().toISOString() })
         .eq('user_id', user.id);
     }
-    navigate('/student/dashboard/rewards');
+    window.open(
+      `https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}?text=Hi%2C%20I%27d%20like%20to%20learn%20more%20about%20the%20Matricula%20USA%20Ambassador%20Program`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   // Aplicar código de referência da URL automaticamente
