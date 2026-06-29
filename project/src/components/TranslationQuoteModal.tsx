@@ -52,9 +52,19 @@ function getFileNameFromUrl(url: string): string {
   return decodeURIComponent(parts[parts.length - 1]).replace(/^\d+_/, '');
 }
 
+interface StandaloneEntry {
+  key: string;
+  file: File;
+  docType: DocType;
+  isBankStatement: boolean | null;
+  pageCount: number | null;
+  counting: boolean;
+}
+
 export interface BatchUpload {
   id: string;
   file_url: string;
+  document_request_id?: string;
 }
 
 export interface TranslationQuoteModalProps {
@@ -106,6 +116,10 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'batch-select' | 'configure' | 'zelle-payment' | 'zelle-sent'>('configure');
   const [standaloneFile, setStandaloneFile] = useState<File | null>(null);
+
+  // Multi-file standalone entries
+  const [standaloneEntries, setStandaloneEntries] = useState<StandaloneEntry[]>([]);
+
   const [zelleFile, setZelleFile] = useState<File | null>(null);
   const [zelleOrderId, setZelleOrderId] = useState<string | null>(null);
   const [zelleOrderIds, setZelleOrderIds] = useState<string[]>([]);
@@ -133,6 +147,8 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
   const isBatchMode = !!batchUploads?.length;
   const isStandaloneMode = !fileName && !file && !storagePath && !isBatchMode;
+  // Entries UI is used whenever there are standalone entries (1 or more)
+  const isStandaloneMulti = isStandaloneMode && standaloneEntries.length > 0;
   const activeFile = standaloneFile || file || null;
   const activeFileName = fileName || standaloneFile?.name || '';
 
@@ -151,6 +167,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     setFileError('');
     setSelectedMethod(null);
     setStandaloneFile(null);
+    setStandaloneEntries([]);
     setZelleFile(null);
     setLinkedRequestId('');
     setIsBankStatement(false);
@@ -297,25 +314,32 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   }, [open, studentId]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setFileError('');
-    if (selected.size > 25 * 1024 * 1024) {
-      setFileError('Arquivo muito grande (máx 25 MB)');
-      return;
-    }
-    setStandaloneFile(selected);
-    setPages(null);
-    setCountingPages(true);
-    try {
-      const n = await countPagesFromFile(selected);
-      setPages(n);
-    } catch {
-      setPages(1);
-    } finally {
-      setCountingPages(false);
-    }
+    const oversized = files.find(f => f.size > 25 * 1024 * 1024);
+    if (oversized) { setFileError('Arquivo muito grande (máx 25 MB)'); return; }
     e.target.value = '';
+
+    // Always use entries path (enables "add more" even after single file)
+    setStandaloneFile(null);
+    setPages(null);
+    const newEntries: StandaloneEntry[] = files.map((f, i) => ({
+      key: `${Date.now()}_${i}`,
+      file: f,
+      docType: 'certified',
+      isBankStatement: null,
+      pageCount: null,
+      counting: true,
+    }));
+    setStandaloneEntries(prev => [...prev, ...newEntries]);
+
+    // Count pages per file
+    for (const entry of newEntries) {
+      countPagesFromFile(entry.file)
+        .then(n => setStandaloneEntries(prev => prev.map(e => e.key === entry.key ? { ...e, pageCount: n, counting: false } : e)))
+        .catch(() => setStandaloneEntries(prev => prev.map(e => e.key === entry.key ? { ...e, pageCount: 1, counting: false } : e)));
+    }
   };
 
   if (!open) return null;
@@ -340,14 +364,29 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   const batchStripeTotal = Math.round(((batchTotal + STRIPE_FIXED) / (1 - STRIPE_RATE)) * 100) / 100;
   const batchStripeFee = Math.round((batchStripeTotal - batchTotal) * 100) / 100;
 
-  const effectiveAmount = resumeAmount ?? (isBatchMode ? batchTotal : total);
+  const multiTotal = (() => {
+    if (!isStandaloneMulti) return 0;
+    return standaloneEntries.reduce((sum, e) => {
+      const dt = DOC_TYPES.find(d => d.id === e.docType)!;
+      return sum + (e.pageCount ?? 1) * (dt.pricePerPage + (e.isBankStatement ? dt.bankSurcharge : 0));
+    }, 0);
+  })();
+  const multiStripeTotal = Math.round(((multiTotal + STRIPE_FIXED) / (1 - STRIPE_RATE)) * 100) / 100;
+  const multiStripeFee = Math.round((multiStripeTotal - multiTotal) * 100) / 100;
+
+  const effectiveAmount = resumeAmount ?? (isBatchMode ? batchTotal : isStandaloneMulti ? multiTotal : total);
 
   const isAnySelectedCounting = isBatchMode && [...selectedIds].some(id => batchCountingIds.has(id));
+  const isMultiCounting = isStandaloneMulti && standaloneEntries.some(e => e.counting);
+  const multiConfigComplete = isStandaloneMulti && standaloneEntries.length > 0
+    && standaloneEntries.every(e => e.isBankStatement !== null && !e.counting);
 
   const cpfValid = selectedMethod !== 'parcelow' || cpfInput.replace(/\D/g, '').length >= 11;
   const canSubmit = isBatchMode
     ? (selectedMethod !== null && !submitting && !isAnySelectedCounting && cpfValid)
-    : (selectedMethod && !submitting && !countingPages && (!isStandaloneMode || !!standaloneFile) && isBankStatement !== null && cpfValid);
+    : isStandaloneMulti
+      ? (selectedMethod !== null && !submitting && !isMultiCounting && multiConfigComplete && cpfValid)
+      : (selectedMethod && !submitting && !countingPages && isBankStatement !== null && cpfValid);
 
   const saveCpfIfNeeded = async () => {
     if (selectedMethod !== 'parcelow') return;
@@ -382,7 +421,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
           .from('translation_orders')
           .insert({
             user_id: studentId,
-            document_request_id: requestId || null,
+            document_request_id: upload.document_request_id || requestId || null,
             document_request_upload_id: upload.id,
             rejection_origin: true,
             document_url: upload.file_url,
@@ -448,8 +487,85 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
     }
   };
 
+  const doSubmitStandaloneMulti = async () => {
+    if (!selectedMethod) return;
+    setSubmitting(true);
+    setError(null);
+    const createdIds: string[] = [];
+    try {
+      for (const entry of standaloneEntries) {
+        const ext = entry.file.name.split('.').pop();
+        const path = `translations/${studentId}/${Date.now()}_${entry.key}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('document-attachments').upload(path, entry.file);
+        if (uploadError) throw uploadError;
+
+        const dt = DOC_TYPES.find(d => d.id === entry.docType)!;
+        const ppp = dt.pricePerPage + (entry.isBankStatement ? dt.bankSurcharge : 0);
+        const pageCount = entry.pageCount ?? 1;
+
+        const { data, error: insertError } = await supabase
+          .from('translation_orders')
+          .insert({
+            user_id: studentId,
+            document_request_id: linkedRequestId || null,
+            document_url: uploadData.path,
+            original_filename: entry.file.name,
+            document_type: entry.docType,
+            original_document_type: entry.docType,
+            is_bank_statement: entry.isBankStatement === true,
+            source_language: sourceLanguage,
+            target_language: 'Inglês',
+            page_count: pageCount,
+            price_per_page: ppp,
+            total_price: pageCount * ppp,
+            status: 'pending',
+            payment_method: selectedMethod,
+            payment_status: 'unpaid',
+            translation_status: 'pending',
+          })
+          .select('id')
+          .single();
+        if (insertError) throw insertError;
+        createdIds.push(data.id);
+      }
+
+      if (selectedMethod === 'zelle') {
+        setZelleOrderIds(createdIds);
+        setStep('zelle-payment');
+        setSubmitting(false);
+        return;
+      }
+
+      if (selectedMethod === 'stripe') {
+        const baseUrl = window.location.origin;
+        const { data: checkout, error: checkoutErr } = await supabase.functions.invoke(
+          'stripe-checkout-translation-batch',
+          {
+            body: {
+              translation_order_ids: createdIds,
+              success_url: `${baseUrl}/student/dashboard/translations?payment=success`,
+              cancel_url: `${baseUrl}/student/dashboard/translations?payment=cancelled`,
+            },
+          }
+        );
+        if (checkoutErr || !checkout?.session_url) throw new Error(checkoutErr?.message || t('translationQuoteModal.errorFallback'));
+        window.location.href = checkout.session_url;
+        return;
+      }
+    } catch (e: any) {
+      for (const id of createdIds) {
+        await supabase.from('translation_orders').delete().eq('id', id).catch(() => {});
+      }
+      setError(e.message || t('translationQuoteModal.errorFallback'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const doSubmit = async () => {
     if (isBatchMode) { await doSubmitBatch(); return; }
+    if (isStandaloneMulti) { await doSubmitStandaloneMulti(); return; }
     if (!selectedMethod) return;
     setSubmitting(true);
     setError(null);
@@ -559,7 +675,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
   const handleZelleBack = async () => {
     if (resumeOrderId) { onClose(); return; }
-    if (isBatchMode && zelleOrderIds.length > 0) {
+    if ((isBatchMode || isStandaloneMulti) && zelleOrderIds.length > 0) {
       for (const id of zelleOrderIds) {
         await supabase.from('translation_orders').delete().eq('id', id);
       }
@@ -574,7 +690,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
   };
 
   const handleZelleSubmit = async () => {
-    const effectiveOrderIds = isBatchMode ? zelleOrderIds : (zelleOrderId ? [zelleOrderId] : []);
+    const effectiveOrderIds = (isBatchMode || isStandaloneMulti) ? zelleOrderIds : (zelleOrderId ? [zelleOrderId] : []);
     if (!zelleFile || effectiveOrderIds.length === 0) return;
     setSubmitting(true);
     setError(null);
@@ -621,7 +737,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
   const handleClose = async () => {
     if (step === 'zelle-payment') {
-      if (isBatchMode && zelleOrderIds.length > 0) {
+      if ((isBatchMode || isStandaloneMulti) && zelleOrderIds.length > 0) {
         try {
           for (const id of zelleOrderIds) {
             await supabase.from('translation_orders').delete().eq('id', id);
@@ -642,7 +758,9 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
 
   const footerAmount = isBatchMode
     ? (selectedMethod === 'stripe' ? batchStripeTotal : batchTotal)
-    : (selectedMethod === 'stripe' ? stripeTotal : total);
+    : isStandaloneMulti
+      ? (selectedMethod === 'stripe' ? multiStripeTotal : multiTotal)
+      : (selectedMethod === 'stripe' ? stripeTotal : total);
 
   return createPortal(
     <div
@@ -839,7 +957,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               )}
 
               {/* File upload zone (standalone only) */}
-              {!isBatchMode && isStandaloneMode && (
+              {!isBatchMode && isStandaloneMode && !isStandaloneMulti && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
                   <div
@@ -850,12 +968,12 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                     <p className="text-sm font-medium text-gray-600">
                       {standaloneFile ? standaloneFile.name : 'Clique para enviar o documento'}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-400">PDF, DOCX, DOC, JPG, PNG — máx 25 MB</p>
+                    <p className="mt-0.5 text-xs text-gray-400">PDF, DOCX, DOC, JPG, PNG — máx 25 MB · Selecione vários para traduzir juntos</p>
                     {standaloneFile && (
                       <p className="mt-1 text-xs text-gray-400">{formatBytes(standaloneFile.size)}</p>
                     )}
                   </div>
-                  <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" onChange={handleFileChange} />
+                  <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" multiple onChange={handleFileChange} />
                   {fileError && <p className="mt-1.5 text-xs text-red-500">{fileError}</p>}
                   {standaloneFile && (
                     <button
@@ -866,6 +984,95 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                       <X className="w-3 h-3" /> Remover arquivo
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Multi-file standalone: list with per-file config */}
+              {isStandaloneMulti && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Documentos ({standaloneEntries.length})</label>
+                    <button
+                      type="button"
+                      onClick={() => { setStandaloneEntries([]); setStandaloneFile(null); setPages(null); }}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Limpar seleção
+                    </button>
+                  </div>
+
+                  {standaloneEntries.map((entry) => {
+                    const dt = DOC_TYPES.find(d => d.id === entry.docType)!;
+                    const ppp = dt.pricePerPage + (entry.isBankStatement ? dt.bankSurcharge : 0);
+                    const price = (entry.pageCount ?? 1) * ppp;
+                    return (
+                      <div key={entry.key} className="rounded-xl border border-gray-200 p-3 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-700 truncate">{entry.file.name}</p>
+                            <p className="text-xs text-gray-400">{formatBytes(entry.file.size)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold text-[#1e3a5f]">${price.toFixed(2)}</span>
+                            <button
+                              type="button"
+                              onClick={() => setStandaloneEntries(prev => prev.filter(e => e.key !== entry.key))}
+                              className="p-0.5 text-gray-300 hover:text-red-400 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex p-0.5 rounded-lg bg-gray-100/80 border border-gray-200/30 w-fit">
+                          {DOC_TYPES.map(d => (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => setStandaloneEntries(prev => prev.map(e => e.key === entry.key ? { ...e, docType: d.id } : e))}
+                              className={`py-1 px-2.5 rounded-md text-[11px] font-semibold transition-all ${entry.docType === d.id ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                              {d.id === 'certified' ? 'Certificada' : 'Juramentada'} (${d.pricePerPage}/pág)
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] text-gray-400">Extrato bancário?</span>
+                            <div className="flex p-0.5 rounded-lg bg-gray-100/80 border border-gray-200/30">
+                              <button type="button"
+                                onClick={() => setStandaloneEntries(prev => prev.map(e => e.key === entry.key ? { ...e, isBankStatement: true } : e))}
+                                className={`py-0.5 px-2 rounded-md text-[10px] font-bold transition-all ${entry.isBankStatement === true ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                              >Sim</button>
+                              <button type="button"
+                                onClick={() => setStandaloneEntries(prev => prev.map(e => e.key === entry.key ? { ...e, isBankStatement: false } : e))}
+                                className={`py-0.5 px-2 rounded-md text-[10px] font-bold transition-all ${entry.isBankStatement === false ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                              >Não</button>
+                            </div>
+                            {entry.isBankStatement === null && <span className="text-[10px] text-red-400">*</span>}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[11px] text-gray-400">Págs:</span>
+                            {entry.counting
+                              ? <span className="flex items-center gap-0.5 text-[11px] text-gray-400"><Loader2 className="w-3 h-3 animate-spin" />...</span>
+                              : <span className="text-xs font-bold text-gray-700">{entry.pageCount ?? '?'}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-2 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400 hover:border-[#1e3a5f]/40 hover:text-[#1e3a5f] transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Adicionar mais documentos
+                  </button>
+                  <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden" multiple onChange={handleFileChange} />
+                  {fileError && <p className="text-xs text-red-500">{fileError}</p>}
                 </div>
               )}
 
@@ -883,8 +1090,8 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               )}
 
-              {/* Page count (standalone, after file selected) */}
-              {!isBatchMode && isStandaloneMode && standaloneFile && (
+              {/* Page count (standalone single, after file selected) */}
+              {!isBatchMode && isStandaloneMode && !isStandaloneMulti && standaloneFile && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   {countingPages
                     ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Contando páginas...</>
@@ -893,7 +1100,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               )}
 
               {/* Document type (single mode only) */}
-              {!isBatchMode && (
+              {!isBatchMode && !isStandaloneMulti && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentType')}</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -956,7 +1163,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               )}
 
               {/* Source language (single mode only) */}
-              {!isBatchMode && (
+              {!isBatchMode && !isStandaloneMulti && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">{t('translationQuoteModal.documentLanguage')}</label>
                   <select
@@ -970,7 +1177,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
               )}
 
               {/* Link to document request (single standalone only) */}
-              {!isBatchMode && !requestId && !documentRequestUploadId && availableRequests.length > 0 && (
+              {!isBatchMode && !isStandaloneMulti && !requestId && !documentRequestUploadId && availableRequests.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Vincular a um pedido de documento
@@ -994,8 +1201,37 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                 </div>
               )}
 
+              {/* Source language for multi standalone (shared) */}
+              {isStandaloneMulti && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Idioma dos documentos</label>
+                  <select
+                    value={sourceLanguage}
+                    onChange={e => setSourceLanguage(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f]"
+                  >
+                    {SOURCE_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Price summary — multi standalone */}
+              {isStandaloneMulti && (
+                <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Subtotal</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {standaloneEntries.length} {standaloneEntries.length === 1 ? 'documento' : 'documentos'}
+                    </p>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isMultiCounting ? '...' : `$${multiTotal.toFixed(2)}`}
+                  </p>
+                </div>
+              )}
+
               {/* Price summary (single mode only) */}
-              {!isBatchMode && (
+              {!isBatchMode && !isStandaloneMulti && (
                 <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1017,15 +1253,15 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                     {
                       id: 'stripe' as const,
                       label: 'Cartão de crédito / débito',
-                      note: `+$${(isBatchMode ? batchStripeFee : stripeFee).toFixed(2)} taxa Stripe`,
-                      amount: isBatchMode ? batchStripeTotal : stripeTotal,
+                      note: `+$${(isBatchMode ? batchStripeFee : isStandaloneMulti ? multiStripeFee : stripeFee).toFixed(2)} taxa Stripe`,
+                      amount: isBatchMode ? batchStripeTotal : isStandaloneMulti ? multiStripeTotal : stripeTotal,
                       Icon: StripeIcon,
                     },
                     {
                       id: 'zelle' as const,
                       label: 'Zelle',
                       note: t('translationQuoteModal.zelleNoFeeNote') || 'Sem taxa',
-                      amount: isBatchMode ? batchTotal : total,
+                      amount: isBatchMode ? batchTotal : isStandaloneMulti ? multiTotal : total,
                       Icon: ZelleIcon,
                     },
                     // Parcelow temporariamente desabilitado — sandbox com problemas
@@ -1055,7 +1291,7 @@ export const TranslationQuoteModal: React.FC<TranslationQuoteModalProps> = ({
                         <p className="text-[11px] text-gray-400 leading-tight">{m.note}</p>
                       </div>
                       <p className="text-sm font-bold text-gray-900 shrink-0">
-                        {(isBatchMode ? false : countingPages) ? '...' : `$${m.amount.toFixed(2)}`}
+                        {(isBatchMode ? false : isStandaloneMulti ? isMultiCounting : countingPages) ? '...' : `$${m.amount.toFixed(2)}`}
                       </p>
                       {selectedMethod === m.id && (
                         <CheckCircle className="w-3.5 h-3.5 text-[#1e3a5f] shrink-0" />

@@ -317,6 +317,7 @@ Deno.serve(async (req: Request) => {
     const dueTodayStudents: TeamAlertStudent[] = [];
     let notifiedPlacement = 0;
     let notifiedPackage = 0;
+    const emailPromises: Promise<void>[] = [];
 
     for (const student of eligibleStudents) {
       if (!student.email || !student.placement_fee_due_date) continue;
@@ -329,13 +330,15 @@ Deno.serve(async (req: Request) => {
 
       if (!isUpcomingReminder && !isOverdueReminder) continue;
 
-      adminClient.functions.invoke('send-email', {
+      notifiedPlacement++;
+
+      const p = adminClient.functions.invoke('send-email', {
         body: {
           to: student.email,
           subject: buildStudentSubject(daysUntilDue),
           html: buildStudentEmailHtml(student, daysUntilDue),
         },
-      }).then(({ error: emailError }: { error: any }) => {
+      }).then(async ({ error: emailError }: { error: any }) => {
         if (emailError) {
           console.error(`[notify-installment-due] Failed to send to ${student.email}:`, emailError);
         } else {
@@ -348,7 +351,7 @@ Deno.serve(async (req: Request) => {
               ? `Installment reminder sent — due TODAY (${formatDate(student.placement_fee_due_date)})`
               : `Installment reminder sent — due in ${daysUntilDue} day(s) (${formatDate(student.placement_fee_due_date)})`;
 
-          adminClient.rpc('log_student_action', {
+          const { error: logErr } = await adminClient.rpc('log_student_action', {
             p_student_id: student.id,
             p_action_type: 'installment_reminder_sent',
             p_action_description: description,
@@ -362,15 +365,14 @@ Deno.serve(async (req: Request) => {
               email_sent_to: student.email,
               overdue: daysUntilDue < 0,
             },
-          }).catch((logErr: any) => {
-            console.error(`[notify-installment-due] Failed to log for ${student.email}:`, logErr);
           });
+          if (logErr) console.error(`[notify-installment-due] Failed to log for ${student.email}:`, logErr);
         }
       }).catch((e: any) => {
         console.error(`[notify-installment-due] Unexpected error for ${student.email}:`, e);
       });
 
-      notifiedPlacement++;
+      emailPromises.push(p);
 
       if (daysUntilDue === 0) {
         dueTodayStudents.push({
@@ -459,13 +461,13 @@ Deno.serve(async (req: Request) => {
         const profile = profileMap[record.user_id];
         const studentProfileId = profile?.id;
 
-        adminClient.functions.invoke('send-email', {
+        const pp = adminClient.functions.invoke('send-email', {
           body: {
             to: record.email,
             subject: buildPackageSubject(daysUntilDue, record.fee_type),
             html: buildPackageEmailHtml(record, daysUntilDue),
           },
-        }).then(({ error: emailError }: { error: any }) => {
+        }).then(async ({ error: emailError }: { error: any }) => {
           if (emailError) {
             console.error(`[notify-installment-due] Failed to send package reminder to ${record.email}:`, emailError);
           } else {
@@ -480,7 +482,7 @@ Deno.serve(async (req: Request) => {
                   ? `${feeLabel} installment reminder sent — due TODAY (${formatDate(record.next_due_date)})`
                   : `${feeLabel} installment reminder sent — due in ${daysUntilDue} day(s) (${formatDate(record.next_due_date)})`;
 
-              adminClient.rpc('log_student_action', {
+              const { error: logErr } = await adminClient.rpc('log_student_action', {
                 p_student_id: studentProfileId,
                 p_action_type: 'installment_reminder_sent',
                 p_action_description: description,
@@ -494,15 +496,15 @@ Deno.serve(async (req: Request) => {
                   email_sent_to: record.email,
                   overdue: daysUntilDue < 0,
                 },
-              }).catch((logErr: any) => {
-                console.error(`[notify-installment-due] Failed to log for ${record.email}:`, logErr);
               });
+              if (logErr) console.error(`[notify-installment-due] Failed to log for ${record.email}:`, logErr);
             }
           }
         }).catch((e: any) => {
           console.error(`[notify-installment-due] Unexpected error for ${record.email}:`, e);
         });
 
+        emailPromises.push(pp);
         notifiedPackage++;
 
         if (daysUntilDue === 0) {
@@ -533,7 +535,7 @@ Deno.serve(async (req: Request) => {
         for (const member of team ?? []) {
           if (!member.email) continue;
 
-          adminClient.functions.invoke('send-email', {
+          const tp = adminClient.functions.invoke('send-email', {
             body: {
               to: member.email,
               subject: `🔴 [Matrícula USA] ${dueTodayStudents.length} student(s) with installment due today`,
@@ -549,10 +551,14 @@ Deno.serve(async (req: Request) => {
             console.error(`[notify-installment-due] Unexpected error sending team alert:`, e);
           });
 
+          emailPromises.push(tp);
           teamNotified++;
         }
       }
     }
+
+    // Wait for all emails to complete before returning (Deno cancels pending promises on response)
+    await Promise.allSettled(emailPromises);
 
     const summary = {
       success: true,

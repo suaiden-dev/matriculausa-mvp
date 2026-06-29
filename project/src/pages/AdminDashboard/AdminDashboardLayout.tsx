@@ -123,7 +123,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const sidebarItems = allSidebarItems.filter(item => {
     if (isPostSales) {
       // Pós-Vendas: overview, users, scholarships, universities e payments
-      const allowedItems = ['overview', 'users', 'scholarships', 'universities', 'payments'];
+      const allowedItems = ['overview', 'users', 'scholarships', 'universities', 'payments', 'translations'];
       return allowedItems.includes(item.id);
     }
     return true;
@@ -268,6 +268,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'newsletter' && 'Newsletter Management'}
                   {activeTab === 'agencies' && 'Agency Management'}
                   {activeTab === 'matricula-rewards' && 'Matricula Rewards'}
+                  {activeTab === 'translations' && 'Translations'}
                   {activeTab === 'settings' && 'Content Management'}
                 </h1>
                 <p className="text-slate-600">
@@ -283,6 +284,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'newsletter' && 'Manage newsletter campaigns and user preferences'}
                   {activeTab === 'agencies' && 'Manage B2B agency partners'}
                   {activeTab === 'matricula-rewards' && 'Reward system management'}
+                  {activeTab === 'translations' && 'Manage translation orders'}
                   {activeTab === 'settings' && 'Content and system settings'}
                 </p>
               </div>

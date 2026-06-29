@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { Paperclip } from 'lucide-react';
+import { getFileName } from '../../utils/documentUploadUtils';
 
 interface DocumentRequest {
   id: string;
@@ -922,7 +923,7 @@ const UniversityGlobalDocumentRequests: React.FC<UniversityGlobalDocumentRequest
                     />
                   </label>
                   {editingRequest?.attachment_url && !editForm.attachment && (
-                    <span className="text-xs text-slate-500">Current: {editingRequest.attachment_url?.split('/').pop()}</span>
+                    <span className="text-xs text-slate-500">Current: {editingRequest.attachment_url ? getFileName(editingRequest.attachment_url) : ''}</span>
                   )}
                   {editForm.attachment && (
                     <span className="text-xs text-slate-700 truncate max-w-[180px]">{editForm.attachment?.name}</span>

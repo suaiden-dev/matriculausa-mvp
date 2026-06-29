@@ -600,13 +600,18 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         .in('fee_type', ['ds160_package', 'i539_cos_package']);
 
                     if (packagePayments) {
+                        const isPaidMethod = (p: any) =>
+                            p.parcelow_status === 'paid' ||
+                            p.payment_method === 'stripe' ||
+                            p.payment_method === 'pix' ||
+                            p.payment_method === 'zelle' ||
+                            p.payment_method === 'coupon';
+
                         const ds160Paid = packagePayments.some(
-                            (p: any) => p.fee_type === 'ds160_package' &&
-                                (p.parcelow_status === 'paid' || p.payment_method === 'stripe' || p.payment_method === 'zelle')
+                            (p: any) => p.fee_type === 'ds160_package' && isPaidMethod(p)
                         );
                         const i539Paid = packagePayments.some(
-                            (p: any) => p.fee_type === 'i539_cos_package' &&
-                                (p.parcelow_status === 'paid' || p.payment_method === 'stripe' || p.payment_method === 'zelle')
+                            (p: any) => p.fee_type === 'i539_cos_package' && isPaidMethod(p)
                         );
 
                         const hasPending = packagePayments.some(

@@ -277,6 +277,11 @@ const Field: React.FC<{ label: string; value: React.ReactNode }> = ({ label, val
 
 const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRefresh?: () => void }> = ({ order: o, onClose, onRefresh }) => {
   const [certViewFile, setCertViewFile] = useState<CertFile | null>(null);
+
+  const viewInModal = async (storagePath: string, fileName?: string) => {
+    const { data } = await supabase.storage.from('document-attachments').createSignedUrl(storagePath, 3600);
+    if (data?.signedUrl) setCertViewFile({ url: data.signedUrl, name: fileName || storagePath.split('/').pop() || 'documento' });
+  };
   const [simulating, setSimulating] = useState(false);
   const [approving, setApproving] = useState(false);
   const txKey = txStateKey(o);
@@ -459,7 +464,7 @@ const OrderModal: React.FC<{ order: TranslationOrder; onClose: () => void; onRef
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <button onClick={() => openStorageFile(o.document_url!)}
+                      <button onClick={() => viewInModal(o.document_url!, o.original_filename ?? undefined)}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#05294E] px-3 py-2 text-xs font-semibold text-white hover:bg-[#041d38] transition-colors">
                         <ExternalLink className="h-3.5 w-3.5" /> View
                       </button>
