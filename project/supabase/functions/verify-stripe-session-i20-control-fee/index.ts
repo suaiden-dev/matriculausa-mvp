@@ -502,7 +502,17 @@ Deno.serve(async (req)=>{
           error: 'User ID (client_reference_id) missing in session.'
         }, 400);
       }
-      
+
+      // Guard: session must be for i20_control_fee specifically
+      const sessionFeeType = session.metadata?.fee_type || session.metadata?.payment_type;
+      if (sessionFeeType && sessionFeeType !== 'i20_control_fee') {
+        console.error(`[verify-stripe-session-i20-control-fee] Session ${sessionId} has fee_type="${sessionFeeType}", not i20_control_fee. Rejecting to prevent cross-fee contamination.`);
+        return corsResponse({
+          error: `Session fee_type mismatch: expected i20_control_fee, got ${sessionFeeType}`,
+          session_id: sessionId,
+        }, 400);
+      }
+
       // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
       // Definir no escopo mais amplo para uso em múltiplos lugares
       let paymentIntentId = '';
