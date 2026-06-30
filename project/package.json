@@ -59,6 +59,7 @@
     "dompurify": "^3.3.1",
     "dotenv": "^17.2.1",
     "embla-carousel-react": "^8.6.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "framer-motion": "^12.23.24",
     "i18next": "^25.4.0",
@@ -66,6 +67,7 @@
     "i18next-http-backend": "^3.0.2",
     "i18next-resources-to-backend": "^1.2.1",
     "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.8",
     "jszip": "^3.10.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.344.0",
@@ -92,7 +94,6 @@
     "tus-js-client": "^4.3.1",
     "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
     "zod": "^4.4.3",
     "zustand": "^5.0.7"
   },

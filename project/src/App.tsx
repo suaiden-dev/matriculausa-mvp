@@ -9,6 +9,7 @@ import { UnreadMessagesProvider } from './contexts/UnreadMessagesContext';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
 import Home from './pages/Home';
+import ModalEmbaixadorPreview from './pages/DevPreview/ModalEmbaixadorPreview';
 import About from './pages/About';
 import Scholarships from './pages/Scholarships';
 import Universities from './pages/Universities';
@@ -153,8 +154,7 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
-          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
+          <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />          {/* Initial — landings de pacotes (Caroline University + MatrículaUSA) */}
           <Route path="/initial/california-mission" element={<MissaoCalifornia />} />
           <Route path="/initial/california-dreams" element={<CaliforniaDreams />} />
           {/* Student Routes */}
@@ -230,6 +230,9 @@ const AppContent = () => {
 
           {/* Bio Links Tree Route */}
           <Route path="/bio" element={<BioPage />} />
+
+          {/* Dev Previews */}
+          <Route path="/dev/modal-embaixador" element={<ModalEmbaixadorPreview />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<NotFound />} />

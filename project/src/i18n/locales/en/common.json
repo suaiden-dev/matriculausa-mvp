@@ -403,5 +403,24 @@
     "site": "Official Website",
     "quiz": "Find out if you are eligible for US scholarships",
     "copyright": "© {{year}} Matrícula USA. All rights reserved."
+  },
+  "ambassador": "AMBASSADOR",
+  "ambassadorStep": {
+    "congrats": "Congratulations!",
+    "selected": "You were selected.",
+    "participates": "{{university}} is part of the Ambassador Program",
+    "inviteIntro": "You have just been invited to join the ",
+    "programName": "Matrícula USA Ambassador Program!",
+    "courseHook": "Your {{course}} program caught our attention, and we believe you can inspire other students who also dream of studying in the United States.",
+    "profileHook": "Your profile caught our attention, and we believe you can inspire other students who also dream of studying in the United States.",
+    "benefitsTitle": "As an Ambassador, you can receive exclusive benefits, such as:",
+    "benefit1": "Discounts of up to 100% on your tuition at {{university}}.",
+    "benefit1Generic": "Discounts of up to 100% on your tuition at participating universities.",
+    "benefit2": "Rewards for content creation approved by our team.",
+    "benefit3": "Bonuses for referrals of new students.",
+    "benefit4": "Access to campaigns, news and special opportunities.",
+    "timer": "It takes less than 2 minutes to activate your participation.",
+    "cta": "I want to be an Ambassador",
+    "skip": "Maybe later"
   }
 }

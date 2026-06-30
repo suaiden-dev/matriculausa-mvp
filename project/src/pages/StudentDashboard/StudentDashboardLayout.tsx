@@ -144,6 +144,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
 
   const activeTab = getActiveTab();
 
+  const showRewardsBadge =
+    !!profile?.is_application_fee_paid &&
+    !profile?.rewards_popup_accepted_at &&
+    activeTab !== 'rewards';
+
   const handleLogout = async () => {
     try {
       setSidebarOpen(false);
@@ -310,6 +315,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                             : 'bg-blue-600'
                             }`}></div>
                         )}
+
+                        {item.id === 'rewards' && showRewardsBadge && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
+                        )}
                       </div>
                       <span className="text-sm sm:text-base">{item.label}</span>
                     </div>
@@ -355,10 +364,13 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
               {showSidebar && (
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+                  className="relative lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
                   aria-label="Open sidebar"
                 >
                   <Menu className="h-6 w-6 lg:h-5 lg:w-5" />
+                  {showRewardsBadge && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
+                  )}
                 </button>
               )}
               <div className="min-w-0 flex-1 hidden lg:block">

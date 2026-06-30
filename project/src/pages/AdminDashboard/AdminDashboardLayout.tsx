@@ -110,6 +110,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'translations', label: 'Translations', icon: Languages, path: '/admin/dashboard/translations', badge: null },
+    { id: 'reports', label: 'Reports', icon: BarChart3, path: '/admin/dashboard/reports', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'coupons', label: 'Coupons', icon: Tag, path: '/admin/dashboard/coupons', badge: null },
     { id: 'newsletter', label: 'Newsletter', icon: Mail, path: '/admin/dashboard/newsletter', badge: null },
@@ -261,7 +262,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Users'}
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
-                  {activeTab === 'reports' && 'Relatórios e Análises'}
+                  {activeTab === 'reports' && 'Reports & Analytics'}
                   {activeTab === 'financial-analytics' && 'Financial Analytics'}
                   {activeTab === 'coupons' && 'Coupon Management'}
                   {activeTab === 'newsletter' && 'Newsletter Management'}
@@ -277,7 +278,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'users' && 'Manage student and user accounts'}
                   {activeTab === 'scholarships' && 'Manage scholarship programs'}
                   {activeTab === 'payments' && 'Payment processing and management'}
-                  {activeTab === 'reports' && 'Relatórios gerais, métricas de funil, parceiros e bolsas'}
+                  {activeTab === 'reports' && 'General reports, funnel metrics, partners and scholarships'}
                   {activeTab === 'financial-analytics' && 'Financial reports and analytics'}
                   {activeTab === 'coupons' && 'Manage promotional coupons'}
                   {activeTab === 'newsletter' && 'Manage newsletter campaigns and user preferences'}

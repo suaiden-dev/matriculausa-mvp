@@ -446,5 +446,24 @@
     "site": "Sitio Oficial",
     "quiz": "Descubre si eres elegible para becas de estudio en EE.UU.",
     "copyright": "© {{year}} Matrícula USA. Todos los derechos reservados."
+  },
+  "ambassador": "EMBAJADOR",
+  "ambassadorStep": {
+    "congrats": "¡Felicitaciones!",
+    "selected": "Fuiste seleccionado.",
+    "participates": "{{university}} forma parte del Programa de Embajadores",
+    "inviteIntro": "Acabas de ser invitado a formar parte del ",
+    "programName": "¡Programa de Embajadores de Matrícula USA!",
+    "courseHook": "Tu carrera de {{course}} llamó nuestra atención, y creemos que puedes inspirar a otros estudiantes que también sueñan con estudiar en los Estados Unidos.",
+    "profileHook": "Tu perfil llamó nuestra atención, y creemos que puedes inspirar a otros estudiantes que también sueñan con estudiar en los Estados Unidos.",
+    "benefitsTitle": "Como Embajador, podrás recibir beneficios exclusivos, como:",
+    "benefit1": "Descuentos de hasta el 100% en tu tuition en {{university}}.",
+    "benefit1Generic": "Descuentos de hasta el 100% en tu tuition en universidades participantes.",
+    "benefit2": "Recompensas por creación de contenido aprobado por nuestro equipo.",
+    "benefit3": "Bonificaciones por referir nuevos estudiantes.",
+    "benefit4": "Acceso a campañas, novedades y oportunidades especiales.",
+    "timer": "Tarda menos de 2 minutos en activar tu participación.",
+    "cta": "Quiero ser Embajador",
+    "skip": "Quizás después"
   }
 }
