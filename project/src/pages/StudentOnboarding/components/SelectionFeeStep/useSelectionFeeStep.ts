@@ -9,6 +9,7 @@ import { useAffiliateTermsAcceptance } from '../../../../hooks/useAffiliateTerms
 import { useReferralCode } from '../../../../hooks/useReferralCode';
 import { useStudentLogs } from '../../../../hooks/useStudentLogs';
 import { supabase } from '../../../../lib/supabase';
+import { applyFreePayment } from '../../../../lib/freePaymentHandler';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../../../../utils/stripeFeeCalculator';
 import { Term, PaymentMethod, ValidationResult, PromotionalCouponValidation } from './types';
 import { PayerInfo } from '../../../../components/PayerAlternativeForm';
@@ -602,6 +603,51 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     }
   };
 
+  const handleFreeCheckout = async () => {
+    if (!user?.id) { setError('User not authenticated'); return; }
+    if (!termsAccepted) {
+      alert(t('payment:preCheckoutModal.mustAcceptTerms') || 'You must accept the terms and conditions.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    // Tentativa final de sincronizar termos se necessário (mesmo padrão do handleCheckout)
+    if (termsAccepted && !hasAcceptedTermsInDB) {
+      try {
+        if (!activeTerm) await loadActiveTerms();
+        await handleTermsAcceptRecord();
+      } catch (e) {
+        console.warn('⚠️ [Free Checkout Terms Sync] Falha final ao sincronizar termos:', e);
+      }
+    }
+
+    // Cupom aplicado (afiliado tem prioridade, depois indicação validada, depois promocional)
+    const couponCode =
+      (activeDiscount?.has_discount && activeDiscount.affiliate_code) ||
+      (validationResult?.isValid && codeApplied && discountCode.trim() ? discountCode.trim().toUpperCase() : undefined) ||
+      (promotionalCouponValidation?.isValid && promotionalCoupon.trim() ? promotionalCoupon.trim().toUpperCase() : undefined) ||
+      undefined;
+
+    const { error: freeError } = await applyFreePayment({
+      supabase,
+      feeType: 'selection_process',
+      userId: user.id,
+      couponCode: couponCode || undefined,
+      amount: selectionFeeAmount,
+    });
+
+    if (freeError) {
+      setError(freeError.message || 'Error finalizing free registration. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    await refetchUserProfile();
+    setLoading(false);
+    onNext();
+  };
+
   return {
     // State
     t, navigate, user, userProfile, loading, error, selectedMethod, setSelectedMethod,
@@ -623,7 +669,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     isBlocked, pendingPayment, rejectedPayment, paymentBlockedLoading, refetchPaymentStatus,
     activeDiscount,
     // Functions
-    handleCheckout, handleCheckboxChange, handleTermsClick,
+    handleCheckout, handleFreeCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
     onNext, refetchUserProfile,
     setError,

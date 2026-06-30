@@ -55,6 +55,8 @@ export interface InstallmentPlan {
   updated_at: string;
   completed_at: string | null;
   notes: string | null;
+  /** ISO string of the most recent individual payment — computed client-side from individual_fee_payments */
+  last_payment_date?: string | null;
 }
 
 /**

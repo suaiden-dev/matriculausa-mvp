@@ -30,6 +30,7 @@ import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 import StudentApplicationsKanbanView from './StudentApplicationsKanbanView';
+import { APPLICATION_FLOW_STAGES, getStepStatus as getKanbanStepStatus } from '../../utils/applicationFlowStages';
 
 // OTIMIZAÇÃO: Interface movida para o hook useStudentApplicationsQueries
 
@@ -162,6 +163,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
+  const [placementFeeFilter, setPlacementFeeFilter] = useState<'all' | 'has_plan' | 'overdue' | 'due_soon' | 'overdue_or_soon'>('all');
+  const [controlFeeFilter, setControlFeeFilter] = useState<'all' | 'has_plan' | 'overdue' | 'due_soon' | 'overdue_or_soon'>('all');
 
   // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
@@ -188,7 +191,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       showCurrentStudents,
       processTypeFilter,
       sourceFilter,
-      hideUorakUsers,
+      placementFeeFilter,
+      controlFeeFilter,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -213,6 +217,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
         setShowCurrentStudents(filters.showCurrentStudents || false);
         setProcessTypeFilter(filters.processTypeFilter || 'all');
+        setPlacementFeeFilter(filters.placementFeeFilter || 'all');
+        setControlFeeFilter(filters.controlFeeFilter || 'all');
         setSourceFilter(filters.sourceFilter || 'all');
         setHideUorakUsers(typeof filters.hideUorakUsers === 'boolean' ? filters.hideUorakUsers : isProductionHost);
         setCurrentPage(filters.currentPage || 1);
@@ -335,7 +341,8 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     showCurrentStudents,
     processTypeFilter,
     sourceFilter,
-    hideUorakUsers,
+    placementFeeFilter,
+    controlFeeFilter,
     currentPage
   ]);
 
@@ -605,9 +612,31 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       }
     }
 
-    // Filtro por etapa do processo: etapa selecionada ou posterior.
-    const matchesStage = stageFilter === 'all' ||
-      getStudentStageRank(student) >= (stageRank[stageFilter] || 0);
+    // Filtro por etapa do processo — usa exatamente a mesma lógica do kanban
+    const matchesStage = stageFilter === 'all' || (() => {
+      if (stageFilter === 'dropped') return student.is_dropped;
+      if (stageFilter === 'registered') {
+        return !student.is_dropped &&
+          !student.has_paid_selection_process_fee &&
+          student.application_status !== 'enrolled' &&
+          student.source !== 'migma';
+      }
+      if (student.is_dropped) return false;
+
+      const kanbanStages = APPLICATION_FLOW_STAGES.filter(s => s.key !== 'scholarship_fee');
+      const isTransferPendingSevis = student.student_process_type === 'transfer' && !student.sevis_transfer_completed;
+      if (student.application_status === 'enrolled' && !isTransferPendingSevis) {
+        return stageFilter === 'enrollment';
+      }
+      for (const stageDef of kanbanStages) {
+        if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') continue;
+        if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) continue;
+        const status = getKanbanStepStatus(student as any, stageDef.key);
+        if (status === 'skipped') continue;
+        if (status !== 'completed') return stageDef.key === stageFilter;
+      }
+      return stageFilter === 'enrollment';
+    })();
 
     // Filtro por bolsa
     const matchesScholarship = scholarshipFilter === 'all' ||
@@ -678,7 +707,40 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       (sourceFilter === 'migma' && student.source === 'migma') ||
       (sourceFilter === 'direct' && (!student.source || student.source !== 'migma'));
 
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType && matchesSource;
+    const matchesPlacementFee = (() => {
+      if (placementFeeFilter === 'all') return true;
+      if (!student.placement_fee_installment_enabled || (student.placement_fee_pending_balance ?? 0) <= 0) return false;
+      if (placementFeeFilter === 'has_plan') return true;
+      if (!student.placement_fee_due_date) return false;
+      const due = new Date(student.placement_fee_due_date);
+      const now = new Date();
+      const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const isOverdue = due < now;
+      const isDueSoon = !isOverdue && due <= in7Days;
+      if (placementFeeFilter === 'overdue') return isOverdue;
+      if (placementFeeFilter === 'due_soon') return isDueSoon;
+      if (placementFeeFilter === 'overdue_or_soon') return isOverdue || isDueSoon;
+      return true;
+    })();
+
+    const matchesControlFee = (() => {
+      if (controlFeeFilter === 'all') return true;
+      const pkg = student.package_fee_installment;
+      if (!pkg) return false;
+      if (controlFeeFilter === 'has_plan') return true;
+      if (!pkg.last_payment_date) return false;
+      const due = new Date(new Date(pkg.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const isOverdue = due < now;
+      const isDueSoon = !isOverdue && due <= in7Days;
+      if (controlFeeFilter === 'overdue') return isOverdue;
+      if (controlFeeFilter === 'due_soon') return isDueSoon;
+      if (controlFeeFilter === 'overdue_or_soon') return isOverdue || isDueSoon;
+      return true;
+    })();
+
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime && matchesProcessType && matchesSource && matchesPlacementFee && matchesControlFee;
 
     return finalResult;
   });
@@ -924,14 +986,11 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
               >
                 <option value="all">All Stages</option>
-                <option value="selection_fee">Selection Fee</option>
-                <option value="application">Application</option>
-                <option value="review">Review</option>
-                <option value="app_fee">App Fee</option>
-                <option value="scholarship_fee">Scholarship Fee</option>
-                <option value="acceptance">Acceptance</option>
-                <option value="i20_fee">I-20 Fee</option>
-                <option value="enrollment">Enrollment</option>
+                <option value="registered">Registered (no fee)</option>
+                {APPLICATION_FLOW_STAGES.filter(s => s.key !== 'scholarship_fee').map(s => (
+                  <option key={s.key} value={s.key}>{s.shortLabel}</option>
+                ))}
+                <option value="dropped">Dropped</option>
               </select>
             </div>
 
@@ -1176,6 +1235,34 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                   Show only students who paid Selection Process Fee
                 </label>
               </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Placement Fee Installment:</label>
+                <select
+                  value={placementFeeFilter}
+                  onChange={(e) => setPlacementFeeFilter(e.target.value as any)}
+                  className={`text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#05294E] ${placementFeeFilter !== 'all' ? 'border-red-400 bg-red-50 text-red-800 font-medium' : 'border-gray-300 text-gray-700'}`}
+                >
+                  <option value="all">All</option>
+                  <option value="has_plan">Has installment plan</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_soon">Due in 7 days</option>
+                  <option value="overdue_or_soon">Overdue or due soon</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Control Fee Installment:</label>
+                <select
+                  value={controlFeeFilter}
+                  onChange={(e) => setControlFeeFilter(e.target.value as any)}
+                  className={`text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#05294E] ${controlFeeFilter !== 'all' ? 'border-red-400 bg-red-50 text-red-800 font-medium' : 'border-gray-300 text-gray-700'}`}
+                >
+                  <option value="all">All</option>
+                  <option value="has_plan">Has installment plan</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="due_soon">Due in 7 days</option>
+                  <option value="overdue_or_soon">Overdue or due soon</option>
+                </select>
+              </div>
               {/* <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1230,6 +1317,24 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
           students={filteredStudents}
           getUnreadCount={getUnreadCount}
           getGlobalUnreadCount={getGlobalUnreadCount}
+          hideEmptyColumns={
+            searchTerm !== '' ||
+            statusFilter !== 'all' ||
+            stageFilter !== 'all' ||
+            affiliateFilter !== 'all' ||
+            scholarshipFilter !== 'all' ||
+            universityFilter !== 'all' ||
+            timeFilter !== 'all' ||
+            startDate !== null ||
+            endDate !== null ||
+            processTypeFilter !== 'all' ||
+            sourceFilter !== 'all' ||
+            onlyPaidSelectionFee ||
+            onlyBlackCouponUsers ||
+            showCurrentStudents ||
+            placementFeeFilter !== 'all' ||
+            controlFeeFilter !== 'all'
+          }
         />
       ) : (
         /* Applications List - Table View */

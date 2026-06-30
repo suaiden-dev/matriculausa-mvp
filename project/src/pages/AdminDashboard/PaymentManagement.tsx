@@ -78,12 +78,15 @@ import PaymentManagementSkeleton from '../../components/PaymentManagementSkeleto
 
 
 const FEE_TYPES = [
-  { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
-  { value: 'application',       label: 'Application Fee',       color: 'bg-green-100 text-green-800' },
-  { value: 'placement',         label: 'Placement Fee',         color: 'bg-purple-100 text-purple-800' },
-  { value: 'control_fee',       label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'reinstatement_fee', label: 'Reinstatement Fee',     color: 'bg-amber-100 text-amber-800' },
-  { value: 'translation',       label: 'Translation Fee',       color: 'bg-teal-100 text-teal-800' },
+  { value: 'selection_process',    label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
+  { value: 'application',          label: 'Application Fee',       color: 'bg-green-100 text-green-800' },
+  { value: 'placement',            label: 'Placement Fee',         color: 'bg-purple-100 text-purple-800' },
+  { value: 'control_fee',          label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'ds160_package',        label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'i539_cos_package',     label: 'Control Fee',           color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'reinstatement_package', label: 'Reinstatement Fee',    color: 'bg-amber-100 text-amber-800' },
+  { value: 'reinstatement_fee',    label: 'Reinstatement Fee',     color: 'bg-amber-100 text-amber-800' },
+  { value: 'translation',          label: 'Translation Fee',       color: 'bg-teal-100 text-teal-800' },
 ];
 
 const STATUS_OPTIONS = [

@@ -53,6 +53,7 @@ export interface StudentRecord {
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
+  placement_fee_total_installments: number | null;
   source?: string;
   has_uploaded_photo?: boolean;
   has_submitted_form?: boolean;
@@ -83,6 +84,14 @@ export interface StudentRecord {
   basic_docs_approved_names?: string[];
   basic_docs_rejected_names?: string[];
   basic_docs_under_review_names?: string[];
+  package_fee_installment?: {
+    fee_type: 'ds160_package' | 'i539_cos_package';
+    installments_paid: number;
+    total_installments: number;
+    amount_paid: number;
+    total_amount: number;
+    last_payment_date: string | null;
+  } | null;
 }
 
 /**
@@ -237,6 +246,8 @@ export function useStudentsQuery() {
       // Batch fetch fee overrides for all students
       const userIds = data?.map((s: any) => s.user_id).filter(Boolean) || [];
       const feeOverridesMap: Record<string, any> = {};
+      const placementPlanMap: Record<string, number> = {};
+      const packagePlanMap: Record<string, StudentRecord['package_fee_installment']> = {};
       if (userIds.length > 0) {
         const { data: overridesData } = await supabase
           .from("user_fee_overrides")
@@ -247,6 +258,43 @@ export function useStudentsQuery() {
         if (overridesData) {
           overridesData.forEach((o: any) => {
             feeOverridesMap[o.user_id] = o;
+          });
+        }
+
+        const { data: plansData } = await supabase
+          .from("fee_installment_plans")
+          .select("user_id, total_installments")
+          .eq("fee_type", "placement_fee")
+          .in("user_id", userIds);
+        if (plansData) {
+          plansData.forEach((p: any) => {
+            placementPlanMap[p.user_id] = p.total_installments;
+          });
+        }
+
+        const { data: packagePlansData } = await supabase
+          .from("fee_installment_plans")
+          .select("user_id, fee_type, installments_paid, total_installments, amount_paid, total_amount, individual_fee_payments(payment_date)")
+          .in("fee_type", ["ds160_package", "i539_cos_package"])
+          .eq("status", "active")
+          .gt("amount_paid", 0)
+          .in("user_id", userIds);
+        if (packagePlansData) {
+          packagePlansData.forEach((p: any) => {
+            if ((p.installments_paid ?? 0) < (p.total_installments ?? 1)) {
+              const payments: { payment_date: string }[] = p.individual_fee_payments || [];
+              const lastTs = payments.length > 0
+                ? Math.max(...payments.map((pay: any) => new Date(pay.payment_date).getTime()))
+                : null;
+              packagePlanMap[p.user_id] = {
+                fee_type: p.fee_type,
+                installments_paid: p.installments_paid ?? 0,
+                total_installments: p.total_installments ?? 2,
+                amount_paid: Number(p.amount_paid ?? 0),
+                total_amount: Number(p.total_amount ?? 0),
+                last_payment_date: lastTs ? new Date(lastTs).toISOString() : null,
+              };
+            }
           });
         }
       }
@@ -471,6 +519,9 @@ export function useStudentsQuery() {
             student.placement_fee_installment_number ?? 0,
           placement_fee_installment_enabled:
             student.placement_fee_installment_enabled ?? false,
+          placement_fee_total_installments:
+            placementPlanMap[student.user_id] ?? null,
+          package_fee_installment: packagePlanMap[student.user_id] ?? null,
           source: student.source,
           has_uploaded_photo: !!student.identity_photo_path,
           has_submitted_form: student.selection_survey_passed === true,

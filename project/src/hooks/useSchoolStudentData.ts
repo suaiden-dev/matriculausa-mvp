@@ -87,13 +87,19 @@ export const useSchoolStudentData = (applicationId: string | undefined) => {
     if (!userId) return;
     supabase
       .from('fee_installment_plans')
-      .select('*')
+      .select('*, individual_fee_payments(payment_date)')
       .eq('user_id', userId)
       .in('status', ['active', 'completed'])
       .then(({ data }) => {
         const map: Record<string, InstallmentPlan | null> = {};
         (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
-        (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+        (data || []).forEach((plan: any) => {
+          const payments: { payment_date: string }[] = plan.individual_fee_payments || [];
+          const lastTs = payments.length > 0
+            ? Math.max(...payments.map(p => new Date(p.payment_date).getTime()))
+            : null;
+          map[plan.fee_type] = { ...plan, last_payment_date: lastTs ? new Date(lastTs).toISOString() : null };
+        });
         setInstallmentPlans(map);
       });
   }, [application?.user_profiles?.user_id]);

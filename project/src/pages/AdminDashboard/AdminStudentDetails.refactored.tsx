@@ -374,6 +374,16 @@ const AdminStudentDetails: React.FC = () => {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para reinstatement_package - calculando valor esperado`);
       }
 
+      // DS-160 / Control Fee Package
+      if (realPaidAmounts.ds160_package !== undefined && realPaidAmounts.ds160_package > 0) {
+        normalized.ds160_package = realPaidAmounts.ds160_package;
+      }
+
+      // I-539 COS Package
+      if (realPaidAmounts.i539_cos_package !== undefined && realPaidAmounts.i539_cos_package > 0) {
+        normalized.i539_cos_package = realPaidAmounts.i539_cos_package;
+      }
+
       return normalized;
     },
     []
@@ -1434,13 +1444,19 @@ const AdminStudentDetails: React.FC = () => {
     if (!student?.user_id) return;
     supabase
       .from('fee_installment_plans')
-      .select('*')
+      .select('*, individual_fee_payments(payment_date)')
       .eq('user_id', student.user_id)
       .in('status', ['active', 'completed'])
       .then(({ data }) => {
         const map: Record<string, InstallmentPlan | null> = {};
         (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
-        (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+        (data || []).forEach((plan: any) => {
+          const payments: { payment_date: string }[] = plan.individual_fee_payments || [];
+          const lastTs = payments.length > 0
+            ? Math.max(...payments.map((p: any) => new Date(p.payment_date).getTime()))
+            : null;
+          map[plan.fee_type] = { ...plan, last_payment_date: lastTs ? new Date(lastTs).toISOString() : null };
+        });
         setInstallmentPlans(map);
       });
   }, [student?.user_id]);
@@ -1630,12 +1646,18 @@ const AdminStudentDetails: React.FC = () => {
     // Refresh installment plans
     const { data } = await supabase
       .from('fee_installment_plans')
-      .select('*')
+      .select('*, individual_fee_payments(payment_date)')
       .eq('user_id', student.user_id)
       .eq('status', 'active');
     const map: Record<string, InstallmentPlan | null> = {};
     (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
-    (data || []).forEach((plan: InstallmentPlan) => { map[plan.fee_type] = plan; });
+    (data || []).forEach((plan: any) => {
+      const payments: { payment_date: string }[] = plan.individual_fee_payments || [];
+      const lastTs = payments.length > 0
+        ? Math.max(...payments.map((p: any) => new Date(p.payment_date).getTime()))
+        : null;
+      map[plan.fee_type] = { ...plan, last_payment_date: lastTs ? new Date(lastTs).toISOString() : null };
+    });
     setInstallmentPlans(map);
 
     queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -1897,10 +1919,16 @@ const AdminStudentDetails: React.FC = () => {
           placementFeePendingBalance = isLastInstallment ? 0 : Math.max(0, activePlan.total_amount - nextAmountPaid);
         }
 
-        const { data } = await supabase.from('fee_installment_plans').select('*').eq('user_id', student.user_id).eq('status', 'active');
+        const { data } = await supabase.from('fee_installment_plans').select('*, individual_fee_payments(payment_date)').eq('user_id', student.user_id).eq('status', 'active');
         const map: Record<string, InstallmentPlan | null> = {};
         (INSTALLMENT_CONFIG.SUPPORTED_FEE_TYPES as readonly string[]).forEach(ft => { map[ft] = null; });
-        (data || []).forEach((p: InstallmentPlan) => { map[p.fee_type] = p; });
+        (data || []).forEach((plan: any) => {
+          const payments: { payment_date: string }[] = plan.individual_fee_payments || [];
+          const lastTs = payments.length > 0
+            ? Math.max(...payments.map((p: any) => new Date(p.payment_date).getTime()))
+            : null;
+          map[plan.fee_type] = { ...plan, last_payment_date: lastTs ? new Date(lastTs).toISOString() : null };
+        });
         setInstallmentPlans(map);
 
         if (!isLastInstallment) {
