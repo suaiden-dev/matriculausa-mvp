@@ -204,7 +204,8 @@ const Overview: React.FC = () => {
     const validSteps = [
       'selection_fee', 'identity_verification', 'selection_survey',
       'scholarship_selection', 'process_type', 'documents_upload',
-      'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'
+      'payment', 'ambassador_program', 'scholarship_fee', 'placement_fee',
+      'reinstatement_fee', 'my_applications', 'completed'
     ];
 
     // 1. FONTE PRIMÁRIA: step salvo no banco de dados
@@ -215,8 +216,8 @@ const Overview: React.FC = () => {
       if (userProfile && !userProfile.has_paid_selection_process_fee) {
         const stepsAfterSelection = [
           'scholarship_selection', 'process_type', 'documents_upload',
-          'payment', 'scholarship_fee', 'placement_fee', 'my_applications',
-          'waiting_approval', 'completed'
+          'payment', 'ambassador_program', 'scholarship_fee', 'placement_fee',
+          'reinstatement_fee', 'my_applications', 'waiting_approval', 'completed'
         ];
         if (stepsAfterSelection.includes(dbStep)) {
           return 'selection_fee';
@@ -226,16 +227,21 @@ const Overview: React.FC = () => {
       // Bloqueio: step salvo pode estar stale após mudança de fluxo pelo admin.
       // Ex: aluno era old flow (scholarship_fee salvo) e virou new flow (placement_fee_flow=true).
       // Validar se o step ainda existe no conjunto de steps válidos para o perfil atual.
-      if (userProfile && dbStep === 'scholarship_fee') {
+      if (userProfile && ['ambassador_program', 'scholarship_fee', 'placement_fee'].includes(dbStep)) {
         const isNewFlow = !!(userProfile as any).placement_fee_flow;
         const isTransferInactive = userProfile.student_process_type === 'transfer' && (userProfile as any).visa_transfer_active === false;
-        if (isNewFlow || isTransferInactive) {
-          // Step stale — cai para o fallback
-          return null;
-        }
-      }
+        const rewardsAlreadySeen = !!(userProfile as any).rewards_popup_shown_at;
+        const isStaleAmbassadorStep = dbStep === 'ambassador_program' && rewardsAlreadySeen;
+        const isStaleScholarshipStep = dbStep === 'scholarship_fee' && (isNewFlow || isTransferInactive);
+        const isStalePlacementStep = dbStep === 'placement_fee' && (!isNewFlow || isTransferInactive);
 
-      return dbStep;
+        if (!isStaleAmbassadorStep && !isStaleScholarshipStep && !isStalePlacementStep) {
+          // Step stale — cai para o fallback
+          return dbStep;
+        }
+      } else {
+        return dbStep;
+      }
     }
 
     // 2. FALLBACK: calcular baseado nas flags do perfil (usuários sem campo preenchido)
@@ -251,13 +257,19 @@ const Overview: React.FC = () => {
       );
       const hasPaidPackage = !!(userProfile as any).has_paid_ds160_package || !!(userProfile as any).has_paid_i539_cos_package;
       const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid || hasPaidPackage;
-      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
+      const placementFeePaid = !!(userProfile as any).is_placement_fee_paid;
+      const reinstatementFeePaid = !!(userProfile as any).has_paid_reinstatement_package;
+      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || placementFeePaid || anyAppPaidOrApproved || hasPaidPackage;
       const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
 
       // Verificar Process Type (situação do visto)
       const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
       const storedProcessType = typeof window !== 'undefined' ? (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) : null;
-      const hasProcessType = (applications.length > 0 && !!applications[0].student_process_type) || (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
+      const effectiveProcessType = userProfile.student_process_type || applications[0]?.student_process_type || storedProcessType;
+      const hasProcessType = !!effectiveProcessType && ['initial', 'transfer', 'change_of_status', 'resident'].includes(effectiveProcessType);
+      const isNewFlow = !!(userProfile as any).placement_fee_flow;
+      const isTransferInactive = effectiveProcessType === 'transfer' && (userProfile as any).visa_transfer_active === false;
+      const rewardsAlreadySeen = !!(userProfile as any).rewards_popup_shown_at;
 
       if (userProfile.onboarding_completed) {
         calculatedStep = 'completed';
@@ -273,8 +285,14 @@ const Overview: React.FC = () => {
         calculatedStep = 'documents_upload';
       } else if (!hasGlobalFeePaid) {
         calculatedStep = 'payment';
-      } else if (!anyScholarshipFeePaid && !(userProfile.student_process_type === 'transfer' && (userProfile as any).visa_transfer_active === false)) {
+      } else if (!rewardsAlreadySeen && !placementFeePaid && !anyScholarshipFeePaid && !reinstatementFeePaid) {
+        calculatedStep = 'ambassador_program';
+      } else if (isNewFlow && !placementFeePaid && !isTransferInactive) {
+        calculatedStep = 'placement_fee';
+      } else if (!isNewFlow && !anyScholarshipFeePaid && effectiveProcessType !== 'resident' && !isTransferInactive) {
         calculatedStep = 'scholarship_fee';
+      } else if (isTransferInactive && !reinstatementFeePaid) {
+        calculatedStep = 'reinstatement_fee';
       } else {
         calculatedStep = 'my_applications';
       }
@@ -412,8 +430,9 @@ const Overview: React.FC = () => {
   type OnboardingStepKey =
     | 'selection_fee' | 'identity_verification' | 'selection_survey'
     | 'scholarship_selection' | 'process_type' | 'documents_upload'
-    | 'payment' | 'scholarship_fee' | 'placement_fee' | 'university_documents'
-    | 'waiting_approval' | 'my_applications' | 'completed';
+    | 'payment' | 'ambassador_program' | 'scholarship_fee' | 'placement_fee'
+    | 'reinstatement_fee' | 'university_documents' | 'waiting_approval'
+    | 'my_applications' | 'completed';
 
   const STEP_NUMBER_MAP: Record<OnboardingStepKey, number> = {
     'selection_fee': 1,
@@ -423,8 +442,10 @@ const Overview: React.FC = () => {
     'process_type': 4,
     'documents_upload': 5,
     'payment': 6,
+    'ambassador_program': 7,
     'scholarship_fee': 7,
     'placement_fee': 7,
+    'reinstatement_fee': 7,
     'university_documents': 7,
     'waiting_approval': 7,
     'my_applications': 7,

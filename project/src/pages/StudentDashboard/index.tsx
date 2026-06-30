@@ -80,6 +80,7 @@ const StudentDashboard: React.FC = () => {
   // MatriculaRewards invite popup — show to students who paid app fee but haven't seen it recently
   useEffect(() => {
     if (!userProfile?.is_application_fee_paid) return;
+    if (userProfile?.rewards_popup_shown_at || userProfile?.rewards_popup_accepted_at) return;
 
     const dismissedAt = localStorage.getItem(REWARDS_POPUP_KEY);
     if (dismissedAt) {
@@ -89,32 +90,51 @@ const StudentDashboard: React.FC = () => {
 
     const timer = setTimeout(() => {
       setShowRewardsPopup(true);
-      if (user?.id && !userProfile?.rewards_popup_shown_at) {
-        supabase.from('user_profiles')
-          .update({ rewards_popup_shown_at: new Date().toISOString() })
-          .eq('user_id', user.id);
-      }
     }, 1500);
     return () => clearTimeout(timer);
-  }, [userProfile?.is_application_fee_paid, user?.id, userProfile?.rewards_popup_shown_at]);
+  }, [
+    userProfile?.is_application_fee_paid,
+    userProfile?.rewards_popup_shown_at,
+    userProfile?.rewards_popup_accepted_at,
+  ]);
 
-  const handleRewardsPopupClose = () => {
+  const markRewardsPopup = React.useCallback(async (accepted = false) => {
+    if (!user?.id) return;
+
+    const now = new Date().toISOString();
+    const updates: Record<string, string> = {
+      rewards_popup_shown_at: now,
+    };
+
+    if (accepted) {
+      updates.rewards_popup_accepted_at = now;
+    }
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('[StudentDashboard] Error updating rewards popup status:', error);
+    }
+  }, [user?.id]);
+
+  const handleRewardsPopupClose = async () => {
     localStorage.setItem(REWARDS_POPUP_KEY, String(Date.now()));
+    await markRewardsPopup(false);
     setShowRewardsPopup(false);
   };
 
-  const handleRewardsPopupAccept = () => {
+  const handleRewardsPopupAccept = async () => {
     setShowRewardsPopup(false);
-    if (user?.id) {
-      supabase.from('user_profiles')
-        .update({ rewards_popup_accepted_at: new Date().toISOString() })
-        .eq('user_id', user.id);
-    }
+    localStorage.setItem(REWARDS_POPUP_KEY, String(Date.now()));
     window.open(
-      `https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}?text=Hi%2C%20I%27d%20like%20to%20learn%20more%20about%20the%20Matricula%20USA%20Ambassador%20Program`,
+      'https://wa.me/12136762544?text=Tenho%20interesso%20em%20ser%20embaixador!%0ACheguei%20pelo%20site%20MatriculaUSA.',
       '_blank',
       'noopener,noreferrer'
     );
+    await markRewardsPopup(true);
   };
 
   // Aplicar código de referência da URL automaticamente

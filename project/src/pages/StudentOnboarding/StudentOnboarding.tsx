@@ -11,6 +11,7 @@ import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import LanguageSelector from '../../components/LanguageSelector';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
+import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 
 // Retry automático para lazy imports — evita tela azul quando chunk falha após deploy
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -129,6 +130,8 @@ const StudentOnboarding: React.FC = () => {
   });
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showRewardsPopup, setShowRewardsPopup] = useState(false);
+  const rewardsContinueRef = React.useRef<(() => void) | null>(null);
 
   // O estado do progresso agora contém se o usuário é do novo fluxo
   // Prioriza o valor do perfil (banco) sobre o estado local se o perfil já estiver carregado
@@ -142,6 +145,55 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     isNewFlowUserRef.current = isNewFlowUser;
   }, [isNewFlowUser]);
+
+  const continueAfterRewardsPopup = useCallback(() => {
+    const next = rewardsContinueRef.current;
+    rewardsContinueRef.current = null;
+    setShowRewardsPopup(false);
+    next?.();
+  }, []);
+
+  const triggerRewardsInterstitial = useCallback((onContinue: () => void) => {
+    rewardsContinueRef.current = onContinue;
+    setShowRewardsPopup(true);
+  }, []);
+
+  const markRewardsPopup = useCallback(async (accepted = false) => {
+    if (!user?.id) return;
+
+    const now = new Date().toISOString();
+    const updates: Record<string, string> = {
+      rewards_popup_shown_at: now,
+    };
+
+    if (accepted) {
+      updates.rewards_popup_accepted_at = now;
+    }
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('[Onboarding] Error updating rewards popup status:', error);
+    }
+  }, [user?.id]);
+
+  const handleRewardsPopupAccept = useCallback(async () => {
+    window.open(
+      'https://wa.me/12136762544?text=Tenho%20interesso%20em%20ser%20embaixador!%0ACheguei%20pelo%20site%20MatriculaUSA.',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    await markRewardsPopup(true);
+    continueAfterRewardsPopup();
+  }, [continueAfterRewardsPopup, markRewardsPopup]);
+
+  const handleRewardsPopupClose = useCallback(async () => {
+    await markRewardsPopup(false);
+    continueAfterRewardsPopup();
+  }, [continueAfterRewardsPopup, markRewardsPopup]);
 
   const getOrderedSteps = useCallback((): OnboardingStep[] => {
     const isTransferInactive = userProfile?.student_process_type === 'transfer' && userProfile?.visa_transfer_active === false;
@@ -896,6 +948,13 @@ const StudentOnboarding: React.FC = () => {
         }}
         onMarkAllAsRead={markAllAsRead}
         onClearAll={clearAll}
+      />
+
+      <MatriculaRewardsInvitePopup
+        isOpen={showRewardsPopup}
+        onClose={handleRewardsPopupClose}
+        onAccept={handleRewardsPopupAccept}
+        variant="onboarding"
       />
     </div>
   );

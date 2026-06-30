@@ -74,12 +74,24 @@ export const AmbassadorProgramStep: React.FC<StepProps> = ({ onNext }) => {
     }
   }, [user?.id, userProfile?.rewards_popup_shown_at]);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     localStorage.setItem("rewards_invite_popup_dismissed_at", String(Date.now() + 365 * 24 * 60 * 60 * 1000));
+    window.open(
+      "https://wa.me/12136762544?text=Tenho%20interesso%20em%20ser%20embaixador!%0ACheguei%20pelo%20site%20MatriculaUSA.",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    const now = new Date().toISOString();
     if (user?.id) {
-      supabase.from("user_profiles")
-        .update({ rewards_popup_accepted_at: new Date().toISOString() })
+      const { error } = await supabase.from("user_profiles")
+        .update({
+          rewards_popup_shown_at: now,
+          rewards_popup_accepted_at: now,
+        })
         .eq("user_id", user.id);
+      if (error) {
+        console.error("Error updating rewards popup acceptance:", error);
+      }
     }
     onNext();
   };
@@ -199,7 +211,7 @@ export const AmbassadorProgramStep: React.FC<StepProps> = ({ onNext }) => {
 
         {/* ===== MOBILE ===== */}
         <div className="sm:hidden px-5 pt-4 pb-2">
-          <div className="flex items-stretch gap-3">
+          <div className="flex flex-col items-start gap-0">
             <div className="flex-1 min-w-0">
               <div className="flex items-start gap-2">
                 <span className="text-3xl leading-none">🎉</span>
@@ -210,7 +222,7 @@ export const AmbassadorProgramStep: React.FC<StepProps> = ({ onNext }) => {
               <h2 className="mt-1 mb-0 font-extrabold leading-tight" style={{ fontSize: 18, color: "#E11D26", letterSpacing: -0.3 }}>
                 {t("ambassadorStep.selected")}
               </h2>
-              <div className="inline-flex items-center gap-1.5 mt-2" style={{
+              <div className="hidden" style={{
                 background: "linear-gradient(160deg,#22397F 0%,#16285C 100%)",
                 border: "1.5px solid #3A57A8", borderRadius: 8, padding: "5px 10px",
                 boxShadow: "0 4px 12px rgba(15,28,70,0.35)", whiteSpace: "nowrap",
@@ -227,20 +239,53 @@ export const AmbassadorProgramStep: React.FC<StepProps> = ({ onNext }) => {
               </div>
             </div>
 
-            <div className="relative flex-shrink-0" style={{ width: 120, height: 160 }}>
+            <div className="relative mx-auto mt-1" style={{ width: 190, height: 205 }}>
               <img
                 src="/embaixador-hero.png"
                 alt="Embaixador Matrícula USA"
                 style={{
-                  position: "absolute", top: -8, right: -12,
-                  height: "115%", width: "auto",
-                  objectFit: "contain", objectPosition: "top right",
+                  position: "absolute",
+                  top: -6,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  height: "108%",
+                  width: "auto",
+                  objectFit: "contain",
+                  objectPosition: "top center",
                 }}
               />
+              <div style={{
+                position: "absolute",
+                bottom: 4,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 5,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                background: "linear-gradient(160deg,#22397F 0%,#16285C 100%)",
+                border: "1.5px solid #3A57A8",
+                borderRadius: 10,
+                padding: "6px 11px",
+                boxShadow: "0 6px 16px rgba(15,28,70,0.36)",
+                whiteSpace: "nowrap",
+              }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#2B5CC4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid #fff" }}>
+                  <StarIcon size={10} color="#fff" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.18, gap: 1 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: "#fff", letterSpacing: 0.4 }}>
+                    {t("ambassador")}
+                  </span>
+                  <span style={{ fontSize: 6.5, fontWeight: 600, color: "#E6EAF5", letterSpacing: 0.9, display: "flex", alignItems: "center", gap: 2 }}>
+                    <span style={{ color: "#E11D26" }}>â˜…</span>MATRÃCULA USA<span style={{ color: "#E11D26" }}>â˜…</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 my-3">
+          <div className="flex items-center gap-2 my-2">
             <div className="flex-1 h-px rounded" style={{ background: "#E3E6EB" }} />
             <StarIcon size={8} color="#1B2E6B" />
             <StarIcon size={11} color="#2B5CC4" />
@@ -338,11 +383,14 @@ export const AmbassadorProgramStep: React.FC<StepProps> = ({ onNext }) => {
           </button>
 
           <button
-            onClick={() => {
+            onClick={async () => {
               if (user?.id) {
-                supabase.from("user_profiles")
+                const { error } = await supabase.from("user_profiles")
                   .update({ rewards_popup_shown_at: new Date().toISOString() })
                   .eq("user_id", user.id);
+                if (error) {
+                  console.error("Error updating rewards popup shown status:", error);
+                }
               }
               onNext();
             }}

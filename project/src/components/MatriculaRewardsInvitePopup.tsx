@@ -279,8 +279,8 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
 
         {/* ===== MOBILE COPY ===== */}
         <div className="sm:hidden px-5 pt-4 pb-2">
-          {/* Top row: text left + image right */}
-          <div className="flex items-stretch gap-3">
+          {/* Mobile stacked hero */}
+          <div className="flex flex-col items-start gap-0">
             {/* Text */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start gap-2">
@@ -293,7 +293,7 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
                 Você foi selecionado.
               </h2>
               {/* Badge mobile */}
-              <div className="inline-flex items-center gap-1.5 mt-2" style={{
+              <div className="hidden" style={{
                 background: "linear-gradient(160deg,#22397F 0%,#16285C 100%)",
                 border: "1.5px solid #3A57A8", borderRadius: 8, padding: "5px 10px",
                 boxShadow: "0 4px 12px rgba(15,28,70,0.35)", whiteSpace: "nowrap",
@@ -311,20 +311,53 @@ const MatriculaRewardsInvitePopup: React.FC<MatriculaRewardsInvitePopupProps> = 
             </div>
 
             {/* Hero image — small, right side */}
-            <div className="relative flex-shrink-0" style={{ width: 120, height: 160 }}>
+            <div className="relative mx-auto mt-1" style={{ width: 190, height: 205 }}>
               <img
                 src="/embaixador-hero.png"
                 alt="Embaixador Matrícula USA"
                 style={{
-                  position: "absolute", top: -8, right: -12,
-                  height: "115%", width: "auto",
-                  objectFit: "contain", objectPosition: "top right",
+                  position: "absolute",
+                  top: -6,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  height: "108%",
+                  width: "auto",
+                  objectFit: "contain",
+                  objectPosition: "top center",
                 }}
               />
+              <div style={{
+                position: "absolute",
+                bottom: 4,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 5,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                background: "linear-gradient(160deg,#22397F 0%,#16285C 100%)",
+                border: "1.5px solid #3A57A8",
+                borderRadius: 10,
+                padding: "6px 11px",
+                boxShadow: "0 6px 16px rgba(15,28,70,0.36)",
+                whiteSpace: "nowrap",
+              }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#2B5CC4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid #fff" }}>
+                  <StarIcon size={10} color="#fff" />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.18, gap: 1 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: "#fff", letterSpacing: 0.4 }}>
+                    {t("ambassador")}
+                  </span>
+                  <span style={{ fontSize: 6.5, fontWeight: 600, color: "#E6EAF5", letterSpacing: 0.9, display: "flex", alignItems: "center", gap: 2 }}>
+                    <span style={{ color: "#E11D26" }}>â˜…</span>MATRÃCULA USA<span style={{ color: "#E11D26" }}>â˜…</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 my-3">
+          <div className="flex items-center gap-2 my-2">
             <div className="flex-1 h-px rounded" style={{ background: "#E3E6EB" }} />
             <StarIcon size={8} color="#1B2E6B" />
             <StarIcon size={11} color="#2B5CC4" />

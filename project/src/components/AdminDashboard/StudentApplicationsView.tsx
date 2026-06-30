@@ -27,7 +27,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 import StudentApplicationsKanbanView from './StudentApplicationsKanbanView';
 import { APPLICATION_FLOW_STAGES, getStepStatus as getKanbanStepStatus } from '../../utils/applicationFlowStages';
@@ -425,7 +425,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const selectedRecords = filteredStudents.filter(student =>
       selectedStudents.has(student.student_id)
     );
@@ -467,10 +467,34 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       'Enrolled': (student.status === 'enrolled' || student.application_status === 'enrolled') ? 'Yes' : 'No',
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
-    XLSX.writeFile(workbook, `admin-users-export-${dayjs().format('YYYY-MM-DD')}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Matricula USA';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('Students');
+    worksheet.columns = Object.keys(dataToExport[0]).map(key => ({
+      header: key,
+      key,
+      width: Math.min(Math.max(key.length + 2, 14), 32),
+    }));
+    worksheet.addRows(dataToExport);
+
+    worksheet.getRow(1).eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF05294E' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `admin-users-export-${dayjs().format('YYYY-MM-DD')}.xlsx`;
+    anchor.click();
+    URL.revokeObjectURL(url);
 
     toast.success(`Exported ${studentsToExport.length} student${studentsToExport.length !== 1 ? 's' : ''}`);
   };
