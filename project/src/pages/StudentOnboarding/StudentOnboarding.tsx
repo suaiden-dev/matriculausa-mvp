@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Bell, Clock, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +11,7 @@ import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import LanguageSelector from '../../components/LanguageSelector';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
+import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 
 // Retry automático para lazy imports — evita tela azul quando chunk falha após deploy
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -107,6 +109,9 @@ const ReinstatementFeeStep = React.lazy(() =>
 const UniversityDocumentsStep = React.lazy(() =>
   retryImport(() => import('./components/UniversityDocumentsStep')).then(m => ({ default: m.UniversityDocumentsStep }))
 );
+const AmbassadorProgramStep = React.lazy(() =>
+  retryImport(() => import('./components/AmbassadorProgramStep')).then(m => ({ default: m.AmbassadorProgramStep }))
+);
 
 
 
@@ -125,6 +130,8 @@ const StudentOnboarding: React.FC = () => {
   });
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showRewardsPopup, setShowRewardsPopup] = useState(false);
+  const rewardsContinueRef = React.useRef<(() => void) | null>(null);
 
   // O estado do progresso agora contém se o usuário é do novo fluxo
   // Prioriza o valor do perfil (banco) sobre o estado local se o perfil já estiver carregado
@@ -139,6 +146,55 @@ const StudentOnboarding: React.FC = () => {
     isNewFlowUserRef.current = isNewFlowUser;
   }, [isNewFlowUser]);
 
+  const continueAfterRewardsPopup = useCallback(() => {
+    const next = rewardsContinueRef.current;
+    rewardsContinueRef.current = null;
+    setShowRewardsPopup(false);
+    next?.();
+  }, []);
+
+  const triggerRewardsInterstitial = useCallback((onContinue: () => void) => {
+    rewardsContinueRef.current = onContinue;
+    setShowRewardsPopup(true);
+  }, []);
+
+  const markRewardsPopup = useCallback(async (accepted = false) => {
+    if (!user?.id) return;
+
+    const now = new Date().toISOString();
+    const updates: Record<string, string> = {
+      rewards_popup_shown_at: now,
+    };
+
+    if (accepted) {
+      updates.rewards_popup_accepted_at = now;
+    }
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('[Onboarding] Error updating rewards popup status:', error);
+    }
+  }, [user?.id]);
+
+  const handleRewardsPopupAccept = useCallback(async () => {
+    window.open(
+      'https://wa.me/12136762544?text=Tenho%20interesso%20em%20ser%20embaixador!%0ACheguei%20pelo%20site%20MatriculaUSA.',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    await markRewardsPopup(true);
+    continueAfterRewardsPopup();
+  }, [continueAfterRewardsPopup, markRewardsPopup]);
+
+  const handleRewardsPopupClose = useCallback(async () => {
+    await markRewardsPopup(false);
+    continueAfterRewardsPopup();
+  }, [continueAfterRewardsPopup, markRewardsPopup]);
+
   const getOrderedSteps = useCallback((): OnboardingStep[] => {
     const isTransferInactive = userProfile?.student_process_type === 'transfer' && userProfile?.visa_transfer_active === false;
     const processTypeSet = userProfile?.student_process_type &&
@@ -152,6 +208,7 @@ const StudentOnboarding: React.FC = () => {
       ...(!processTypeSet ? ['process_type' as OnboardingStep] : []),
       'documents_upload',
       'payment',
+      'ambassador_program',
       ...(isTransferInactive ? [] : [isNewFlowUser ? 'placement_fee' as OnboardingStep : 'scholarship_fee' as OnboardingStep]),
     ];
 
@@ -166,15 +223,28 @@ const StudentOnboarding: React.FC = () => {
 
   const handleNext = useCallback(async () => {
     const previousStep = state.currentStep;
-    
+
+    // ambassador_program não tem flag no banco — sempre avança manualmente para o próximo passo
+    if (previousStep === 'ambassador_program') {
+      const steps = getOrderedSteps();
+      const currentIndex = steps.indexOf('ambassador_program');
+      if (currentIndex !== -1 && currentIndex < steps.length - 1) {
+        goToStep(steps[currentIndex + 1]);
+      }
+      return;
+    }
+
     // 🎯 SMART JUMP: Pedimos ao sistema para re-avaliar o progresso atual no banco.
-    // Se o aluno já passou por etapas futuras (ex: após corrigir uma selfie rejeitada),
-    // o checkProgress(true) retornará o passo mais avançado permitido.
     const systemDecidedStep = await checkProgress(true);
-    
-    // Se o sistema decidiu nos mover para um novo passo, o useEffect do hook já cuidará disso.
-    // Mas se o sistema nos manteve no mesmo passo (ex: passos que não tem flag automática no banco),
-    // forçamos o avanço lógico para o próximo.
+
+    // Após o pagamento da application fee, o checkProgress salta direto para placement/scholarship fee,
+    // mas precisamos passar pelo ambassador_program primeiro.
+    if (previousStep === 'payment' && systemDecidedStep && systemDecidedStep !== 'payment') {
+      goToStep('ambassador_program');
+      return;
+    }
+
+    // Se o sistema nos manteve no mesmo passo, forçamos o avanço lógico.
     if (!systemDecidedStep || systemDecidedStep === previousStep) {
       const steps = getOrderedSteps();
       const currentIndex = steps.indexOf(state.currentStep);
@@ -434,7 +504,7 @@ const StudentOnboarding: React.FC = () => {
                 // Ao pagar a taxa de aplicação, vai para a placement_fee ou scholarship_fee
                 const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
                 console.log(`[Onboarding] 🚀 Pagamento confirmado via Parcelow. Indo para: ${nextFeeStep}`);
-                goToStep(nextFeeStep);
+                triggerRewardsInterstitial(() => goToStep(nextFeeStep));
               } else if (currentStepParam === 'scholarship_fee' || currentStepParam === 'placement_fee') {
                 // Ao pagar as taxas finais, vai para a listagem ou corrige fluxo
                 if (isNewFlowUserRef.current && currentStepParam === 'scholarship_fee') {
@@ -550,7 +620,11 @@ const StudentOnboarding: React.FC = () => {
                   }
 
                   console.log(`[Onboarding] 💳 Pagamento de ${stepParam} confirmado. Progredindo para: ${nextStep}`);
-                  goToStep(nextStep);
+                  if (stepParam === 'payment') {
+                    triggerRewardsInterstitial(() => goToStep(nextStep));
+                  } else {
+                    goToStep(nextStep);
+                  }
                 } else {
                   // Fallback para limpar a URL se for o último passo
                   const newParams = new URLSearchParams(searchParams);
@@ -644,6 +718,7 @@ const StudentOnboarding: React.FC = () => {
   if (state.processTypeSelected && currentIdx > allSteps.indexOf('process_type')) completedSteps.push('process_type');
   if (state.documentsUploaded && currentIdx > allSteps.indexOf('documents_upload')) completedSteps.push('documents_upload');
   if (state.applicationFeePaid && currentIdx > allSteps.indexOf('payment')) completedSteps.push('payment');
+  if (currentIdx > allSteps.indexOf('ambassador_program')) completedSteps.push('ambassador_program');
 
   const feeStepPaid = isNewFlowUser ? state.placementFeePaid : state.scholarshipFeePaid;
   if (feeStepPaid && currentIdx > allSteps.indexOf(feeStep)) completedSteps.push(feeStep);
@@ -675,6 +750,8 @@ const StudentOnboarding: React.FC = () => {
           return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
         case 'payment':
           return <PaymentStep onNext={handleNext} onBack={handleBack} />;
+        case 'ambassador_program':
+          return <AmbassadorProgramStep onNext={handleNext} onBack={handleBack} />;
         case 'scholarship_fee':
           return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
         case 'placement_fee':
@@ -871,6 +948,13 @@ const StudentOnboarding: React.FC = () => {
         }}
         onMarkAllAsRead={markAllAsRead}
         onClearAll={clearAll}
+      />
+
+      <MatriculaRewardsInvitePopup
+        isOpen={showRewardsPopup}
+        onClose={handleRewardsPopupClose}
+        onAccept={handleRewardsPopupAccept}
+        variant="onboarding"
       />
     </div>
   );

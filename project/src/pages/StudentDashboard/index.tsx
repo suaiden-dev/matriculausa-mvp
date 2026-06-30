@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
 
@@ -25,7 +26,9 @@ import ApplicationFeePage from './ApplicationFeePage';
 import MatriculaRewards from './MatriculaRewards';
 import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
+import MatriculaRewardsInvitePopup from '../../components/MatriculaRewardsInvitePopup';
 import { useReferralCode } from '../../hooks/useReferralCode';
+import { useStudentApplicationsQuery } from '../../hooks/useStudentDashboardQueries';
 import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
@@ -33,10 +36,23 @@ import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
 import Translations from './Translations';
 
+const REWARDS_POPUP_KEY = 'rewards_invite_popup_dismissed_at';
+const REWARDS_POPUP_SUPPRESS_DAYS = 7;
+
 const StudentDashboard: React.FC = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { fetchCart } = useCartStore();
+  const navigate = useNavigate();
+
+  // Dados da universidade/curso para o popup de embaixador
+  const { data: applications } = useStudentApplicationsQuery(userProfile?.id);
+  const selectedApp = applications?.find(
+    app => app.id === userProfile?.selected_application_id
+  ) || applications?.[0];
+  const ambassadorUniversityName = (selectedApp as any)?.scholarships?.universities?.name as string | undefined;
+  const ambassadorUniversityLogo = (selectedApp as any)?.scholarships?.universities?.logo_url as string | undefined;
+  const ambassadorCourseName = (selectedApp as any)?.scholarships?.field_of_study as string | undefined;
 
   // Referral Code System
   const {
@@ -46,6 +62,7 @@ const StudentDashboard: React.FC = () => {
   } = useReferralCode();
   const [showCongratulationsModal, setShowCongratulationsModal] = React.useState(false);
   const [referralResult, setReferralResult] = React.useState<any>(null);
+  const [showRewardsPopup, setShowRewardsPopup] = React.useState(false);
 
   // Setup cache invalidation listener — invalida queries do React Query automaticamente
   useEffect(() => {
@@ -59,6 +76,66 @@ const StudentDashboard: React.FC = () => {
       fetchCart(user.id);
     }
   }, [user?.id, fetchCart]);
+
+  // MatriculaRewards invite popup — show to students who paid app fee but haven't seen it recently
+  useEffect(() => {
+    if (!userProfile?.is_application_fee_paid) return;
+    if (userProfile?.rewards_popup_shown_at || userProfile?.rewards_popup_accepted_at) return;
+
+    const dismissedAt = localStorage.getItem(REWARDS_POPUP_KEY);
+    if (dismissedAt) {
+      const daysSince = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSince < REWARDS_POPUP_SUPPRESS_DAYS) return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowRewardsPopup(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [
+    userProfile?.is_application_fee_paid,
+    userProfile?.rewards_popup_shown_at,
+    userProfile?.rewards_popup_accepted_at,
+  ]);
+
+  const markRewardsPopup = React.useCallback(async (accepted = false) => {
+    if (!user?.id) return;
+
+    const now = new Date().toISOString();
+    const updates: Record<string, string> = {
+      rewards_popup_shown_at: now,
+    };
+
+    if (accepted) {
+      updates.rewards_popup_accepted_at = now;
+    }
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(updates)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('[StudentDashboard] Error updating rewards popup status:', error);
+    }
+  }, [user?.id]);
+
+  const handleRewardsPopupClose = async () => {
+    localStorage.setItem(REWARDS_POPUP_KEY, String(Date.now()));
+    await markRewardsPopup(false);
+    setShowRewardsPopup(false);
+  };
+
+  const handleRewardsPopupAccept = async () => {
+    setShowRewardsPopup(false);
+    localStorage.setItem(REWARDS_POPUP_KEY, String(Date.now()));
+    window.open(
+      'https://wa.me/12136762544?text=Tenho%20interesso%20em%20ser%20embaixador!%0ACheguei%20pelo%20site%20MatriculaUSA.',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    await markRewardsPopup(true);
+  };
 
   // Aplicar código de referência da URL automaticamente
   useEffect(() => {
@@ -111,6 +188,16 @@ const StudentDashboard: React.FC = () => {
           affiliateCode={referralResult.affiliate_code || 'N/A'}
         />
       )}
+
+      <MatriculaRewardsInvitePopup
+        isOpen={showRewardsPopup}
+        onClose={handleRewardsPopupClose}
+        onAccept={handleRewardsPopupAccept}
+        variant="dashboard"
+        universityName={ambassadorUniversityName}
+        universityLogo={ambassadorUniversityLogo}
+        courseName={ambassadorCourseName}
+      />
     </StudentDashboardLayout>
   );
 };

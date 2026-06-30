@@ -9,6 +9,7 @@ import {
   DollarSign,
   TrendingUp,
   Mail,
+  Phone,
   Calendar,
   Coins,
   AlertCircle,
@@ -27,6 +28,7 @@ interface ReferralAffiliate {
   created_at: string;
   full_name: string;
   email: string;
+  phone: string;
   coin_balance: number;
   pending_payment_requests: number;
   pending_amount: number;
@@ -59,7 +61,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
           .select('id, user_id, code, is_active, created_at')
           .order('created_at', { ascending: false }),
         supabase.rpc('get_admin_users_data'),
-        supabase.from('user_profiles').select('user_id, full_name, role'),
+        supabase.from('user_profiles').select('user_id, full_name, role, phone'),
         supabase.from('matriculacoin_credits').select('user_id, balance'),
         supabase.from('affiliate_referrals').select('affiliate_code'),
         supabase.from('affiliate_payment_requests').select('referrer_user_id, amount_usd, status').in('status', ['pending', 'approved'])
@@ -74,9 +76,11 @@ const ReferralAffiliatesManagement: React.FC = () => {
 
       const nameMap: Record<string, string> = {};
       const roleMap: Record<string, string> = {};
+      const phoneMap: Record<string, string> = {};
       (profilesRes.data || []).forEach((p: any) => {
         nameMap[p.user_id] = p.full_name || '';
         roleMap[p.user_id] = p.role || '';
+        phoneMap[p.user_id] = p.phone || '';
       });
 
       const coinsMap: Record<string, number> = {};
@@ -111,6 +115,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
             created_at: c.created_at,
             full_name: nameMap[c.user_id] || emailMap[c.user_id] || 'Unknown',
             email: emailMap[c.user_id] || '',
+            phone: phoneMap[c.user_id] || '',
             coin_balance: coinsMap[c.user_id] || 0,
             pending_payment_requests: payStats.count,
             pending_amount: payStats.amount,
@@ -150,6 +155,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
         return (
           a.full_name.toLowerCase().includes(q) ||
           a.email.toLowerCase().includes(q) ||
+          a.phone.toLowerCase().includes(q) ||
           a.code.toLowerCase().includes(q)
         );
       }
@@ -269,7 +275,7 @@ const ReferralAffiliatesManagement: React.FC = () => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name, email or code..."
+              placeholder="Search by name, email, phone or code..."
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
@@ -330,6 +336,12 @@ const ReferralAffiliatesManagement: React.FC = () => {
                       <Mail className="h-3 w-3" />
                       {affiliate.email}
                     </span>
+                    {affiliate.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {affiliate.phone}
+                      </span>
+                    )}
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {new Date(affiliate.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

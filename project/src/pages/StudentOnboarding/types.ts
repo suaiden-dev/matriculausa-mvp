@@ -6,6 +6,7 @@ export type OnboardingStep =
   | "process_type"
   | "documents_upload"
   | "payment"
+  | "ambassador_program"
   | "scholarship_fee"
   | "placement_fee"
   | "reinstatement_fee"

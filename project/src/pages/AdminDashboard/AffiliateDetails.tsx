@@ -9,6 +9,7 @@ import {
   Copy,
   DollarSign,
   Mail,
+  Phone,
   Calendar,
   Coins,
   Clock,
@@ -33,6 +34,7 @@ interface AffiliateData {
   created_at: string;
   full_name: string;
   email: string;
+  phone: string;
   coin_balance: number;
   coin_total_earned: number;
   pending_payment_requests: number;
@@ -146,7 +148,7 @@ const AffiliateDetails: React.FC = () => {
 
       // 2. All remaining data in parallel
       const [profileRes, usersRes, coinsRes, referralsRes, requestsRes] = await Promise.all([
-        supabase.from('user_profiles').select('full_name, email').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_profiles').select('full_name, email, phone').eq('user_id', userId).maybeSingle(),
         supabase.rpc('get_admin_users_data'),
         supabase.from('matriculacoin_credits').select('balance, total_earned').eq('user_id', userId).maybeSingle(),
         supabase
@@ -167,6 +169,7 @@ const AffiliateDetails: React.FC = () => {
 
       const profileName = profileRes.data?.full_name || '';
       const profileEmail = profileRes.data?.email || emailMap[userId] || '';
+      const profilePhone = profileRes.data?.phone || '';
       const coins = coinsRes.data;
 
       // Payment pending stats
@@ -181,6 +184,7 @@ const AffiliateDetails: React.FC = () => {
         created_at: codeData.created_at,
         full_name: profileName || profileEmail || 'Unknown',
         email: profileEmail,
+        phone: profilePhone,
         coin_balance: Number(coins?.balance) || 0,
         coin_total_earned: Number(coins?.total_earned) || 0,
         pending_payment_requests: pendingReqs.length,
@@ -477,6 +481,12 @@ const AffiliateDetails: React.FC = () => {
                   <Mail className="h-3 w-3" />
                   {affiliate.email}
                 </span>
+                {affiliate.phone && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {affiliate.phone}
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Joined {new Date(affiliate.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
